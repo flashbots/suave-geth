@@ -195,6 +195,8 @@ func CommitGenesisState(db ethdb.Database, triedb *trie.Database, blockhash comm
 			genesis = DefaultGoerliGenesisBlock()
 		case params.SepoliaGenesisHash:
 			genesis = DefaultSepoliaGenesisBlock()
+		case params.SuaveGenesisHash:
+			genesis = DefaultSuaveGenesisBlock()
 		}
 		if genesis != nil {
 			alloc = genesis.Alloc
@@ -424,6 +426,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.RinkebyChainConfig
 	case ghash == params.GoerliGenesisHash:
 		return params.GoerliChainConfig
+	case ghash == params.SuaveGenesisHash:
+		return params.SuaveChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -525,6 +529,41 @@ func DefaultGenesisBlock() *Genesis {
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
+	}
+}
+
+// DefaultSuaveGenesisBlock returns the Suave network genesis block.
+func DefaultSuaveGenesisBlock() *Genesis {
+	faucet := common.HexToAddress("0x0")
+	return &Genesis{
+		Config:     params.SuaveChainConfig,
+		Timestamp:  1687192941,
+		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000004f91862699aF93251B3e3518E4Ca6278036892520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   30000000,
+		Difficulty: big.NewInt(1),
+		Alloc: map[common.Address]GenesisAccount{
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
+			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
+			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
+			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
+			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
+			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
+			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
+			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
+			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
+			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
+
+			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
+			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			common.HexToAddress("0x42200000"): {
+				Balance: big.NewInt(1),
+				Code:    hexutil.MustDecode(BidsContractCode),
+			},
+			common.HexToAddress("0x42200001"): {
+				Balance: big.NewInt(1),
+				Code:    hexutil.MustDecode(BlockBidContractCode),
+			},
+		},
 	}
 }
 

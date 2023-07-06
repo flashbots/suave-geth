@@ -150,7 +150,9 @@ func TestCreateGas(t *testing.T) {
 				config.ExtraEips = []int{3860}
 			}
 
-			vmenv := NewEVM(vmctx, TxContext{}, statedb, params.AllEthashProtocolChanges, config)
+			chainParams := *params.AllEthashProtocolChanges
+			chainParams.SuaveBlock = nil
+			vmenv := NewEVM(vmctx, TxContext{}, statedb, &chainParams, config)
 			var startGas = uint64(testGas)
 			ret, gas, err := vmenv.Call(AccountRef(common.Address{}), address, nil, startGas, new(big.Int))
 			if err != nil {

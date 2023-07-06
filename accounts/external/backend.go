@@ -17,6 +17,7 @@
 package external
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -197,6 +198,10 @@ type signTransactionResult struct {
 // by the external signer. For non-legacy transactions, the chain ID of the
 // transaction overrides the chainID parameter.
 func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	if tx.Type() == types.OffchainTxType || tx.Type() == types.OffchainExecutedTxType {
+		return nil, errors.New("off-chain not supported by external signers")
+	}
+
 	data := hexutil.Bytes(tx.Data())
 	var to *common.MixedcaseAddress
 	if tx.To() != nil {

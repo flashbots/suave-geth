@@ -122,7 +122,7 @@ func testCallTracer(tracerName string, dirPath string, t *testing.T) {
 			// Configure a blockchain with the given prestate
 			var (
 				signer    = types.MakeSigner(test.Genesis.Config, new(big.Int).SetUint64(uint64(test.Context.Number)), uint64(test.Context.Time))
-				origin, _ = signer.Sender(tx)
+				origin, _ = types.Sender(signer, tx)
 				txContext = vm.TxContext{
 					Origin:   origin,
 					GasPrice: tx.GasPrice(),
@@ -223,7 +223,7 @@ func benchTracer(tracerName string, test *callTracerTest, b *testing.B) {
 	if err != nil {
 		b.Fatalf("failed to prepare transaction for tracing: %v", err)
 	}
-	origin, _ := signer.Sender(tx)
+	origin, _ := types.Sender(signer, tx)
 	txContext := vm.TxContext{
 		Origin:   origin,
 		GasPrice: tx.GasPrice(),

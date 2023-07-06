@@ -40,6 +40,13 @@ type PrecompiledContract interface {
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
 
+// SuavePrecompiledContract is an optional interface for precompiled Suave contracts.
+// During off-chain execution the contract will be called with their RunOffchain method.
+type SuavePrecompiledContract interface {
+	PrecompiledContract
+	RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error)
+}
+
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
 // contracts used in the Frontier and Homestead releases.
 var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
@@ -76,6 +83,24 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{9}): &blake2F{},
 }
 
+// PrecompiledContractsSuave contains the default set of pre-compiled SUAVE VM
+// contracts used in the suave testnet. It's a superset of Berlin precompiles.
+// Offchain contracts (implementing OffchainPrecompiledContract)
+// are ran with their respective RunOffchain in offchain setting
+var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
+	isOffchainAddress:         &isOffchainPrecompile{},
+	confidentialInputsAddress: &confidentialInputsPrecompile{},
+
+	confStoreStoreAddress:    newConfStoreStore(),
+	confStoreRetrieveAddress: newConfStoreRetrieve(),
+
+	newBidAddress:    newNewBid(),
+	fetchBidsAddress: newFetchBids(),
+
+	simulateBundleAddress: &simulateBundle{},
+	buildEthBlockAddress:  &buildEthBlock{},
+}
+
 // PrecompiledContractsBerlin contains the default set of pre-compiled Ethereum
 // contracts used in the Berlin release.
 var PrecompiledContractsBerlin = map[common.Address]PrecompiledContract{
@@ -105,6 +130,7 @@ var PrecompiledContractsBLS = map[common.Address]PrecompiledContract{
 }
 
 var (
+	PrecompiledAddressesSuave     []common.Address
 	PrecompiledAddressesBerlin    []common.Address
 	PrecompiledAddressesIstanbul  []common.Address
 	PrecompiledAddressesByzantium []common.Address
@@ -124,20 +150,31 @@ func init() {
 	for k := range PrecompiledContractsBerlin {
 		PrecompiledAddressesBerlin = append(PrecompiledAddressesBerlin, k)
 	}
+	for k := range PrecompiledContractsSuave {
+		PrecompiledAddressesSuave = append(PrecompiledAddressesSuave, k)
+	}
 }
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
 func ActivePrecompiles(rules params.Rules) []common.Address {
+	var basePrecompiles []common.Address
+
 	switch {
 	case rules.IsBerlin:
-		return PrecompiledAddressesBerlin
+		basePrecompiles = PrecompiledAddressesBerlin
 	case rules.IsIstanbul:
-		return PrecompiledAddressesIstanbul
+		basePrecompiles = PrecompiledAddressesIstanbul
 	case rules.IsByzantium:
-		return PrecompiledAddressesByzantium
+		basePrecompiles = PrecompiledAddressesByzantium
 	default:
-		return PrecompiledAddressesHomestead
+		basePrecompiles = PrecompiledAddressesHomestead
 	}
+
+	if rules.IsSuave {
+		return append(basePrecompiles, PrecompiledAddressesSuave...)
+	}
+
+	return basePrecompiles
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -146,6 +183,7 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 // - the _remaining_ gas,
 // - any error that occurred
 func RunPrecompiledContract(p PrecompiledContract, input []byte, suppliedGas uint64) (ret []byte, remainingGas uint64, err error) {
+	// TODO: it'd be nice if the offchain contracts' exact gas usage was calculated with execution
 	gasCost := p.RequiredGas(input)
 	if suppliedGas < gasCost {
 		return nil, 0, ErrOutOfGas

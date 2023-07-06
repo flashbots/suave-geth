@@ -41,6 +41,16 @@ type (
 )
 
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
+	// First check offchain precompiles, only then continue to the regular ones
+	if evm.chainRules.IsSuave {
+		if p, ok := PrecompiledContractsSuave[addr]; ok {
+			if evm.Config.IsOffchain {
+				runtimeBackend := NewRuntimeSuaveOffchainBackend(evm, addr)
+				return NewOffchainPrecompiledContractWrapper(runtimeBackend, p), true
+			}
+			return p, ok
+		}
+	}
 	var precompiles map[common.Address]PrecompiledContract
 	switch {
 	case evm.chainRules.IsBerlin:
@@ -119,6 +129,11 @@ type EVM struct {
 	// available gas is calculated in gasCall* according to the 63/64 rule and later
 	// applied in opCall*.
 	callGasTemp uint64
+
+	// Backend for off-chain execution
+	// Set only if EVM was instantiated with NewOffchainEVM
+	// !!! WILL PANIC IF OFFCHAIN EXECUTION REQUESTED AND THIS IS NOT SET
+	suaveOffchainBackend *SuaveOffchainBackend
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -136,11 +151,30 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	return evm
 }
 
+func NewOffchainEVM(suaveOffchainBackend *SuaveOffchainBackend, blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config) *EVM {
+	evm := &EVM{
+		Context:              blockCtx,
+		TxContext:            txCtx,
+		StateDB:              statedb,
+		Config:               config,
+		chainConfig:          chainConfig,
+		chainRules:           chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil, blockCtx.Time),
+		suaveOffchainBackend: suaveOffchainBackend,
+	}
+	evm.interpreter = NewEVMInterpreter(evm)
+	return evm
+}
+
+func (evm *EVM) SetConfidentialInput(data []byte) {
+	evm.suaveOffchainBackend.confidentialInputs = data
+}
+
 // Reset resets the EVM with a new transaction context.Reset
 // This is not threadsafe and should only be done very cautiously.
 func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {
 	evm.TxContext = txCtx
 	evm.StateDB = statedb
+	evm.suaveOffchainBackend = nil
 }
 
 // Cancel cancels any running EVM operation. This may be called concurrently and
@@ -232,7 +266,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			// The depth-check is already done, and precompiles handled above
 			contract := NewContract(caller, AccountRef(addrCopy), value, gas)
 			contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), code)
-			ret, err = evm.interpreter.Run(contract, input, false)
+			runtimeBackend := NewRuntimeSuaveOffchainBackend(evm, addrCopy)
+			ret, err = evm.interpreter.Run(runtimeBackend, contract, input, false)
 			gas = contract.Gas
 		}
 	}
@@ -289,7 +324,8 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		// The contract is a scoped environment for this execution context only.
 		contract := NewContract(caller, AccountRef(caller.Address()), value, gas)
 		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
-		ret, err = evm.interpreter.Run(contract, input, false)
+		runtimeBackend := NewRuntimeSuaveOffchainBackend(evm, addrCopy)
+		ret, err = evm.interpreter.Run(runtimeBackend, contract, input, false)
 		gas = contract.Gas
 	}
 	if err != nil {
@@ -333,7 +369,8 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 		// Initialise a new contract and make initialise the delegate values
 		contract := NewContract(caller, AccountRef(caller.Address()), nil, gas).AsDelegate()
 		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
-		ret, err = evm.interpreter.Run(contract, input, false)
+		runtimeBackend := NewRuntimeSuaveOffchainBackend(evm, addrCopy)
+		ret, err = evm.interpreter.Run(runtimeBackend, contract, input, false)
 		gas = contract.Gas
 	}
 	if err != nil {
@@ -389,7 +426,8 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		// When an error was returned by the EVM or when setting the creation code
 		// above we revert to the snapshot and consume any gas remaining. Additionally
 		// when we're in Homestead this also counts for code storage gas errors.
-		ret, err = evm.interpreter.Run(contract, input, true)
+		runtimeBackend := NewRuntimeSuaveOffchainBackend(evm, addrCopy)
+		ret, err = evm.interpreter.Run(runtimeBackend, contract, input, true)
 		gas = contract.Gas
 	}
 	if err != nil {
@@ -459,7 +497,8 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		}
 	}
 
-	ret, err := evm.interpreter.Run(contract, nil, false)
+	runtimeBackend := NewRuntimeSuaveOffchainBackend(evm, address)
+	ret, err := evm.interpreter.Run(runtimeBackend, contract, nil, false)
 
 	// Check whether the max code size has been exceeded, assign err if the case.
 	if err == nil && evm.chainRules.IsEIP158 && len(ret) > params.MaxCodeSize {

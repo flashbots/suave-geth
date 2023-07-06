@@ -110,6 +110,7 @@ func (args SendTxArgs) String() string {
 
 // ToTransaction converts the arguments to a transaction.
 func (args *SendTxArgs) ToTransaction() *types.Transaction {
+	// TODO: offchain
 	// Add the To-field, if specified
 	var to *common.Address
 	if args.To != nil {

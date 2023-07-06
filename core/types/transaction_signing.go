@@ -42,6 +42,8 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int, blockTime uint
 	switch {
 	case config.IsCancun(blockNumber, blockTime):
 		signer = NewCancunSigner(config.ChainID)
+	case config.IsSuave(blockNumber):
+		signer = NewOffchainSigner(config.ChainID)
 	case config.IsLondon(blockNumber):
 		signer = NewLondonSigner(config.ChainID)
 	case config.IsBerlin(blockNumber):
@@ -68,6 +70,9 @@ func LatestSigner(config *params.ChainConfig) Signer {
 		if config.CancunTime != nil {
 			return NewCancunSigner(config.ChainID)
 		}
+		if config.SuaveBlock != nil {
+			return NewOffchainSigner(config.ChainID)
+		}
 		if config.LondonBlock != nil {
 			return NewLondonSigner(config.ChainID)
 		}
@@ -92,7 +97,7 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 	if chainID == nil {
 		return HomesteadSigner{}
 	}
-	return NewCancunSigner(chainID)
+	return NewOffchainSigner(chainID)
 }
 
 // SignTx signs the transaction using the given signer and private key.
@@ -191,6 +196,7 @@ func (s cancunSigner) Sender(tx *Transaction) (common.Address, error) {
 	if tx.Type() != BlobTxType {
 		return s.londonSigner.Sender(tx)
 	}
+
 	V, R, S := tx.RawSignatureValues()
 	// Blob txs are defined to use 0 and 1 as their recovery
 	// id, add 27 to become equivalent to unprotected Homestead signatures.
@@ -242,6 +248,113 @@ func (s cancunSigner) Hash(tx *Transaction) common.Hash {
 			tx.BlobGasFeeCap(),
 			tx.BlobHashes(),
 		})
+}
+
+type suaveSigner struct{ londonSigner }
+
+// NewOffchainSigner returns a signer that accepts
+// - SUAVE offchain transactions
+// - EIP-1559 dynamic fee transactions
+// - EIP-2930 access list transactions,
+// - EIP-155 replay protected transactions, and
+// - legacy Homestead transactions.
+func NewOffchainSigner(chainId *big.Int) Signer {
+	return suaveSigner{londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}}
+}
+
+// For offchain transaction, sender refers to the sender of the original transaction
+func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
+	if tx.Type() != OffchainTxType && tx.Type() != OffchainExecutedTxType {
+		return s.londonSigner.Sender(tx)
+	}
+
+	var offchainTx *Transaction = tx
+	if tx.Type() == OffchainExecutedTxType { // Verify ExecutionNode's signature
+		inner := tx.inner.(*OffchainExecutedTx)
+		offchainTx = NewTx(&OffchainTx{ExecutionNode: inner.ExecutionNode, Wrapped: inner.Wrapped, ChainID: inner.ChainID})
+
+		V, R, S := tx.RawSignatureValues()
+		// DynamicFee txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V = new(big.Int).Add(V, big.NewInt(27))
+		if tx.ChainId().Cmp(s.chainId) != 0 {
+			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, tx.ChainId(), s.chainId)
+		}
+		_, err := recoverPlain(s.Hash(tx), R, S, V, true)
+		if err != nil {
+			return common.Address{}, err
+		}
+	}
+
+	{ // Verify wrapped tx's signature
+		V, R, S := offchainTx.RawSignatureValues()
+		// Offchain txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V = new(big.Int).Add(V, big.NewInt(27))
+		if offchainTx.ChainId().Cmp(s.chainId) != 0 {
+			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, offchainTx.ChainId(), s.chainId)
+		}
+
+		addr, err := recoverPlain(s.Hash(offchainTx), R, S, V, true)
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		return addr, nil
+	}
+}
+
+func (s suaveSigner) Equal(s2 Signer) bool {
+	x, ok := s2.(suaveSigner)
+	return ok && x.chainId.Cmp(s.chainId) == 0
+}
+
+func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	txdataOffchain, ok := tx.inner.(*OffchainTx)
+	if ok {
+		if txdataOffchain.ChainID.Sign() != 0 && txdataOffchain.ChainID.Cmp(s.chainId) != 0 {
+			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdataOffchain.ChainID, s.chainId)
+		}
+		R, S, _ = decodeSignature(sig)
+		V = big.NewInt(int64(sig[64]))
+		return R, S, V, nil
+	}
+
+	txdataExecuted, ok := tx.inner.(*OffchainExecutedTx)
+	if ok {
+		if txdataExecuted.ChainID.Sign() != 0 && txdataExecuted.ChainID.Cmp(s.chainId) != 0 {
+			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdataExecuted.ChainID, s.chainId)
+		}
+		R, S, _ = decodeSignature(sig)
+		V = big.NewInt(int64(sig[64]))
+		return R, S, V, nil
+	}
+
+	return s.londonSigner.SignatureValues(tx, sig)
+}
+
+// Hash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (s suaveSigner) Hash(tx *Transaction) common.Hash {
+	switch tx.Type() {
+	case OffchainTxType:
+		return prefixedRlpHash(
+			tx.Type(),
+			[]interface{}{
+				tx.inner.(*OffchainTx).ExecutionNode,
+				s.Hash(&tx.inner.(*OffchainTx).Wrapped),
+			})
+	case OffchainExecutedTxType:
+		return prefixedRlpHash(
+			tx.Type(),
+			[]interface{}{
+				tx.inner.(*OffchainExecutedTx).ExecutionNode,
+				s.Hash(&tx.inner.(*OffchainExecutedTx).Wrapped),
+				tx.inner.(*OffchainExecutedTx).OffchainResult,
+			})
+	default:
+		return s.londonSigner.Hash(tx)
+	}
 }
 
 type londonSigner struct{ eip2930Signer }

@@ -42,10 +42,12 @@ var (
 
 // Transaction types.
 const (
-	LegacyTxType     = 0x00
-	AccessListTxType = 0x01
-	DynamicFeeTxType = 0x02
-	BlobTxType       = 0x03
+	LegacyTxType           = 0x00
+	AccessListTxType       = 0x01
+	DynamicFeeTxType       = 0x02
+	BlobTxType             = 0x03
+	OffchainTxType         = 0x42
+	OffchainExecutedTxType = 0x43
 )
 
 // Transaction is an Ethereum transaction.
@@ -200,6 +202,14 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner BlobTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
+	case OffchainTxType:
+		var inner OffchainTx
+		err := rlp.DecodeBytes(b[1:], &inner)
+		return &inner, err
+	case OffchainExecutedTxType:
+		var inner OffchainExecutedTx
+		err := rlp.DecodeBytes(b[1:], &inner)
+		return &inner, err
 	default:
 		return nil, ErrTxTypeNotSupported
 	}
@@ -262,6 +272,11 @@ func (tx *Transaction) Protected() bool {
 // Type returns the transaction type.
 func (tx *Transaction) Type() uint8 {
 	return tx.inner.txType()
+}
+
+func CastTxInner[T any](tx *Transaction) (T, bool) {
+	t, ok := tx.inner.(T)
+	return t, ok
 }
 
 // ChainId returns the EIP155 chain ID of the transaction. The return value will always be
@@ -396,10 +411,6 @@ func (tx *Transaction) BlobGasFeeCapIntCmp(other *big.Int) int {
 
 // Hash returns the transaction hash.
 func (tx *Transaction) Hash() common.Hash {
-	if hash := tx.hash.Load(); hash != nil {
-		return hash.(common.Hash)
-	}
-
 	var h common.Hash
 	if tx.Type() == LegacyTxType {
 		h = rlpHash(tx.inner)
