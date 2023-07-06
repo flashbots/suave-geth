@@ -42,6 +42,9 @@ type txJSON struct {
 	Input                *hexutil.Bytes  `json:"input"`
 	AccessList           *AccessList     `json:"accessList,omitempty"`
 	BlobVersionedHashes  []common.Hash   `json:"blobVersionedHashes,omitempty"`
+	ExecutionNode        *common.Address `json:"executionNode,omitempty"`
+	Wrapped              *hexutil.Bytes  `json:"wrapped,omitempty"`
+	OffchainResult       *hexutil.Bytes  `json:"offchainResult,omitempty"`
 	V                    *hexutil.Big    `json:"v"`
 	R                    *hexutil.Big    `json:"r"`
 	S                    *hexutil.Big    `json:"s"`
@@ -112,7 +115,35 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.V = (*hexutil.Big)(itx.V.ToBig())
 		enc.R = (*hexutil.Big)(itx.R.ToBig())
 		enc.S = (*hexutil.Big)(itx.S.ToBig())
+
+	case *OffchainTx:
+		enc.ExecutionNode = &itx.ExecutionNode
+
+		wrapped, err := itx.Wrapped.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+
+		enc.Wrapped = (*hexutil.Bytes)(&wrapped)
+		enc.ChainID = (*hexutil.Big)(itx.ChainID)
+
+	case *OffchainExecutedTx:
+		enc.ExecutionNode = &itx.ExecutionNode
+
+		wrapped, err := itx.Wrapped.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+
+		enc.Wrapped = (*hexutil.Bytes)(&wrapped)
+
+		enc.ChainID = (*hexutil.Big)(itx.ChainID)
+		enc.OffchainResult = (*hexutil.Bytes)(&itx.OffchainResult)
+		enc.V = (*hexutil.Big)(itx.V)
+		enc.R = (*hexutil.Big)(itx.R)
+		enc.S = (*hexutil.Big)(itx.S)
 	}
+
 	return json.Marshal(&enc)
 }
 
@@ -339,6 +370,83 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
 		if withSignature {
 			if err := sanityCheckSignature(itx.V.ToBig(), itx.R.ToBig(), itx.S.ToBig(), false); err != nil {
+				return err
+			}
+		}
+
+	case OffchainTxType:
+		var itx OffchainTx
+		inner = &itx
+
+		if dec.ExecutionNode == nil {
+			return errors.New("missing required field 'executionNode' in transaction")
+		}
+
+		itx.ExecutionNode = *dec.ExecutionNode
+
+		if dec.Wrapped == nil {
+			return errors.New("missing required field 'wrapped' in transaction")
+		}
+
+		var wrappedTx Transaction
+		err := wrappedTx.UnmarshalJSON(([]byte)(*dec.Wrapped))
+		if err != nil {
+			return err
+		}
+
+		itx.Wrapped = wrappedTx
+
+		if dec.ChainID == nil {
+			return errors.New("missing required field 'chainId' in transaction")
+		}
+		itx.ChainID = (*big.Int)(dec.ChainID)
+
+	case OffchainExecutedTxType:
+		var itx OffchainExecutedTx
+		inner = &itx
+
+		if dec.ExecutionNode == nil {
+			return errors.New("missing required field 'executionNode' in transaction")
+		}
+
+		itx.ExecutionNode = *dec.ExecutionNode
+
+		if dec.Wrapped == nil {
+			return errors.New("missing required field 'wrapped' in transaction")
+		}
+
+		var wrappedTx Transaction
+		err := wrappedTx.UnmarshalJSON(([]byte)(*dec.Wrapped))
+		if err != nil {
+			return err
+		}
+
+		itx.Wrapped = wrappedTx
+
+		if dec.OffchainResult != nil {
+			itx.OffchainResult = ([]byte)(*dec.OffchainResult)
+		}
+
+		if dec.ChainID == nil {
+			return errors.New("missing required field 'chainId' in transaction")
+		}
+		itx.ChainID = (*big.Int)(dec.ChainID)
+		// Q: should the signature be required? Maybe, leaving in for now
+		if dec.V == nil {
+			return errors.New("missing required field 'v' in transaction")
+		}
+		itx.V = (*big.Int)(dec.V)
+		if dec.R == nil {
+			return errors.New("missing required field 'r' in transaction")
+		}
+		itx.R = (*big.Int)(dec.R)
+		if dec.S == nil {
+			return errors.New("missing required field 's' in transaction")
+		}
+		itx.S = (*big.Int)(dec.S)
+		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if withSignature {
+			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
 				return err
 			}
 		}

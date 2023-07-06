@@ -55,6 +55,8 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	suave_backends "github.com/ethereum/go-ethereum/suave/backends"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -227,7 +229,20 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil}
+	cdas := suave_backends.NewLocalConfidentialStore()
+	var suaveEthBackend suave.OffchainEthBackend
+	if config.Suave.SuaveEthRemoteBackendEndpoint != "" {
+		suaveEthBackend = suave_backends.NewRemoteEthBackend(config.Suave.SuaveEthRemoteBackendEndpoint)
+	} else {
+		suaveEthBackend = &suave_backends.EthMock{}
+	}
+
+	offchainBackend := &vm.SuaveOffchainBackend{
+		ConfiendialStoreBackend: cdas,
+		MempoolBackned:          suave_backends.NewMempoolOnConfidentialStore(cdas),
+		OffchainEthBackend:      suaveEthBackend,
+	}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, offchainBackend}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}

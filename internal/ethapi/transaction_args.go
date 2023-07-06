@@ -42,6 +42,8 @@ type TransactionArgs struct {
 	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
 	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
 	Value                *hexutil.Big    `json:"value"`
+	ExecutionNode        *common.Address `json:"executionNode"`
+	IsOffchain           bool            `json:"isOffchain"`
 	Nonce                *hexutil.Uint64 `json:"nonce"`
 
 	// We accept "data" and "input" for backwards-compatibility reasons.
@@ -321,6 +323,15 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			Data:     args.data(),
 		}
 	}
+
+	if args.IsOffchain {
+		var executionNode common.Address
+		if args.ExecutionNode != nil {
+			executionNode = *args.ExecutionNode
+		}
+		data = &types.OffchainTx{ExecutionNode: executionNode, Wrapped: *types.NewTx(data), ChainID: (*big.Int)(args.ChainID)}
+	}
+
 	return types.NewTx(data)
 }
 

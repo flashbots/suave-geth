@@ -40,6 +40,7 @@ import (
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -48,6 +49,12 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
+	offchainBackend     *vm.SuaveOffchainBackend
+}
+
+func (b *EthAPIBackend) OffchainBackend() *vm.SuaveOffchainBackend {
+	// For testing purposes
+	return b.offchainBackend
 }
 
 // ChainConfig returns the active chain configuration.
@@ -257,7 +264,12 @@ func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *st
 	} else {
 		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
 	}
-	return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+
+	if vmConfig.IsOffchain {
+		return vm.NewOffchainEVM(b.offchainBackend, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+	} else {
+		return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+	}
 }
 
 func (b *EthAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
@@ -399,6 +411,10 @@ func (b *EthAPIBackend) Miner() *miner.Miner {
 
 func (b *EthAPIBackend) StartMining() error {
 	return b.eth.StartMining()
+}
+
+func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+	return b.eth.Miner().BuildBlockFromTxs(ctx, buildArgs, txs)
 }
 
 func (b *EthAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (*state.StateDB, tracers.StateReleaseFunc, error) {

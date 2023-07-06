@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/scwallet"
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -1019,7 +1020,9 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 	if blockOverrides != nil {
 		blockOverrides.Apply(&blockCtx)
 	}
-	evm, vmError := b.GetEVM(ctx, msg, state, header, &vm.Config{NoBaseFee: true}, &blockCtx)
+
+	vmConfig := vm.Config{NoBaseFee: true, IsOffchain: args.IsOffchain}
+	evm, vmError := b.GetEVM(ctx, msg, state, header, &vmConfig, &blockCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1310,6 +1313,27 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 		fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(ctx, b.Hash()))
 	}
 	return fields, err
+}
+
+func (s *BlockChainAPI) BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	if buildArgs == nil {
+		head := s.b.CurrentHeader()
+		buildArgs = &types.BuildBlockArgs{
+			Parent:       head.Hash(),
+			Timestamp:    head.Time + uint64(12),
+			FeeRecipient: common.Address{0x42},
+			GasLimit:     30000000,
+			Random:       head.Root,
+			Withdrawals:  nil,
+		}
+	}
+
+	block, profit, err := s.b.BuildBlockFromTxs(ctx, buildArgs, txs)
+	if err != nil {
+		return nil, err
+	}
+
+	return engine.BlockToExecutableData(block, profit), nil
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
@@ -1718,6 +1742,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		// Ensure only eip155 signed transactions are submitted if EIP155Required is set.
 		return common.Hash{}, errors.New("only replay-protected (EIP-155) transactions allowed over RPC")
 	}
+
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}
@@ -1740,7 +1765,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
-func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionArgs) (common.Hash, error) {
+func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionArgs, confidential *hexutil.Bytes) (common.Hash, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.from()}
 
@@ -1767,6 +1792,14 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 	if err != nil {
 		return common.Hash{}, err
 	}
+
+	if tx.Type() == types.OffchainTxType {
+		// TODO: this is a huge dos vector!
+		tx, err := s.executeOffchainCall(ctx, tx, confidential)
+		if err != nil {
+			return tx.Hash(), err
+		}
+	}
 	return SubmitTransaction(ctx, s.b, signed)
 }
 
@@ -1789,12 +1822,113 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
-func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
+func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes, confidential *hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
 	if err := tx.UnmarshalBinary(input); err != nil {
 		return common.Hash{}, err
 	}
+
+	if tx.Type() == types.OffchainTxType {
+		// TODO: only if not yet signed
+		// TODO: this is a huge dos vector!
+		ntx, err := s.executeOffchainCall(ctx, tx, confidential)
+		if err != nil {
+			return tx.Hash(), err
+		}
+		tx = ntx
+	}
+
 	return SubmitTransaction(ctx, s.b, tx)
+}
+
+func (s *TransactionAPI) executeOffchainCall(ctx context.Context, tx *types.Transaction, confidential *hexutil.Bytes) (*types.Transaction, error) {
+	defer func(start time.Time) { log.Debug("Executing offchain call finished", "runtime", time.Since(start)) }(time.Now())
+
+	// TODO: copy the inner, but only once
+	offchainTx, ok := types.CastTxInner[*types.OffchainTx](tx)
+	if !ok {
+		return nil, errors.New("invalid transaction passed")
+	}
+
+	// Look up the wallet containing the requested execution node
+	account := accounts.Account{Address: offchainTx.ExecutionNode}
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+
+	state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return nil, err
+	}
+
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+
+	// Make sure the context is cancelled when the call has completed
+	// this makes sure resources are cleaned up.
+	defer cancel()
+
+	// Get a new instance of the EVM.
+	msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
+	if err != nil {
+		return nil, err
+	}
+	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, s.b), nil)
+	evm, vmError := s.b.GetEVM(ctx, msg, state, header, &vm.Config{IsOffchain: true}, &blockCtx)
+
+	if confidential != nil {
+		evm.SetConfidentialInput(*confidential)
+	}
+
+	// Wait for the context to be done and cancel the evm. Even if the
+	// EVM has finished, cancelling may be done (repeatedly)
+	go func() {
+		<-ctx.Done()
+		evm.Cancel()
+	}()
+
+	// Execute the message.
+	gp := new(core.GasPool).AddGas(header.GasLimit)
+
+	msg.SkipAccountChecks = true // validate elsewhere!
+	result, err := core.ApplyMessage(evm, msg, gp)
+	// If the timer caused an abort, return an appropriate error message
+	if evm.Cancelled() {
+		return nil, fmt.Errorf("execution aborted")
+	}
+	if err != nil {
+		return tx, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
+	}
+	if err := vmError(); err != nil {
+		return nil, err
+	}
+
+	if result.Failed() {
+		return nil, fmt.Errorf("%w: %s", result.Err, hexutil.Encode(result.Revert()))
+	}
+
+	// Check for call in return
+	var offchainResult []byte
+
+	args := abi.Arguments{abi.Argument{Type: abi.Type{T: abi.BytesTy}}}
+	unpacked, err := args.Unpack(result.ReturnData)
+	if err == nil && len(unpacked[0].([]byte))%32 == 4 {
+		// This is supposed to be the case for all off-chain smart contracts!
+		offchainResult = unpacked[0].([]byte)
+	} else {
+		offchainResult = result.ReturnData // Or should it be nil maybe in this case?
+	}
+
+	offchainExecutedTxData := &types.OffchainExecutedTx{ExecutionNode: offchainTx.ExecutionNode, Wrapped: offchainTx.Wrapped, OffchainResult: offchainResult}
+
+	signed, err := wallet.SignTx(account, types.NewTx(offchainExecutedTxData), s.b.ChainConfig().ChainID)
+	if err != nil {
+		return nil, err
+	}
+
+	// will copy the inner tx again!
+	return signed, nil
 }
 
 // Sign calculates an ECDSA signature for:
