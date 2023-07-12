@@ -29,9 +29,8 @@ type ConfiendialStoreBackend interface {
 
 type MempoolBackend interface {
 	SubmitBid(Bid) error
-	FetchBids(blockNumber uint64) []Bid
+	// FetchBids(blockNumber uint64) []Bid
 	FetchBidById(BidId) (Bid, error)
-	FetchBidsByBlock(blockNumber uint64) []Bid
 	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
 }
 

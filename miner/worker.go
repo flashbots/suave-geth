@@ -1280,7 +1280,6 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	}
 	blockProfit := new(big.Int).Sub(profitPost, profitPre)
 	return block, blockProfit, nil
-
 }
 
 func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
@@ -1358,7 +1357,6 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 				return nil, nil, err
 			}
 		}
-
 	}
 
 	profitPost := work.state.GetBalance(params.coinbase)
@@ -1389,7 +1387,6 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		return nil, nil, err
 	}
 	return block, proposerProfit, nil
-
 }
 
 func (w *worker) rawCommitTransactions(env *environment, txs types.Transactions) error {

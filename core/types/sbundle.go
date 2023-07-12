@@ -8,7 +8,7 @@ import (
 
 type SBundle struct {
 	Txs             Transactions  `json:"txs"`
-	RevertingHashes []common.Hash `json:"revertingHashes"`
-	RefundPercent   int           `json:"percent"`
-	MatchId         [16]byte      `json:"MatchId"`
+	RevertingHashes []common.Hash `json:"revertingHashes,omitempty"`
+	RefundPercent   int           `json:"percent,omitempty"`
+	MatchId         [16]byte      `json:"MatchId,omitempty"`
 }

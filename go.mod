@@ -25,7 +25,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
-	github.com/flashbots/go-boost-utils v1.6.0
+	github.com/flashbots/go-boost-utils v1.7.0
 	github.com/flashbots/mev-boost-relay v0.20.1-0.20230508091414-343c03b7b0c4
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff

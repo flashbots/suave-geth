@@ -98,8 +98,9 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	fetchBidsAddress:   newFetchBids(),
 	extractHintAddress: &extractHint{},
 
-	simulateBundleAddress: &simulateBundle{},
-	buildEthBlockAddress:  &buildEthBlock{},
+	simulateBundleAddress:           &simulateBundle{},
+	buildEthBlockAddress:            &buildEthBlock{},
+	submitEthBlockBidToRelayAddress: &submitEthBlockBidToRelay{},
 }
 
 // PrecompiledContractsBerlin contains the default set of pre-compiled Ethereum

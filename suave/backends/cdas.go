@@ -87,7 +87,7 @@ func (s *LocalConfidentialStore) Retrieve(bidId suave.BidId, caller common.Addre
 
 	data, found := bidAcd.dataMap[key]
 	if !found {
-		return []byte{}, errors.New("data not found")
+		return []byte{}, fmt.Errorf("data for key %s not found", key)
 	}
 
 	log.Trace("CSRW", "caller", caller, "key", key, "data", data)
