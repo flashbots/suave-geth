@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -1277,9 +1278,118 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	if err != nil {
 		return nil, nil, err
 	}
-
 	blockProfit := new(big.Int).Sub(profitPost, profitPre)
 	return block, blockProfit, nil
+
+}
+
+func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+	// create ephemeral addr and private key for payment txn
+	ephemeralPrivKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+	ephemeralAddr := crypto.PubkeyToAddress(ephemeralPrivKey.PublicKey)
+
+	params := &generateParams{
+		timestamp:   args.Timestamp,
+		forceTime:   true,
+		parentHash:  args.Parent,
+		coinbase:    ephemeralAddr, // NOTE : overriding BuildBlockArgs.FeeRecipient
+		gasLimit:    args.GasLimit,
+		random:      args.Random,
+		withdrawals: args.Withdrawals,
+		noUncle:     true,
+		noTxs:       false,
+	}
+
+	work, err := w.prepareWork(params)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer work.discard()
+
+	// Assume static 28000 gas transfers for both mev-share and proposer payments
+	refundTransferCost := new(big.Int).Mul(big.NewInt(28000), work.header.BaseFee)
+
+	profitPre := work.state.GetBalance(params.coinbase)
+
+	for _, bundle := range bundles {
+		// NOTE: failing bundles will cause the block to not be built!
+
+		// apply bundle
+		profitPreBundle := work.state.GetBalance(params.coinbase)
+		if err := w.rawCommitTransactions(work, bundle.Txs); err != nil {
+			return nil, nil, err
+		}
+		profitPostBundle := work.state.GetBalance(params.coinbase)
+
+		// calc & refund user if bundle has multiple txns
+		if len(bundle.Txs) > 1 {
+			// Note: PoC logic, this could be gamed by not sending any eth to coinbase
+			refundPrct := bundle.RefundPercent
+			if refundPrct == 0 {
+				// default refund
+				refundPrct = 10
+			}
+			bundleProfit := new(big.Int).Sub(profitPostBundle, profitPreBundle)
+			refundAmt := new(big.Int).Div(bundleProfit, big.NewInt(int64(refundPrct)))
+			// subtract payment txn transfer costs
+			refundAmt = new(big.Int).Sub(refundAmt, refundTransferCost)
+
+			currNonce := work.state.GetNonce(ephemeralAddr)
+			// HACK to include payment txn
+			// multi refund block untested
+			bidTx := bundle.Txs[0] // NOTE : assumes first txn is refund recipient
+			paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+				Nonce:    currNonce,
+				To:       bidTx.To(),
+				Value:    refundAmt,
+				Gas:      28000,
+				GasPrice: work.header.BaseFee,
+			}), work.signer, ephemeralPrivKey)
+
+			if err != nil {
+				return nil, nil, err
+			}
+
+			// commit payment txn
+			if err := w.rawCommitTransactions(work, types.Transactions{paymentTx}); err != nil {
+				return nil, nil, err
+			}
+		}
+
+	}
+
+	profitPost := work.state.GetBalance(params.coinbase)
+	proposerProfit := new(big.Int).Set(profitPost) // = post-pre-transfer_cost
+	proposerProfit = proposerProfit.Sub(profitPost, profitPre)
+	proposerProfit = proposerProfit.Sub(proposerProfit, refundTransferCost)
+
+	currNonce := work.state.GetNonce(ephemeralAddr)
+	paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    currNonce,
+		To:       &args.FeeRecipient,
+		Value:    proposerProfit,
+		Gas:      28000,
+		GasPrice: work.header.BaseFee,
+	}), work.signer, ephemeralPrivKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
+	}
+
+	// commit payment txn
+	if err := w.rawCommitTransactions(work, types.Transactions{paymentTx}); err != nil {
+		return nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
+	}
+
+	log.Info("buildBlockFromBundles", "num_bundles", len(bundles), "num_txns", len(work.txs), "profit", proposerProfit)
+	block, err := w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts, params.withdrawals)
+	if err != nil {
+		return nil, nil, err
+	}
+	return block, proposerProfit, nil
+
 }
 
 func (w *worker) rawCommitTransactions(env *environment, txs types.Transactions) error {

@@ -348,3 +348,7 @@ func (b *backendMock) Engine() consensus.Engine { return nil }
 func (b *backendMock) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	return nil, nil, errors.New("not implemented")
 }
+
+func (b *backendMock) BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+	return nil, nil, errors.New("not implemented")
+}

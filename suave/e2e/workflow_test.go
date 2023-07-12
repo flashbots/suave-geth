@@ -134,20 +134,22 @@ func TestMempool(t *testing.T) {
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
+			Version:             "default:v0",
 		}
 
 		bid2 := suave.Bid{
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
+			Version:             "default:v0",
 		}
 
 		ethservice.APIBackend.OffchainBackend().MempoolBackned.SubmitBid(bid1)
 		ethservice.APIBackend.OffchainBackend().MempoolBackned.SubmitBid(bid2)
 
-		inoutAbi := mustParseMethodAbi(`[{"inputs":[{"internalType":"uint64","name":"cond","type":"uint64"}],"name":"fetchBids","outputs":[{"components":[{"internalType":"Suave.BidId","name":"id","type":"bytes16"},{"internalType":"uint64","name":"decryptionCondition","type":"uint64"},{"internalType":"address[]","name":"allowedPeekers","type":"address[]"}],"internalType":"struct Suave.Bid[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"}]`, "fetchBids")
+		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
-		calldata, err := inoutAbi.Inputs.Pack(targetBlock)
+		calldata, err := inoutAbi.Inputs.Pack(targetBlock, "default:v0")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -166,17 +168,20 @@ func TestMempool(t *testing.T) {
 			Id                  [16]uint8        "json:\"id\""
 			DecryptionCondition uint64           "json:\"decryptionCondition\""
 			AllowedPeekers      []common.Address "json:\"allowedPeekers\""
+			Version             string           `json:"version"`
 		})
 
 		require.Equal(t, bid1, suave.Bid{
 			Id:                  bids[0].Id,
 			DecryptionCondition: bids[0].DecryptionCondition,
 			AllowedPeekers:      bids[0].AllowedPeekers,
+			Version:             bids[0].Version,
 		})
 		require.Equal(t, bid2, suave.Bid{
 			Id:                  bids[1].Id,
 			DecryptionCondition: bids[1].DecryptionCondition,
 			AllowedPeekers:      bids[1].AllowedPeekers,
+			Version:             bids[1].Version,
 		})
 
 		// Verify via transaction
@@ -357,10 +362,11 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{common.Address{0x41, 0x42, 0x43}, buildEthBlockAddress},
+			Version:             "default:v0",
 		}
 
 		ethservice.APIBackend.OffchainBackend().MempoolBackned.SubmitBid(bid)
-		ethservice.APIBackend.OffchainBackend().ConfiendialStoreBackend.Initialize(bid, "ethBundle", bundleBytes)
+		ethservice.APIBackend.OffchainBackend().ConfiendialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
 		ethHead := ethEthService.BlockChain().CurrentBlock()
 		payloadArgsTuple := struct {
@@ -380,7 +386,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			FeeRecipient: common.Address{0x42},
 		}
 
-		packed, err := suaveLibAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id)
+		packed, err := suaveLibAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "default:v0")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -438,9 +444,11 @@ func TestBlockBuildingContract(t *testing.T) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
+		Version         string             `json:"version"`
 	}{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
+		Version:         "default:v0",
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	require.NoError(t, err)
@@ -528,6 +536,211 @@ func TestBlockBuildingContract(t *testing.T) {
 	}
 }
 
+func TestMevShare(t *testing.T) {
+
+	// 1. craft mevshare transaction
+	//   1a. confirm submission
+	// 2. send backrun txn
+	//	 2a. confirm submission
+	// 3. build share block
+	//   3a. confirm share bundle
+
+	ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
+	defer ethNode.Close()
+	ethEthService.APIs()
+
+	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: "http://127.0.0.1:8596"})
+	defer node.Close()
+	ethservice.APIs()
+
+	rpc, err := node.Attach()
+	require.NoError(t, err)
+
+	// ************ 1. Initial mevshare transaction Portion ************
+	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr,
+		Value:    big.NewInt(1000),
+		Gas:      21000,
+		GasPrice: big.NewInt(13),
+		Data:     []byte{},
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	bundle := types.SBundle{
+		Txs:             types.Transactions{ethTx},
+		RevertingHashes: []common.Hash{},
+		RefundPercent:   10,
+	}
+	bundleBytes, err := json.Marshal(bundle)
+	t.Log("extractHint", "bundleBytes", bundleBytes)
+	require.NoError(t, err)
+
+	targetBlock := uint64(1)
+
+	// Send a bundle bid
+	allowedPeekers := []common.Address{common.Address{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
+	calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
+	require.NoError(t, err)
+
+	wrappedTxData := &types.LegacyTx{
+		Nonce:    0,
+		To:       &mevShareAddress,
+		Value:    nil,
+		Gas:      1000069,
+		GasPrice: big.NewInt(10),
+		Data:     calldata,
+	}
+
+	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		ExecutionNode: ethservice.AccountManager().Accounts()[0],
+		Wrapped:       *types.NewTx(wrappedTxData),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	offchainTxBytes, err := offchainTx.MarshalBinary()
+	require.NoError(t, err)
+
+	// TODO : reusing this function selector from bid contract to avoid creating another ABI
+	confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+	require.NoError(t, err)
+
+	var offchainTxHash common.Hash
+	requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+
+	//   1a. confirm submission
+	block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+	require.Equal(t, 1, len(block.Transactions()))
+	// check txn in block went to mev share
+	require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
+
+	// 2b. check logs emitted in the transaction
+	var r *types.Receipt
+	rpc.Call(&r, "eth_getTransactionReceipt", block.Transactions()[0].Hash())
+	require.NotEmpty(t, r)
+
+	t.Log("logs", r.Logs)
+	require.NoError(t, err)
+	require.NotEmpty(t, r.Logs)
+
+	// extract share BidId
+	unpacked, err := matchBidAbi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
+	require.NoError(t, err)
+	shareBidId := unpacked[0].([16]byte)
+
+	// ************ 2. Match Portion ************
+	backrunTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr,
+		Value:    big.NewInt(1000),
+		Gas:      21420,
+		GasPrice: big.NewInt(13),
+		Data:     []byte{},
+	}), signer, testKey2)
+	require.NoError(t, err)
+
+	backRunBundle := types.SBundle{
+		Txs:             types.Transactions{backrunTx},
+		RevertingHashes: []common.Hash{},
+		MatchId:         shareBidId,
+	}
+	backRunBundleBytes, err := json.Marshal(backRunBundle)
+	require.NoError(t, err)
+
+	// decryption conditions are assumed to be eth blocks right now
+	backRunCalldata, err := matchBidAbi.Pack("newMatch", targetBlock+1, allowedPeekers, shareBidId)
+	require.NoError(t, err)
+
+	wrappedMatchTxData := &types.LegacyTx{
+		Nonce:    1,
+		To:       &mevShareAddress,
+		Value:    nil,
+		Gas:      1000069,
+		GasPrice: big.NewInt(10),
+		Data:     backRunCalldata,
+	}
+
+	offchainMatchTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		ExecutionNode: ethservice.AccountManager().Accounts()[0],
+		Wrapped:       *types.NewTx(wrappedMatchTxData),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	offchainMatchTxBytes, err := offchainMatchTx.MarshalBinary()
+	require.NoError(t, err)
+
+	// TODO : reusing this function selector from bid contract to avoid creating another ABI
+	confidentialDataMatchBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
+	require.NoError(t, err)
+
+	var offchainMatchTxHash common.Hash
+	requireNoRpcError(t, rpc.Call(&offchainMatchTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainMatchTxBytes), hexutil.Encode(confidentialDataMatchBytes)))
+
+	block = progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+	require.Equal(t, 1, len(block.Transactions()))
+	// check txn in block went to mev share
+	require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
+
+	var r2 *types.Receipt
+	rpc.Call(&r2, "eth_getTransactionReceipt", block.Transactions()[0].Hash())
+	require.NotEmpty(t, r2)
+	require.NotEmpty(t, r.Logs)
+
+	t.Log("logs", r2.Logs)
+
+	// ************ 3. Build Share Block ************
+
+	ethHead := ethEthService.BlockChain().CurrentBlock()
+	payloadArgsTuple := struct {
+		Parent       common.Hash
+		Timestamp    uint64
+		FeeRecipient common.Address
+		GasLimit     uint64
+		Random       common.Hash
+		Withdrawals  []struct {
+			Index     uint64
+			Validator uint64
+			Address   common.Address
+			Amount    uint64
+		}
+	}{
+		Timestamp:    ethHead.Time + uint64(12),
+		FeeRecipient: common.Address{0x42},
+	}
+
+	calldata, err = buildEthBlockAbi.Pack("buildMevShare", payloadArgsTuple, targetBlock+1)
+	require.NoError(t, err)
+
+	wrappedTxDataBB := &types.LegacyTx{
+		Nonce:    2,
+		To:       &newBlockBidAddress,
+		Value:    nil,
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+		Data:     calldata,
+	}
+
+	offchainTxBB, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		ExecutionNode: ethservice.AccountManager().Accounts()[0],
+		Wrapped:       *types.NewTx(wrappedTxDataBB),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	offchainTxBytesBB, err := offchainTxBB.MarshalBinary()
+	require.NoError(t, err)
+
+	var offchainTxHashBB common.Hash
+	requireNoRpcError(t, rpc.Call(&offchainTxHashBB, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytesBB)))
+
+	block = progressChain(t, ethservice, block.Header())
+	require.Equal(t, 1, len(block.Transactions()))
+
+	var r3 *types.Receipt
+	requireNoRpcError(t, rpc.Call(&r3, "eth_getTransactionReceipt", block.Transactions()[0].Hash()))
+	require.NotEmpty(t, r3.Logs)
+
+}
+
 // Utilities
 
 var (
@@ -536,6 +749,11 @@ var (
 
 	// testAddr is the Ethereum address of the tester account.
 	testAddr = crypto.PubkeyToAddress(testKey.PublicKey)
+
+	testKey2, _ = crypto.HexToECDSA("a71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+
+	// testAddr is the Ethereum address of the tester account.
+	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
 	testBalance = big.NewInt(2e18)
 
@@ -547,6 +765,8 @@ var (
 	fetchBidsAddress    = common.HexToAddress("0x42030001")
 	newBundleBidAddress = common.HexToAddress("0x42300000")
 	newBlockBidAddress  = common.HexToAddress("0x42300001")
+	extractHintAddress  = common.HexToAddress("0x42100037")
+	mevShareAddress     = common.HexToAddress("0x42100073")
 
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
@@ -559,8 +779,10 @@ var (
 		Difficulty: big.NewInt(0),
 		Alloc: core.GenesisAlloc{
 			testAddr:            {Balance: testBalance},
+			testAddr2:           {Balance: testBalance},
 			newBundleBidAddress: {Balance: big.NewInt(0), Code: hexutil.MustDecode(core.BidsContractCode)},
 			newBlockBidAddress:  {Balance: big.NewInt(0), Code: hexutil.MustDecode(core.BlockBidContractCode)},
+			mevShareAddress:     {Balance: big.NewInt(0), Code: hexutil.MustDecode(core.MevShareBidContractCode)},
 		},
 	}
 
@@ -570,7 +792,10 @@ var (
 		GasLimit:   30000000,
 		BaseFee:    big.NewInt(0),
 		Difficulty: big.NewInt(0),
-		Alloc:      core.GenesisAlloc{testAddr: {Balance: testBalance}},
+		Alloc: core.GenesisAlloc{
+			testAddr:  {Balance: testBalance},
+			testAddr2: {Balance: testBalance},
+		},
 	}
 
 	signer = types.NewOffchainSigner(params.AllEthashProtocolChanges.ChainID)
@@ -689,9 +914,11 @@ func requireNoRpcError(t *testing.T, rpcErr error) {
 		}
 
 		unpacked, err := suaveLibAbi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
-		require.NoError(t, err, rpcErr.Error())
-
-		require.NoError(t, rpcErr, string(unpacked[1].([]byte)))
+		if len(unpacked) < 2 {
+			require.NoError(t, err, rpcErr.Error())
+		} else {
+			require.NoError(t, rpcErr, string(unpacked[1].([]byte)))
+		}
 	}
 }
 
@@ -714,9 +941,11 @@ func mustParseAbi(data string) abi.ABI {
 }
 
 var (
-	suaveLibAbi = mustParseAbi(`[{ "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "Suave.BidId", "name": "bid", "type": "bytes16" } ], "name": "buildEthBlock", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "", "type": "address" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "name": "PeekerReverted", "type": "error" }]`)
+	suaveLibAbi = mustParseAbi(`[ { "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "Suave.BidId", "name": "bid", "type": "bytes16" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "buildEthBlock", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "", "type": "address" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "name": "PeekerReverted", "type": "error" }]`)
 
-	bundleBidAbi = mustParseAbi(`[ { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "indexed": false, "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "name": "BidEvent", "type": "event" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" } ], "name": "emitBid", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "fetchBidConfidentialBundleData", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "bidAllowedPeekers", "type": "address[]" } ], "name": "newBid", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "payable", "type": "function" } ]`)
+	bundleBidAbi = mustParseAbi(`[{ "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "indexed": false, "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "name": "BidEvent", "type": "event" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" } ], "name": "emitBid", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "fetchBidConfidentialBundleData", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "bidAllowedPeekers", "type": "address[]" } ], "name": "newBid", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "payable", "type": "function" } ]`)
 
-	buildEthBlockAbi = mustParseAbi(`[ { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "indexed": false, "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "name": "BidEvent", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "bytes", "name": "builderBid", "type": "bytes" } ], "name": "BuilderBoostBidEvent", "type": "event" }, { "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "uint64", "name": "blockHeight", "type": "uint64" }, { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid[]", "name": "bids", "type": "tuple[]" } ], "name": "build", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "uint64", "name": "blockHeight", "type": "uint64" } ], "name": "buildFromPool", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" } ], "name": "emitBid", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" }, { "internalType": "bytes", "name": "builderBid", "type": "bytes" } ], "name": "emitBuilderBidAndBid", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "", "type": "tuple" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "internalType": "bytes", "name": "signedBlindedHeader", "type": "bytes" } ], "name": "unlock", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" } ]`)
+	matchBidAbi = mustParseAbi(`[ { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "indexed": false, "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "name": "BidEvent", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "bytes", "name": "hint", "type": "bytes" } ], "name": "HintEvent", "type": "event" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" } ], "name": "emitBid", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "fetchBidConfidentialBundleData", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "bidAllowedPeekers", "type": "address[]" } ], "name": "newBid", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "payable", "type": "function" }, { "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "bidAllowedPeekers", "type": "address[]" }, { "internalType": "Suave.BidId", "name": "shareBidId", "type": "bytes16" } ], "name": "newMatch", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "payable", "type": "function" } ]`)
+
+	buildEthBlockAbi = mustParseAbi(`[ { "inputs": [ { "internalType": "address", "name": "", "type": "address" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "name": "PeekerReverted", "type": "error" }, { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "indexed": false, "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "name": "BidEvent", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "indexed": false, "internalType": "bytes", "name": "builderBid", "type": "bytes" } ], "name": "BuilderBoostBidEvent", "type": "event" }, { "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "uint64", "name": "blockHeight", "type": "uint64" }, { "internalType": "Suave.BidId[]", "name": "bids", "type": "bytes16[]" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "build", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "uint64", "name": "blockHeight", "type": "uint64" } ], "name": "buildFromPool", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "bytes32", "name": "parent", "type": "bytes32" }, { "internalType": "uint64", "name": "timestamp", "type": "uint64" }, { "internalType": "address", "name": "feeRecipient", "type": "address" }, { "internalType": "uint64", "name": "gasLimit", "type": "uint64" }, { "internalType": "bytes32", "name": "random", "type": "bytes32" }, { "components": [ { "internalType": "uint64", "name": "index", "type": "uint64" }, { "internalType": "uint64", "name": "validator", "type": "uint64" }, { "internalType": "address", "name": "Address", "type": "address" }, { "internalType": "uint64", "name": "amount", "type": "uint64" } ], "internalType": "struct Suave.Withdrawal[]", "name": "withdrawals", "type": "tuple[]" } ], "internalType": "struct Suave.BuildBlockArgs", "name": "blockArgs", "type": "tuple" }, { "internalType": "uint64", "name": "blockHeight", "type": "uint64" } ], "name": "buildMevShare", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" } ], "name": "emitBid", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "bid", "type": "tuple" }, { "internalType": "bytes", "name": "builderBid", "type": "bytes" } ], "name": "emitBuilderBidAndBid", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "", "type": "tuple" }, { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "Suave.BidId", "name": "bidId", "type": "bytes16" }, { "internalType": "bytes", "name": "signedBlindedHeader", "type": "bytes" } ], "name": "unlock", "outputs": [ { "internalType": "bytes", "name": "", "type": "bytes" } ], "stateMutability": "nonpayable", "type": "function" } ]`)
 )

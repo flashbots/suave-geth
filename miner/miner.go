@@ -257,3 +257,7 @@ func (miner *Miner) BuildPayload(args *BuildPayloadArgs) (*Payload, error) {
 func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	return miner.worker.buildBlockFromTxs(ctx, buildArgs, txs)
 }
+
+func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+	return miner.worker.buildBlockFromBundles(ctx, buildArgs, bundles)
+}

@@ -1336,6 +1336,27 @@ func (s *BlockChainAPI) BuildEth2Block(ctx context.Context, buildArgs *types.Bui
 	return engine.BlockToExecutableData(block, profit), nil
 }
 
+func (s *BlockChainAPI) BuildEth2BlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	if buildArgs == nil {
+		head := s.b.CurrentHeader()
+		buildArgs = &types.BuildBlockArgs{
+			Parent:       head.Hash(),
+			Timestamp:    head.Time + uint64(12),
+			FeeRecipient: common.Address{0x42},
+			GasLimit:     30000000,
+			Random:       head.Root,
+			Withdrawals:  nil,
+		}
+	}
+
+	block, profit, err := s.b.BuildBlockFromBundles(ctx, buildArgs, bundles)
+	if err != nil {
+		return nil, err
+	}
+
+	return engine.BlockToExecutableData(block, profit), nil
+}
+
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 type RPCTransaction struct {
 	BlockHash        *common.Hash      `json:"blockHash"`
