@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -27,8 +28,9 @@ var (
 	confStoreStoreAddress    = common.HexToAddress("0x42020000")
 	confStoreRetrieveAddress = common.HexToAddress("0x42020001")
 
-	newBidAddress    = common.HexToAddress("0x42030000")
-	fetchBidsAddress = common.HexToAddress("0x42030001")
+	newBidAddress      = common.HexToAddress("0x42030000")
+	fetchBidsAddress   = common.HexToAddress("0x42030001")
+	extractHintAddress = common.HexToAddress("0x42100037")
 
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
@@ -163,6 +165,8 @@ func (c *confStoreRetrieve) RunOffchain(backend *SuaveOffchainBackend, input []b
 	bidId := unpacked[0].([16]byte)
 	key := unpacked[1].(string)
 
+	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
+
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
 	for i := len(backend.callerStack) - 1; i >= 0; i-- {
@@ -188,7 +192,7 @@ type newBid struct {
 }
 
 func newNewBid() *newBid {
-	inoutAbi := mustParseMethodAbi(`[{ "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "name": "newBid", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "", "type": "tuple" } ], "stateMutability": "view", "type": "function" }]`, "newBid")
+	inoutAbi := mustParseMethodAbi(`[{ "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "BidType", "type": "string" } ], "name": "newBid", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "", "type": "tuple" } ], "stateMutability": "view", "type": "function" }]`, "newBid")
 
 	return &newBid{inoutAbi}
 }
@@ -202,10 +206,12 @@ func (c *newBid) Run(input []byte) ([]byte, error) {
 }
 
 func (c *newBid) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
+	version := unpacked[2].(string)
 
 	decryptionCondition := unpacked[0].(uint64)
 	allowedPeekers := unpacked[1].([]common.Address)
@@ -213,6 +219,7 @@ func (c *newBid) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byt
 		Id:                  suave.BidId(uuid.New()),
 		DecryptionCondition: decryptionCondition,
 		AllowedPeekers:      allowedPeekers,
+		Version:             version, // TODO : make generic
 	}
 
 	bid, err = backend.ConfiendialStoreBackend.Initialize(bid, "", nil)
@@ -233,7 +240,7 @@ type fetchBids struct {
 }
 
 func newFetchBids() *fetchBids {
-	inoutAbi := mustParseMethodAbi(`[{"inputs":[{"internalType":"uint64","name":"cond","type":"uint64"}],"name":"fetchBids","outputs":[{"components":[{"internalType":"Suave.BidId","name":"id","type":"bytes16"},{"internalType":"uint64","name":"decryptionCondition","type":"uint64"},{"internalType":"address[]","name":"allowedPeekers","type":"address[]"}],"internalType":"struct Suave.Bid[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"}]`, "fetchBids")
+	inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
 	return &fetchBids{inoutAbi}
 }
@@ -253,8 +260,10 @@ func (c *fetchBids) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]
 	}
 
 	targetBlock := unpacked[0].(uint64)
+	namespace := unpacked[1].(string)
 
-	bids := backend.MempoolBackned.FetchBids(targetBlock)
+	bids := backend.MempoolBackned.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+
 	return c.inoutAbi.Outputs.Pack(bids)
 }
 
@@ -319,12 +328,11 @@ func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
 }
 
 func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
-	unpacked, err := precompilesAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
+	unpacked, err := buildBlockPrecompileAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
 
-	// blockArgs := unpacked[0].(types.BuildBlockArgs)
 	blockArgsRaw := unpacked[0].(struct {
 		Parent       [32]uint8      "json:\"parent\""
 		Timestamp    uint64         "json:\"timestamp\""
@@ -338,7 +346,6 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte)
 			Amount    uint64         "json:\"amount\""
 		} "json:\"withdrawals\""
 	})
-
 	blockArgs := types.BuildBlockArgs{
 		Parent:       blockArgsRaw.Parent,
 		Timestamp:    blockArgsRaw.Timestamp,
@@ -358,9 +365,10 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte)
 	}
 
 	bidId := unpacked[1].(suave.BidId)
-
+	namespace := unpacked[2].(string)
 	var bidIds = []suave.BidId{}
-	if mergedBidsBytes, err := backend.ConfiendialStoreBackend.Retrieve(bidId, buildEthBlockAddress, "mergedBids"); err == nil {
+	// first check for merged bid, else assume regular bid
+	if mergedBidsBytes, err := backend.ConfiendialStoreBackend.Retrieve(bidId, buildEthBlockAddress, namespace+":mergedBids"); err == nil {
 		bidIdsAbi := mustParseMethodAbi(`[{"inputs": [{ "type": "bytes16[]" }], "name": "bidids", "outputs":[], "type": "function"}]`, "bidids")
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
 		if err != nil {
@@ -372,26 +380,52 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte)
 	}
 
 	var txs types.Transactions
+	var bundles []types.SBundle
+	idToBundle := make(map[suave.BidId]types.SBundle)
+	var zero [16]byte
 	for _, bidId := range bidIds {
-		bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bidId, buildEthBlockAddress, "ethBundle")
+		bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bidId, buildEthBlockAddress, namespace+":ethBundles")
 		if err != nil {
 			return []byte(err.Error()), err
 		}
 
-		bundle := struct {
-			Txs             types.Transactions `json:"txs"`
-			RevertingHashes []common.Hash      `json:"revertingHashes"`
-		}{}
+		bundle := types.SBundle{}
 		if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
 			return []byte(err.Error()), err
 		}
 		txs = append(txs, bundle.Txs...)
+		idToBundle[bidId] = bundle
+		if bundle.MatchId != zero {
+			bundles = append(bundles, bundle)
+		}
+
 	}
 
-	envelope, err := backend.OffchainEthBackend.BuildEthBlock(context.TODO(), &blockArgs, txs)
+	var mergedBundles []types.SBundle
+	for _, b := range bundles {
+		// hack: merge relevant bundles
+		// need to create a mergeBid precompile imo
+		match, success := idToBundle[b.MatchId]
+		if success {
+			var mergedTxs types.Transactions
+			mergedTxs = append(mergedTxs, match.Txs...)
+			mergedTxs = append(mergedTxs, b.Txs...)
+			b.Txs = mergedTxs
+			b.RefundPercent = match.RefundPercent
+		}
+
+		mergedBundles = append(mergedBundles, b)
+	}
+
+	envelope, err := backend.OffchainEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
+
+	// envelope, err := backend.OffchainEthBackend.BuildEthBlock(context.TODO(), &blockArgs, txs)
+	// if err != nil {
+	// 	return []byte(err.Error()), err
+	// }
 
 	/*
 		"github.com/attestantio/go-builder-client/api/capella"
@@ -433,7 +467,52 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte)
 		return []byte(err.Error()), err
 	}
 
-	return precompilesAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
+	return buildBlockPrecompileAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
+}
+
+type extractHint struct{}
+
+func (c *extractHint) RequiredGas(input []byte) uint64 {
+	return 10000
+}
+
+func (c *extractHint) Run(input []byte) ([]byte, error) {
+	return input, nil
+}
+
+func (c *extractHint) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+	unpacked, err := peekerPrecompileAbi.Methods["extractHint"].Inputs.Unpack(input)
+	if err != nil {
+		return []byte(err.Error()), err
+	}
+
+	bundleBytes := unpacked[0].([]byte)
+	bundle := struct {
+		Txs             types.Transactions `json:"txs"`
+		RevertingHashes []common.Hash      `json:"revertingHashes"`
+		RefundPercent   int                `json:"percent"`
+		MatchId         [16]byte           `json:"MatchId"`
+	}{}
+
+	err = json.Unmarshal(bundleBytes, &bundle)
+	if err != nil {
+		return []byte(err.Error()), err
+	}
+
+	tx := bundle.Txs[0]
+	hint := struct {
+		To   common.Address
+		Data []byte
+	}{
+		To:   *tx.To(),
+		Data: tx.Data(),
+	}
+
+	hintBytes, err := json.Marshal(hint)
+	if err != nil {
+		return []byte(err.Error()), err
+	}
+	return hintBytes, nil
 }
 
 func mustParseAbi(data string) abi.ABI {

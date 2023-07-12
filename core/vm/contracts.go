@@ -94,8 +94,9 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	confStoreStoreAddress:    newConfStoreStore(),
 	confStoreRetrieveAddress: newConfStoreRetrieve(),
 
-	newBidAddress:    newNewBid(),
-	fetchBidsAddress: newFetchBids(),
+	newBidAddress:      newNewBid(),
+	fetchBidsAddress:   newFetchBids(),
+	extractHintAddress: &extractHint{},
 
 	simulateBundleAddress: &simulateBundle{},
 	buildEthBlockAddress:  &buildEthBlock{},

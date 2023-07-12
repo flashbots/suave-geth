@@ -18,6 +18,8 @@ library Suave {
         0x0000000000000000000000000000000042030000;
     address public constant FETCH_BIDS =
         0x0000000000000000000000000000000042030001;
+    address public constant EXTRACT_HINT =
+        0x0000000000000000000000000000000042100037;
 
     // Not implemented yet!
     address public constant SIMULATE_BUNDLE_PEEKER =
@@ -61,52 +63,26 @@ library Suave {
         }
     }
 
+    // Temporay with this call
     function confidentialInputs() internal view returns (bytes memory) {
-		require(isOffchain());
-
         (bool success, bytes memory inputs) = CONFIDENTIAL_INPUTS.staticcall("");
         require(success);
         return inputs;
     }
 
     // Generates a new, random id and stores the bid
-    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers) internal view returns (Bid memory) {
-		require(isOffchain());
-
-        (bool success, bytes memory bidBytes) = NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers));
+    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, string memory BidType) internal view returns (Bid memory) {
+        (bool success, bytes memory bidBytes) = NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers, BidType));
         if (!success) {
             revert PeekerReverted(NEW_BID, bidBytes);
         }
         return abi.decode(bidBytes, (Bid));
     }
 
-    // Stores confidential bid's data
-    // Both the caller AND store peeker have to be allowed on the bid!
-    function confidentialStoreStore(BidId bidId, string memory key, bytes memory data) internal view {
-		require(isOffchain());
-
-        (bool success, bytes memory resp) = CONFIDENTIAL_STORE.staticcall(abi.encode(bidId, key, data));
-        if (!success) {
-            revert PeekerReverted(CONFIDENTIAL_STORE, resp);
-        }
-    }
-
-    function confidentialStoreRetrieve(BidId bidId, string memory key) internal view returns (bytes memory) {
-		require(isOffchain());
-
-        (bool success, bytes memory data) = CONFIDENTIAL_RETRIEVE.staticcall(abi.encode(bidId, key));
-        if (!success) {
-            revert PeekerReverted(CONFIDENTIAL_RETRIEVE, data);
-        }
-        return data;
-    }
-
 	// Returns bids matching the decryption condition.
-	function fetchBids(uint64 cond) internal view returns (Bid[] memory) {
-		require(isOffchain());
-
+	function fetchBids(uint64 cond, string memory namespace) internal view returns (Bid[] memory) {
         (bool success, bytes memory packedBids) = FETCH_BIDS.staticcall(
-            abi.encode(cond)
+            abi.encode(cond, namespace)
         );
         if (!success) {
             revert PeekerReverted(FETCH_BIDS, packedBids);
@@ -115,10 +91,26 @@ library Suave {
         return bids;
     }
 
-    function simulateBundle(bytes memory bundleData) internal view returns (bool, uint64) { // returns egp
-		require(isOffchain());
+     // Stores confidential bid's data
+    // Both the caller AND store peeker have to be allowed on the bid!
+    function confidentialStoreStore(BidId bidId, string memory key, bytes memory data) internal view {
+        (bool success, bytes memory resp) = CONFIDENTIAL_STORE.staticcall(abi.encode(bidId, key, data));
+        if (!success) {
+            revert PeekerReverted(CONFIDENTIAL_STORE, resp);
+        }
+    }
 
+    function confidentialStoreRetrieve(BidId bidId, string memory key) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = CONFIDENTIAL_RETRIEVE.staticcall(abi.encode(bidId, key));
+        if (!success) {
+            revert PeekerReverted(CONFIDENTIAL_RETRIEVE, data);
+        }
+        return data;
+    }
+
+    function simulateBundle(bytes memory bundleData) internal view returns (bool, uint64) { // returns egp
         (bool success, bytes memory simResults) = SIMULATE_BUNDLE_PEEKER.staticcall(bundleData);
+        require(success, "Bundle simulation failed");
         return (success, abi.decode(simResults, (uint64)));
     }
 
@@ -126,15 +118,22 @@ library Suave {
 	// Returns a bid which contains the built block and can be queried.
 	// The input bid may contain some intermediate cached results
 	// speeding up the subsequent block building calls.
-	function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
-		require(isOffchain());
-
+	function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid, string memory namespace) internal view returns (bytes memory, bytes memory) {
         (bool success, bytes memory builderBid) = BUILD_ETH_BLOCK_PEEKER.staticcall(
-            abi.encode(blockArgs, bid)
+            abi.encode(blockArgs, bid, namespace)
         );
         if (!success) {
             revert PeekerReverted(BUILD_ETH_BLOCK_PEEKER, builderBid);
         }
         return abi.decode(builderBid, (bytes, bytes));
+    }
+
+
+    function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
+        (bool success, bytes memory hint) = EXTRACT_HINT.staticcall
+            (abi.encode(bundleData)
+        );
+        require(success, "Hint extraction failed");
+        return hint;
     }
 }

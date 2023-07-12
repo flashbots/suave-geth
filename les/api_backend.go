@@ -341,3 +341,7 @@ func (b *LesApiBackend) StateAtTransaction(ctx context.Context, block *types.Blo
 func (b *LesApiBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
 	return nil, nil, errors.New("not implemented")
 }
+
+func (b *LesApiBackend) BuildBlockFromBundles(context.Context, *types.BuildBlockArgs, []types.SBundle) (*types.Block, *big.Int, error) {
+	return nil, nil, errors.New("not implemented")
+}

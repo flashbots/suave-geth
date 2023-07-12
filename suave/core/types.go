@@ -16,6 +16,7 @@ type Bid struct {
 	Id                  BidId            `json:"id"`
 	DecryptionCondition uint64           `json:"decryptionCondition"` // For now simply the block number. Should be either derived from the source contract, or be a contract itself
 	AllowedPeekers      []common.Address `json:"allowedPeekers"`
+	Version             string           `json:"version"`
 }
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
@@ -30,10 +31,13 @@ type MempoolBackend interface {
 	SubmitBid(Bid) error
 	FetchBids(blockNumber uint64) []Bid
 	FetchBidById(BidId) (Bid, error)
+	FetchBidsByBlock(blockNumber uint64) []Bid
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
 }
 
 type OffchainEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
+	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 }
 
 type BuildBlockArgs = types.BuildBlockArgs

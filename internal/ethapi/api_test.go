@@ -351,6 +351,10 @@ func (b testBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.Bui
 	panic("implement me")
 }
 
+func (b testBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+	panic("implement me")
+}
+
 func TestEstimateGas(t *testing.T) {
 	t.Parallel()
 	// Initialize test accounts

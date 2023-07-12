@@ -18,6 +18,15 @@ func (e *EthMock) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs,
 	return engine.BlockToExecutableData(block, big.NewInt(11000)), nil
 }
 
+func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	var txs types.Transactions
+	for _, bundle := range bundles {
+		txs = append(txs, bundle.Txs...)
+	}
+	block := types.NewBlock(&types.Header{GasUsed: 1000}, txs, nil, nil, trie.NewStackTrie(nil))
+	return engine.BlockToExecutableData(block, big.NewInt(11000)), nil
+}
+
 type RemoteEthBackend struct {
 	endpoint string
 	client   *rpc.Client
@@ -42,6 +51,29 @@ func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildB
 
 	var result engine.ExecutionPayloadEnvelope
 	err := e.client.CallContext(ctx, &result, "eth_buildEth2Block", args, txs)
+	if err != nil {
+		client := e.client
+		e.client = nil
+		client.Close()
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+	if e.client == nil {
+		// should lock
+		var err error
+		client, err := rpc.DialContext(ctx, e.endpoint)
+		if err != nil {
+			return nil, err
+		}
+		e.client = client
+	}
+
+	var result engine.ExecutionPayloadEnvelope
+	err := e.client.CallContext(ctx, &result, "eth_buildEth2BlockFromBundles", args, bundles)
 	if err != nil {
 		client := e.client
 		e.client = nil
