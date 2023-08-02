@@ -47,16 +47,6 @@ func (m *MempoolOnConfidentialStore) SubmitBid(bid suave.Bid) error {
 	return nil
 }
 
-/*
-func (m *MempoolOnConfidentialStore) FetchBids(blockNumber uint64) []suave.Bid {
-	bidsByBlockNumberBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("bn-%d", blockNumber))
-	if err != nil {
-		return nil
-	}
-	return suave.MustDecode[[]suave.Bid](bidsByBlockNumberBytes)
-}
-*/
-
 func (m *MempoolOnConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
 	bidBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("id-%x", bidId))
 	if err != nil {

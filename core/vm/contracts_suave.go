@@ -216,7 +216,7 @@ func (c *newBid) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byt
 		return []byte(err.Error()), err
 	}
 
-	err = backend.MempoolBackned.SubmitBid(bid)
+	err = backend.MempoolBackend.SubmitBid(bid)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -251,7 +251,7 @@ func (c *fetchBids) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]
 	targetBlock := unpacked[0].(uint64)
 	namespace := unpacked[1].(string)
 
-	bids := backend.MempoolBackned.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+	bids := backend.MempoolBackend.FetchBidsByProtocolAndBlock(targetBlock, namespace)
 
 	return c.inoutAbi.Outputs.Pack(bids)
 }

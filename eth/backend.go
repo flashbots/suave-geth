@@ -239,7 +239,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	offchainBackend := &vm.SuaveOffchainBackend{
 		ConfiendialStoreBackend: cdas,
-		MempoolBackned:          suave_backends.NewMempoolOnConfidentialStore(cdas),
+		MempoolBackend:          suave_backends.NewMempoolOnConfidentialStore(cdas),
 		OffchainEthBackend:      suaveEthBackend,
 	}
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, offchainBackend}
