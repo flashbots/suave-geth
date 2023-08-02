@@ -1340,9 +1340,13 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 			// HACK to include payment txn
 			// multi refund block untested
 			bidTx := bundle.Txs[0] // NOTE : assumes first txn is refund recipient
+			refundAddr, err := types.Sender(types.LatestSignerForChainID(bidTx.ChainId()), bidTx)
+			if err != nil {
+				return nil, nil, err
+			}
 			paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
 				Nonce:    currNonce,
-				To:       bidTx.To(),
+				To:       &refundAddr,
 				Value:    refundAmt,
 				Gas:      28000,
 				GasPrice: work.header.BaseFee,
@@ -1425,6 +1429,7 @@ func (w *worker) rawCommitTransactions(env *environment, txs types.Transactions)
 		switch {
 		case errors.Is(err, core.ErrNonceTooLow):
 			log.Debug("Skipping transaction with low nonce", "hash", tx.Hash(), "sender", from, "nonce", tx.Nonce())
+			return err
 		case errors.Is(err, nil):
 			// coalescedLogs = append(coalescedLogs, logs...)
 			env.tcount++
@@ -1432,6 +1437,7 @@ func (w *worker) rawCommitTransactions(env *environment, txs types.Transactions)
 			// Transaction is regarded as invalid, drop all consecutive transactions from
 			// the same sender because of `nonce-too-high` clause.
 			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			return err
 		}
 	}
 	return nil

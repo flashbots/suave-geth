@@ -1,6 +1,7 @@
 package vm
 
-// TODO: update!
+var bidIdsAbi = mustParseMethodAbi(`[{"inputs": [{ "type": "bytes16[]" }], "name": "bidids", "outputs":[], "type": "function"}]`, "bidids")
+
 var precompilesAbi = mustParseAbi(`[
     {
       "inputs": [
@@ -17,6 +18,19 @@ var precompilesAbi = mustParseAbi(`[
       ],
       "name": "PeekerReverted",
       "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "Suave.BidId[]",
+          "name": "ids",
+          "type": "bytes16[]"
+        }
+      ],
+      "name": "BidIds",
+      "type": "event"
     },
     {
       "inputs": [

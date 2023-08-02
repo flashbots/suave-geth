@@ -1,20 +1,41 @@
 package main
 
 import (
+	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var commands = map[string]func(){
-	"sendBundle":                cmdSendBundle,
+	// deploy
 	"deployBlockSenderContract": cmdDeployBlockSenderContract,
+	"deployMevShareContract":    cmdDeployMevShareContract,
+	// send
+	"sendBundle":          cmdSendBundle,
+	"sendMevShareBundle":  cmdSendMevShareBundle,
+	"sendMevShareMatch":   cmdSendMevShareMatch,
+	"sendBuildShareBlock": cmdSendBuildShareBlock,
+	// listeners
+	"startHintListener":       cmdHintListener,
+	"subscribeBeaconAndBoost": cmdSubscribeBeaconAndBoost,
+	"startRelayListener":      cmdRelayListener,
+
+	// e2e test
+	"testDeployAndShare": cmdTestDeployAndShare,
+	"buildGoerliBlocks":  cmdBuildGoerliBlocks,
 }
 
 func getAllowedCommands() string {
@@ -51,8 +72,8 @@ var (
 	newBundleBidAddress = common.HexToAddress("0x42200000")
 	newBlockBidAddress  = common.HexToAddress("0x42200001")
 
-	// simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress = common.HexToAddress("0x42100001")
+	extractHintAddress   = common.HexToAddress("0x42100037")
 )
 
 func RequireNoError(err error) {
@@ -87,4 +108,54 @@ func unwrapPeekerError(rpcErr error) error {
 
 	revertReason := string(unpacked[1].([]byte))
 	return errors.Join(rpcErr, fmt.Errorf("revert reason: %s", revertReason))
+}
+
+func waitForTransactionToBeConfirmed(suaveClient *rpc.Client, txHash *common.Hash) {
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Duration(1+i/2) * time.Second)
+
+		var r *types.Receipt
+		err := suaveClient.Call(&r, "eth_getTransactionReceipt", txHash)
+		if err == nil && r != nil {
+			log.Info("All is good!", "receipt", r, "block_num", r.BlockNumber)
+			return
+		}
+	}
+	utils.Fatalf("did not see the receipt succeed in time. hash: %s", txHash.String())
+}
+
+func extractBidId(suaveClient *rpc.Client, txHash common.Hash) ([16]byte, error) {
+	var r *types.Receipt
+	err := suaveClient.Call(&r, "eth_getTransactionReceipt", &txHash)
+	if err == nil && r != nil {
+		unpacked, err := mevShareABI.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data) // index = 1 because second hint is bid event
+		if err != nil {
+			return [16]byte{0}, err
+		}
+		shareBidId := unpacked[0].([16]byte)
+		return shareBidId, nil
+	}
+
+	return [16]byte{0}, err
+}
+
+func setUpSuaveAndGoerli(privKeyHex *string, executionNodeAddressHex *string, suaveRpc *string, goerliRpc *string) (*ecdsa.PrivateKey, common.Address, *rpc.Client, *rpc.Client, types.Signer, types.Signer) {
+	privKey, err := crypto.HexToECDSA(*privKeyHex)
+	RequireNoErrorf(err, "-nodekeyhex: %v", err)
+	/* shush linter */ privKey.Public()
+
+	executionNodeAddress := common.HexToAddress(*executionNodeAddressHex)
+
+	suaveClient, err := rpc.DialContext(context.TODO(), *suaveRpc)
+	RequireNoErrorf(err, "could not connect to suave rpc: %v", err)
+
+	goerliClient, err := rpc.DialContext(context.TODO(), *goerliRpc)
+	RequireNoErrorf(err, "could not connect to goerli rpc: %v", err)
+
+	genesis := core.DefaultSuaveGenesisBlock()
+	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+
+	goerliSigner := types.LatestSigner(core.DefaultGoerliGenesisBlock().Config)
+
+	return privKey, executionNodeAddress, suaveClient, goerliClient, suaveSigner, goerliSigner
 }

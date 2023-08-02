@@ -57,7 +57,9 @@ library Suave {
     // Returns whether execution is off- or on-chain
     function isOffchain() internal view returns (bool b) {
         (bool success, bytes memory isOffchainBytes) = IS_OFFCHAIN_ADDR.staticcall("");
-        require(success);
+        if (!success) {
+            revert PeekerReverted(IS_OFFCHAIN_ADDR, isOffchainBytes);
+        }
         assembly {
             // Load the length of data (first 32 bytes)
             let len := mload(isOffchainBytes)
@@ -69,7 +71,9 @@ library Suave {
     // Temporay with this call
     function confidentialInputs() internal view returns (bytes memory) {
         (bool success, bytes memory inputs) = CONFIDENTIAL_INPUTS.staticcall("");
-        require(success);
+        if (!success) {
+            revert PeekerReverted(CONFIDENTIAL_INPUTS, inputs);
+        }
         return inputs;
     }
 
@@ -113,7 +117,9 @@ library Suave {
 
     function simulateBundle(bytes memory bundleData) internal view returns (bool, uint64) { // returns egp
         (bool success, bytes memory simResults) = SIMULATE_BUNDLE_PEEKER.staticcall(bundleData);
-        require(success, "Bundle simulation failed");
+        if (!success) {
+            return (false, 0);
+        }
         return (success, abi.decode(simResults, (uint64)));
     }
 
@@ -151,4 +157,16 @@ library Suave {
 
         return (success, err);
     }
+}
+
+function idsEqual(Suave.BidId _l, Suave.BidId _r) pure returns (bool) {
+    bytes memory l = abi.encodePacked(_l);
+    bytes memory r = abi.encodePacked(_r);
+    for (uint i = 0; i < l.length; i++) {
+        if (bytes(l)[i] != r[i]) {
+            return false;
+        }
+    }
+
+    return true;
 }

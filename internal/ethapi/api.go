@@ -1375,6 +1375,9 @@ type RPCTransaction struct {
 	Type             hexutil.Uint64    `json:"type"`
 	Accesses         *types.AccessList `json:"accessList,omitempty"`
 	ChainID          *hexutil.Big      `json:"chainId,omitempty"`
+	ExecutionNode    *common.Address   `json:"executionNode,omitempty"`
+	Wrapped          *hexutil.Bytes    `json:"wrapped,omitempty"`
+	OffchainResult   *hexutil.Bytes    `json:"offchainResult,omitempty"`
 	V                *hexutil.Big      `json:"v"`
 	R                *hexutil.Big      `json:"r"`
 	S                *hexutil.Big      `json:"s"`
@@ -1400,6 +1403,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
 	}
+
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = &blockHash
 		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
@@ -1429,6 +1433,43 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		} else {
 			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
 		}
+	case types.OffchainTxType:
+		inner, ok := types.CastTxInner[*types.OffchainTx](tx)
+		if !ok {
+			log.Error("could not marshal rpc transaction: tx did not cast correctly")
+			return nil
+		}
+
+		result.ExecutionNode = &inner.ExecutionNode
+
+		// TODO: should be rpc marshaled
+		wrappedBytes, err := inner.Wrapped.MarshalJSON()
+		if err != nil {
+			log.Error("could not marshal rpc transaction", "err", err)
+			return nil
+		}
+
+		result.Wrapped = (*hexutil.Bytes)(&wrappedBytes)
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+	case types.OffchainExecutedTxType:
+		inner, ok := types.CastTxInner[*types.OffchainExecutedTx](tx)
+		if !ok {
+			log.Error("could not marshal rpc transaction: tx did not cast correctly")
+			return nil
+		}
+
+		result.ExecutionNode = &inner.ExecutionNode
+
+		// TODO: should be rpc marshaled
+		wrappedBytes, err := inner.Wrapped.MarshalJSON()
+		if err != nil {
+			log.Error("could not marshal rpc transaction", "err", err)
+			return nil
+		}
+
+		result.Wrapped = (*hexutil.Bytes)(&wrappedBytes)
+		result.OffchainResult = (*hexutil.Bytes)(&inner.OffchainResult)
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	}
 	return result
 }
@@ -1777,7 +1818,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 
 	if tx.To() == nil {
 		addr := crypto.CreateAddress(from, tx.Nonce())
-		log.Info("Submitted contract creation", "hash", tx.Hash().Hex(), "from", from, "nonce", tx.Nonce(), "contract", addr.Hex(), "value", tx.Value())
+		log.Info("Submitted contract creation", "hash", tx.Hash().Hex(), "from", from, "nonce", tx.Nonce(), "contract", addr.Hex(), "value", tx.Value(), "data", tx.Data())
 	} else {
 		log.Info("Submitted transaction", "hash", tx.Hash().Hex(), "from", from, "nonce", tx.Nonce(), "recipient", tx.To(), "value", tx.Value())
 	}
@@ -1816,6 +1857,7 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 
 	if tx.Type() == types.OffchainTxType {
 		// TODO: this is a huge dos vector!
+		log.Info("received offchain tx", "tx", tx.Hash())
 		tx, err := s.executeOffchainCall(ctx, tx, confidential)
 		if err != nil {
 			return tx.Hash(), err
@@ -1863,13 +1905,15 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 }
 
 func (s *TransactionAPI) executeOffchainCall(ctx context.Context, tx *types.Transaction, confidential *hexutil.Bytes) (*types.Transaction, error) {
-	defer func(start time.Time) { log.Debug("Executing offchain call finished", "runtime", time.Since(start)) }(time.Now())
+	defer func(start time.Time) { log.Info("Executing offchain call finished", "runtime", time.Since(start)) }(time.Now())
 
 	// TODO: copy the inner, but only once
 	offchainTx, ok := types.CastTxInner[*types.OffchainTx](tx)
 	if !ok {
 		return nil, errors.New("invalid transaction passed")
 	}
+
+	log.Info("executeOffchainCall", "hello$$$", "hello$$$")
 
 	// Look up the wallet containing the requested execution node
 	account := accounts.Account{Address: offchainTx.ExecutionNode}
@@ -1901,6 +1945,7 @@ func (s *TransactionAPI) executeOffchainCall(ctx context.Context, tx *types.Tran
 	if confidential != nil {
 		evm.SetConfidentialInput(*confidential)
 	}
+	log.Info("executeOffchainCall", "confidential", confidential)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1912,6 +1957,7 @@ func (s *TransactionAPI) executeOffchainCall(ctx context.Context, tx *types.Tran
 	// Execute the message.
 	gp := new(core.GasPool).AddGas(header.GasLimit)
 
+	log.Info("executeOffchainCall", "msg", msg)
 	msg.SkipAccountChecks = true // validate elsewhere!
 	result, err := core.ApplyMessage(evm, msg, gp)
 	// If the timer caused an abort, return an appropriate error message
@@ -1934,12 +1980,17 @@ func (s *TransactionAPI) executeOffchainCall(ctx context.Context, tx *types.Tran
 
 	args := abi.Arguments{abi.Argument{Type: abi.Type{T: abi.BytesTy}}}
 	unpacked, err := args.Unpack(result.ReturnData)
+	log.Info("executeOffchainCall", "offchainResult1", unpacked)
 	if err == nil && len(unpacked[0].([]byte))%32 == 4 {
+		log.Info("executeOffchainCall", "offchainResult2", unpacked[0])
 		// This is supposed to be the case for all off-chain smart contracts!
 		offchainResult = unpacked[0].([]byte)
 	} else {
 		offchainResult = result.ReturnData // Or should it be nil maybe in this case?
+		log.Info("executeOffchainCall", "offchainResult3", result.ReturnData)
 	}
+
+	log.Info("executeOffchainCall", "offchainResult", offchainResult)
 
 	offchainExecutedTxData := &types.OffchainExecutedTx{ExecutionNode: offchainTx.ExecutionNode, Wrapped: offchainTx.Wrapped, OffchainResult: offchainResult}
 

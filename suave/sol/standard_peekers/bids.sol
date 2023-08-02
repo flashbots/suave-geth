@@ -10,6 +10,13 @@ contract AnyBidContract {
 		address[] allowedPeekers
 	);
 
+	function fetchBidConfidentialBundleData() public returns (bytes memory) {
+		require(Suave.isOffchain());
+		
+		bytes memory confidentialInputs = Suave.confidentialInputs();
+		return abi.decode(confidentialInputs, (bytes));
+	}
+
 	// Bids to this contract should not be trusted!
 	function emitBid(Suave.Bid calldata bid) public {
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
@@ -18,20 +25,15 @@ contract AnyBidContract {
 
 contract BundleBidContract is AnyBidContract {
 
-	function fetchBidConfidentialBundleData() public view returns (bytes memory) {
-		require(Suave.isOffchain());
-
-		bytes memory confidentialInputs = Suave.confidentialInputs();
-		return abi.decode(confidentialInputs, (bytes));
-	}
-
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers) external payable returns (bytes memory) {
 		require(Suave.isOffchain());
 
 		bytes memory bundleData = this.fetchBidConfidentialBundleData();
 
 		(bool simOk, uint64 egp) = Suave.simulateBundle(bundleData);
-		require(simOk, "bundle does not simulate correctly");
+		if (!simOk) {
+			revert Suave.PeekerReverted(address(this), "bundle did not simulate correctly");
+		}
 
 		Suave.Bid memory bid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "default:v0:ethBundles");
 
@@ -45,7 +47,6 @@ contract BundleBidContract is AnyBidContract {
 
 contract MevShareBidContract is AnyBidContract {
 
-
 	event HintEvent(
 		Suave.BidId bidId,
 		bytes hint
@@ -57,12 +58,6 @@ contract MevShareBidContract is AnyBidContract {
 		bytes matchHint
 	);
 
-	function fetchBidConfidentialBundleData() public returns (bytes memory) {
-		bytes memory confidentialInputs = Suave.confidentialInputs();
-		return abi.decode(confidentialInputs, (bytes));
-	}
-
-	// function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers, bytes memory hintConfig) external payable returns (bytes memory) {
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers) external payable returns (bytes memory) {
 		// 0. check offchain execution
 		require(Suave.isOffchain());
@@ -72,15 +67,15 @@ contract MevShareBidContract is AnyBidContract {
 
 		// 2. sim bundle
 		(bool simOk, uint64 egp) = Suave.simulateBundle(bundleData);
-		require(simOk, "bundle does not simulate correctly");
-
+		if (!simOk) {
+			revert Suave.PeekerReverted(address(this), "bundle does not simulate correctly");
+		}
 		
 		// 3. extract hint
-		// TODO : It may be useful to store hints for future
 		bytes memory hint = Suave.extractHint(bundleData);
 		
 		// // 4. store bundle and sim results
-		Suave.Bid memory bid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "mevshare:v0:ethBundles");
+		Suave.Bid memory bid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "mevshare:v0:unmatchedBundles");
 		Suave.confidentialStoreStore(bid.id, "mevshare:v0:ethBundles", bundleData);
 		Suave.confidentialStoreStore(bid.id, "mevshare:v0:ethBundleSimResults", abi.encode(egp));
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
@@ -97,7 +92,7 @@ contract MevShareBidContract is AnyBidContract {
 
 	function newMatch(uint64 decryptionCondition, address[] memory bidAllowedPeekers, Suave.BidId shareBidId) external payable returns (bytes memory) {
 		// WARNING : this function will copy the original mev share bid
-		// into a new key with different permsissions
+		// into a new key with potentially different permsissions
 		
 		require(Suave.isOffchain());
 		// 1. fetch confidential data
@@ -110,24 +105,17 @@ contract MevShareBidContract is AnyBidContract {
 		// 3. extract hint
 		bytes memory matchHint = Suave.extractHint(matchBundleData);
 		
-		Suave.Bid memory bid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "mevshare:v0:ethBundles");
+		Suave.Bid memory bid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "mevshare:v0:matchBids");
 		Suave.confidentialStoreStore(bid.id, "mevshare:v0:ethBundles", matchBundleData);
-		Suave.confidentialStoreStore(bid.id, "mevshare:v0:ethBundleSimResults", abi.encode(egp));
+		Suave.confidentialStoreStore(bid.id, "mevshare:v0:ethBundleSimResults", abi.encode(0));
 
 		//4. merge bids
 		Suave.BidId[] memory bids = new Suave.BidId[](2);
 		bids[0] = shareBidId;
 		bids[1] = bid.id;
-		Suave.Bid memory mergeBid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "mevshare:v0:mergedBids");
-		Suave.confidentialStoreStore(mergeBid.id, "mevshare:v0:mergedBids", abi.encode(bids));
+		Suave.confidentialStoreStore(bid.id, "mevshare:v0:mergedBids", abi.encode(bids));
 
-		//5. grab original share bid and extract hint
-		// TODO : store hints ?
-		bytes memory shareBundleData = Suave.confidentialStoreRetrieve(shareBidId, "mevshare:v0:ethBundles");
-		bytes memory bidHint = Suave.extractHint(shareBundleData);
-
-		
-		return bytes.concat(this.emitMatchBidAndHint.selector, abi.encode(bid, bidHint, matchHint));
+		return bytes.concat(this.emitBid.selector, abi.encode(bid));
 	}
 
 	function emitMatchBidAndHint(Suave.Bid calldata bid, bytes memory bidHint, bytes memory matchHint) public {
@@ -149,10 +137,30 @@ contract EthBlockBidContract is AnyBidContract {
 		bytes builderBid
 	);
 	
-	function buildMevShare(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory){
+	function buildMevShare(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
 		require(Suave.isOffchain());
 
-		Suave.Bid[] memory allBids = Suave.fetchBids(blockHeight, "mevshare:v0:ethBundles");
+		Suave.Bid[] memory allShareMatchBids = Suave.fetchBids(blockHeight, "mevshare:v0:matchBids");
+		Suave.Bid[] memory allShareUserBids = Suave.fetchBids(blockHeight, "mevshare:v0:unmatchedBundles");
+
+		if (allShareUserBids.length == 0) {
+			revert Suave.PeekerReverted(address(this), "no bids");
+		}
+
+		Suave.Bid[] memory allBids = new Suave.Bid[](allShareUserBids.length);
+		for (uint i = 0; i < allShareUserBids.length; i++) {
+			// TODO: sort matches by egp first!
+			Suave.Bid memory bidToInsert = allShareUserBids[i]; // will be updated with the best match if any
+			for (uint j = 0; j < allShareMatchBids.length; j++) {
+				// TODO: should be done once at the start and sorted
+				Suave.BidId[] memory mergedBidIds = abi.decode(Suave.confidentialStoreRetrieve(allShareMatchBids[j].id, "mevshare:v0:mergedBids"), (Suave.BidId[]));
+				if (idsEqual(mergedBidIds[0], allShareUserBids[i].id)) {
+					bidToInsert = allShareMatchBids[j];
+					break;
+				}
+			}
+			allBids[i] = bidToInsert;
+		}
 
 		EgpBidPair[] memory bidsByEGP = new EgpBidPair[](allBids.length);
 		for (uint i = 0; i < allBids.length; i++) {
@@ -165,7 +173,7 @@ contract EthBlockBidContract is AnyBidContract {
 		uint n = bidsByEGP.length;
 		for (uint i = 0; i < n - 1; i++) {
 			for (uint j = i + 1; j < n; j++) {
-				if (bidsByEGP[i].egp > bidsByEGP[j].egp) {
+				if (bidsByEGP[i].egp < bidsByEGP[j].egp) {
 					EgpBidPair memory temp = bidsByEGP[i];
 					bidsByEGP[i] = bidsByEGP[j];
 					bidsByEGP[j] = temp;
@@ -185,8 +193,10 @@ contract EthBlockBidContract is AnyBidContract {
 		require(Suave.isOffchain());
 
 		Suave.Bid[] memory allBids = Suave.fetchBids(blockHeight, "default:v0:ethBundles");
+		if (allBids.length == 0) {
+			revert Suave.PeekerReverted(address(this), "no bids");
+		}
 
-		// TODO: handle merged bids
 		EgpBidPair[] memory bidsByEGP = new EgpBidPair[](allBids.length);
 		for (uint i = 0; i < allBids.length; i++) {
 			bytes memory simResults = Suave.confidentialStoreRetrieve(allBids[i].id, "default:v0:ethBundleSimResults");
@@ -198,7 +208,7 @@ contract EthBlockBidContract is AnyBidContract {
 		uint n = bidsByEGP.length;
 		for (uint i = 0; i < n - 1; i++) {
 			for (uint j = i + 1; j < n; j++) {
-				if (bidsByEGP[i].egp > bidsByEGP[j].egp) {
+				if (bidsByEGP[i].egp < bidsByEGP[j].egp) {
 					EgpBidPair memory temp = bidsByEGP[i];
 					bidsByEGP[i] = bidsByEGP[j];
 					bidsByEGP[j] = temp;
@@ -211,7 +221,7 @@ contract EthBlockBidContract is AnyBidContract {
 			allBidIds[i] = bidsByEGP[i].bidId;
 		}
 
-		return buildAndEmit(blockArgs, blockHeight, allBidIds, "default:v0");
+		return buildAndEmit(blockArgs, blockHeight, allBidIds, "");
 	}
 
 	function buildAndEmit(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.BidId[] memory bids, string memory namespace) public virtual returns (bytes memory) {

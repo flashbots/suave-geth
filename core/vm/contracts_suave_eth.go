@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"math/big"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -53,7 +53,7 @@ func (c *simulateBundle) RunOffchain(backend *SuaveOffchainBackend, input []byte
 	}{}
 	err := json.Unmarshal(input, &bundle)
 	if err != nil {
-		return []byte(err.Error()), err
+		return formatPeekerError("could not unmarshal bundle: %w", err)
 	}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
@@ -61,11 +61,11 @@ func (c *simulateBundle) RunOffchain(backend *SuaveOffchainBackend, input []byte
 
 	envelope, err := backend.OffchainEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
-		return []byte(err.Error()), err
+		return formatPeekerError("could not build eth block for bundle simulation: %w", err)
 	}
 
 	if envelope.ExecutionPayload.GasUsed == 0 {
-		return nil, errors.New("transaction not applied correctly")
+		return formatPeekerError("transaction not applied correctly: %v", envelope)
 	}
 
 	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
@@ -74,7 +74,7 @@ func (c *simulateBundle) RunOffchain(backend *SuaveOffchainBackend, input []byte
 	egpBytes, err := precompilesAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
 
 	if err != nil {
-		return []byte(err.Error()), err
+		return formatPeekerError("could not pack egp %v: %w", egp, err)
 	}
 
 	return egpBytes, nil
@@ -178,65 +178,105 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte)
 		})
 	}
 
-	bidId := unpacked[1].(suave.BidId)
-	namespace := unpacked[2].(string)
+	inputBidId := unpacked[1].(suave.BidId)
 
-	var bidIds = []suave.BidId{}
+	bidIds := []suave.BidId{}
 	// first check for merged bid, else assume regular bid
-	if mergedBidsBytes, err := backend.ConfiendialStoreBackend.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
-		// TODO: move me outside
-		bidIdsAbi := mustParseMethodAbi(`[{"inputs": [{ "type": "bytes16[]" }], "name": "bidids", "outputs":[], "type": "function"}]`, "bidids")
+	if mergedBidsBytes, err := backend.ConfiendialStoreBackend.Retrieve(inputBidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
+
 		if err != nil {
 			return formatPeekerError("could not unpack merged bid ids: %w", err)
 		}
+		log.Info("x", "x", unpacked, "x", mergedBidsBytes)
 		bidIds = unpacked[0].([]suave.BidId)
 	} else {
-		bidIds = append(bidIds, bidId)
+		bidIds = append(bidIds, inputBidId)
+	}
+
+	var bidsToMerge = make([]suave.Bid, len(bidIds))
+	for i, bidId := range bidIds {
+		bidsToMerge[i], err = backend.MempoolBackend.FetchBidById(bidId)
+		if err != nil {
+			return formatPeekerError("could not fetch bid id %v: %w", bidId, err)
+		}
 	}
 
 	var mergedBundles []types.SBundle
-	var unmatchedBundles []types.SBundle
-	idToBundle := make(map[suave.BidId]types.SBundle)
-	var zero [16]byte
-	for _, bidId := range bidIds {
-		bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bidId, buildEthBlockAddress, namespace+":ethBundles")
-		if err != nil {
-			return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bidId, err)
-		}
+	for _, bid := range bidsToMerge {
+		switch bid.Version {
+		case "mevshare:v0:matchBids":
+			// fetch the matched ids and merge the bundle
+			matchedBundleIdsBytes, err := backend.ConfiendialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:mergedBids")
+			if err != nil {
+				return formatPeekerError("could not retrieve bid ids data for bid %v, from cdas: %w", bid, err)
+			}
 
-		var bundle types.SBundle
-		if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
-			return formatPeekerError("could not unmarshal bundle data for bidId %v, from cdas: %w", bidId, err)
-		}
+			unpackedBidIds, err := bidIdsAbi.Inputs.Unpack(matchedBundleIdsBytes)
+			if err != nil {
+				return formatPeekerError("could not unpack bid ids data for bid %v, from cdas: %w", bid, err)
+			}
 
-		idToBundle[bidId] = bundle
-		if bundle.MatchId != zero {
-			unmatchedBundles = append(unmatchedBundles, bundle)
-		} else {
+			matchBidIds := unpackedBidIds[0].([]suave.BidId)
+
+			userBundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
+			if err != nil {
+				return formatPeekerError("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
+			}
+
+			var userBundle types.SBundle
+			if err := json.Unmarshal(userBundleBytes, &userBundle); err != nil {
+				return formatPeekerError("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
+			}
+
+			matchBundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(matchBidIds[1], buildEthBlockAddress, "mevshare:v0:ethBundles")
+			if err != nil {
+				return formatPeekerError("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
+			}
+
+			var matchBundle types.SBundle
+			if err := json.Unmarshal(matchBundleBytes, &matchBundle); err != nil {
+				return formatPeekerError("could not unmarshal match bundle data for bidId %v: %w", matchBidIds[1], err)
+			}
+
+			userBundle.Txs = append(userBundle.Txs, matchBundle.Txs...)
+
+			mergedBundles = append(mergedBundles, userBundle)
+
+		case "mevshare:v0:unmatchedBundles":
+			bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:ethBundles")
+			if err != nil {
+				return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
+			}
+
+			var bundle types.SBundle
+			if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
+				return formatPeekerError("could not unmarshal bundle data for bidId %v, from cdas: %w", bid.Id, err)
+			}
 			mergedBundles = append(mergedBundles, bundle)
+		case "default:v0:ethBundles":
+			bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "default:v0:ethBundles")
+			if err != nil {
+				return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
+			}
+
+			var bundle types.SBundle
+			if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
+				return formatPeekerError("could not unmarshal bundle data for bidId %v, from cdas: %w", bid.Id, err)
+			}
+			mergedBundles = append(mergedBundles, bundle)
+		default:
+			return formatPeekerError("unknown bid version %s", bid.Version)
 		}
 	}
 
-	for _, b := range unmatchedBundles {
-		// hack: merge relevant unmatchedBundles
-		// need to create a mergeBid precompile imo
-		match, success := idToBundle[b.MatchId]
-		if success {
-			var mergedTxs types.Transactions
-			mergedTxs = append(mergedTxs, match.Txs...)
-			mergedTxs = append(mergedTxs, b.Txs...)
-			b.Txs = mergedTxs
-			b.RefundPercent = match.RefundPercent
-		}
-
-		mergedBundles = append(mergedBundles, b)
-	}
-
+	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
 	envelope, err := backend.OffchainEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 	if err != nil {
 		return formatPeekerError("could not build eth block: %w", err)
 	}
+
+	log.Info("built block from bundles", "payload", *envelope.ExecutionPayload)
 
 	payload, err := executableDataToCapellaExecutionPayload(envelope.ExecutionPayload)
 	if err != nil {
@@ -320,7 +360,7 @@ func (c *submitEthBlockBidToRelay) RunOffchain(backend *SuaveOffchainBackend, in
 	relayUrl := unpacked[0].(string)
 	builderBidJson := unpacked[1].([]byte)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(500*time.Millisecond))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
 
 	endpoint := relayUrl + "/relay/v1/builder/blocks"

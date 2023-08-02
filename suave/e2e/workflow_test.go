@@ -142,22 +142,22 @@ func TestMempool(t *testing.T) {
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
-			Version:             "default:v0",
+			Version:             "default:v0:ethBundles",
 		}
 
 		bid2 := suave.Bid{
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
-			Version:             "default:v0",
+			Version:             "default:v0:ethBundles",
 		}
 
-		ethservice.APIBackend.OffchainBackend().MempoolBackned.SubmitBid(bid1)
-		ethservice.APIBackend.OffchainBackend().MempoolBackned.SubmitBid(bid2)
+		ethservice.APIBackend.OffchainBackend().MempoolBackend.SubmitBid(bid1)
+		ethservice.APIBackend.OffchainBackend().MempoolBackend.SubmitBid(bid2)
 
 		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
-		calldata, err := inoutAbi.Inputs.Pack(targetBlock, "default:v0")
+		calldata, err := inoutAbi.Inputs.Pack(targetBlock, "default:v0:ethBundles")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -608,10 +608,10 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{common.Address{0x41, 0x42, 0x43}, buildEthBlockAddress},
-			Version:             "default:v0",
+			Version:             "default:v0:ethBundles",
 		}
 
-		ethservice.APIBackend.OffchainBackend().MempoolBackned.SubmitBid(bid)
+		ethservice.APIBackend.OffchainBackend().MempoolBackend.SubmitBid(bid)
 		ethservice.APIBackend.OffchainBackend().ConfiendialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
 		ethHead := ethEthService.BlockChain().CurrentBlock()
@@ -634,7 +634,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			FeeRecipient: common.Address{0x42},
 		}
 
-		packed, err := suaveLibAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "default:v0")
+		packed, err := suaveLibAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -692,11 +692,9 @@ func TestBlockBuildingContract(t *testing.T) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
-		Version         string             `json:"version"`
 	}{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
-		Version:         "default:v0",
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	require.NoError(t, err)

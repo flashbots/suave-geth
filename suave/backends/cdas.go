@@ -63,7 +63,7 @@ func (s *LocalConfidentialStore) Store(bidId suave.BidId, caller common.Address,
 	}
 
 	if !slices.Contains(bidAcd.bid.AllowedPeekers, caller) {
-		return suave.Bid{}, errors.New("not allowed")
+		return suave.Bid{}, fmt.Errorf("%x not allowed to store %s on %x", caller, key, bidId)
 	}
 
 	bidAcd.dataMap[key] = append(make([]byte, 0, len(value)), value...)
@@ -82,7 +82,7 @@ func (s *LocalConfidentialStore) Retrieve(bidId suave.BidId, caller common.Addre
 	}
 
 	if !slices.Contains(bidAcd.bid.AllowedPeekers, caller) {
-		return []byte{}, errors.New("not allowed")
+		return []byte{}, fmt.Errorf("%x not allowed to fetch %s on %x", caller, key, bidId)
 	}
 
 	data, found := bidAcd.dataMap[key]

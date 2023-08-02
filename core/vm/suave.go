@@ -7,7 +7,7 @@ import (
 
 type SuaveOffchainBackend struct {
 	ConfiendialStoreBackend suave.ConfiendialStoreBackend
-	MempoolBackned          suave.MempoolBackend
+	MempoolBackend          suave.MempoolBackend
 	OffchainEthBackend      suave.OffchainEthBackend
 	confidentialInputs      []byte
 	callerStack             []*common.Address
@@ -20,7 +20,7 @@ func NewRuntimeSuaveOffchainBackend(evm *EVM, caller common.Address) *SuaveOffch
 
 	return &SuaveOffchainBackend{
 		ConfiendialStoreBackend: evm.suaveOffchainBackend.ConfiendialStoreBackend,
-		MempoolBackned:          evm.suaveOffchainBackend.MempoolBackned,
+		MempoolBackend:          evm.suaveOffchainBackend.MempoolBackend,
 		OffchainEthBackend:      evm.suaveOffchainBackend.OffchainEthBackend,
 		confidentialInputs:      evm.suaveOffchainBackend.confidentialInputs,
 		callerStack:             append(evm.suaveOffchainBackend.callerStack, &caller),

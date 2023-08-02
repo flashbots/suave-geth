@@ -198,7 +198,10 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
 		if withSignature {
 			if err := sanityCheckSignature(itx.V, itx.R, itx.S, true); err != nil {
-				return err
+				// Dirty hack! Wrapped legacy txs will be 0-signed
+				if werr := sanityCheckSignature(itx.V, itx.R, itx.S, false); werr != nil {
+					return err
+				}
 			}
 		}
 

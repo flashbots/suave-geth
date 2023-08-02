@@ -18,15 +18,14 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-func cmdDeployBlockSenderContract() {
-	flagset := flag.NewFlagSet("deployBlockSenderContract", flag.ExitOnError)
+func cmdDeployMevShareContract() {
+	flagset := flag.NewFlagSet("deployMevShare", flag.ExitOnError)
 
 	var (
-		suaveRpc      = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		privKeyHex    = flagset.String("privkey", "", "private key as hex (for testing)")
-		boostRelayUrl = flagset.String("relay_url", "http://127.0.0.1:8091", "address of boost relay that the contract will send blocks to")
-		verbosity     = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
-		privKey       *ecdsa.PrivateKey
+		suaveRpc   = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
+		privKeyHex = flagset.String("privkey", "", "private key as hex (for testing)")
+		verbosity  = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
+		privKey    *ecdsa.PrivateKey
 	)
 
 	flagset.Parse(os.Args[2:])
@@ -46,9 +45,12 @@ func cmdDeployBlockSenderContract() {
 
 	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
 
-	ethBlockBidSenderAddr, txHash, _ := sendBlockSenderCreationTx(suaveClient, suaveSigner, privKey, boostRelayUrl)
-
-	// TODO: wait until tx is included and check receipt
+	mevShareAddr, txHash, err := sendMevShareCreationTx(suaveClient, suaveSigner, privKey)
+	if err != nil {
+		log.Error("error deploying mevshare", "error", err.Error())
+		panic(err.Error())
+	}
+	RequireNoErrorf(err, "could not send the deployment transaction to suave node: %v", err)
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Duration(1+i/2) * time.Second)
@@ -56,7 +58,7 @@ func cmdDeployBlockSenderContract() {
 		var receipt = make(map[string]interface{})
 		err = suaveClient.Call(&receipt, "eth_getTransactionReceipt", txHash)
 		if err == nil && receipt != nil {
-			log.Info("All is good!", "receipt", receipt, "address", ethBlockBidSenderAddr)
+			log.Info("All is good!", "receipt", receipt, "address", mevShareAddr)
 			return
 		}
 	}
@@ -64,7 +66,7 @@ func cmdDeployBlockSenderContract() {
 	utils.Fatalf("did not see the receipt succeed in time. hash: %s", txHash.String())
 }
 
-func sendBlockSenderCreationTx(suaveClient *rpc.Client, suaveSigner types.Signer, privKey *ecdsa.PrivateKey, boostRelayUrl *string) (*common.Address, *common.Hash, error) {
+func sendMevShareCreationTx(suaveClient *rpc.Client, suaveSigner types.Signer, privKey *ecdsa.PrivateKey) (*common.Address, *common.Hash, error) {
 	var suaveAccNonceBytes hexutil.Uint64
 	err := suaveClient.Call(&suaveAccNonceBytes, "eth_getTransactionCount", crypto.PubkeyToAddress(privKey.PublicKey), "latest")
 	RequireNoErrorf(err, "could not call eth_getTransactionCount on suave: %v", err)
@@ -74,10 +76,9 @@ func sendBlockSenderCreationTx(suaveClient *rpc.Client, suaveSigner types.Signer
 	err = suaveClient.Call(&suaveGp, "eth_gasPrice")
 	RequireNoErrorf(err, "could not call eth_gasPrice on suave: %v", err)
 
-	abiEncodedRelayUrl, err := ethBlockBidSenderAbi.Pack("", boostRelayUrl)
-	RequireNoErrorf(err, "could not pack inputs to the constructor: %v", err)
-
-	calldata := append(hexutil.MustDecode(blockSenderContractBytecode), abiEncodedRelayUrl...)
+	calldata := hexutil.MustDecode(mevshareContractBytecode)
+	log.Info("contract address will be", "mevshareContractBytecode", mevshareContractBytecode)
+	log.Info("contract address will be", "calldata", calldata)
 	ccTxData := &types.LegacyTx{
 		Nonce:    suaveAccNonce,
 		To:       nil, // contract creation
@@ -91,8 +92,8 @@ func sendBlockSenderCreationTx(suaveClient *rpc.Client, suaveSigner types.Signer
 	RequireNoErrorf(err, "could not sign the deployment transaction: %v", err)
 
 	from, _ := types.Sender(suaveSigner, tx)
-	ethBlockBidSenderAddr := crypto.CreateAddress(from, tx.Nonce())
-	log.Info("contract address will be", "addr", ethBlockBidSenderAddr)
+	mevshareAddr := crypto.CreateAddress(from, tx.Nonce())
+	log.Info("contract address will be", "addr", mevshareAddr)
 
 	txBytes, err := tx.MarshalBinary()
 	RequireNoErrorf(err, "could not marshal the deployment transaction: %v", err)
@@ -101,5 +102,5 @@ func sendBlockSenderCreationTx(suaveClient *rpc.Client, suaveSigner types.Signer
 	err = suaveClient.Call(&txHash, "eth_sendRawTransaction", hexutil.Encode(txBytes))
 	RequireNoErrorf(err, "could not send the deployment transaction to suave node: %v", err)
 
-	return &ethBlockBidSenderAddr, &txHash, nil
+	return &mevshareAddr, &txHash, nil
 }
