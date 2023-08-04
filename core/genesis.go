@@ -534,7 +534,6 @@ func DefaultGenesisBlock() *Genesis {
 
 // DefaultSuaveGenesisBlock returns the Suave network genesis block.
 func DefaultSuaveGenesisBlock() *Genesis {
-	faucet := common.HexToAddress("0x0")
 	return &Genesis{
 		Config:     params.SuaveChainConfig,
 		Timestamp:  1687192941,
@@ -554,15 +553,6 @@ func DefaultSuaveGenesisBlock() *Genesis {
 			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
 
 			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
-			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
-			common.HexToAddress("0x42200000"): {
-				Balance: big.NewInt(1),
-				Code:    hexutil.MustDecode(BidsContractCode),
-			},
-			common.HexToAddress("0x42200001"): {
-				Balance: big.NewInt(1),
-				Code:    hexutil.MustDecode(BlockBidContractCode),
-			},
 		},
 	}
 }
@@ -628,18 +618,10 @@ func DeveloperGenesisBlock(period uint64, gasLimit uint64, faucet common.Address
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
 			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
 
-			common.HexToAddress("0x71B21E9b8029d1E384B71B2A1708005A7d4D0428"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
-			common.HexToAddress("0xfB8CcAb59b2d3Ef32B966F26891842db2b35d787"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
 			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
+			common.HexToAddress("0x71B21E9b8029d1E384B71B2A1708005A7d4D0428"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))},
+			common.HexToAddress("0xfB8CcAb59b2d3Ef32B966F26891842db2b35d787"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))},
 			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
-			common.HexToAddress("0x42200000"): {
-				Balance: big.NewInt(1),
-				Code:    hexutil.MustDecode(BidsContractCode),
-			},
-			common.HexToAddress("0x42200001"): {
-				Balance: big.NewInt(1),
-				Code:    hexutil.MustDecode(BlockBidContractCode),
-			},
 		},
 	}
 }

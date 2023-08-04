@@ -280,9 +280,13 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 		if tx.ChainId().Cmp(s.chainId) != 0 {
 			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, tx.ChainId(), s.chainId)
 		}
-		_, err := recoverPlain(s.Hash(tx), R, S, V, true)
+		recovered, err := recoverPlain(s.Hash(tx), R, S, V, true)
 		if err != nil {
 			return common.Address{}, err
+		}
+
+		if recovered != inner.ExecutionNode {
+			return common.Address{}, fmt.Errorf("offchain tx %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.ExecutionNode.Hex())
 		}
 	}
 

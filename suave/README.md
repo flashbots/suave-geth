@@ -14,7 +14,7 @@ SUAVE positions itself as a marketplace for mechanisms, promoting an array of no
 ## How do I use the suave chain?
 
 1. **Deploy smart contracts with off-chain execution capabilities.**  
-   Similiar to the Ethereum network, the same rules apply to smart contracts in SUAVE. However, contracts on the SUAVE Chain have the added advantage of being able to access additional precompiles during off-chain request execution.
+   Similiar to the Ethereum network, the same rules apply to smart contracts in SUAVE. However, contracts on the SUAVE Chain have the added advantage of being able to access additional precompiles during off-chain request execution. To find the off-chain precompile reference, check the [**SUAVE library**](# SUAVE library).
 
 2. **NEW! Request off-chain execution using the new off-chain transaction feature.**  
    After off-chain execution, the result replaces the calldata for on-chain execution. This grants different behaviors to off-chain and on-chain transactions since off-chain APIs are inaccessible during on-chain computation. 
@@ -23,11 +23,7 @@ SUAVE positions itself as a marketplace for mechanisms, promoting an array of no
 
    See [Off-chain transactions](#Off-chain-transactions) for more details.
 
-3. **Transact with SUAVE tokens.**  
-   Similar to Ethereum, SUAVE tokens are used to cover gas fees.
-
-
-### How do execute a contract off-chain?
+### How do I execute a contract off-chain?
 
 Let’s take a look at how you can send an off-chain transaction through an execution node.
 
@@ -66,6 +62,8 @@ Let’s take a look at how you can send an off-chain transaction through an exec
     ```
 
 5. All done! Once the execution node processes your off-chain transaction, the execution node will submit it as `OffchainExecutedTransaction` to the suave chain’s mempool.
+
+For more on off-chain transactions see [Off-chain transactions](# Off-chain transactions).
 
 ### How do I run a suave chain node?
 

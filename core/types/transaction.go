@@ -411,6 +411,10 @@ func (tx *Transaction) BlobGasFeeCapIntCmp(other *big.Int) int {
 
 // Hash returns the transaction hash.
 func (tx *Transaction) Hash() common.Hash {
+	if hash := tx.hash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+
 	var h common.Hash
 	if tx.Type() == LegacyTxType {
 		h = rlpHash(tx.inner)

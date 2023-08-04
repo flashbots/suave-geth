@@ -1,6 +1,6 @@
 ## SUAVE Geth
 
-For SUAVE specific docs see [here](https://github.com/flashbots/suave-geth/blob/main/suave/README.md) and for more information on the current target release SUAVE Centauri see [here](https://writings.flashbots.net/mevm-suave-centauri-and-beyond).
+For SUAVE specific docs see [suave/README.md](suave/README.md) and for more information on the current target release SUAVE Centauri see [here](https://writings.flashbots.net/mevm-suave-centauri-and-beyond).
 
 ## Go Ethereum
 

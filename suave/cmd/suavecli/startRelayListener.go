@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -130,7 +130,7 @@ func blockHashChecker(blockHashChan <-chan string, nextBlockHashChan chan<- stri
 				continue
 			}
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				log.Error("Failed to read response body: %v", err)
 				continue
@@ -159,7 +159,7 @@ func payloadDeliveryChecker(nextBlockHashChan <-chan string, payloadDeliveredCha
 				continue
 			}
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				log.Error("Failed to read response body: %v", err)
 				continue
