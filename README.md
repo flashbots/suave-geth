@@ -366,10 +366,6 @@ The go-ethereum binaries (i.e. all code inside of the `cmd` directory) are licen
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also
 included in our repository in the `COPYING` file.
 
-The SUAVE library (i.e. all code in the `suave` directory, but outside the `suave/cmd` directory) is licensed under the
+The SUAVE library and binaries (i.e. all code in the `suave` directory) is licensed under the
 [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html),
 also included in our repository in the `COPYING.LESSER` file.
-
-The SUAVE binaries (i.e. all code in the `suave/cmd` directory) are licensed under the
-[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also
-included in our repository in the `COPYING` file.
