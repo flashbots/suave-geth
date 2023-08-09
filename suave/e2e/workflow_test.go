@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
@@ -69,44 +70,13 @@ func TestIsOffchain(t *testing.T) {
 	}
 
 	{
-		// Verify sending offchain and onchain transactions to isOffchainAddress
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &isOffchainAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     []byte{},
-		}
+		oo := newOffchainTx(node, ethservice).
+			To(isOffchainAddress)
+		oo.Send(t)
 
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
-
-		onchainTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
-			Nonce:    1,
-			To:       &isOffchainAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     []byte{},
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		onchainTxBytes, err := onchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var onchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&onchainTxHash, "eth_sendRawTransaction", hexutil.Encode(onchainTxBytes)))
-		require.Equal(t, common.HexToHash("0x031415a9010d25f2a882758cf7b8dbb3750678828e9973f32f0c73ef49a038b4"), onchainTxHash)
+		onchain := newTxn(node, ethservice).
+			To(isOffchainAddress)
+		onchain.Send(t)
 
 		block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
 		require.Equal(t, 2, len(block.Transactions()))
@@ -192,27 +162,10 @@ func TestMempool(t *testing.T) {
 			Version:             bids[1].Version,
 		})
 
-		// Verify via transaction
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &fetchBidsAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
+		oo := newOffchainTx(node, ethservice).
+			To(fetchBidsAddress).
+			Data(calldata)
+		oo.Send(t)
 
 		block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
 		require.Equal(t, 1, len(block.Transactions()))
@@ -227,13 +180,100 @@ func TestMempool(t *testing.T) {
 	}
 }
 
+type offchainTxn struct {
+	ethservice *eth.Ethereum
+	node       *node.Node
+
+	isOffchain   bool
+	to           common.Address
+	data         []byte
+	confidential []byte
+
+	rawTxn *types.LegacyTx
+}
+
+func (o *offchainTxn) WithConfidential(input []byte) *offchainTxn {
+	o.confidential = append(o.confidential, input...)
+	return o
+}
+
+func (o *offchainTxn) Data(input []byte) *offchainTxn {
+	o.data = input
+	return o
+}
+
+func (o *offchainTxn) To(addr common.Address) *offchainTxn {
+	o.to = addr
+	return o
+}
+
+func (o *offchainTxn) Send(t *testing.T) common.Hash {
+	rpc, err := o.node.Attach()
+	require.NoError(t, err)
+
+	clt := ethclient.NewClient(rpc)
+
+	senderAddr := crypto.PubkeyToAddress(testKey.PublicKey)
+
+	nonce, err := clt.PendingNonceAt(context.Background(), senderAddr)
+	require.NoError(t, err)
+
+	txnData := &types.LegacyTx{
+		Nonce:    nonce,
+		To:       &o.to,
+		Value:    nil,
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+		Data:     o.data,
+	}
+
+	o.rawTxn = txnData
+
+	var txBytes []byte
+
+	if o.isOffchain {
+		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+			ExecutionNode: o.ethservice.AccountManager().Accounts()[0],
+			Wrapped:       *types.NewTx(txnData),
+		}), signer, testKey)
+		require.NoError(t, err)
+
+		txBytes, err = offchainTx.MarshalBinary()
+		require.NoError(t, err)
+	} else {
+		onchainTx, err := types.SignTx(types.NewTx(txnData), signer, testKey)
+		require.NoError(t, err)
+
+		txBytes, err = onchainTx.MarshalBinary()
+		require.NoError(t, err)
+	}
+
+	var offchainTxHash common.Hash
+	requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(txBytes), hexutil.Encode(o.confidential)))
+
+	return offchainTxHash
+}
+
+func newTxn(node *node.Node, ethservice *eth.Ethereum) *offchainTxn {
+	return &offchainTxn{
+		isOffchain: false,
+		node:       node,
+		ethservice: ethservice,
+	}
+}
+
+func newOffchainTx(node *node.Node, ethservice *eth.Ethereum) *offchainTxn {
+	return &offchainTxn{
+		isOffchain: true,
+		node:       node,
+		ethservice: ethservice,
+	}
+}
+
 func TestBundleBid(t *testing.T) {
 	// t.Fatal("not implemented")
 	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{})
 	defer node.Close()
-
-	rpc, err := node.Attach()
-	require.NoError(t, err)
 
 	{
 		targetBlock := uint64(16103213)
@@ -252,30 +292,14 @@ func TestBundleBid(t *testing.T) {
 		calldata, err := bundleBidAbi.Pack("newBid", targetBlock, allowedPeekers)
 		require.NoError(t, err)
 
-		// Verify via transaction
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		oo := newOffchainTx(node, ethservice).
+			To(newBundleBidAddress).
+			Data(calldata).
+			WithConfidential(confidentialDataBytes)
+		oo.Send(t)
 
 		block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
 		require.Equal(t, 1, len(block.Transactions()))
@@ -359,30 +383,15 @@ func TestMevShare(t *testing.T) {
 	calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
 	require.NoError(t, err)
 
-	wrappedTxData := &types.LegacyTx{
-		Nonce:    0,
-		To:       &mevShareAddress,
-		Value:    nil,
-		Gas:      1000069,
-		GasPrice: big.NewInt(10),
-		Data:     calldata,
-	}
-
-	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: ethservice.AccountManager().Accounts()[0],
-		Wrapped:       *types.NewTx(wrappedTxData),
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	offchainTxBytes, err := offchainTx.MarshalBinary()
-	require.NoError(t, err)
-
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
 	confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 	require.NoError(t, err)
 
-	var offchainTxHash common.Hash
-	requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+	oo := newOffchainTx(node, ethservice).
+		To(mevShareAddress).
+		Data(calldata).
+		WithConfidential(confidentialDataBytes)
+	oo.Send(t)
 
 	//   1a. confirm submission
 	block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
@@ -427,30 +436,15 @@ func TestMevShare(t *testing.T) {
 	backRunCalldata, err := matchBidAbi.Pack("newMatch", targetBlock+1, allowedPeekers, shareBidId)
 	require.NoError(t, err)
 
-	wrappedMatchTxData := &types.LegacyTx{
-		Nonce:    1,
-		To:       &mevShareAddress,
-		Value:    nil,
-		Gas:      1000069,
-		GasPrice: big.NewInt(10),
-		Data:     backRunCalldata,
-	}
-
-	offchainMatchTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: ethservice.AccountManager().Accounts()[0],
-		Wrapped:       *types.NewTx(wrappedMatchTxData),
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	offchainMatchTxBytes, err := offchainMatchTx.MarshalBinary()
-	require.NoError(t, err)
-
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
 	confidentialDataMatchBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 	require.NoError(t, err)
 
-	var offchainMatchTxHash common.Hash
-	requireNoRpcError(t, rpc.Call(&offchainMatchTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainMatchTxBytes), hexutil.Encode(confidentialDataMatchBytes)))
+	oo2 := newOffchainTx(node, ethservice).
+		To(mevShareAddress).
+		Data(backRunCalldata).
+		WithConfidential(confidentialDataMatchBytes)
+	oo2.Send(t)
 
 	block = progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
 	require.Equal(t, 1, len(block.Transactions()))
@@ -489,26 +483,10 @@ func TestMevShare(t *testing.T) {
 	calldata, err = buildEthBlockAbi.Pack("buildMevShare", payloadArgsTuple, targetBlock+1)
 	require.NoError(t, err)
 
-	wrappedTxDataBB := &types.LegacyTx{
-		Nonce:    2,
-		To:       &newBlockBidAddress,
-		Value:    nil,
-		Gas:      1000000,
-		GasPrice: big.NewInt(10),
-		Data:     calldata,
-	}
-
-	offchainTxBB, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: ethservice.AccountManager().Accounts()[0],
-		Wrapped:       *types.NewTx(wrappedTxDataBB),
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	offchainTxBytesBB, err := offchainTxBB.MarshalBinary()
-	require.NoError(t, err)
-
-	var offchainTxHashBB common.Hash
-	requireNoRpcError(t, rpc.Call(&offchainTxHashBB, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytesBB)))
+	oo3 := newOffchainTx(node, ethservice).
+		To(newBlockBidAddress).
+		Data(calldata)
+	oo3.Send(t)
 
 	block = progressChain(t, ethservice, block.Header())
 	require.Equal(t, 1, len(block.Transactions()))
@@ -673,9 +651,6 @@ func TestBlockBuildingContract(t *testing.T) {
 	defer node.Close()
 	ethservice.APIs()
 
-	rpc, err := node.Attach()
-	require.NoError(t, err)
-
 	// ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	// defer cancel()
 
@@ -706,29 +681,14 @@ func TestBlockBuildingContract(t *testing.T) {
 		calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
 		require.NoError(t, err)
 
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		oo := newOffchainTx(node, ethservice).
+			To(newBundleBidAddress).
+			Data(calldata).
+			WithConfidential(confidentialDataBytes)
+		oo.Send(t)
 	}
 
 	block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
@@ -759,26 +719,10 @@ func TestBlockBuildingContract(t *testing.T) {
 		calldata, err := buildEthBlockAbi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
 		require.NoError(t, err)
 
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    1,
-			To:       &newBlockBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
+		oo1 := newOffchainTx(node, ethservice).
+			To(newBlockBidAddress).
+			Data(calldata)
+		oo1.Send(t)
 
 		block = progressChain(t, ethservice, block.Header())
 		require.Equal(t, 1, len(block.Transactions()))
@@ -879,29 +823,14 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
 		require.NoError(t, err)
 
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    1,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		oo := newOffchainTx(node, ethservice).
+			To(newBundleBidAddress).
+			Data(calldata).
+			WithConfidential(confidentialDataBytes)
+		oo.Send(t)
 	}
 
 	block = progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
@@ -932,26 +861,10 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		calldata, err := ethBlockBidSenderAbi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
 		require.NoError(t, err)
 
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    2,
-			To:       &ethBlockBidSenderAddr,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
+		oo1 := newOffchainTx(node, ethservice).
+			To(ethBlockBidSenderAddr).
+			Data(calldata)
+		oo1.Send(t)
 
 		block = progressChain(t, ethservice, block.Header())
 		require.Equal(t, 1, len(block.Transactions()))
