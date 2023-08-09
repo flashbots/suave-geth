@@ -1,25 +1,41 @@
-# SUAVE Chain
+**Table of Contents**
 
-We introduce SUAVE, a new hard-fork based on Shapella. The node, compatible with Ethereum, operates just like any Ethereum network node. The defining feature of SUAVE chain nodes is the off-chain execution capability, enabling users to both define and use smart contracts executed before their transactions are sent to the public chain. Off-chain execution gives contracts access to additional precompiles, expanding MEV-related functionalities. This includes transaction and bundle simulation using geth RPC, building blocks, and sending blocks to boost relays. Nodes providing off-chain execution are known as "execution nodes".
+1. [SUAVE](#SUAVE)  
+    1.1. [Why would I use the suave chain?](#Why-would-I-use-the-suave-chain?)  
+    1.2. [How do I use the suave chain?](#How-do-I-use-the-suave-chain?)  
+    1.3. [How do I execute a contract off-chain?](#How-do-I-execute-a-contract-off-chain?)  
+    1.4. [How do I run a suave chain node?](#How-do-I-run-a-suave-chain-node?)  
+    1.5. [How do I run a suave execution node?](#How-do-I-run-a-suave-execution-node?)  
+2. [Suave technical details](#Suave-technical-details)
+    2.2. [Suave Runtime (MEVM)](#Suave-Runtime-(MEVM))  
+    2.3. [Off-chain execution of smart contracts](#Off-chain-execution-of-smart-contracts)  
+    2.4. [Off-chain transactions](#Off-chain-transactions)  
+    2.5. [SUAVE Bids](#SUAVE-Bids)  
+    2.6. [SUAVE library](#SUAVE-library)  
+    2.7. [Offchain APIs](#Offchain-APIs)  
+    2.8. [Confidential Store](#Confidential-Store)  
+    2.9. [SUAVE Mempool](#SUAVE-Mempool)  
+    2.10. [Notable differences from standard issue go-ethereum](#Notable-differences-from-standard-issue-go-ethereum)  
+    2.11. [Suave precompiles](#Suave-precompiles)  
 
-Currently, the SUAVE chain operates as a good old PoA chain (Proof of Authority), with Flashbots acting as the authority.
+# SUAVE
+
+We introduce `suave-geth`, our work-in-progress SUAVE client. The defining feature of `suave-geth` is the off-chain execution capability, enabling users to both define and use smart contracts executed before their transactions are sent to the public chain. Off-chain execution gives contracts access to additional precompiles, expanding MEV-related functionalities. This includes transaction and bundle simulation using geth RPC, building blocks, and sending blocks to boost relays. Nodes providing off-chain execution are known as "execution nodes".
 
 
 ## Why would I use the suave chain?
 
 The SUAVE Chain, an integral part of the [Centauri release](https://writings.flashbots.net/mevm-suave-centauri-and-beyond), introduces [MEVM](#suave-runtime-mevm), an augmented version of the Ethereum Virtual Machine (EVM) that lowers entry barriers for MEV application development and encourages the creation of innovative mechanisms. It aims to decentralize the traditionally centralized MEV infrastructure by rendering every MEV supply chain primitive programmable in smart contracts on a decentralized blockchain.
 
-SUAVE positions itself as a marketplace for mechanisms, promoting an array of novel applications previously unachievable on Ethereum. It is designed to cater to applications needing private data, intra-block time coordination, and eventually, access to real-time off-chain data, and high compute resources. SUAVE assures privacy, credible computation, and composability, with the MEVM performing computations of sensitive data off-chain.
-
 ## How do I use the suave chain?
 
 1. **Deploy smart contracts with off-chain execution capabilities.**  
-   Similiar to the Ethereum network, the same rules apply to smart contracts in SUAVE. However, contracts on the SUAVE Chain have the added advantage of being able to access additional precompiles during off-chain request execution. To find the off-chain precompile reference, check the [**SUAVE library**](# SUAVE library).
+   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during off-chain request execution. Precompiles are available through the [SUAVE library](#SUAVE-library).
 
 2. **NEW! Request off-chain execution using the new off-chain transaction feature.**  
-   After off-chain execution, the result replaces the calldata for on-chain execution. This grants different behaviors to off-chain and on-chain transactions since off-chain APIs are inaccessible during on-chain computation. 
+   Contracts requested using off-chain transactions have access to off-chain data and APIs through SUAVE precompiles. Off-chain execution is *not* reproducible on-chain, thus, users are required to whitelist a specific execution node trusted to provide the result. Eventually proofs and trusted enclaves will help to verify the results of execution.  
+      After off-chain execution, the result replaces the calldata for on-chain execution. This grants different behaviors to off-chain and on-chain transactions since off-chain APIs are inaccessible during on-chain computation. 
 
-   Contracts requested using off-chain transactions have access to off-chain data and APIs through SUAVE precompiles. Off-chain execution is *not* reproducible on-chain, thus, users are required to whitelist a specific execution node trusted to provide the result. Eventually proofs and trusted enclaves will help to verify the results of execution.
 
    See [Off-chain transactions](#Off-chain-transactions) for more details.
 
@@ -90,6 +106,7 @@ Not all suave chain nodes provide off-chain execution. You’ll need:
 Note that simply enabling http jsonrpc and allowing direct access might not be the wisest. Look into proxyd and other restricted access solutions.
 
 # Suave technical details
+
 
 ## Suave Runtime (MEVM)
 
