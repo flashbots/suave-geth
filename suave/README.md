@@ -1,13 +1,20 @@
+# SUAVE
+
+SUAVE is designed to decentralize the MEV supply chain by enabling centralized infrastructure (builders, relays, centralized RFQ routing, etc.) to be programmed as smart contracts on a decentralized blockchain.
+
+`suave-geth` is a work-in-progress golang SUAVE client, consisting of two seperable components, chain nodes and execution nodes. SUAVE clients offer confidential execution for smart contracts, allowing off-chain processing with extended precompiles for enhanced MEV functionalities, including transaction simulation via geth RPC, block building, and relay boosting, all handled by dedicated execution nodes.
+
+For a deeper dive check out the [technical details section](#suave-geth-technical-details), and for a step-by-step guide explore the [simple MEV-share walk through](cmd/README.md).
+
 **Table of Contents**
 
-1. [SUAVE](#SUAVE)  
-    1.1. [Why would I use the suave chain?](#Why-would-I-use-the-suave-chain?)  
-    1.2. [How do I use the suave chain?](#How-do-I-use-the-suave-chain?)  
-    1.3. [How do I execute a contract confidentially?](#How-do-I-execute-a-contract-confidentially?)  
-    1.4. [How do I run a suave chain node?](#How-do-I-run-a-suave-chain-node?)  
-    1.5. [How do I run a suave execution node?](#How-do-I-run-a-suave-execution-node?)  
-2. [Suave technical details](#Suave-technical-details)  
-    2.2. [Suave Runtime (MEVM)](#Suave-Runtime-(MEVM))  
+1. [Getting Started](#Getting-Started)  
+    1.1. [How do I use the SUAVE?](#How-do-I-use-SUAVE)  
+    1.2. [How do I execute a contract confidentially?](#How-do-I-execute-a-contract-confidentially)  
+    1.3. [How do I run a SUAVE chain node?](#How-do-I-run-a-SUAVE-chain-node)  
+    1.4. [How do I run a SUAVE execution node?](#How-do-I-run-a-SAUVE-execution-node)  
+2. [suave-geth technical details](#suave-geth-technical-details)  
+    2.2. [SUAVE Runtime (MEVM)](#Suave-Runtime-MEVM)  
     2.3. [Confidential execution of smart contracts](#Confidential-execution-of-smart-contracts)  
     2.4. [Confidential computation requests](#Confidential-computation-requests)  
     2.5. [SUAVE Bids](#SUAVE-Bids)  
@@ -16,18 +23,11 @@
     2.8. [Confidential Store](#Confidential-Store)  
     2.9. [SUAVE Mempool](#SUAVE-Mempool)  
     2.10. [Notable differences from standard issue go-ethereum](#Notable-differences-from-standard-issue-go-ethereum)  
-    2.11. [Suave precompiles](#Suave-precompiles)  
+    2.11. [Suave precompiles](#SUAVE-precompiles)  
 
-# SUAVE
+## Getting Started
 
-We introduce `suave-geth`, our work-in-progress SUAVE client. The defining feature of `suave-geth` is the confidential execution capability, enabling users to both define and use smart contracts executed before their transactions are sent to the public chain. Off-chain execution gives contracts access to additional precompiles, expanding MEV-related functionalities. This includes transaction and bundle simulation using geth RPC, building blocks, and sending blocks to boost relays. Nodes providing confidential execution are known as "execution nodes".
-
-
-## Why would I use the suave chain?
-
-The SUAVE Chain, an integral part of the [Centauri release](https://writings.flashbots.net/mevm-suave-centauri-and-beyond), introduces [MEVM](#suave-runtime-mevm), an augmented version of the Ethereum Virtual Machine (EVM) that lowers entry barriers for MEV application development and encourages the creation of innovative mechanisms. It aims to decentralize the traditionally centralized MEV infrastructure by rendering every MEV supply chain primitive programmable in smart contracts on a decentralized blockchain.
-
-## How do I use the suave chain?
+### How do I use SUAVE?
 
 1. **Deploy confidential smart contracts.**  
    Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#SUAVE-library).
@@ -79,7 +79,7 @@ Let’s take a look at how you can request confidential computation through an e
 
 For more on confidential computation requests see [Confidential computation requests](#Confidential-computation-requests).
 
-### How do I run a suave node?
+### How do I run a SUAVE node?
 
 1. Build the client with `make geth`.
 2. Run the node. Pass in `--dev` to enable local devnet. Example:
@@ -90,10 +90,10 @@ For more on confidential computation requests see [Confidential computation requ
 
 3. Do your thing!
 
-### How do I run a suave execution node?
+### How do I run a SUAVE execution node?
 
 Not all nodes serve confidential computation requests. You’ll need:
-- A suave node (see above).
+- A SUAVE node (see above).
 - An account. If you are doing this for testing, simply run `geth --suave account new`. Take note of the address.
 - Access to Ethereum’s RPC. When starting your node, pass in `--suave.eth.remote_endpoint` to point to your Ethereum RPC for off-chain execution.
     ```go
@@ -101,9 +101,11 @@ Not all nodes serve confidential computation requests. You’ll need:
     ```
 Note that simply enabling http jsonrpc and allowing direct access might not be the wisest. Look into proxyd and other restricted access solutions.
 
-# Suave technical details
+## suave-geth technical details
 
-## Suave Runtime (MEVM)
+### Overview
+
+### SUAVE Runtime (MEVM)
 
 [`SuaveExecutionBackend`](#SuaveExecutionBackend) 🤝 EVM = MEVM
 
@@ -131,13 +133,13 @@ graph TB
     class S orange
     class T,U purple
     class Z,V lightgreen
-    classDef yellow fill:#f6c347,stroke:#333,stroke-width:2px;
-    classDef red fill:#eaafa1,stroke:#333,stroke-width:2px;
-    classDef green fill:#96bb7c,stroke:#333,stroke-width:2px;
-    classDef blue fill:#f7ea00,stroke:#333,stroke-width:2px;
-    classDef orange fill:#ffcdab,stroke:#333,stroke-width:2px;
-    classDef purple fill:#b992c9,stroke:#333,stroke-width:2px;
-    classDef lightgreen fill:#dbd56e,stroke:#333,stroke-width:2px;
+    classDef yellow fill:#f5cf58,stroke:#444,stroke-width:2px;
+    classDef red fill:#d98686,stroke:#444,stroke-width:2px;
+    classDef green fill:#82a682,stroke:#444,stroke-width:2px;
+    classDef blue fill:#9abedc,stroke:#444,stroke-width:2px;
+    classDef orange fill:#f3b983,stroke:#444,stroke-width:2px;
+    classDef purple fill:#ab92b5,stroke:#444,stroke-width:2px;
+    classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px;
 ```
 
 The capabilities enabled by this modified runtime are exposed via the APIs `ConfiendialStoreBackend` , `MempoolBackend`, `ConfiendialStoreBackend`, as well as access to `confidentialInputs` to confidential computation requests and `callerStack`. 
@@ -160,19 +162,19 @@ func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExec
 
 All of these newly offered APIs are available to your solidity smart contract through the use of precompiles! See below for how confidential computation and smart contracts interact.
 
-## Confidential execution of smart contracts
+### Confidential execution of smart contracts
 
-Virtual machine inside suave nodes has two modes of operation: regular and confidential (sometimes called off-chain). Regulal on-chain environment is your usual Ethereum virtual machine environment.
+The virtual machine (MEVM) inside SUAVE nodes have two modes of operation: regular and confidential (sometimes called off-chain). Regulal on-chain environment is your usual Ethereum virtual machine environment.
 
 Confidential environment is available to users through a new type of ransaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [Confidential computation requests](#Confidential-computation-requests).
 
 The confidential execution environment provides additional precompiles, both directly and through a convenient [library](#SUAVE-library). Confidential execution is *not* verifiable during on-chain state transition, instead the result of the confidential execution is cached in the transaction (`OffchainExecutedTx`). Users requesting confidential computation requests specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
 
-The cached result of confidential execution is used as calldata once the transaction makes its way on the suave chain.
+The cached result of confidential execution is used as calldata in the transaction that inevitably makes its way onto the SUAVE chain.
 
 Other than ability to access new precompiles, the contracts aiming to be executed confidentially are written as usual in Solidity (or any other language) and compiled to EVM bytecode.
 
-## Confidential computation requests
+### Confidential computation requests
 
 We introduce two new transaction types: `OffchainTx`, serving as a request of confidential computation, and `OffchainExecutedTx` which is the result of a confidential computation. The new confidential computation transactions track the usage of gas during confidential computation, and contain (or reference) the result of the computation in a chain-friendly manner.  
 
@@ -218,7 +220,7 @@ Architecture reference
 
 Mind, that the results are not reproducible as they are based on confidential data that is dropped after execution, and off-chain data that might change with time. On-chain state transition only depends on the result of the confidential computation, so it is fully reproducible.
 
-## SUAVE Bids
+### SUAVE Bids
 
 On the SUAVE chain, bids serve as the primary transaction unit, and are used for interactions between smart contracts and the Confidential Store. 
 
@@ -235,7 +237,7 @@ type Bid struct {
 
 Each `Bid` has an `Id`, a `DecryptionCondition`, an array of `AllowedPeekers`, and a `Version`. The `DecryptionCondition` signifies the block number at which the bid can be decrypted and is typically derived from the source contract or may even be a contract itself. The `AllowedPeekers` are the addresses that are permitted to access the data associated with the bid, providing an added layer of access control. The `Version` indicates the version of the protocol used for the bid.
 
-## SUAVE library
+### SUAVE library
 
 Along the SUAVE precompiles, we provide a convenient wrapper for calling them from Solidity. The [library](sol/libraries/Suave.sol) makes the precompiles easier to call by providing the signatures, and the library functions themselves simply perform a `staticcall` of the requested precompile.
 
@@ -264,7 +266,7 @@ library Suave {
 }
 ```
 
-## Offchain APIs
+### Offchain APIs
 
 Off-chain precompiles have access to the following [off-chain APIs](core/types.go) during execution.
 
@@ -287,7 +289,7 @@ type OffchainEthBackend interface {
 }
 ```
 
-## Confidential Store
+### Confidential Store
 
 The Confidential Store is an integral part of the SUAVE chain, designed to facilitate secure and privacy-preserving transactions and smart contract interactions. It functions as a key-value store where users can safely store and retrieve confidential data related to their bids. The Confidential Store restricts access (both reading and writing) only to the allowed peekers of each bid, allowing developers to define the entire data model of their application!
 
@@ -316,7 +318,7 @@ The `LocalConfidentialStore` provides the following key methods:
 
 It is important to note that the actual implementation of the Confidential Store will vary depending on future requirements and the privacy mechanisms used.
 
-## SUAVE Mempool
+### SUAVE Mempool
 
 The SUAVE mempool is a temporary storage pool for transactions waiting to be added to the blockchain. This mempool, `MempoolOnConfidentialStore`, operates on the Confidential Store, hence facilitating the privacy-preserving handling of bid transactions. The `MempoolOnConfidentialStore` is designed to handle SUAVE bids, namely the submission, retrieval, and grouping of bids by decryption condition such as block number and protocol. It provides a secure and efficient mechanism for managing these transactions while preserving their confidentiality.
 
@@ -362,11 +364,12 @@ We introduce a new interface [SuavePrecompiledContract](../core/vm/contracts.go)
 type SuavePrecompiledContract interface {
 	PrecompiledContract
 	RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error)
+}
 ```
 
 The method `RunOffchain` is invoked during confidential execution, and the suave execution backend which provides access to off-chain APIs is passed in as input.
 
-### Suave precompile wrapper
+### SUAVE precompile wrapper
 
 We introduce [SuavePrecompiledContractWrapper](../core/vm/suave.go) implementing the `PrecompiledContract` interface. The new structure captures the off-chain APIs in its constructor, and passes the off-chain APIs during the usual contract's `Run` method to a separate method - `RunOffchain`
 
@@ -408,7 +411,7 @@ The methods are implemented in [worker](../miner/worker.go), by `buildBlockFromT
 `buildBlockFromTxs` will simply build a block out of the transactions provided, while `buildBlockFromBundles` will in addition forward the block profit to the requested fee recipient, as needed for boost relay payments.
 
 
-## Suave precompiles
+## SUAVE precompiles
 
 Additional precompiles available via the EVM.  
 Only `IsOffchain` is available during on-chain execution, and simply returns false.  
