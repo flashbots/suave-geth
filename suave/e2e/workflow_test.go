@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/ssz"
 	boostSsz "github.com/flashbots/go-boost-utils/ssz"
@@ -275,6 +276,8 @@ func TestBundleBid(t *testing.T) {
 	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{})
 	defer node.Close()
 
+	client := newClient(node, ethservice)
+
 	{
 		targetBlock := uint64(16103213)
 		allowedPeekers := []common.Address{common.Address{0x41, 0x42, 0x43}, newBundleBidAddress}
@@ -297,7 +300,7 @@ func TestBundleBid(t *testing.T) {
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		cc := getContract(newBundleBidAddress, bundleBidAbi, node, ethservice)
+		cc := getContract(newBundleBidAddress, bundleBidAbi, client)
 		_, err = cc.sendTransaction("newBid", []interface{}{targetBlock, allowedPeekers}, WithConfidential(confidentialDataBytes))
 		require.NoError(t, err)
 
@@ -354,6 +357,8 @@ func TestMevShare(t *testing.T) {
 	rpc, err := node.Attach()
 	require.NoError(t, err)
 
+	client := newClient(node, ethservice)
+
 	// ************ 1. Initial mevshare transaction Portion ************
 
 	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
@@ -387,7 +392,7 @@ func TestMevShare(t *testing.T) {
 	confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 	require.NoError(t, err)
 
-	cc := getContract(mevShareAddress, bundleBidAbi, node, ethservice)
+	cc := getContract(mevShareAddress, bundleBidAbi, client)
 
 	_, err = cc.sendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, WithConfidential(confidentialDataBytes))
 	require.NoError(t, err)
@@ -435,7 +440,7 @@ func TestMevShare(t *testing.T) {
 	confidentialDataMatchBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 	require.NoError(t, err)
 
-	cc1 := getContract(mevShareAddress, matchBidAbi, node, ethservice)
+	cc1 := getContract(mevShareAddress, matchBidAbi, client)
 
 	// decryption conditions are assumed to be eth blocks right now
 	_, err = cc1.sendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, shareBidId}, WithConfidential(confidentialDataMatchBytes))
@@ -480,7 +485,7 @@ func TestMevShare(t *testing.T) {
 		require.NoError(t, err)
 	*/
 
-	cc2 := getContract(newBlockBidAddress, buildEthBlockAbi, node, ethservice)
+	cc2 := getContract(newBlockBidAddress, buildEthBlockAbi, client)
 
 	_, err = cc2.sendTransaction("buildMevShare", []interface{}{payloadArgsTuple, targetBlock + 1})
 	require.NoError(t, err)
@@ -655,6 +660,8 @@ func TestBlockBuildingContract(t *testing.T) {
 	defer node.Close()
 	ethservice.APIs()
 
+	client := newClient(node, ethservice)
+
 	// ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	// defer cancel()
 
@@ -690,7 +697,7 @@ func TestBlockBuildingContract(t *testing.T) {
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		cc := getContract(newBundleBidAddress, bundleBidAbi, node, ethservice)
+		cc := getContract(newBundleBidAddress, bundleBidAbi, client)
 
 		_, err = cc.sendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, WithConfidential(confidentialDataBytes))
 		require.NoError(t, err)
@@ -734,7 +741,7 @@ func TestBlockBuildingContract(t *testing.T) {
 			require.NoError(t, err)
 		*/
 
-		cc1 := getContract(newBlockBidAddress, buildEthBlockAbi, node, ethservice)
+		cc1 := getContract(newBlockBidAddress, buildEthBlockAbi, client)
 
 		_, err = cc1.sendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1})
 		require.NoError(t, err)
@@ -751,11 +758,27 @@ func TestBlockBuildingContract(t *testing.T) {
 	}
 }
 
-type contract struct {
-	addr       common.Address
-	abi        abi.ABI
-	node       *node.Node
+type client struct {
 	ethservice *eth.Ethereum
+	rpc        *rpc.Client
+}
+
+func newClient(node *node.Node, ethservice *eth.Ethereum) *client {
+	rpc, err := node.Attach()
+	if err != nil {
+		panic(err)
+	}
+
+	return &client{
+		rpc:        rpc,
+		ethservice: ethservice,
+	}
+}
+
+type contract struct {
+	addr   common.Address
+	abi    abi.ABI
+	client *client
 }
 
 type txnOpts struct {
@@ -780,12 +803,7 @@ func (c *contract) sendTransaction(method string, args []interface{}, opts ...tx
 		opt(tOpts)
 	}
 
-	rpc, err := c.node.Attach()
-	if err != nil {
-		return nil, err
-	}
-
-	clt := ethclient.NewClient(rpc)
+	clt := ethclient.NewClient(c.client.rpc)
 
 	senderAddr := crypto.PubkeyToAddress(testKey.PublicKey)
 	nonce, err := clt.PendingNonceAt(context.Background(), senderAddr)
@@ -808,7 +826,7 @@ func (c *contract) sendTransaction(method string, args []interface{}, opts ...tx
 	}
 
 	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: c.ethservice.AccountManager().Accounts()[0],
+		ExecutionNode: c.client.ethservice.AccountManager().Accounts()[0],
 		Wrapped:       *types.NewTx(txnData),
 	}), signer, testKey)
 	if err != nil {
@@ -821,7 +839,7 @@ func (c *contract) sendTransaction(method string, args []interface{}, opts ...tx
 	}
 
 	var offchainTxHash common.Hash
-	if err := rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(txBytes), hexutil.Encode(tOpts.Confidential)); err != nil {
+	if err := c.client.rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(txBytes), hexutil.Encode(tOpts.Confidential)); err != nil {
 		return nil, err
 	}
 
@@ -831,12 +849,11 @@ func (c *contract) sendTransaction(method string, args []interface{}, opts ...tx
 	return resp, nil
 }
 
-func getContract(addr common.Address, abi abi.ABI, node *node.Node, ethservice *eth.Ethereum) *contract {
+func getContract(addr common.Address, abi abi.ABI, client *client) *contract {
 	c := &contract{
-		addr:       addr,
-		abi:        abi,
-		node:       node,
-		ethservice: ethservice,
+		addr:   addr,
+		abi:    abi,
+		client: client,
 	}
 	return c
 }
@@ -849,6 +866,8 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: "http://127.0.0.1:8596"})
 	defer node.Close()
 	ethservice.APIs()
+
+	client := newClient(node, ethservice)
 
 	rpc, err := node.Attach()
 	require.NoError(t, err)
@@ -932,7 +951,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{ethBlockBidSenderAddr, newBundleBidAddress, buildEthBlockAddress}
-		cc := getContract(newBundleBidAddress, bundleBidAbi, node, ethservice)
+		cc := getContract(newBundleBidAddress, bundleBidAbi, client)
 
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
@@ -970,7 +989,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 			FeeRecipient:   common.Address{0x42},
 		}
 
-		cc1 := getContract(ethBlockBidSenderAddr, ethBlockBidSenderAbi, node, ethservice)
+		cc1 := getContract(ethBlockBidSenderAddr, ethBlockBidSenderAbi, client)
 
 		_, err = cc1.sendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1})
 		require.NoError(t, err)
