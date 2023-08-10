@@ -3,13 +3,13 @@
 1. [SUAVE](#SUAVE)  
     1.1. [Why would I use the suave chain?](#Why-would-I-use-the-suave-chain?)  
     1.2. [How do I use the suave chain?](#How-do-I-use-the-suave-chain?)  
-    1.3. [How do I execute a contract off-chain?](#How-do-I-execute-a-contract-off-chain?)  
+    1.3. [How do I execute a contract confidentially?](#How-do-I-execute-a-contract-confidentially?)  
     1.4. [How do I run a suave chain node?](#How-do-I-run-a-suave-chain-node?)  
     1.5. [How do I run a suave execution node?](#How-do-I-run-a-suave-execution-node?)  
-2. [Suave technical details](#Suave-technical-details)
+2. [Suave technical details](#Suave-technical-details)  
     2.2. [Suave Runtime (MEVM)](#Suave-Runtime-(MEVM))  
-    2.3. [Off-chain execution of smart contracts](#Off-chain-execution-of-smart-contracts)  
-    2.4. [Off-chain transactions](#Off-chain-transactions)  
+    2.3. [Confidential execution of smart contracts](#Confidential-execution-of-smart-contracts)  
+    2.4. [Confidential computation requests](#Confidential-computation-requests)  
     2.5. [SUAVE Bids](#SUAVE-Bids)  
     2.6. [SUAVE library](#SUAVE-library)  
     2.7. [Offchain APIs](#Offchain-APIs)  
@@ -20,7 +20,7 @@
 
 # SUAVE
 
-We introduce `suave-geth`, our work-in-progress SUAVE client. The defining feature of `suave-geth` is the off-chain execution capability, enabling users to both define and use smart contracts executed before their transactions are sent to the public chain. Off-chain execution gives contracts access to additional precompiles, expanding MEV-related functionalities. This includes transaction and bundle simulation using geth RPC, building blocks, and sending blocks to boost relays. Nodes providing off-chain execution are known as "execution nodes".
+We introduce `suave-geth`, our work-in-progress SUAVE client. The defining feature of `suave-geth` is the confidential execution capability, enabling users to both define and use smart contracts executed before their transactions are sent to the public chain. Off-chain execution gives contracts access to additional precompiles, expanding MEV-related functionalities. This includes transaction and bundle simulation using geth RPC, building blocks, and sending blocks to boost relays. Nodes providing confidential execution are known as "execution nodes".
 
 
 ## Why would I use the suave chain?
@@ -29,28 +29,26 @@ The SUAVE Chain, an integral part of the [Centauri release](https://writings.fla
 
 ## How do I use the suave chain?
 
-1. **Deploy smart contracts with off-chain execution capabilities.**  
-   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during off-chain request execution. Precompiles are available through the [SUAVE library](#SUAVE-library).
+1. **Deploy confidential smart contracts.**  
+   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#SUAVE-library).
 
-2. **NEW! Request off-chain execution using the new off-chain transaction feature.**  
-   Contracts requested using off-chain transactions have access to off-chain data and APIs through SUAVE precompiles. Off-chain execution is *not* reproducible on-chain, thus, users are required to whitelist a specific execution node trusted to provide the result. Eventually proofs and trusted enclaves will help to verify the results of execution.  
-      After off-chain execution, the result replaces the calldata for on-chain execution. This grants different behaviors to off-chain and on-chain transactions since off-chain APIs are inaccessible during on-chain computation. 
+2. **NEW! Request confidential execution using the new confidential computation request.**  
+   Contracts called using confidential computation requests have access to off-chain data and APIs through SUAVE precompiles. Confidential computation is *not* reproducible on-chain, thus, users are required to whitelist a specific execution node trusted to provide the result. Eventually proofs and trusted enclaves will help to verify the results of execution.  
+      After the initial confidential computation, its result replaces the calldata for on-chain execution. This grants different behaviors to confidential, treated as off-chain, and regular on-chain transactions since off-chain APIs are inaccessible during regular chain state transition. 
 
 
-   See [Off-chain transactions](#Off-chain-transactions) for more details.
+   See [Confidential computation requests](#Confidential-computation-requests) for more details.
 
-### How do I execute a contract off-chain?
+### How do I execute a contract confidentially?
 
-Let’s take a look at how you can send an off-chain transaction through an execution node.
+Let’s take a look at how you can request confidential computation through an execution node. In the code sometimes we refer to confidential computation as "off-chain" (expect unification).
 
 1. Pick your favorite execution node. You’ll need its URL and wallet address. Note that the execution node is fully trusted to provide the result of your off-chain computation.
 
-    The execution node ran by Flashbots is at `soon™️` and its wallet address is `0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B`.
-
-2. Craft your off-chain request. This is a regular Ethereum transaction, where you specify the contract address and it’s (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call off-chain. Don’t sign the transaction quite yet.
+2. Craft your confidential computation request. This is a regular Ethereum transaction, where you specify the desired contract address and it’s (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
 
     ```go
-    allowedPeekers := []common.Address{newBlockBidPeeker, newBundleBidPeeker, buildEthBlockPeeker}
+    allowedPeekers := []common.Address{newBlockBidPeeker, newBundleBidPeeker, buildEthBlockPeeker} // express which contracts should have access to your data (by their addresses)
     offchainInnerTx := &types.LegacyTx{
         Nonce:    suaveAccNonce,
         To:       &newBundleBidAddress,
@@ -61,7 +59,7 @@ Let’s take a look at how you can send an off-chain transaction through an exec
     }
     ```
 
-3. Wrap your regular transaction into the new `OffchainTransaction` transaction, and specify the execution node’s wallet address as the `ExecutionNode` field. Sign the transaction with your suave wallet.
+3. Wrap your regular transaction into the new `OffchainTx` transaction type, and specify the execution node’s wallet address as the `ExecutionNode` field. Sign the transaction with your wallet.
 
     ```go
     offchainTx := types.SignTx(types.NewTx(&types.OffchainTx{
@@ -70,49 +68,46 @@ Let’s take a look at how you can send an off-chain transaction through an exec
     }), suaveSigner, privKey)
     ```
 
-4. Submit your off-chain transaction along with your confidential data to the execution node you chose via `eth_sendRawTransaction`.
+4. Request confidential computation by submitting your transaction along with your confidential data to the execution node you chose via `eth_sendRawTransaction`.
 
     ```go
     confidentialDataBytes := hexutil.Encode(ethBundle)
     suaveClient.Call("eth_sendRawTransaction", offchainTx, confidentialDataBytes)
     ```
 
-5. All done! Once the execution node processes your off-chain transaction, the execution node will submit it as `OffchainExecutedTransaction` to the suave chain’s mempool.
+5. All done! Once the execution node processes your computation request, the execution node will submit it as `OffchainExecutedTransaction` to the mempool.
 
-For more on off-chain transactions see [Off-chain transactions](# Off-chain transactions).
+For more on confidential computation requests see [Confidential computation requests](#Confidential-computation-requests).
 
-### How do I run a suave chain node?
+### How do I run a suave node?
 
-1. Check out https://github.com/flashbots/suave-geth on the `main` branch. If you are running a different version, make sure your genesis is the same!
-2. Build the client with `make geth`.
-3. Run the node. Pass in `--suave` to enable the suave network. Example:
+1. Build the client with `make geth`.
+2. Run the node. Pass in `--dev` to enable local devnet. Example:
 
     ```go
-    ./build/bin/geth --suave --syncmode=full --http --ws --allow-insecure-unlock --unlock "0xd52d1935D1239ADf94C59fA0F586fE00250694d5"
+    ./build/bin/geth --dev --dev.gaslimit 30000000 --datadir suave_dev --http --ws --allow-insecure-unlock --unlock "0xd52d1935D1239ADf94C59fA0F586fE00250694d5"
     ```
 
-4. Do your thing! Run your node as an execution node (see below), or simply process blocks as they come.
+3. Do your thing!
 
 ### How do I run a suave execution node?
 
-Not all suave chain nodes provide off-chain execution. You’ll need:
-- A suave chain node (see above).
+Not all nodes serve confidential computation requests. You’ll need:
+- A suave node (see above).
 - An account. If you are doing this for testing, simply run `geth --suave account new`. Take note of the address.
 - Access to Ethereum’s RPC. When starting your node, pass in `--suave.eth.remote_endpoint` to point to your Ethereum RPC for off-chain execution.
     ```go
-    ./build/bin/geth --dev --dev.gaslimit 30000000 --datadir dev_data --http --allow-insecure-unlock --unlock "0x<YOUR_PUBKEY>" --ws --suave.eth.remote_endpoint "http://<EXECUTION_NODE_IP>"
+    ./build/bin/geth --dev --dev.gaslimit 30000000 --datadir suave_dev --http --allow-insecure-unlock --unlock "0x<YOUR_PUBKEY>" --ws --suave.eth.remote_endpoint "http://<EXECUTION_NODE_IP>"
     ```
-- Users! Advertise your execution node’s address and how to access it.
 Note that simply enabling http jsonrpc and allowing direct access might not be the wisest. Look into proxyd and other restricted access solutions.
 
 # Suave technical details
 
-
 ## Suave Runtime (MEVM)
 
-`SuaveOffchainBackend` 🤝 EVM = MEVM
+[`SuaveExecutionBackend`](#SuaveExecutionBackend) 🤝 EVM = MEVM
 
-More specifically, `SuaveOffchainBackend` and `Runtime` add functionality to the stock EVM which allows it to interact with off-chain operations.
+More specifically, `SuaveExecutionBackend` and `Runtime` add functionality to the stock EVM which allows it both confidential computation and interaction with off-chain APIs.
 
 ```mermaid
 graph TB
@@ -126,8 +121,8 @@ graph TB
     A-->|8|T[NewRuntime]
     T-->|9|Z((Runtime))
     Z-->|10|F
-    A-->|11|U[NewRuntimeSuaveOffchainBackend]
-    U-->|12|V((SuaveOffchainBackend))
+    A-->|11|U[NewRuntimeSuaveExecutionBackend]
+    U-->|12|V((SuaveExecutionBackend))
     V-->|13|F
     class A,B,C,D,E,F yellow
     class G,H,I,J,K,L,M,N,O red
@@ -145,49 +140,45 @@ graph TB
     classDef lightgreen fill:#dbd56e,stroke:#333,stroke-width:2px;
 ```
 
-The capabilities enabled by this modified runtime are exposed via the APIs `ConfiendialStoreBackend` , `MempoolBackend`, `ConfiendialStoreBackend`, as well as access to `confidentialInputs` to offchain txns and `callerStack`. 
+The capabilities enabled by this modified runtime are exposed via the APIs `ConfiendialStoreBackend` , `MempoolBackend`, `ConfiendialStoreBackend`, as well as access to `confidentialInputs` to confidential computation requests and `callerStack`. 
 
 ```go
-func NewRuntimeSuaveOffchainBackend(evm *EVM, caller common.Address) *SuaveOffchainBackend {
+func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
 	if !evm.Config.IsOffchain {
 		return nil
 	}
 
-	return &SuaveOffchainBackend{
-		ConfiendialStoreBackend: evm.suaveOffchainBackend.ConfiendialStoreBackend,
-		MempoolBackned:          evm.suaveOffchainBackend.MempoolBackned,
-		OffchainEthBackend:      evm.suaveOffchainBackend.OffchainEthBackend,
-		confidentialInputs:      evm.suaveOffchainBackend.confidentialInputs,
-		callerStack:             append(evm.suaveOffchainBackend.callerStack, &caller),
+	return &SuaveExecutionBackend{
+		ConfiendialStoreBackend: evm.suaveExecutionBackend.ConfiendialStoreBackend,
+		MempoolBackned:          evm.suaveExecutionBackend.MempoolBackned,
+		OffchainEthBackend:      evm.suaveExecutionBackend.OffchainEthBackend,
+		confidentialInputs:      evm.suaveExecutionBackend.confidentialInputs,
+		callerStack:             append(evm.suaveExecutionBackend.callerStack, &caller),
 	}
 }
 ```
 
-All of these newly offered APIs are available to your solidity smart contract through the use of precompiles! See below for how offchain executions and smart contracts interact.
+All of these newly offered APIs are available to your solidity smart contract through the use of precompiles! See below for how confidential computation and smart contracts interact.
 
-## Off-chain execution of smart contracts
+## Confidential execution of smart contracts
 
-Virtual machine inside suave nodes has two modes of operation: off-chain and on-chain. On-chain environment is your usual Ethereum virtual machine environment.
+Virtual machine inside suave nodes has two modes of operation: regular and confidential (sometimes called off-chain). Regulal on-chain environment is your usual Ethereum virtual machine environment.
 
-Off-chain environment is available to users through `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Transactions of a new type - `OffchainTx` - are executed in the off-chain mode, and so are simulations (`eth_call`) requested with a new optional argument `IsOffchain`. For more on off-chain transactions see [Off-chain transactions](#Off-chain-transactions).
+Confidential environment is available to users through a new type of ransaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [Confidential computation requests](#Confidential-computation-requests).
 
-The off-chain environment provides additional precompiles, both directly and through a convenient [library](#SUAVE-library). Off-chain execution is *not* verifiable on-chain, instead the result of the off-chain execution is cached in the transaction (`OffchainExecutedTx`). Users submitting off-chain transactions specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
+The confidential execution environment provides additional precompiles, both directly and through a convenient [library](#SUAVE-library). Confidential execution is *not* verifiable during on-chain state transition, instead the result of the confidential execution is cached in the transaction (`OffchainExecutedTx`). Users requesting confidential computation requests specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
 
-The cached result of off-chain execution is used as calldata once the transaction makes its way on the suave chain.
+The cached result of confidential execution is used as calldata once the transaction makes its way on the suave chain.
 
-Other than the new precompiles, the off-chain contracts are written as usual in Solidity (or any other language) and compiled to EVM bytecode.
+Other than ability to access new precompiles, the contracts aiming to be executed confidentially are written as usual in Solidity (or any other language) and compiled to EVM bytecode.
 
-## Off-chain transactions
+## Confidential computation requests
 
-These new transaction types unify off-chain execution with the SUAVE chain and its mempool. The transactions track the usage of gas in off-chain computation, and contain (or reference) the result of the computation in a chain-friendly manner.
+We introduce two new transaction types: `OffchainTx`, serving as a request of confidential computation, and `OffchainExecutedTx` which is the result of a confidential computation. The new confidential computation transactions track the usage of gas during confidential computation, and contain (or reference) the result of the computation in a chain-friendly manner.  
 
-We introduce two new transaction types: `OffchainTx` and `OffchainExecutedTx`.
+![image](docs/conf_comp_request_flow.png)
 
-`OffchainTx` expresses the request for off-chain computation, and `OffchainExecutedTx` - its outcome to be applied on-chain.
-
-![image](docs/offchain_tx_flow.png)
-
-`OffchainTx` is only an intermediary between the user requesting off-chain computation and the RPC node, and is not propagated through the mempool.
+Confidential computation requests (`OffchainTx`) are only intermediary message between the user requesting confidential computation and the execution node, and are not currently propagated through the mempool or included in blocks. The results of those computations (`OffchainExecutedTx`) are treated as regular transactions.
 
 ```go
 type OffchainTx struct {
@@ -196,7 +187,7 @@ type OffchainTx struct {
 }
 ```
 
-`OffchainExecutedTx` transactions are propagated through the suave mempool and applied to the suave chain, unifying all of the interactions on suave, both off-chain and on-chain.
+`OffchainExecutedTx` transactions are propagated through the mempool and inserted into blocks as expected, unifying confidential computation with regular on-chain execution.
 
 ```go
 type OffchainExecutedTx struct {
@@ -207,25 +198,25 @@ type OffchainExecutedTx struct {
 }
 ```
 
-The off-chain execution result is placed in the `OffchainResult` field, which is further used instead of the original transaction's calldata for on-chain execution.
+The confidential computation result is placed in the `OffchainResult` field, which is further used instead of the original transaction's calldata for on-chain execution.
 
 The basic flow is as follows:
 
-1. User crafts a usual legacy/dynamic transaction, which calls the off-chain contract of their liking
-2. User crafts the `OffchainTx`:
-    1. User choses an execution node of their liking, that is an address whose signature over the offchain results will be trusted
+1. User crafts a usual legacy/dynamic transaction, which calls the contract of their liking
+2. User crafts the confidential computation request (`OffchainTx`):
+    1. User choses an execution node of their liking, that is an address whose signature over the confidential computation result will be trusted
     2. User embeds the transaction from (1.) into an `OffchainTx` together with the desired execution node's address
-    3. User signs and sends the off-chain transaction to an RPC via `eth_sendRawTransaction` (possibly passing in additional confidential data)
-3. The RPC executes the transaction in an off-chain mode, providing access to the usual off-chain APIs
-4. RPC creates an `OffchainExecutedTx` using the off-chain execution result and the off-chain request `OffchainTx`, signs and submits the whole transaction into the mempool
-5. The transaction makes its way into a block, by executing the `OffchainResult` as calldata, as long as the execution node's signature matches the requested executor node in (2a.)
+    3. User signs and sends the confidential computation request to an execution node via `eth_sendRawTransaction` (possibly passing in additional confidential data)
+3. The execution node executes the transaction in the confidential mode, providing access to the usual off-chain APIs
+4. Execution node creates an `OffchainExecutedTx` using the confidential computation request the result of its execution, signs and submits the transaction into the mempool
+5. The transaction makes its way into a block, by executing the `OffchainResult` as calldata, as long as the execution node's signature matches the requested executor node in (2.1.)
 
-The user passes in any confidential data through the new `confidential_data` field of the `eth_sendRawTransaction` RPC method. The initial, off-chain execution has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool.
+The user passes in any confidential data through the new `confidential_data` parameter of the `eth_sendRawTransaction` RPC method. The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.
 
 Architecture reference
 ![image](docs/execution_node_architecture.png)
 
-Mind, that the results are not reproducible as they are based on confidential data that is dropped after execution, and off-chain data that might change with time. On-chain state transition only depends on the result of the off-chain computation.
+Mind, that the results are not reproducible as they are based on confidential data that is dropped after execution, and off-chain data that might change with time. On-chain state transition only depends on the result of the confidential computation, so it is fully reproducible.
 
 ## SUAVE Bids
 
@@ -298,7 +289,7 @@ type OffchainEthBackend interface {
 
 ## Confidential Store
 
-The Confidential Store is an integral part of the SUAVE chain, designed to facilitate secure and privacy-preserving transactions and smart contract interactions. It functions as a key-value store where users can safely store and retrieve confidential data related to their bids. This data is managed through off-chain smart contracts, ensuring optimal confidentiality and security. The Confidential Store restricts access (both reading and writing) only to the allowed peekers of each bid, allowing developers to define the entire data model of their application!
+The Confidential Store is an integral part of the SUAVE chain, designed to facilitate secure and privacy-preserving transactions and smart contract interactions. It functions as a key-value store where users can safely store and retrieve confidential data related to their bids. The Confidential Store restricts access (both reading and writing) only to the allowed peekers of each bid, allowing developers to define the entire data model of their application!
 
 The current, and certainly not final, implementation of the Confidential Store is managed by the `LocalConfidentialStore` struct. It provides thread-safe access to the bids' confidential data. The `LocalConfidentialStore` struct is composed of a mutex lock and a map of bid data, `ACData`, indexed by a `BidId`. 
 
@@ -360,7 +351,7 @@ If `IsOffchain` is set to true, the call will be performed as an off-chain call,
 `OffchainExecutedTx` is the result of `eth_sendTransaction`!
 
 2. New optional argument - `confidential_data` is added to `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call` methods.  
-The confidential data is made available to the EVM durin off-chain execution via a precompile, but does not become a part of the transaction that makes it to chain. This allows performing off-chain computation based on confidential data (like simulating a bundle, putting the data into confidential store).
+The confidential data is made available to the EVM in the confidential mode via a precompile, but does not become a part of the transaction that makes it to chain. This allows performing computation based on confidential data (like simulating a bundle, putting the data into confidential store).
 
 
 ### SuavePrecompiledContract
@@ -370,30 +361,30 @@ We introduce a new interface [SuavePrecompiledContract](../core/vm/contracts.go)
 ```
 type SuavePrecompiledContract interface {
 	PrecompiledContract
-	RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error)
+	RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error)
 ```
 
-The method `RunOffchain` is invoked during off-chain execution, and the off-chain backend providing access to off-chain APIs is passed in as input.
+The method `RunOffchain` is invoked during confidential execution, and the suave execution backend which provides access to off-chain APIs is passed in as input.
 
-### Off-chain precompile wrapper
+### Suave precompile wrapper
 
-We introduce [OffchainPrecompiledContractWrapper](../core/vm/suave.go) implementing the `PrecompiledContract` interface. The new structure captures the off-chain APIs in its constructor, and passes the off-chain APIs during the usual contract's `Run` method to a separate method - `RunOffchain`
+We introduce [SuavePrecompiledContractWrapper](../core/vm/suave.go) implementing the `PrecompiledContract` interface. The new structure captures the off-chain APIs in its constructor, and passes the off-chain APIs during the usual contract's `Run` method to a separate method - `RunOffchain`
 
 
-### SuaveOffchainBackend
+### SuaveExecutionBackend
 
-We introduce [SuaveOffchainBackend](../core/vm/suave.go), which allows access to off-chain capabilities during (off-chain) EVM execution:
+We introduce [SuaveExecutionBackend](../core/vm/suave.go), which allows access to off-chain capabilities during confidential execution:
 * Access to off-chain APIs
 * Access to confidential input
 * Caller stack tracing
 
-The backend is only available to off-chain execution!
+The backend is only available to confidential execution!
 
 ### EVM Interpreter
 
-The [EVM interpreter](../core/vm/interpreter.go) is modified to allow for off-chain computation's needs:
+The [EVM interpreter](../core/vm/interpreter.go) is modified to allow for confidential computation's needs:
 * We introduce `IsOffchain` to the interpreter's config
-* We modify the `Run` function to accept off-chain APIs `func (in *EVMInterpreter) Run(*SuaveOffchainBackend, *Contract, []byte, bool) ([]byte, err)`
+* We modify the `Run` function to accept off-chain APIs `func (in *EVMInterpreter) Run(*SuaveExecutionBackend, *Contract, []byte, bool) ([]byte, err)`
 * We modify the `Run` function to trace the caller stack
 
 
@@ -432,7 +423,7 @@ For details and implementation see [contracts_suave.go](../core/vm/contracts_sua
 | Inputs | None |
 | Outputs | boolean |
 
-Outputs whether execution is on- or off-chain.
+Outputs whether execution mode is regular (on-chain) or confidential.
 
 
 ### ConfidentialInputs
@@ -443,7 +434,7 @@ Outputs whether execution is on- or off-chain.
 | Inputs | None |
 | Outputs | bytes |
 
-Outputs the confidential inputs passed in with the off-chain transaction.
+Outputs the confidential inputs passed in with the confidential computation request.
 
 
 NOTE: currently all precompiles have access to the data passed in. This might change in the future.

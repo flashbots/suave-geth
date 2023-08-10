@@ -44,7 +44,7 @@ type PrecompiledContract interface {
 // During off-chain execution the contract will be called with their RunOffchain method.
 type SuavePrecompiledContract interface {
 	PrecompiledContract
-	RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error)
+	RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error)
 }
 
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum

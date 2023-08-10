@@ -49,10 +49,10 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
-	offchainBackend     *vm.SuaveOffchainBackend
+	offchainBackend     *vm.SuaveExecutionBackend
 }
 
-func (b *EthAPIBackend) OffchainBackend() *vm.SuaveOffchainBackend {
+func (b *EthAPIBackend) OffchainBackend() *vm.SuaveExecutionBackend {
 	// For testing purposes
 	return b.offchainBackend
 }

@@ -46,7 +46,7 @@ func (c *simulateBundle) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *simulateBundle) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *simulateBundle) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
@@ -90,7 +90,7 @@ func (c *extractHint) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *extractHint) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *extractHint) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := precompilesAbi.Methods["extractHint"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -137,7 +137,7 @@ func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *buildEthBlock) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := precompilesAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
 	if err != nil {
 		return formatPeekerError("could not unpack inputs: %w", err)
@@ -351,7 +351,7 @@ func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *submitEthBlockBidToRelay) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *submitEthBlockBidToRelay) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := precompilesAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
 	if err != nil {
 		return formatPeekerError("could not unpack inputs: %w", err)

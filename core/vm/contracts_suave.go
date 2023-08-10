@@ -51,7 +51,7 @@ func (c *isOffchainPrecompile) Run(input []byte) ([]byte, error) {
 	return []byte{0x00}, nil
 }
 
-func (c *isOffchainPrecompile) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *isOffchainPrecompile) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(input) != 0 {
 		return nil, errIsOffchainInvalidInputLength
 	}
@@ -68,7 +68,7 @@ func (c *confidentialInputsPrecompile) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confidentialInputsPrecompile) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *confidentialInputsPrecompile) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	return backend.confidentialInputs, nil
 }
 
@@ -92,7 +92,7 @@ func (c *confStoreStore) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confStoreStore) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(backend.callerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this context")
 	}
@@ -142,7 +142,7 @@ func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confStoreRetrieve) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(backend.callerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this context")
 	}
@@ -195,7 +195,7 @@ func (c *newBid) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *newBid) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -242,7 +242,7 @@ func (c *fetchBids) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *fetchBids) RunOffchain(backend *SuaveOffchainBackend, input []byte) ([]byte, error) {
+func (c *fetchBids) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
