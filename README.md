@@ -13,22 +13,22 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
 
 **Table of Contents**
 
-1. [Getting Started](#getting-Started)
-    1. [How do I use the SUAVE?](#how-do-I-use-SUAVE)
-    1. [How do I execute a contract confidentially?](#how-do-I-execute-a-contract-confidentially)
-    1. [How do I run a SUAVE chain node?](#how-do-I-run-a-SUAVE-chain-node)
-    1. [How do I run a SUAVE execution node?](#how-do-i-run-a-suave-execution-node)
+1. [Getting Started](#getting-started)
+    1. [How do I use the SUAVE?](#how-do-i-use-suave)
+    1. [How do I execute a contract confidentially?](#how-do-i-execute-a-contract-confidentially)
+    1. [How do I run a SUAVE chain node?](#how-do-i-run-a-suave-chain-node)
+    1. [How do I run a SUAVE execution node?](#)how-do-i-run-a-suave-execution-node
 1. [suave-geth technical details](#suave-geth-technical-details)
-    1. [SUAVE Runtime (MEVM)](#Suave-Runtime-MEVM)
-    1. [Confidential execution of smart contracts](#Confidential-execution-of-smart-contracts)
-    1. [Confidential compute requests](#Confidential-compute-requests)
-    1. [SUAVE Bids](#SUAVE-Bids)
-    1. [SUAVE library](#SUAVE-library)
-    1. [Offchain APIs](#Offchain-APIs)
-    1. [Confidential Store](#Confidential-Store)
-    1. [SUAVE Mempool](#SUAVE-Mempool)
-    1. [Notable differences from standard issue go-ethereum](#Notable-differences-from-standard-issue-go-ethereum)
-    1. [Suave precompiles](#SUAVE-precompiles)
+    1. [SUAVE Runtime (MEVM)](#suave-runtime-mevm)
+    1. [Confidential execution of smart contracts](#)confidential-execution-of-smart-contracts
+    1. [Confidential compute requests](#confidential-compute-requests)
+    1. [SUAVE Bids](#suave-bids)
+    1. [SUAVE library](#suave-library)
+    1. [Offchain APIs](#offchain-apis)
+    1. [Confidential Store](#confidential-store)
+    1. [SUAVE Mempool](#suave-mempool)
+    1. [Notable differences from standard issue go-ethereum](#notable-differences-from-standard-issue-go-ethereum)
+    1. [Suave precompiles](#suave-precompiles)
 
 ---
 
@@ -109,8 +109,6 @@ Not all nodes serve confidential compute requests. You’ll need:
 Note that simply enabling http jsonrpc and allowing direct access might not be the wisest. Look into proxyd and other restricted access solutions.
 
 ## suave-geth technical details
-
-### Overview
 
 ### SUAVE Runtime (MEVM)
 
