@@ -23,6 +23,7 @@ const (
 	LightCategory      = "LIGHT CLIENT"
 	DevCategory        = "DEVELOPER CHAIN"
 	EthashCategory     = "ETHASH"
+	SuaveCategory      = "SUAVE"
 	TxPoolCategory     = "TRANSACTION POOL"
 	PerfCategory       = "PERFORMANCE TUNING"
 	AccountCategory    = "ACCOUNT"

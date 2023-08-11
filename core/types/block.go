@@ -456,3 +456,12 @@ func HeaderParentHashFromRLP(header []byte) common.Hash {
 	}
 	return common.BytesToHash(parentHash)
 }
+
+type BuildBlockArgs struct {
+	Parent       common.Hash    // The parent block to build payload on top
+	Timestamp    uint64         // The provided timestamp of generated payload
+	FeeRecipient common.Address // The provided recipient address for collecting transaction fee
+	GasLimit     uint64
+	Random       common.Hash // The provided randomness value
+	Withdrawals  Withdrawals // The provided withdrawals
+}

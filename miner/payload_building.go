@@ -34,13 +34,7 @@ import (
 // BuildPayloadArgs contains the provided parameters for building payload.
 // Check engine-api specification for more details.
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#payloadattributesv1
-type BuildPayloadArgs struct {
-	Parent       common.Hash       // The parent block to build payload on top
-	Timestamp    uint64            // The provided timestamp of generated payload
-	FeeRecipient common.Address    // The provided recipient address for collecting transaction fee
-	Random       common.Hash       // The provided randomness value
-	Withdrawals  types.Withdrawals // The provided withdrawals
-}
+type BuildPayloadArgs types.BuildBlockArgs
 
 // Id computes an 8-byte identifier by hashing the components of the payload arguments.
 func (args *BuildPayloadArgs) Id() engine.PayloadID {

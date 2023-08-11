@@ -195,6 +195,8 @@ func CommitGenesisState(db ethdb.Database, triedb *trie.Database, blockhash comm
 			genesis = DefaultGoerliGenesisBlock()
 		case params.SepoliaGenesisHash:
 			genesis = DefaultSepoliaGenesisBlock()
+		case params.SuaveGenesisHash:
+			genesis = DefaultSuaveGenesisBlock()
 		}
 		if genesis != nil {
 			alloc = genesis.Alloc
@@ -424,6 +426,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.RinkebyChainConfig
 	case ghash == params.GoerliGenesisHash:
 		return params.GoerliChainConfig
+	case ghash == params.SuaveGenesisHash:
+		return params.SuaveChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -528,6 +532,31 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
+// DefaultSuaveGenesisBlock returns the Suave network genesis block.
+func DefaultSuaveGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.SuaveChainConfig,
+		Timestamp:  1687192941,
+		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000004f91862699aF93251B3e3518E4Ca6278036892520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		GasLimit:   30000000,
+		Difficulty: big.NewInt(1),
+		Alloc: map[common.Address]GenesisAccount{
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
+			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
+			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
+			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
+			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
+			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
+			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
+			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
+			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
+			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
+
+			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
+		},
+	}
+}
+
 // DefaultRinkebyGenesisBlock returns the Rinkeby network genesis block.
 func DefaultRinkebyGenesisBlock() *Genesis {
 	return &Genesis{
@@ -568,11 +597,7 @@ func DefaultSepoliaGenesisBlock() *Genesis {
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
 func DeveloperGenesisBlock(period uint64, gasLimit uint64, faucet common.Address) *Genesis {
 	// Override the default period to the user requested one
-	config := *params.AllCliqueProtocolChanges
-	config.Clique = &params.CliqueConfig{
-		Period: period,
-		Epoch:  config.Clique.Epoch,
-	}
+	config := *params.SuaveChainConfig
 
 	// Assemble and return the genesis with the precompiles and faucet pre-funded
 	return &Genesis{
@@ -591,7 +616,12 @@ func DeveloperGenesisBlock(period uint64, gasLimit uint64, faucet common.Address
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
-			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
+
+			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
+			common.HexToAddress("0x71B21E9b8029d1E384B71B2A1708005A7d4D0428"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))},
+			common.HexToAddress("0xfB8CcAb59b2d3Ef32B966F26891842db2b35d787"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))},
+			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }
