@@ -246,7 +246,7 @@ Each `Bid` has an `Id`, a `DecryptionCondition`, an array of `AllowedPeekers`, a
 
 ### SUAVE library
 
-Along the SUAVE precompiles, we provide a convenient wrapper for calling them from Solidity. The [library](sol/libraries/Suave.sol) makes the precompiles easier to call by providing the signatures, and the library functions themselves simply perform a `staticcall` of the requested precompile.
+Along the SUAVE precompiles, we provide a convenient wrapper for calling them from Solidity. The [library](suave/sol/libraries/Suave.sol) makes the precompiles easier to call by providing the signatures, and the library functions themselves simply perform a `staticcall` of the requested precompile.
 
 ```solidity
 library Suave {
@@ -275,7 +275,7 @@ library Suave {
 
 ### Offchain APIs
 
-Off-chain precompiles have access to the following [off-chain APIs](core/types.go) during execution.
+Off-chain precompiles have access to the following [off-chain APIs](suave/core/types.go) during execution.
 
 ```go
 type ConfiendialStoreBackend interface {
@@ -365,7 +365,7 @@ The confidential data is made available to the EVM in the confidential mode via 
 
 ### SuavePrecompiledContract
 
-We introduce a new interface [SuavePrecompiledContract](../core/vm/contracts.go) for SUAVE precompiles.
+We introduce a new interface [SuavePrecompiledContract](core/vm/contracts.go) for SUAVE precompiles.
 
 ```
 type SuavePrecompiledContract interface {
@@ -378,12 +378,12 @@ The method `RunOffchain` is invoked during confidential execution, and the suave
 
 ### SUAVE precompile wrapper
 
-We introduce [SuavePrecompiledContractWrapper](../core/vm/suave.go) implementing the `PrecompiledContract` interface. The new structure captures the off-chain APIs in its constructor, and passes the off-chain APIs during the usual contract's `Run` method to a separate method - `RunOffchain`
+We introduce [SuavePrecompiledContractWrapper](core/vm/suave.go) implementing the `PrecompiledContract` interface. The new structure captures the off-chain APIs in its constructor, and passes the off-chain APIs during the usual contract's `Run` method to a separate method - `RunOffchain`
 
 
 ### SuaveExecutionBackend
 
-We introduce [SuaveExecutionBackend](../core/vm/suave.go), which allows access to off-chain capabilities during confidential execution:
+We introduce [SuaveExecutionBackend](core/vm/suave.go), which allows access to off-chain capabilities during confidential execution:
 * Access to off-chain APIs
 * Access to confidential input
 * Caller stack tracing
@@ -392,7 +392,7 @@ The backend is only available to confidential execution!
 
 ### EVM Interpreter
 
-The [EVM interpreter](../core/vm/interpreter.go) is modified to allow for confidential computation's needs:
+The [EVM interpreter](core/vm/interpreter.go) is modified to allow for confidential computation's needs:
 * We introduce `IsOffchain` to the interpreter's config
 * We modify the `Run` function to accept off-chain APIs `func (in *EVMInterpreter) Run(*SuaveExecutionBackend, *Contract, []byte, bool) ([]byte, err)`
 * We modify the `Run` function to trace the caller stack
@@ -405,7 +405,7 @@ Like `eth_sendTransaction`, this method accepts an additional, optional confiden
 
 We implement two rpc methods that allow building Ethereum blocks from a list of either transactions or bundles: `BuildEth2Block` and `BuildEth2BlockFromBundles`.
 
-This methods are defined in [BlockChainAPI](../internal/ethapi/api.go)
+This methods are defined in [BlockChainAPI](internal/ethapi/api.go)
 
 ```go
 func (s *BlockChainAPI) BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
@@ -413,7 +413,7 @@ func (s *BlockChainAPI) BuildEth2BlockFromBundles(ctx context.Context, buildArgs
 
 ```
 
-The methods are implemented in [worker](../miner/worker.go), by `buildBlockFromTxs` and `buildBlockFromBundles` respectively.
+The methods are implemented in [worker](miner/worker.go), by `buildBlockFromTxs` and `buildBlockFromBundles` respectively.
 
 `buildBlockFromTxs` will simply build a block out of the transactions provided, while `buildBlockFromBundles` will in addition forward the block profit to the requested fee recipient, as needed for boost relay payments.
 
@@ -423,7 +423,7 @@ The methods are implemented in [worker](../miner/worker.go), by `buildBlockFromT
 Additional precompiles available via the EVM.
 Only `IsOffchain` is available during on-chain execution, and simply returns false.
 
-For details and implementation see [contracts_suave.go](../core/vm/contracts_suave.go)
+For details and implementation see [contracts_suave.go](core/vm/contracts_suave.go)
 
 ### IsOffchain
 
