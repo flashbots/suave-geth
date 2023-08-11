@@ -37,7 +37,7 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
 ### How do I use SUAVE?
 
 1. **Deploy confidential smart contracts.**
-   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#SUAVE-library).
+   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#suave-library).
 
 2. **NEW! Request confidential execution using the new confidential computation request.**
    Contracts called using confidential compute requests have access to off-chain data and APIs through SUAVE precompiles. Confidential computation is *not* reproducible on-chain, thus, users are required to whitelist a specific execution node trusted to provide the result. Eventually proofs and trusted enclaves will help to verify the results of execution.
