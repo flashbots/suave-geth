@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/ssz"
-	boostSsz "github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -237,7 +236,7 @@ func TestBundleBid(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
-		allowedPeekers := []common.Address{common.Address{0x41, 0x42, 0x43}, newBundleBidAddress}
+		allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBundleBidAddress}
 
 		bundle := struct {
 			Txs             types.Transactions `json:"txs"`
@@ -355,7 +354,7 @@ func TestMevShare(t *testing.T) {
 	targetBlock := uint64(1)
 
 	// Send a bundle bid
-	allowedPeekers := []common.Address{common.Address{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
+	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
 	calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
 	require.NoError(t, err)
 
@@ -607,7 +606,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		bid := suave.Bid{
 			Id:                  suave.BidId(uuid.New()),
 			DecryptionCondition: uint64(1),
-			AllowedPeekers:      []common.Address{common.Address{0x41, 0x42, 0x43}, buildEthBlockAddress},
+			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
 			Version:             "default:v0:ethBundles",
 		}
 
@@ -969,7 +968,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	builderPubkey := blockPayloadSentToRelay.Message.BuilderPubkey
 	signature := blockPayloadSentToRelay.Signature
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, phase0.Version{0x00, 0x00, 0x10, 0x20}, phase0.Root{})
-	ok, err := boostSsz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
+	ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
 	require.NoError(t, err)
 	require.True(t, ok)
 }
@@ -1178,13 +1177,4 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 	}
 
 	return inoutAbi.Methods[method]
-}
-
-func mustParseAbi(data string) abi.ABI {
-	inoutAbi, err := abi.JSON(strings.NewReader(data))
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return inoutAbi
 }
