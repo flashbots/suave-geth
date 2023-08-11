@@ -17,7 +17,7 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
     1. [How do I use the SUAVE?](#how-do-i-use-suave)
     1. [How do I execute a contract confidentially?](#how-do-i-execute-a-contract-confidentially)
     1. [How do I run a SUAVE chain node?](#how-do-i-run-a-suave-chain-node)
-    1. [How do I run a SUAVE execution node?](#)how-do-i-run-a-suave-execution-node
+    1. [How do I run a SUAVE execution node?](#how-do-i-run-a-suave-execution-node)
 1. [suave-geth technical details](#suave-geth-technical-details)
     1. [SUAVE Runtime (MEVM)](#suave-runtime-mevm)
     1. [Confidential execution of smart contracts](#confidential-execution-of-smart-contracts)
