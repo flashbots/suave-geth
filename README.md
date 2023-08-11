@@ -138,13 +138,13 @@ graph TB
     class S orange
     class T,U purple
     class Z,V lightgreen
-    classDef yellow fill:#f5cf58,stroke:#444,stroke-width:2px;
-    classDef red fill:#d98686,stroke:#444,stroke-width:2px;
-    classDef green fill:#82a682,stroke:#444,stroke-width:2px;
-    classDef blue fill:#9abedc,stroke:#444,stroke-width:2px;
-    classDef orange fill:#f3b983,stroke:#444,stroke-width:2px;
-    classDef purple fill:#ab92b5,stroke:#444,stroke-width:2px;
-    classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px;
+    classDef yellow fill:#f5cf58,stroke:#444,stroke-width:2px, color:#333;
+    classDef red fill:#d98686,stroke:#444,stroke-width:2px, color:#333;
+    classDef green fill:#82a682,stroke:#444,stroke-width:2px, color:#333;
+    classDef blue fill:#9abedc,stroke:#444,stroke-width:2px, color:#333;
+    classDef orange fill:#f3b983,stroke:#444,stroke-width:2px, color:#333;
+    classDef purple fill:#ab92b5,stroke:#444,stroke-width:2px, color:#333;
+    classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px, color:#333;
 ```
 
 The capabilities enabled by this modified runtime are exposed via the APIs `ConfiendialStoreBackend` , `MempoolBackend`, `ConfiendialStoreBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
