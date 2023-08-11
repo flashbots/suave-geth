@@ -20,7 +20,7 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
     1. [How do I run a SUAVE execution node?](#)how-do-i-run-a-suave-execution-node
 1. [suave-geth technical details](#suave-geth-technical-details)
     1. [SUAVE Runtime (MEVM)](#suave-runtime-mevm)
-    1. [Confidential execution of smart contracts](#)confidential-execution-of-smart-contracts
+    1. [Confidential execution of smart contracts](#confidential-execution-of-smart-contracts)
     1. [Confidential compute requests](#confidential-compute-requests)
     1. [SUAVE Bids](#suave-bids)
     1. [SUAVE library](#suave-library)
