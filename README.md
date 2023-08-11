@@ -5,21 +5,23 @@
 
 [SUAVE](https://writings.flashbots.net/mevm-suave-centauri-and-beyond) is designed to decentralize the MEV supply chain by enabling centralized infrastructure (builders, relays, centralized RFQ routing, etc.) to be programmed as smart contracts on a decentralized blockchain.
 
-`suave-geth` is a work-in-progress golang SUAVE client, consisting of two seperable components, chain nodes and execution nodes. SUAVE clients offer confidential execution for smart contracts, allowing off-chain processing with extended precompiles for enhanced MEV functionalities, including transaction simulation via geth RPC, block building, and relay boosting, all handled by dedicated execution nodes.
+`suave-geth` is a work-in-progress Golang SUAVE client consisting of two separable components: chain nodes and execution nodes. SUAVE clients offer confidential execution for smart contracts, allowing off-chain processing with extended precompiles for enhanced MEV functionalities, including transaction simulation via geth RPC, block building, and relay boosting, all handled by dedicated execution nodes.
 
-For a deeper dive check out the [technical details section](#suave-geth-technical-details), and for a step-by-step guide explore the [simple MEV-share walk through](suave/cmd/README.md).
+For a deeper dive, check out the [technical details section](#suave-geth-technical-details), and for a step-by-step guide explore the [simple MEV-share walk through](suave/cmd/suavecli/README.md).
+
+---
 
 **Table of Contents**
 
-1. [Getting Started](#Getting-Started)
-    1. [How do I use the SUAVE?](#How-do-I-use-SUAVE)
-    1. [How do I execute a contract confidentially?](#How-do-I-execute-a-contract-confidentially)
-    1. [How do I run a SUAVE chain node?](#How-do-I-run-a-SUAVE-chain-node)
-    1. [How do I run a SUAVE execution node?](#How-do-I-run-a-SAUVE-execution-node)
+1. [Getting Started](#getting-Started)
+    1. [How do I use the SUAVE?](#how-do-I-use-SUAVE)
+    1. [How do I execute a contract confidentially?](#how-do-I-execute-a-contract-confidentially)
+    1. [How do I run a SUAVE chain node?](#how-do-I-run-a-SUAVE-chain-node)
+    1. [How do I run a SUAVE execution node?](#how-do-i-run-a-suave-execution-node)
 1. [suave-geth technical details](#suave-geth-technical-details)
     1. [SUAVE Runtime (MEVM)](#Suave-Runtime-MEVM)
     1. [Confidential execution of smart contracts](#Confidential-execution-of-smart-contracts)
-    1. [confidential compute requests](#Confidential-compute-requests)
+    1. [Confidential compute requests](#Confidential-compute-requests)
     1. [SUAVE Bids](#SUAVE-Bids)
     1. [SUAVE library](#SUAVE-library)
     1. [Offchain APIs](#Offchain-APIs)
@@ -27,6 +29,8 @@ For a deeper dive check out the [technical details section](#suave-geth-technica
     1. [SUAVE Mempool](#SUAVE-Mempool)
     1. [Notable differences from standard issue go-ethereum](#Notable-differences-from-standard-issue-go-ethereum)
     1. [Suave precompiles](#SUAVE-precompiles)
+
+---
 
 ## Getting Started
 
@@ -82,7 +86,7 @@ Let’s take a look at how you can request confidential computation through an e
 
 For more on confidential compute requests see [confidential compute requests](#Confidential-compute-requests).
 
-### How do I run a SUAVE node?
+### How do I run a SUAVE chain node?
 
 1. Build the client with `make geth`.
 2. Run the node. Pass in `--dev` to enable local devnet. Example:
@@ -177,11 +181,11 @@ The cached result of confidential execution is used as calldata in the transacti
 
 Other than ability to access new precompiles, the contracts aiming to be executed confidentially are written as usual in Solidity (or any other language) and compiled to EVM bytecode.
 
-### confidential compute requests
+### Confidential compute requests
 
 We introduce two new transaction types: `OffchainTx`, serving as a request of confidential computation, and `OffchainExecutedTx` which is the result of a confidential computation. The new confidential computation transactions track the usage of gas during confidential computation, and contain (or reference) the result of the computation in a chain-friendly manner.
 
-![image](docs/conf_comp_request_flow.png)
+![image](suave/docs/conf_comp_request_flow.png)
 
 confidential compute requests (`OffchainTx`) are only intermediary message between the user requesting confidential computation and the execution node, and are not currently propagated through the mempool or included in blocks. The results of those computations (`OffchainExecutedTx`) are treated as regular transactions.
 
@@ -219,7 +223,7 @@ The basic flow is as follows:
 The user passes in any confidential data through the new `confidential_data` parameter of the `eth_sendRawTransaction` RPC method. The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.
 
 Architecture reference
-![image](docs/execution_node_architecture.png)
+![image](suave/docs/execution_node_architecture.png)
 
 Mind, that the results are not reproducible as they are based on confidential data that is dropped after execution, and off-chain data that might change with time. On-chain state transition only depends on the result of the confidential computation, so it is fully reproducible.
 
