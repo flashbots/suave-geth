@@ -7,7 +7,7 @@
 
 `suave-geth` is a work-in-progress Golang SUAVE client consisting of two separable components: chain nodes and execution nodes. SUAVE clients offer confidential execution for smart contracts, allowing off-chain processing with extended precompiles for enhanced MEV functionalities, including transaction simulation via geth RPC, block building, and relay boosting, all handled by dedicated execution nodes.
 
-For a deeper dive, check out the [technical details section](#suave-geth-technical-details), and for a step-by-step guide explore the [simple MEV-share walk through](suave/cmd/suavecli/README.md).
+For a deeper dive, check out the [technical details section](#suave-geth-technical-details), [simple MEV-share walk through](suave/cmd/suavecli/README.md), and the [demo video from EthCC](https://drive.google.com/file/d/1IHuLtxwjRvRpYjMG3oRuAgS5MUZtmAXq/view?usp=sharing).
 
 ---
 
