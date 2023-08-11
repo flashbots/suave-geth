@@ -1,7 +1,7 @@
 # SUAVE
 
 [![Goreport status](https://goreportcard.com/badge/github.com/flashbots/suave-geth)](https://goreportcard.com/report/github.com/flashbots/suave-geth)
-[![CI status](https://github.com/flashbots/suave-geth/workflows/Go/badge.svg?branch=main)](https://github.com/flashbots/suave-geth/actions?query=workflow%3A%Go%22)
+[![CI status](https://github.com/flashbots/suave-geth/workflows/Go/badge.svg?branch=main)](https://github.com/flashbots/suave-geth/actions/workflows/go.yml)
 
 [SUAVE](https://writings.flashbots.net/mevm-suave-centauri-and-beyond) is designed to decentralize the MEV supply chain by enabling centralized infrastructure (builders, relays, centralized RFQ routing, etc.) to be programmed as smart contracts on a decentralized blockchain.
 

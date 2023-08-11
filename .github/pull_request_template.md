@@ -8,4 +8,4 @@
 
 ---
 
-* [ ] I have seen and agree to [`CONTRIBUTING.md`](https://github.com/flashbots/suave-geth/blob/main/suave/CONTRIBUTING.md)
+* [ ] I have seen and agree to CONTRIBUTING.md
