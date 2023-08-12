@@ -238,7 +238,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 
 	offchainBackend := &vm.SuaveExecutionBackend{
-		ConfiendialStoreBackend: cdas,
+		ConfidentialStoreBackend: cdas,
 		MempoolBackend:          suave_backends.NewMempoolOnConfidentialStore(cdas),
 		OffchainEthBackend:      suaveEthBackend,
 	}
