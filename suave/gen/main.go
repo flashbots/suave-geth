@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"go/format"
 	"html/template"
-	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 
@@ -249,7 +249,7 @@ func applyTemplate(templateText string, input interface{}, out string) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(out, srcFormatted, 0755); err != nil {
+	if err := os.WriteFile(out, srcFormatted, 0755); err != nil {
 		return err
 	}
 	return nil
