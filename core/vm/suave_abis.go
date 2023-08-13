@@ -1,5 +1,7 @@
 package vm
 
+var PrecompilesAbi = precompilesAbi
+
 var bidIdsAbi = mustParseMethodAbi(`[{"inputs": [{ "type": "bytes16[]" }], "name": "bidids", "outputs":[], "type": "function"}]`, "bidids")
 
 var precompilesAbi = mustParseAbi(`[
@@ -227,6 +229,11 @@ var precompilesAbi = mustParseAbi(`[
               "internalType": "address[]",
               "name": "allowedPeekers",
               "type": "address[]"
+            },
+            {
+              "internalType": "string",
+              "name": "version",
+              "type": "string"
             }
           ],
           "internalType": "struct Suave.Bid[]",
@@ -273,6 +280,11 @@ var precompilesAbi = mustParseAbi(`[
               "internalType": "address[]",
               "name": "allowedPeekers",
               "type": "address[]"
+            },
+            {
+              "internalType": "string",
+              "name": "version",
+              "type": "string"
             }
           ],
           "internalType": "struct Suave.Bid",

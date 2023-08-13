@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
@@ -106,6 +107,13 @@ func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byt
 	key := unpacked[1].(string)
 	data := unpacked[2].([]byte)
 
+	if err := c.runImpl(backend, bidId, key, data); err != nil {
+		return []byte(err.Error()), err
+	}
+	return nil, nil
+}
+
+func (c *confStoreStore) runImpl(backend *SuaveExecutionBackend, bidId [16]byte, key string, data []byte) error {
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
 	for i := len(backend.callerStack) - 1; i >= 0; i-- {
@@ -116,12 +124,12 @@ func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byt
 		}
 	}
 
-	_, err = backend.ConfiendialStoreBackend.Store(bidId, caller, key, data)
+	_, err := backend.ConfiendialStoreBackend.Store(bidId, caller, key, data)
 	if err != nil {
-		return []byte(err.Error()), err
+		return err
 	}
 
-	return nil, nil
+	return nil
 }
 
 type confStoreRetrieve struct {
@@ -155,6 +163,10 @@ func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []
 	bidId := unpacked[0].([16]byte)
 	key := unpacked[1].(string)
 
+	return c.runImpl(backend, bidId, key)
+}
+
+func (c *confStoreRetrieve) runImpl(backend *SuaveExecutionBackend, bidId [16]byte, key string) ([]byte, error) {
 	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
 
 	// Can be zeroes in some fringe cases!
@@ -204,6 +216,16 @@ func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]by
 
 	decryptionCondition := unpacked[0].(uint64)
 	allowedPeekers := unpacked[1].([]common.Address)
+
+	bid, err := c.runImpl(backend, version, decryptionCondition, allowedPeekers)
+	if err != nil {
+		return []byte(err.Error()), err
+	}
+
+	return c.inoutAbi.Outputs.Pack(bid)
+}
+
+func (c *newBid) runImpl(backend *SuaveExecutionBackend, version string, decryptionCondition uint64, allowedPeekers []common.Address) (*suave.Bid, error) {
 	bid := suave.Bid{
 		Id:                  suave.BidId(uuid.New()),
 		DecryptionCondition: decryptionCondition,
@@ -211,17 +233,17 @@ func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]by
 		Version:             version, // TODO : make generic
 	}
 
-	bid, err = backend.ConfiendialStoreBackend.Initialize(bid, "", nil)
+	bid, err := backend.ConfiendialStoreBackend.Initialize(bid, "", nil)
 	if err != nil {
-		return []byte(err.Error()), err
+		return nil, err
 	}
 
 	err = backend.MempoolBackend.SubmitBid(bid)
 	if err != nil {
-		return []byte(err.Error()), err
+		return nil, err
 	}
 
-	return c.inoutAbi.Outputs.Pack(bid)
+	return &bid, nil
 }
 
 type fetchBids struct {
@@ -251,9 +273,17 @@ func (c *fetchBids) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([
 	targetBlock := unpacked[0].(uint64)
 	namespace := unpacked[1].(string)
 
-	bids := backend.MempoolBackend.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+	bids, err := c.runImpl(backend, targetBlock, namespace)
+	if err != nil {
+		return []byte(err.Error()), err
+	}
 
 	return c.inoutAbi.Outputs.Pack(bids)
+}
+
+func (c *fetchBids) runImpl(backend *SuaveExecutionBackend, targetBlock uint64, namespace string) ([]suave.Bid, error) {
+	bids := backend.MempoolBackend.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+	return bids, nil
 }
 
 func mustParseAbi(data string) abi.ABI {
@@ -273,4 +303,54 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 func formatPeekerError(format string, args ...any) ([]byte, error) {
 	err := fmt.Errorf(format, args...)
 	return []byte(err.Error()), err
+}
+
+type backendImpl struct {
+	backend *SuaveExecutionBackend
+}
+
+var _ BackendImpl = &backendImpl{}
+
+func (b *backendImpl) buildEthBlock(blockArgs types.BuildBlockArgs, bid [16]byte, namespace string) ([]byte, []byte, error) {
+	return (&buildEthBlock{}).runImpl(b.backend, blockArgs, bid, namespace)
+}
+
+func (b *backendImpl) confidentialStoreRetrieve(bidId [16]byte, key string) ([]byte, error) {
+	return (&confStoreRetrieve{}).runImpl(b.backend, bidId, key)
+}
+
+func (b *backendImpl) confidentialStoreStore(bidId [16]byte, key string, data []byte) error {
+	return (&confStoreStore{}).runImpl(b.backend, bidId, key, data)
+}
+
+func (b *backendImpl) extractHint(bundleData []byte) ([]byte, error) {
+	return (&extractHint{}).runImpl(b.backend, bundleData)
+}
+
+func (b *backendImpl) fetchBids(cond uint64, namespace string) ([]types.Bid, error) {
+	bids, err := (&fetchBids{}).runImpl(b.backend, cond, namespace)
+	if err != nil {
+		return nil, err
+	}
+	return bids, nil
+}
+
+func (b *backendImpl) newBid(decryptionCondition uint64, allowedPeekers []common.Address, BidType string) (types.Bid, error) {
+	bid, err := (&newBid{}).runImpl(b.backend, BidType, decryptionCondition, allowedPeekers)
+	if err != nil {
+		return types.Bid{}, err
+	}
+	return *bid, nil
+}
+
+func (b *backendImpl) simulateBundle(bundleData []byte) (uint64, error) {
+	num, err := (&simulateBundle{}).runImpl(b.backend, bundleData)
+	if err != nil {
+		return 0, err
+	}
+	return num.Uint64(), nil
+}
+
+func (b *backendImpl) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
+	return (&submitEthBlockBidToRelay{}).runImpl(b.backend, relayUrl, builderBid)
 }
