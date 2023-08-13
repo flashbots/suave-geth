@@ -1,16 +1,33 @@
 package abi
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
 func randomInt(min, max int) int {
-	return min + rand.Intn(max-min)
+	// Make sure max is greater than min
+	if max <= min {
+		panic(fmt.Errorf("max must be greater than min"))
+	}
+
+	// Calculate the range
+	diff := big.NewInt(int64(max - min))
+
+	// Generate a random number within the specified range
+	randomValue, err := rand.Int(rand.Reader, diff)
+	if err != nil {
+		panic(err)
+	}
+
+	// Add the minimum value to the generated random number
+	randomNumber := int(randomValue.Int64()) + min
+
+	return randomNumber
 }
 
 func generateNumber(t Type) interface{} {
@@ -33,7 +50,7 @@ const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 func randString(n int, dict string) string {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = dict[rand.Intn(len(dict))]
+		b[i] = dict[randomInt(0, len(dict))]
 	}
 	return string(b)
 }
