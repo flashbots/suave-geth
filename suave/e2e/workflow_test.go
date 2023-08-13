@@ -248,7 +248,7 @@ func TestBundleBid(t *testing.T) {
 		bundleBytes, err := json.Marshal(bundle)
 		require.NoError(t, err)
 
-		calldata, err := bundleBidAbi.Pack("newBid", targetBlock, allowedPeekers)
+		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock, allowedPeekers)
 		require.NoError(t, err)
 
 		// Verify via transaction
@@ -270,7 +270,7 @@ func TestBundleBid(t *testing.T) {
 		offchainTxBytes, err := offchainTx.MarshalBinary()
 		require.NoError(t, err)
 
-		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
 		var offchainTxHash common.Hash
@@ -285,7 +285,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 1, len(block.Transactions()))
-		unpacked, err := bundleBidAbi.Methods["emitBid"].Inputs.Unpack(block.Transactions()[0].Data()[4:])
+		unpacked, err := bundleBidContract.Abi.Methods["emitBid"].Inputs.Unpack(block.Transactions()[0].Data()[4:])
 		require.NoError(t, err)
 		bid := unpacked[0].(struct {
 			Id                  [16]uint8        "json:\"id\""
@@ -298,7 +298,7 @@ func TestBundleBid(t *testing.T) {
 		require.NotNil(t, receipts[0].Logs[0])
 		require.Equal(t, newBundleBidAddress, receipts[0].Logs[0].Address)
 
-		unpacked, err = bundleBidAbi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[0].Data)
+		unpacked, err = bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[0].Data)
 		require.NoError(t, err)
 
 		require.Equal(t, bid.Id, unpacked[0].([16]byte))
@@ -355,7 +355,7 @@ func TestMevShare(t *testing.T) {
 
 	// Send a bundle bid
 	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
-	calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
+	calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
 	require.NoError(t, err)
 
 	wrappedTxData := &types.LegacyTx{
@@ -377,7 +377,7 @@ func TestMevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
-	confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+	confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 	require.NoError(t, err)
 
 	var offchainTxHash common.Hash
@@ -399,7 +399,7 @@ func TestMevShare(t *testing.T) {
 	require.NotEmpty(t, r.Logs)
 
 	// extract share BidId
-	unpacked, err := matchBidAbi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
+	unpacked, err := matchBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
 	require.NoError(t, err)
 	shareBidId := unpacked[0].([16]byte)
 
@@ -423,7 +423,7 @@ func TestMevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	// decryption conditions are assumed to be eth blocks right now
-	backRunCalldata, err := matchBidAbi.Pack("newMatch", targetBlock+1, allowedPeekers, shareBidId)
+	backRunCalldata, err := matchBidContract.Abi.Pack("newMatch", targetBlock+1, allowedPeekers, shareBidId)
 	require.NoError(t, err)
 
 	wrappedMatchTxData := &types.LegacyTx{
@@ -445,7 +445,7 @@ func TestMevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
-	confidentialDataMatchBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
+	confidentialDataMatchBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 	require.NoError(t, err)
 
 	var offchainMatchTxHash common.Hash
@@ -485,7 +485,7 @@ func TestMevShare(t *testing.T) {
 		FeeRecipient: common.Address{0x42},
 	}
 
-	calldata, err = buildEthBlockAbi.Pack("buildMevShare", payloadArgsTuple, targetBlock+1)
+	calldata, err = buildEthBlockContract.Abi.Pack("buildMevShare", payloadArgsTuple, targetBlock+1)
 	require.NoError(t, err)
 
 	wrappedTxDataBB := &types.LegacyTx{
@@ -524,7 +524,7 @@ func TestMevShare(t *testing.T) {
 
 		require.Equal(t, 2, len(receipts[0].Logs))
 		require.NotNil(t, receipts[0].Logs[1])
-		unpacked, err := bundleBidAbi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
+		unpacked, err := bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
@@ -633,7 +633,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			FeeRecipient: common.Address{0x42},
 		}
 
-		packed, err := suaveLibAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "")
+		packed, err := suaveLibContract.Abi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -647,7 +647,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 
 		require.NotNil(t, simResult)
 
-		unpacked, err := suaveLibAbi.Methods["buildEthBlock"].Outputs.Unpack(simResult)
+		unpacked, err := suaveLibContract.Abi.Methods["buildEthBlock"].Outputs.Unpack(simResult)
 		require.NoError(t, err)
 
 		// TODO: test builder bid
@@ -702,7 +702,7 @@ func TestBlockBuildingContract(t *testing.T) {
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
-		calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
+		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
 		require.NoError(t, err)
 
 		wrappedTxData := &types.LegacyTx{
@@ -723,7 +723,7 @@ func TestBlockBuildingContract(t *testing.T) {
 		offchainTxBytes, err := offchainTx.MarshalBinary()
 		require.NoError(t, err)
 
-		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
 		var offchainTxHash common.Hash
@@ -755,7 +755,7 @@ func TestBlockBuildingContract(t *testing.T) {
 			FeeRecipient:   common.Address{0x42},
 		}
 
-		calldata, err := buildEthBlockAbi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
+		calldata, err := buildEthBlockContract.Abi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
 		require.NoError(t, err)
 
 		wrappedTxData := &types.LegacyTx{
@@ -820,10 +820,10 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	defer fakeRelayServer.Close()
 
 	{ // Deploy the contract
-		abiEncodedRelayUrl, err := ethBlockBidSenderAbi.Pack("", fakeRelayServer.URL)
+		abiEncodedRelayUrl, err := ethBlockBidSenderContract.Abi.Pack("", fakeRelayServer.URL)
 		require.NoError(t, err)
 
-		calldata := append(hexutil.MustDecode(blockBidSenderContractCode), abiEncodedRelayUrl...)
+		calldata := append(ethBlockBidSenderContract.Code, abiEncodedRelayUrl...)
 		ccTxData := &types.LegacyTx{
 			Nonce:    0,
 			To:       nil, // contract creation
@@ -875,7 +875,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{ethBlockBidSenderAddr, newBundleBidAddress, buildEthBlockAddress}
-		calldata, err := bundleBidAbi.Pack("newBid", targetBlock+1, allowedPeekers)
+		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
 		require.NoError(t, err)
 
 		wrappedTxData := &types.LegacyTx{
@@ -896,7 +896,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		offchainTxBytes, err := offchainTx.MarshalBinary()
 		require.NoError(t, err)
 
-		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
 		var offchainTxHash common.Hash
@@ -928,7 +928,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 			FeeRecipient:   common.Address{0x42},
 		}
 
-		calldata, err := ethBlockBidSenderAbi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
+		calldata, err := ethBlockBidSenderContract.Abi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
 		require.NoError(t, err)
 
 		wrappedTxData := &types.LegacyTx{
@@ -1014,10 +1014,10 @@ var (
 		Alloc: core.GenesisAlloc{
 			testAddr:              {Balance: testBalance},
 			testAddr2:             {Balance: testBalance},
-			newBundleBidAddress:   {Balance: big.NewInt(0), Code: hexutil.MustDecode(bidsContractCode)},
-			newBlockBidAddress:    {Balance: big.NewInt(0), Code: hexutil.MustDecode(blockBidContractCode)},
-			blockBidSenderAddress: {Balance: big.NewInt(0), Code: hexutil.MustDecode(blockBidSenderContractCode)},
-			mevShareAddress:       {Balance: big.NewInt(0), Code: hexutil.MustDecode(mevShareBidContractCode)},
+			newBundleBidAddress:   {Balance: big.NewInt(0), Code: bundleBidContract.DeployedCode},
+			newBlockBidAddress:    {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
+			blockBidSenderAddress: {Balance: big.NewInt(0), Code: ethBlockBidSenderContract.DeployedCode},
+			mevShareAddress:       {Balance: big.NewInt(0), Code: matchBidContract.DeployedCode},
 		},
 	}
 
@@ -1152,7 +1152,7 @@ func requireNoRpcError(t *testing.T, rpcErr error) {
 			require.NoError(t, rpcErr, decodedError)
 		}
 
-		unpacked, err := suaveLibAbi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
+		unpacked, err := suaveLibContract.Abi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
 		if err != nil {
 			require.NoError(t, err, rpcErr.Error())
 		} else {
