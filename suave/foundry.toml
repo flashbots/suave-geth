@@ -1,0 +1,3 @@
+[profile.default]
+src = 'sol'
+out = 'artifacts'

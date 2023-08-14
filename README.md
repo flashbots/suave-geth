@@ -37,14 +37,14 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
 ### How do I use SUAVE?
 
 1. **Deploy confidential smart contracts.**
-   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#SUAVE-library).
+   Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#suave-library).
 
 2. **NEW! Request confidential execution using the new confidential computation request.**
    Contracts called using confidential compute requests have access to off-chain data and APIs through SUAVE precompiles. Confidential computation is *not* reproducible on-chain, thus, users are required to whitelist a specific execution node trusted to provide the result. Eventually proofs and trusted enclaves will help to verify the results of execution.
       After the initial confidential computation, its result replaces the calldata for on-chain execution. This grants different behaviors to confidential, treated as off-chain, and regular on-chain transactions since off-chain APIs are inaccessible during regular chain state transition.
 
 
-   See [confidential compute requests](#Confidential-compute-requests) for more details.
+   See [confidential compute requests](#confidential-compute-requests) for more details.
 
 ### How do I execute a contract confidentially?
 
@@ -84,7 +84,7 @@ Let’s take a look at how you can request confidential computation through an e
 
 5. All done! Once the execution node processes your computation request, the execution node will submit it as `OffchainExecutedTransaction` to the mempool.
 
-For more on confidential compute requests see [confidential compute requests](#Confidential-compute-requests).
+For more on confidential compute requests see [confidential compute requests](#confidential-compute-requests).
 
 ### How do I run a SUAVE chain node?
 
@@ -112,7 +112,7 @@ Note that simply enabling http jsonrpc and allowing direct access might not be t
 
 ### SUAVE Runtime (MEVM)
 
-[`SuaveExecutionBackend`](#SuaveExecutionBackend) 🤝 EVM = MEVM
+[`SuaveExecutionBackend`](#suaveexecutionbackend) 🤝 EVM = MEVM
 
 More specifically, `SuaveExecutionBackend` and `Runtime` add functionality to the stock EVM which allows it both confidential computation and interaction with off-chain APIs.
 
@@ -171,9 +171,9 @@ All of these newly offered APIs are available to your solidity smart contract th
 
 The virtual machine (MEVM) inside SUAVE nodes have two modes of operation: regular and confidential (sometimes called off-chain). Regulal on-chain environment is your usual Ethereum virtual machine environment.
 
-Confidential environment is available to users through a new type of ransaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [confidential compute requests](#Confidential-compute-requests).
+Confidential environment is available to users through a new type of ransaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [confidential compute requests](#confidential-compute-requests).
 
-The confidential execution environment provides additional precompiles, both directly and through a convenient [library](#SUAVE-library). Confidential execution is *not* verifiable during on-chain state transition, instead the result of the confidential execution is cached in the transaction (`OffchainExecutedTx`). Users requesting confidential compute requests specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
+The confidential execution environment provides additional precompiles, both directly and through a convenient [library](#suave-library). Confidential execution is *not* verifiable during on-chain state transition, instead the result of the confidential execution is cached in the transaction (`OffchainExecutedTx`). Users requesting confidential compute requests specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
 
 The cached result of confidential execution is used as calldata in the transaction that inevitably makes its way onto the SUAVE chain.
 
