@@ -147,7 +147,7 @@ graph TB
     classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px, color:#333;
 ```
 
-The capabilities enabled by this modified runtime are exposed via the APIs `ConfidentialStoreBackend` , `MempoolBackend`, `ConfidentialStoreBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
+The capabilities enabled by this modified runtime are exposed via the APIs `ConfidentialStoreBackend` , `MempoolBackend`, `OffchainEthBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
 
 ```go
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
