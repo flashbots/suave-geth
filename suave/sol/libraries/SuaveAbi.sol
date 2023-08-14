@@ -1,6 +1,6 @@
 pragma solidity ^0.8.8;
 
-import {Suave} from "libraries/Suave.sol";
+import {Suave} from "./Suave.sol";
 
 contract SuaveAbi {
     error PeekerReverted(address, bytes);

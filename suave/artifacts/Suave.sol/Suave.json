@@ -1,0 +1,152 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "name": "PeekerReverted",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "BUILD_ETH_BLOCK_PEEKER",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONFIDENTIAL_INPUTS",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONFIDENTIAL_RETRIEVE",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONFIDENTIAL_STORE",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EXTRACT_HINT",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "FETCH_BIDS",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "IS_OFFCHAIN_ADDR",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "NEW_BID",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SIMULATE_BUNDLE_PEEKER",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SUBMIT_ETH_BLOCK_BID_TO_RELAY",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600436106100a85760003560e01c80639c09448d116100705780639c09448d14610100578063ad05aae41461010b578063bc50c00514610116578063c91e11df14610121578063f05797591461012c57600080fd5b8063076d4d8a146100ad57806332c90065146100d457806369094cbc146100df5780637320cb17146100ea578063751afe2c146100f5575b600080fd5b6100b8634210000081565b6040516001600160a01b03909116815260200160405180910390f35b6100b8634201000081565b6100b8634201000181565b6100b8634203000081565b6100b8634210003781565b6100b8634210000181565b6100b8634202000081565b6100b8634210000281565b6100b8634203000181565b6100b863420200018156fea26469706673582212200026fa2d65239a1c47de7a4d121ec3fa0d2c9ee7174b2220073ba4538e86e24e64736f6c63430008130033",
+  "bytecode": "0x61016d61003a600b82828239805160001a60731461002d57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106100a85760003560e01c80639c09448d116100705780639c09448d14610100578063ad05aae41461010b578063bc50c00514610116578063c91e11df14610121578063f05797591461012c57600080fd5b8063076d4d8a146100ad57806332c90065146100d457806369094cbc146100df5780637320cb17146100ea578063751afe2c146100f5575b600080fd5b6100b8634210000081565b6040516001600160a01b03909116815260200160405180910390f35b6100b8634201000081565b6100b8634201000181565b6100b8634203000081565b6100b8634210003781565b6100b8634210000181565b6100b8634202000081565b6100b8634210000281565b6100b8634203000181565b6100b863420200018156fea26469706673582212200026fa2d65239a1c47de7a4d121ec3fa0d2c9ee7174b2220073ba4538e86e24e64736f6c63430008130033"
+}
