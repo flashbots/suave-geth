@@ -3,3 +3,4 @@ src = 'sol'
 out = 'artifacts'
 bytecode_hash = 'none'
 cache = false
+solc_version = '0.8.19'
