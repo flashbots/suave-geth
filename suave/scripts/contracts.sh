@@ -19,10 +19,10 @@ clean() {
 
 # Function to validate that the contract artifacts are valid
 civalidate() {
-    build()
+    build
 
     # Build again and check if there are any changes in the artifacts folder
-    if [[ `git status --porcelain .` ]]; then
+    if [ "$(git status --porcelain .)" ]; then
       echo "Artifacts have not been generated."
       exit 1
     else
@@ -36,8 +36,8 @@ main() {
   case $1 in
     build) build ;;
     clean) clean ;;
-    civalidate) clean ;;
-    *) echo "Invalid command. Available commands: build, clean" ;;
+    civalidate) civalidate ;;
+    *) echo "Invalid command. Available commands: build, clean, civalidate" ;;
   esac
 }
 
