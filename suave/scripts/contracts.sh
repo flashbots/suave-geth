@@ -17,11 +17,26 @@ clean() {
     forge clean
 }
 
+# Function to validate that the contract artifacts are valid
+civalidate() {
+    build()
+
+    # Build again and check if there are any changes in the artifacts folder
+    if [[ `git status --porcelain .` ]]; then
+      echo "Artifacts have not been generated."
+      exit 1
+    else
+      # No changes
+      echo "Artifacts are correct."
+    fi
+}
+
 # Main function to call other functions based on the provided command
 main() {
   case $1 in
     build) build ;;
     clean) clean ;;
+    civalidate) clean ;;
     *) echo "Invalid command. Available commands: build, clean" ;;
   esac
 }
