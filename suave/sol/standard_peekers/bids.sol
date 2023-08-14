@@ -24,6 +24,11 @@ contract AnyBidContract {
 }
 
 contract BundleBidContract is AnyBidContract {
+	int x;
+
+	function doit(int _x) public {
+		x = _x;
+	}
 
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers) external payable returns (bytes memory) {
 		require(Suave.isOffchain());
