@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 )
 
 type fieldInput struct {
@@ -159,7 +159,7 @@ func applyTemplate(templateText string, input interface{}, out string) error {
 			// 2. There is one input and the type is not bytes.
 			// 3. The 'extractHint' function is a specific case which takes []input and also unpacks it. TODO: Fix.
 			if len(method.Inputs) >= 2 || (len(method.Inputs) == 1 && method.Inputs[0].Typ.T != abi.BytesTy) || method.Name == "extractHint" {
-				str = append(str, fmt.Sprintf(`unpacked, err := PrecompilesAbi.Methods["%s"].Inputs.Unpack(input)
+				str = append(str, fmt.Sprintf(`unpacked, err := artifacts.SuaveAbi.Methods["%s"].Inputs.Unpack(input)
 				if err != nil {
 					return nil, err
 				}`, method.Name))
@@ -210,7 +210,7 @@ func applyTemplate(templateText string, input interface{}, out string) error {
 				// Pack if:
 				// 1. There are two or more items.
 				// 2. There is one item and the type is not bytes.
-				str = append(str, fmt.Sprintf(`packedRes, err := PrecompilesAbi.Methods["%s"].Outputs.Pack(%s)
+				str = append(str, fmt.Sprintf(`packedRes, err := artifacts.SuaveAbi.Methods["%s"].Outputs.Pack(%s)
 				if err != nil {
 					return nil, err
 				}
@@ -261,13 +261,13 @@ func main() {
 		Structs: []*structElem{},
 	}
 
-	for _, abiMethod := range vm.PrecompilesAbi.Methods {
+	for _, abiMethod := range artifacts.SuaveAbi.Methods {
 		g.encodeMethod(abiMethod)
 	}
 
 	// compute the hash as the keccak of the json ABI
 	// and add it to the generator
-	abiBytes, err := json.Marshal(vm.PrecompilesAbi)
+	abiBytes, err := json.Marshal(artifacts.SuaveAbi)
 	if err != nil {
 		panic(err)
 	}
@@ -315,6 +315,7 @@ package vm
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	"github.com/mitchellh/mapstructure"
 )
 
