@@ -147,7 +147,7 @@ graph TB
     classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px, color:#333;
 ```
 
-The capabilities enabled by this modified runtime are exposed via the APIs `ConfiendialStoreBackend` , `MempoolBackend`, `ConfiendialStoreBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
+The capabilities enabled by this modified runtime are exposed via the APIs `ConfidentialStoreBackend` , `MempoolBackend`, `OffchainEthBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
 
 ```go
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
@@ -156,7 +156,7 @@ func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExec
 	}
 
 	return &SuaveExecutionBackend{
-		ConfiendialStoreBackend: evm.suaveExecutionBackend.ConfiendialStoreBackend,
+		ConfidentialStoreBackend: evm.suaveExecutionBackend.ConfidentialStoreBackend,
 		MempoolBackned:          evm.suaveExecutionBackend.MempoolBackned,
 		OffchainEthBackend:      evm.suaveExecutionBackend.OffchainEthBackend,
 		confidentialInputs:      evm.suaveExecutionBackend.confidentialInputs,
@@ -276,7 +276,7 @@ library Suave {
 Off-chain precompiles have access to the following [off-chain APIs](suave/core/types.go) during execution.
 
 ```go
-type ConfiendialStoreBackend interface {
+type ConfidentialStoreBackend interface {
     Initialize(bid Bid, key string, value []byte) (Bid, error)
     Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
     Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)
@@ -327,11 +327,11 @@ It is important to note that the actual implementation of the Confidential Store
 
 The SUAVE mempool is a temporary storage pool for transactions waiting to be added to the blockchain. This mempool, `MempoolOnConfidentialStore`, operates on the Confidential Store, hence facilitating the privacy-preserving handling of bid transactions. The `MempoolOnConfidentialStore` is designed to handle SUAVE bids, namely the submission, retrieval, and grouping of bids by decryption condition such as block number and protocol. It provides a secure and efficient mechanism for managing these transactions while preserving their confidentiality.
 
-The `MempoolOnConfidentialStore` interacts directly with the `ConfiendialStoreBackend` interface.
+The `MempoolOnConfidentialStore` interacts directly with the `ConfidentialStoreBackend` interface.
 
 ```go
 type MempoolOnConfidentialStore struct {
-	cs suave.ConfiendialStoreBackend
+	cs suave.ConfidentialStoreBackend
 }
 ```
 It is initialized with a predefined `mempoolConfidentialStoreBid` that's only accessible by a particular address `mempoolConfStoreAddr`.

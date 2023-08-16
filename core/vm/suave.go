@@ -8,11 +8,11 @@ import (
 )
 
 type SuaveExecutionBackend struct {
-	ConfiendialStoreBackend suave.ConfiendialStoreBackend
-	MempoolBackend          suave.MempoolBackend
-	OffchainEthBackend      suave.OffchainEthBackend
-	confidentialInputs      []byte
-	callerStack             []*common.Address
+	ConfidentialStoreBackend suave.ConfidentialStoreBackend
+	MempoolBackend           suave.MempoolBackend
+	OffchainEthBackend       suave.OffchainEthBackend
+	confidentialInputs       []byte
+	callerStack              []*common.Address
 }
 
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
@@ -21,11 +21,11 @@ func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExec
 	}
 
 	return &SuaveExecutionBackend{
-		ConfiendialStoreBackend: evm.suaveExecutionBackend.ConfiendialStoreBackend,
-		MempoolBackend:          evm.suaveExecutionBackend.MempoolBackend,
-		OffchainEthBackend:      evm.suaveExecutionBackend.OffchainEthBackend,
-		confidentialInputs:      evm.suaveExecutionBackend.confidentialInputs,
-		callerStack:             append(evm.suaveExecutionBackend.callerStack, &caller),
+		ConfidentialStoreBackend: evm.suaveExecutionBackend.ConfidentialStoreBackend,
+		MempoolBackend:           evm.suaveExecutionBackend.MempoolBackend,
+		OffchainEthBackend:       evm.suaveExecutionBackend.OffchainEthBackend,
+		confidentialInputs:       evm.suaveExecutionBackend.confidentialInputs,
+		callerStack:              append(evm.suaveExecutionBackend.callerStack, &caller),
 	}
 }
 

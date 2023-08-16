@@ -12,7 +12,7 @@
   },
   "files": {
     "sol/libraries/Suave.sol": {
-      "lastModificationDate": 1692187376822,
+      "lastModificationDate": 1692193753510,
       "contentHash": "9be32eb2331f67c521e66567bb59f713",
       "sourceName": "sol/libraries/Suave.sol",
       "solcConfig": {
@@ -22,7 +22,7 @@
             "runs": 200
           },
           "metadata": {
-            "bytecodeHash": "ipfs",
+            "bytecodeHash": "none",
             "appendCBOR": true
           },
           "outputSelection": {
@@ -62,7 +62,7 @@
             "runs": 200
           },
           "metadata": {
-            "bytecodeHash": "ipfs",
+            "bytecodeHash": "none",
             "appendCBOR": true
           },
           "outputSelection": {
@@ -104,7 +104,7 @@
             "runs": 200
           },
           "metadata": {
-            "bytecodeHash": "ipfs",
+            "bytecodeHash": "none",
             "appendCBOR": true
           },
           "outputSelection": {
