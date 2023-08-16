@@ -291,6 +291,7 @@ func TestBundleBid(t *testing.T) {
 			Id                  [16]uint8        "json:\"id\""
 			DecryptionCondition uint64           "json:\"decryptionCondition\""
 			AllowedPeekers      []common.Address "json:\"allowedPeekers\""
+			Version             string           "json:\"version\""
 		})
 		require.Equal(t, targetBlock, bid.DecryptionCondition)
 		require.Equal(t, allowedPeekers, bid.AllowedPeekers)
