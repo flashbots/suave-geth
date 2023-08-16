@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
@@ -38,11 +40,11 @@ import (
 
 func TestIsOffchain(t *testing.T) {
 	// t.Fatal("not implemented")
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{})
-	defer node.Close()
 
-	rpc, err := node.Attach()
-	require.NoError(t, err)
+	fr := newFramework(t)
+	defer fr.Close()
+
+	rpc := fr.suethSrv.RPCNode()
 
 	gas := hexutil.Uint64(1000000)
 	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
@@ -79,7 +81,7 @@ func TestIsOffchain(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -107,10 +109,10 @@ func TestIsOffchain(t *testing.T) {
 		requireNoRpcError(t, rpc.Call(&onchainTxHash, "eth_sendRawTransaction", hexutil.Encode(onchainTxBytes)))
 		require.Equal(t, common.HexToHash("0x031415a9010d25f2a882758cf7b8dbb3750678828e9973f32f0c73ef49a038b4"), onchainTxHash)
 
-		block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+		block := fr.suethSrv.ProgressChain()
 		require.Equal(t, 2, len(block.Transactions()))
 
-		receipts := ethservice.BlockChain().GetReceiptsByHash(block.Hash())
+		receipts := block.Receipts
 		require.Equal(t, 2, len(receipts))
 		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
@@ -125,11 +127,10 @@ func TestIsOffchain(t *testing.T) {
 
 func TestMempool(t *testing.T) {
 	// t.Fatal("not implemented")
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{})
-	defer node.Close()
+	fr := newFramework(t)
+	defer fr.Close()
 
-	rpc, err := node.Attach()
-	require.NoError(t, err)
+	rpc := fr.suethSrv.RPCNode()
 
 	gas := hexutil.Uint64(1000000)
 	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
@@ -151,8 +152,8 @@ func TestMempool(t *testing.T) {
 			Version:             "default:v0:ethBundles",
 		}
 
-		ethservice.APIBackend.OffchainBackend().MempoolBackend.SubmitBid(bid1)
-		ethservice.APIBackend.OffchainBackend().MempoolBackend.SubmitBid(bid2)
+		fr.OffchainBackend().MempoolBackend.SubmitBid(bid1)
+		fr.OffchainBackend().MempoolBackend.SubmitBid(bid2)
 
 		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
@@ -202,7 +203,7 @@ func TestMempool(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -213,10 +214,10 @@ func TestMempool(t *testing.T) {
 		var offchainTxHash common.Hash
 		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
 
-		block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+		block := fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
 
-		receipts := ethservice.BlockChain().GetReceiptsByHash(block.Hash())
+		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
 		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
@@ -228,11 +229,11 @@ func TestMempool(t *testing.T) {
 
 func TestBundleBid(t *testing.T) {
 	// t.Fatal("not implemented")
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{})
-	defer node.Close()
 
-	rpc, err := node.Attach()
-	require.NoError(t, err)
+	fr := newFramework(t)
+	defer fr.Close()
+
+	rpc := fr.suethSrv.RPCNode()
 
 	{
 		targetBlock := uint64(16103213)
@@ -262,7 +263,7 @@ func TestBundleBid(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -276,10 +277,10 @@ func TestBundleBid(t *testing.T) {
 		var offchainTxHash common.Hash
 		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
 
-		block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+		block := fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
 
-		receipts := ethservice.BlockChain().GetReceiptsByHash(block.Hash())
+		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
 		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
@@ -305,7 +306,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
 		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
 
-		_, err = ethservice.APIBackend.OffchainBackend().ConfidentialStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
+		_, err = fr.OffchainBackend().ConfidentialStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
 		require.NoError(t, err)
 	}
 }
@@ -318,16 +319,10 @@ func TestMevShare(t *testing.T) {
 	// 3. build share block
 	//   3a. confirm share bundle
 
-	ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
-	defer ethNode.Close()
-	ethEthService.APIs()
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
 
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: "http://127.0.0.1:8596"})
-	defer node.Close()
-	ethservice.APIs()
-
-	rpc, err := node.Attach()
-	require.NoError(t, err)
+	rpc := fr.suethSrv.RPCNode()
 
 	// ************ 1. Initial mevshare transaction Portion ************
 
@@ -368,7 +363,7 @@ func TestMevShare(t *testing.T) {
 	}
 
 	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: ethservice.AccountManager().Accounts()[0],
+		ExecutionNode: fr.ExecutionNode(),
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), signer, testKey)
 	require.NoError(t, err)
@@ -384,7 +379,7 @@ func TestMevShare(t *testing.T) {
 	requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
 
 	//   1a. confirm submission
-	block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+	block := fr.suethSrv.ProgressChain()
 	require.Equal(t, 1, len(block.Transactions()))
 	// check txn in block went to mev share
 	require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
@@ -436,7 +431,7 @@ func TestMevShare(t *testing.T) {
 	}
 
 	offchainMatchTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: ethservice.AccountManager().Accounts()[0],
+		ExecutionNode: fr.ExecutionNode(),
 		Wrapped:       *types.NewTx(wrappedMatchTxData),
 	}), signer, testKey)
 	require.NoError(t, err)
@@ -451,7 +446,7 @@ func TestMevShare(t *testing.T) {
 	var offchainMatchTxHash common.Hash
 	requireNoRpcError(t, rpc.Call(&offchainMatchTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainMatchTxBytes), hexutil.Encode(confidentialDataMatchBytes)))
 
-	block = progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+	block = fr.suethSrv.ProgressChain()
 	require.Equal(t, 1, len(block.Transactions()))
 	// check txn in block went to mev share
 	require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
@@ -465,7 +460,7 @@ func TestMevShare(t *testing.T) {
 
 	// ************ 3. Build Share Block ************
 
-	ethHead := ethEthService.BlockChain().CurrentBlock()
+	ethHead := fr.ethSrv.CurrentBlock()
 	payloadArgsTuple := struct {
 		Slot           uint64
 		ProposerPubkey []byte
@@ -498,7 +493,7 @@ func TestMevShare(t *testing.T) {
 	}
 
 	offchainTxBB, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: ethservice.AccountManager().Accounts()[0],
+		ExecutionNode: fr.ExecutionNode(),
 		Wrapped:       *types.NewTx(wrappedTxDataBB),
 	}), signer, testKey)
 	require.NoError(t, err)
@@ -509,7 +504,7 @@ func TestMevShare(t *testing.T) {
 	var offchainTxHashBB common.Hash
 	requireNoRpcError(t, rpc.Call(&offchainTxHashBB, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytesBB)))
 
-	block = progressChain(t, ethservice, block.Header())
+	block = fr.suethSrv.ProgressChain() // block = progressChain(t, ethservice, block.Header())
 	require.Equal(t, 1, len(block.Transactions()))
 
 	var r3 *types.Receipt
@@ -517,7 +512,7 @@ func TestMevShare(t *testing.T) {
 	require.NotEmpty(t, r3.Logs)
 
 	{ // Fetch the built block id and check that the payload contains mev share trasnactions!
-		receipts := ethservice.BlockChain().GetReceiptsByHash(block.Hash())
+		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
 		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
@@ -528,7 +523,7 @@ func TestMevShare(t *testing.T) {
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
-		payloadData, err := ethservice.APIBackend.OffchainBackend().ConfidentialStoreBackend.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
+		payloadData, err := fr.OffchainBackend().ConfidentialStoreBackend.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
 		var payloadEnvelope engine.ExecutionPayloadEnvelope
@@ -549,16 +544,10 @@ func TestMevShare(t *testing.T) {
 }
 
 func TestBlockBuildingPrecompiles(t *testing.T) {
-	ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
-	defer ethNode.Close()
-	ethEthService.APIs()
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
 
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: "http://127.0.0.1:8596"})
-	defer node.Close()
-	ethservice.APIs()
-
-	rpc, err := node.Attach()
-	require.NoError(t, err)
+	rpc := fr.suethSrv.RPCNode()
 
 	gas := hexutil.Uint64(1000000)
 	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
@@ -610,10 +599,10 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			Version:             "default:v0:ethBundles",
 		}
 
-		ethservice.APIBackend.OffchainBackend().MempoolBackend.SubmitBid(bid)
-		ethservice.APIBackend.OffchainBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
+		fr.OffchainBackend().MempoolBackend.SubmitBid(bid)
+		fr.OffchainBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
-		ethHead := ethEthService.BlockChain().CurrentBlock()
+		ethHead := fr.ethSrv.CurrentBlock()
 		payloadArgsTuple := struct {
 			Slot           uint64
 			ProposerPubkey []byte
@@ -664,16 +653,10 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 }
 
 func TestBlockBuildingContract(t *testing.T) {
-	ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
-	defer ethNode.Close()
-	ethEthService.APIs()
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
 
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: "http://127.0.0.1:8596"})
-	defer node.Close()
-	ethservice.APIs()
-
-	rpc, err := node.Attach()
-	require.NoError(t, err)
+	rpc := fr.suethSrv.RPCNode()
 
 	// ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	// defer cancel()
@@ -715,7 +698,7 @@ func TestBlockBuildingContract(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -730,11 +713,11 @@ func TestBlockBuildingContract(t *testing.T) {
 		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
 	}
 
-	block := progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+	block := fr.suethSrv.ProgressChain()
 	require.Equal(t, 1, len(block.Transactions()))
 
 	{
-		ethHead := ethEthService.BlockChain().CurrentBlock()
+		ethHead := fr.ethSrv.CurrentBlock()
 		payloadArgsTuple := struct {
 			Slot           uint64
 			ProposerPubkey []byte
@@ -768,7 +751,7 @@ func TestBlockBuildingContract(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -779,23 +762,18 @@ func TestBlockBuildingContract(t *testing.T) {
 		var offchainTxHash common.Hash
 		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
 
-		block = progressChain(t, ethservice, block.Header())
+		block = fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
 	}
 }
 
 func TestRelayBlockSubmissionContract(t *testing.T) {
-	ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
-	defer ethNode.Close()
-	ethEthService.APIs()
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
 
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: "http://127.0.0.1:8596"})
-	defer node.Close()
-	ethservice.APIs()
+	rpc := fr.suethSrv.RPCNode()
 
-	rpc, err := node.Attach()
-	require.NoError(t, err)
-	var block *types.Block
+	var block *block
 
 	var ethBlockBidSenderAddr common.Address
 
@@ -845,10 +823,9 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		var txHash common.Hash
 		requireNoRpcError(t, rpc.Call(&txHash, "eth_sendRawTransaction", hexutil.Encode(txBytes)))
 
-		block = progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+		block = fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
-		receipts := ethservice.BlockChain().GetReceiptsByHash(block.Hash())
-		require.Equal(t, uint64(1), receipts[0].Status)
+		require.Equal(t, uint64(1), block.Receipts[0].Status)
 	}
 
 	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
@@ -888,7 +865,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -903,11 +880,11 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
 	}
 
-	block = progressChain(t, ethservice, ethservice.BlockChain().CurrentBlock())
+	block = fr.suethSrv.ProgressChain()
 	require.Equal(t, 1, len(block.Transactions()))
 
 	{
-		ethHead := ethEthService.BlockChain().CurrentBlock()
+		ethHead := fr.ethSrv.CurrentBlock()
 		payloadArgsTuple := struct {
 			Slot           uint64
 			ProposerPubkey []byte
@@ -941,7 +918,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		}
 
 		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: ethservice.AccountManager().Accounts()[0],
+			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
@@ -952,7 +929,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		var offchainTxHash common.Hash
 		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
 
-		block = progressChain(t, ethservice, block.Header())
+		block = fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
 	}
 
@@ -971,6 +948,111 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
 	require.NoError(t, err)
 	require.True(t, ok)
+}
+
+type clientWrapper struct {
+	t *testing.T
+
+	node    *node.Node
+	service *eth.Ethereum
+}
+
+func (c *clientWrapper) Close() {
+	c.node.Close()
+}
+
+func (c *clientWrapper) RPCNode() *rpc.Client {
+	rpc, err := c.node.Attach()
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	return rpc
+}
+
+func (c *clientWrapper) CurrentBlock() *types.Header {
+	return c.service.BlockChain().CurrentBlock()
+}
+
+type block struct {
+	*types.Block
+
+	Receipts []*types.Receipt
+}
+
+func (c *clientWrapper) ProgressChain() *block {
+	tBlock := progressChain(c.t, c.service, c.service.BlockChain().CurrentBlock())
+	receipts := c.service.BlockChain().GetReceiptsByHash(tBlock.Hash())
+
+	return &block{
+		Block:    tBlock,
+		Receipts: receipts,
+	}
+}
+
+type framework struct {
+	t *testing.T
+
+	ethSrv   *clientWrapper
+	suethSrv *clientWrapper
+}
+
+type frameworkConfig struct {
+	executionNode bool
+}
+
+type frameworkOpt func(*frameworkConfig)
+
+func WithExecutionNode() frameworkOpt {
+	return func(c *frameworkConfig) {
+		c.executionNode = true
+	}
+}
+
+func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
+	cfg := &frameworkConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	var ethSrv *clientWrapper
+
+	if cfg.executionNode {
+		ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
+		ethEthService.APIs()
+
+		ethSrv = &clientWrapper{t, ethNode, ethEthService}
+	}
+
+	var suaveEthRemoteEndpoint string
+	if ethSrv != nil {
+		suaveEthRemoteEndpoint = "http://127.0.0.1:8596"
+	}
+
+	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: suaveEthRemoteEndpoint})
+	ethservice.APIs()
+
+	f := &framework{
+		t:        t,
+		ethSrv:   ethSrv,
+		suethSrv: &clientWrapper{t, node, ethservice},
+	}
+
+	return f
+}
+
+func (f *framework) OffchainBackend() *vm.SuaveExecutionBackend {
+	return f.suethSrv.service.APIBackend.OffchainBackend()
+}
+
+func (f *framework) ExecutionNode() common.Address {
+	return f.suethSrv.service.AccountManager().Accounts()[0]
+}
+
+func (f *framework) Close() {
+	if f.ethSrv != nil {
+		f.ethSrv.Close()
+	}
+	f.suethSrv.Close()
 }
 
 // Utilities
