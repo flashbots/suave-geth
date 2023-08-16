@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/stretchr/testify/require"
 )
@@ -63,9 +64,9 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
 	suaveBackend := &SuaveExecutionBackend{
-		ConfiendialStoreBackend: mockSuaveBackend,
-		MempoolBackend:          mockSuaveBackend,
-		OffchainEthBackend:      mockSuaveBackend,
+		ConfidentialStoreBackend: mockSuaveBackend,
+		MempoolBackend:           mockSuaveBackend,
+		OffchainEthBackend:       mockSuaveBackend,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
@@ -99,7 +100,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	}
 
 	for name, addr := range methods {
-		abiMethod, ok := precompilesAbi.Methods[name]
+		abiMethod, ok := artifacts.SuaveAbi.Methods[name]
 		if !ok {
 			t.Fatalf("abi method '%s' not found", name)
 		}
@@ -124,7 +125,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	}
 
 	// error if there are methods in the abi that are not tested
-	for name := range precompilesAbi.Methods {
+	for name := range artifacts.SuaveAbi.Methods {
 		if _, ok := methods[name]; !ok {
 			t.Fatalf("abi method '%s' not tested", name)
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -71,7 +72,7 @@ func (c *simulateBundle) RunOffchain(backend *SuaveExecutionBackend, input []byt
 	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
 
 	// Return the EGP
-	egpBytes, err := precompilesAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
+	egpBytes, err := artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
 
 	if err != nil {
 		return formatPeekerError("could not pack egp %v: %w", egp, err)
@@ -91,7 +92,7 @@ func (c *extractHint) Run(input []byte) ([]byte, error) {
 }
 
 func (c *extractHint) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
-	unpacked, err := precompilesAbi.Methods["extractHint"].Inputs.Unpack(input)
+	unpacked, err := artifacts.SuaveAbi.Methods["extractHint"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -138,7 +139,7 @@ func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
 }
 
 func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
-	unpacked, err := precompilesAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
+	unpacked, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
 	if err != nil {
 		return formatPeekerError("could not unpack inputs: %w", err)
 	}
@@ -182,7 +183,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 
 	bidIds := []suave.BidId{}
 	// first check for merged bid, else assume regular bid
-	if mergedBidsBytes, err := backend.ConfiendialStoreBackend.Retrieve(inputBidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
+	if mergedBidsBytes, err := backend.ConfidentialStoreBackend.Retrieve(inputBidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
 
 		if err != nil {
@@ -207,7 +208,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 		switch bid.Version {
 		case "mevshare:v0:matchBids":
 			// fetch the matched ids and merge the bundle
-			matchedBundleIdsBytes, err := backend.ConfiendialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:mergedBids")
+			matchedBundleIdsBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:mergedBids")
 			if err != nil {
 				return formatPeekerError("could not retrieve bid ids data for bid %v, from cdas: %w", bid, err)
 			}
@@ -219,7 +220,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 
 			matchBidIds := unpackedBidIds[0].([]suave.BidId)
 
-			userBundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
+			userBundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
 				return formatPeekerError("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 			}
@@ -229,7 +230,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 				return formatPeekerError("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 			}
 
-			matchBundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(matchBidIds[1], buildEthBlockAddress, "mevshare:v0:ethBundles")
+			matchBundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(matchBidIds[1], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
 				return formatPeekerError("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 			}
@@ -244,7 +245,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 			mergedBundles = append(mergedBundles, userBundle)
 
 		case "mevshare:v0:unmatchedBundles":
-			bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:ethBundles")
+			bundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
 				return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
@@ -255,7 +256,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 			}
 			mergedBundles = append(mergedBundles, bundle)
 		case "default:v0:ethBundles":
-			bundleBytes, err := backend.ConfiendialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "default:v0:ethBundles")
+			bundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "default:v0:ethBundles")
 			if err != nil {
 				return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
@@ -337,7 +338,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 		return formatPeekerError("could not marshal payload envelope: %w", err)
 	}
 
-	return precompilesAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
+	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
 }
 
 type submitEthBlockBidToRelay struct {
@@ -352,7 +353,7 @@ func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
 }
 
 func (c *submitEthBlockBidToRelay) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
-	unpacked, err := precompilesAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
+	unpacked, err := artifacts.SuaveAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
 	if err != nil {
 		return formatPeekerError("could not unpack inputs: %w", err)
 	}

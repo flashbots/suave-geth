@@ -306,7 +306,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
 		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
 
-		_, err = fr.OffchainBackend().ConfiendialStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
+		_, err = fr.OffchainBackend().ConfidentialStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
 		require.NoError(t, err)
 	}
 }
@@ -523,7 +523,7 @@ func TestMevShare(t *testing.T) {
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
-		payloadData, err := fr.OffchainBackend().ConfiendialStoreBackend.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
+		payloadData, err := fr.OffchainBackend().ConfidentialStoreBackend.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
 		var payloadEnvelope engine.ExecutionPayloadEnvelope
@@ -600,7 +600,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		}
 
 		fr.OffchainBackend().MempoolBackend.SubmitBid(bid)
-		fr.OffchainBackend().ConfiendialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
+		fr.OffchainBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
 		ethHead := fr.ethSrv.CurrentBlock()
 		payloadArgsTuple := struct {
