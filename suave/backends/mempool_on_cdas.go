@@ -10,10 +10,10 @@ import (
 )
 
 type MempoolOnConfidentialStore struct {
-	cs suave.ConfiendialStoreBackend
+	cs suave.ConfidentialStoreBackend
 }
 
-func NewMempoolOnConfidentialStore(cs suave.ConfiendialStoreBackend) *MempoolOnConfidentialStore {
+func NewMempoolOnConfidentialStore(cs suave.ConfidentialStoreBackend) *MempoolOnConfidentialStore {
 	_, err := cs.Initialize(mempoolConfidentialStoreBid, "", nil)
 	if err != nil {
 		panic("could not initialize mempool")

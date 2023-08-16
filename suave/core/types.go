@@ -21,7 +21,7 @@ type Bid struct {
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
-type ConfiendialStoreBackend interface {
+type ConfidentialStoreBackend interface {
 	Initialize(bid Bid, key string, value []byte) (Bid, error)
 	Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
 	Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)

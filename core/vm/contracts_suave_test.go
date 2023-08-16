@@ -64,9 +64,9 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
 	suaveBackend := &SuaveExecutionBackend{
-		ConfiendialStoreBackend: mockSuaveBackend,
-		MempoolBackend:          mockSuaveBackend,
-		OffchainEthBackend:      mockSuaveBackend,
+		ConfidentialStoreBackend: mockSuaveBackend,
+		MempoolBackend:           mockSuaveBackend,
+		OffchainEthBackend:       mockSuaveBackend,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
