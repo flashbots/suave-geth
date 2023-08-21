@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -98,16 +97,16 @@ func unwrapPeekerError(rpcErr error) error {
 	}
 	decodedError, err := hexutil.Decode(rpcErr.Error()[20:])
 	if err != nil {
-		return errors.Join(rpcErr, err)
+		return fmt.Errorf("%s: %s", rpcErr, err)
 	}
 
 	unpacked, err := suaveLibAbi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
 	if err != nil {
-		return errors.Join(rpcErr, err)
+		return fmt.Errorf("%s: %s", rpcErr, err)
 	}
 
 	revertReason := string(unpacked[1].([]byte))
-	return errors.Join(rpcErr, fmt.Errorf("revert reason: %s", revertReason))
+	return fmt.Errorf("%s: %s", rpcErr, fmt.Errorf("revert reason: %s", revertReason))
 }
 
 func waitForTransactionToBeConfirmed(suaveClient *rpc.Client, txHash *common.Hash) {
