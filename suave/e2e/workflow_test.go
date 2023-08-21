@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -31,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/gen/examples"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -134,6 +136,8 @@ func TestMempool(t *testing.T) {
 	gas := hexutil.Uint64(1000000)
 	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
 
+	// xx := examples.NewClient(rpc)
+
 	{
 		targetBlock := uint64(16103213)
 
@@ -167,6 +171,9 @@ func TestMempool(t *testing.T) {
 			ChainID:    &chainId,
 			Data:       (*hexutil.Bytes)(&calldata),
 		}, "latest"))
+
+		//bids, err := xx.FetchBids(targetBlock, "default:v0:ethBundles")
+		//require.NoError(t, err)
 
 		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
 		require.NoError(t, err)
@@ -587,19 +594,31 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	bundleBytes, err := json.Marshal(bundle)
 	require.NoError(t, err)
 
-	{ // Test the bundle simulation precompile through eth_call
-		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
-			To:         &simulateBundleAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
-			Data:       (*hexutil.Bytes)(&bundleBytes),
-		}, "latest"))
+	xx := examples.NewClient(rpc)
 
-		require.Equal(t, 32, len(simResult))
-		require.Equal(t, 13, int(simResult[31]))
+	{ // Test the bundle simulation precompile through eth_call
+		/*
+			var simResult hexutil.Bytes
+			requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
+				To:         &simulateBundleAddress,
+				Gas:        &gas,
+				IsOffchain: true,
+				ChainID:    &chainId,
+				Data:       (*hexutil.Bytes)(&bundleBytes),
+			}, "latest"))
+		*/
+
+		fmt.Println("=> RES")
+		if _, err := xx.SimulateBundle(bundleBytes); err != nil {
+			panic(err)
+		}
+		//panic("x")
+
+		//require.Equal(t, 32, len(simResult))
+		//require.Equal(t, 13, int(simResult[31]))
 	}
+
+	return
 
 	{ // Test the block building precompile through eth_call
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
