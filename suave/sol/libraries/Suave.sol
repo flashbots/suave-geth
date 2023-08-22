@@ -34,6 +34,7 @@ library Suave {
         BidId id;
         uint64 decryptionCondition;
         address[] allowedPeekers;
+        string version;
     }
 
     struct Withdrawal {

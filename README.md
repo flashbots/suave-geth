@@ -52,7 +52,7 @@ Let’s take a look at how you can request confidential computation through an e
 
 1. Pick your favorite execution node. You’ll need its URL and wallet address. Note that the execution node is fully trusted to provide the result of your off-chain computation.
 
-2. Craft your confidential computation request. This is a regular Ethereum transaction, where you specify the desired contract address and it’s (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
+2. Craft your confidential computation request. This is a regular Ethereum transaction, where you specify the desired contract address and its (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
 
     ```go
     allowedPeekers := []common.Address{newBlockBidPeeker, newBundleBidPeeker, buildEthBlockPeeker} // express which contracts should have access to your data (by their addresses)
@@ -169,7 +169,7 @@ All of these newly offered APIs are available to your solidity smart contract th
 
 ### Confidential execution of smart contracts
 
-The virtual machine (MEVM) inside SUAVE nodes have two modes of operation: regular and confidential (sometimes called off-chain). Regulal on-chain environment is your usual Ethereum virtual machine environment.
+The virtual machine (MEVM) inside SUAVE nodes have two modes of operation: regular and confidential (sometimes called off-chain). Regular on-chain environment is your usual Ethereum virtual machine environment.
 
 Confidential environment is available to users through a new type of ransaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [confidential compute requests](#confidential-compute-requests).
 

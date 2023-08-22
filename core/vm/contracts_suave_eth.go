@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -48,13 +49,22 @@ func (c *simulateBundle) Run(input []byte) ([]byte, error) {
 }
 
 func (c *simulateBundle) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+	egp, err := c.runImpl(backend, input)
+	if err != nil {
+		return []byte(err.Error()), err
+	}
+
+	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
+}
+
+func (c *simulateBundle) runImpl(backend *SuaveExecutionBackend, input []byte) (*big.Int, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
 	}{}
 	err := json.Unmarshal(input, &bundle)
 	if err != nil {
-		return formatPeekerError("could not unmarshal bundle: %w", err)
+		return nil, err
 	}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
@@ -62,23 +72,15 @@ func (c *simulateBundle) RunOffchain(backend *SuaveExecutionBackend, input []byt
 
 	envelope, err := backend.OffchainEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
-		return formatPeekerError("could not build eth block for bundle simulation: %w", err)
+		return nil, err
 	}
 
 	if envelope.ExecutionPayload.GasUsed == 0 {
-		return formatPeekerError("transaction not applied correctly: %v", envelope)
+		return nil, err
 	}
 
 	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
-
-	// Return the EGP
-	egpBytes, err := artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
-
-	if err != nil {
-		return formatPeekerError("could not pack egp %v: %w", egp, err)
-	}
-
-	return egpBytes, nil
+	return egp, nil
 }
 
 type extractHint struct{}
@@ -98,6 +100,11 @@ func (c *extractHint) RunOffchain(backend *SuaveExecutionBackend, input []byte) 
 	}
 
 	bundleBytes := unpacked[0].([]byte)
+
+	return c.runImpl(backend, bundleBytes)
+}
+
+func (c *extractHint) runImpl(backend *SuaveExecutionBackend, bundleBytes []byte) ([]byte, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
@@ -105,7 +112,7 @@ func (c *extractHint) RunOffchain(backend *SuaveExecutionBackend, input []byte) 
 		MatchId         [16]byte           `json:"MatchId"`
 	}{}
 
-	err = json.Unmarshal(bundleBytes, &bundle)
+	err := json.Unmarshal(bundleBytes, &bundle)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -162,12 +169,14 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 	})
 
 	blockArgs := types.BuildBlockArgs{
-		Parent:       blockArgsRaw.Parent,
-		Timestamp:    blockArgsRaw.Timestamp,
-		FeeRecipient: blockArgsRaw.FeeRecipient,
-		GasLimit:     blockArgsRaw.GasLimit,
-		Random:       blockArgsRaw.Random,
-		Withdrawals:  types.Withdrawals{},
+		Slot:           blockArgsRaw.Slot,
+		Parent:         blockArgsRaw.Parent,
+		Timestamp:      blockArgsRaw.Timestamp,
+		FeeRecipient:   blockArgsRaw.FeeRecipient,
+		GasLimit:       blockArgsRaw.GasLimit,
+		Random:         blockArgsRaw.Random,
+		ProposerPubkey: blockArgsRaw.ProposerPubkey,
+		Withdrawals:    types.Withdrawals{},
 	}
 
 	for _, w := range blockArgsRaw.Withdrawals {
@@ -179,27 +188,39 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 		})
 	}
 
-	inputBidId := unpacked[1].(suave.BidId)
+	bidId := unpacked[1].(suave.BidId)
+	namespace := unpacked[2].(string)
 
+	bidBytes, envelopeBytes, err := c.runImpl(backend, blockArgs, bidId, namespace)
+	if err != nil {
+		return formatPeekerError("could not unpack merged bid ids: %w", err)
+	}
+
+	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
+}
+
+func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.BuildBlockArgs, bidId [16]byte, namespace string) ([]byte, []byte, error) {
 	bidIds := []suave.BidId{}
 	// first check for merged bid, else assume regular bid
-	if mergedBidsBytes, err := backend.ConfidentialStoreBackend.Retrieve(inputBidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
+	if mergedBidsBytes, err := backend.ConfidentialStoreBackend.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
 
 		if err != nil {
-			return formatPeekerError("could not unpack merged bid ids: %w", err)
+			return nil, nil, fmt.Errorf("could not unpack merged bid ids: %w", err)
 		}
 		log.Info("x", "x", unpacked, "x", mergedBidsBytes)
 		bidIds = unpacked[0].([]suave.BidId)
 	} else {
-		bidIds = append(bidIds, inputBidId)
+		bidIds = append(bidIds, bidId)
 	}
 
 	var bidsToMerge = make([]suave.Bid, len(bidIds))
 	for i, bidId := range bidIds {
+		var err error
+
 		bidsToMerge[i], err = backend.MempoolBackend.FetchBidById(bidId)
 		if err != nil {
-			return formatPeekerError("could not fetch bid id %v: %w", bidId, err)
+			return nil, nil, fmt.Errorf("could not fetch bid id %v: %w", bidId, err)
 		}
 	}
 
@@ -210,34 +231,34 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 			// fetch the matched ids and merge the bundle
 			matchedBundleIdsBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:mergedBids")
 			if err != nil {
-				return formatPeekerError("could not retrieve bid ids data for bid %v, from cdas: %w", bid, err)
+				return nil, nil, fmt.Errorf("could not retrieve bid ids data for bid %v, from cdas: %w", bid, err)
 			}
 
 			unpackedBidIds, err := bidIdsAbi.Inputs.Unpack(matchedBundleIdsBytes)
 			if err != nil {
-				return formatPeekerError("could not unpack bid ids data for bid %v, from cdas: %w", bid, err)
+				return nil, nil, fmt.Errorf("could not unpack bid ids data for bid %v, from cdas: %w", bid, err)
 			}
 
 			matchBidIds := unpackedBidIds[0].([]suave.BidId)
 
 			userBundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
-				return formatPeekerError("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
+				return nil, nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 			}
 
 			var userBundle types.SBundle
 			if err := json.Unmarshal(userBundleBytes, &userBundle); err != nil {
-				return formatPeekerError("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
+				return nil, nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 			}
 
 			matchBundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(matchBidIds[1], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
-				return formatPeekerError("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
+				return nil, nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 			}
 
 			var matchBundle types.SBundle
 			if err := json.Unmarshal(matchBundleBytes, &matchBundle); err != nil {
-				return formatPeekerError("could not unmarshal match bundle data for bidId %v: %w", matchBidIds[1], err)
+				return nil, nil, fmt.Errorf("could not unmarshal match bundle data for bidId %v: %w", matchBidIds[1], err)
 			}
 
 			userBundle.Txs = append(userBundle.Txs, matchBundle.Txs...)
@@ -247,68 +268,68 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 		case "mevshare:v0:unmatchedBundles":
 			bundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
-				return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
+				return nil, nil, fmt.Errorf("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
 
 			var bundle types.SBundle
 			if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
-				return formatPeekerError("could not unmarshal bundle data for bidId %v, from cdas: %w", bid.Id, err)
+				return nil, nil, fmt.Errorf("could not unmarshal bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
 			mergedBundles = append(mergedBundles, bundle)
 		case "default:v0:ethBundles":
 			bundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "default:v0:ethBundles")
 			if err != nil {
-				return formatPeekerError("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
+				return nil, nil, fmt.Errorf("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
 
 			var bundle types.SBundle
 			if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
-				return formatPeekerError("could not unmarshal bundle data for bidId %v, from cdas: %w", bid.Id, err)
+				return nil, nil, fmt.Errorf("could not unmarshal bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
 			mergedBundles = append(mergedBundles, bundle)
 		default:
-			return formatPeekerError("unknown bid version %s", bid.Version)
+			return nil, nil, fmt.Errorf("unknown bid version %s", bid.Version)
 		}
 	}
 
 	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
 	envelope, err := backend.OffchainEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 	if err != nil {
-		return formatPeekerError("could not build eth block: %w", err)
+		return nil, nil, fmt.Errorf("could not build eth block: %w", err)
 	}
 
 	log.Info("built block from bundles", "payload", *envelope.ExecutionPayload)
 
 	payload, err := executableDataToCapellaExecutionPayload(envelope.ExecutionPayload)
 	if err != nil {
-		return formatPeekerError("could not format execution payload as capella payload: %w", err)
+		return nil, nil, fmt.Errorf("could not format execution payload as capella payload: %w", err)
 	}
 
 	// really should not be generated here
 	blsSk, blsPk, err := bls.GenerateNewKeypair()
 	if err != nil {
-		return formatPeekerError("could not generate new bls key pair: %w", err)
+		return nil, nil, fmt.Errorf("could not generate new bls key pair: %w", err)
 	}
 
 	pk, err := boostUtils.BlsPublicKeyToPublicKey(blsPk)
 	if err != nil {
-		return formatPeekerError("could not format bls pubkey as bytes: %w", err)
+		return nil, nil, fmt.Errorf("could not format bls pubkey as bytes: %w", err)
 	}
 
 	value, overflow := uint256.FromBig(envelope.BlockValue)
 	if overflow {
-		return formatPeekerError("block value %v overflows", *envelope.BlockValue)
+		return nil, nil, fmt.Errorf("block value %v overflows", *envelope.BlockValue)
 	}
 	var proposerPubkey [48]byte
-	copy(proposerPubkey[:], blockArgsRaw.ProposerPubkey)
+	copy(proposerPubkey[:], blockArgs.ProposerPubkey)
 
 	blockBidMsg := builderV1.BidTrace{
-		Slot:                 blockArgsRaw.Slot,
+		Slot:                 blockArgs.Slot,
 		ParentHash:           payload.ParentHash,
 		BlockHash:            payload.BlockHash,
 		BuilderPubkey:        pk,
 		ProposerPubkey:       phase0.BLSPubKey(proposerPubkey),
-		ProposerFeeRecipient: bellatrix.ExecutionAddress(blockArgsRaw.FeeRecipient),
+		ProposerFeeRecipient: bellatrix.ExecutionAddress(blockArgs.FeeRecipient),
 		GasLimit:             envelope.ExecutionPayload.GasLimit,
 		GasUsed:              envelope.ExecutionPayload.GasUsed,
 		Value:                value,
@@ -319,7 +340,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
 	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, blsSk)
 	if err != nil {
-		return formatPeekerError("could not sign builder bid: %w", err)
+		return nil, nil, fmt.Errorf("could not sign builder bid: %w", err)
 	}
 
 	bidRequest := builderCapella.SubmitBlockRequest{
@@ -330,15 +351,15 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 
 	bidBytes, err := bidRequest.MarshalJSON()
 	if err != nil {
-		return formatPeekerError("could not marshal builder bid request: %w", err)
+		return nil, nil, fmt.Errorf("could not marshal builder bid request: %w", err)
 	}
 
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
-		return formatPeekerError("could not marshal payload envelope: %w", err)
+		return nil, nil, fmt.Errorf("could not marshal payload envelope: %w", err)
 	}
 
-	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
+	return bidBytes, envelopeBytes, nil
 }
 
 type submitEthBlockBidToRelay struct {
@@ -361,6 +382,10 @@ func (c *submitEthBlockBidToRelay) RunOffchain(backend *SuaveExecutionBackend, i
 	relayUrl := unpacked[0].(string)
 	builderBidJson := unpacked[1].([]byte)
 
+	return c.runImpl(backend, relayUrl, builderBidJson)
+}
+
+func (c *submitEthBlockBidToRelay) runImpl(backend *SuaveExecutionBackend, relayUrl string, builderBidJson []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
 
