@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
+	"github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/stretchr/testify/require"
 )
@@ -130,4 +131,79 @@ func TestSuavePrecompileStub(t *testing.T) {
 			t.Fatalf("abi method '%s' not tested", name)
 		}
 	}
+}
+
+func newTestBackend() *backendImpl {
+	confStore := backends.NewLocalConfidentialStore()
+
+	b := &backendImpl{
+		backend: &SuaveExecutionBackend{
+			ConfidentialStoreBackend: confStore,
+			MempoolBackend:           backends.NewMempoolOnConfidentialStore(confStore),
+			OffchainEthBackend:       &mockSuaveBackend{},
+		},
+	}
+	return b
+}
+
+func TestSuave_BidWorkflow(t *testing.T) {
+	b := newTestBackend()
+
+	bid5, err := b.newBid(5, []common.Address{{0x1}}, "a")
+	require.NoError(t, err)
+
+	bid10, err := b.newBid(10, []common.Address{{0x1}}, "a")
+	require.NoError(t, err)
+
+	bid10b, err := b.newBid(10, []common.Address{{0x1}}, "a")
+	require.NoError(t, err)
+
+	cases := []struct {
+		cond      uint64
+		namespace string
+		bids      []suave.Bid
+	}{
+		{0, "a", nil},
+		{5, "a", []suave.Bid{bid5}},
+		{10, "a", []suave.Bid{bid10, bid10b}},
+		{11, "a", nil},
+	}
+
+	for _, c := range cases {
+		bids, err := b.fetchBids(c.cond, c.namespace)
+		require.NoError(t, err)
+		require.Equal(t, c.bids, bids)
+	}
+}
+
+func TestSuave_ConfStoreWorkflow(t *testing.T) {
+	b := newTestBackend()
+
+	callerAddr := common.Address{0x1}
+	data := []byte{0x1}
+
+	// cannot store a value for a bid that does not exist
+	err := b.confidentialStoreStore([16]byte{}, "key", data)
+	require.Error(t, err)
+
+	bid, err := b.newBid(5, []common.Address{callerAddr}, "a")
+	require.NoError(t, err)
+
+	// cannot store the bid if the caller is not allowed to
+	err = b.confidentialStoreStore(bid.Id, "key", data)
+	require.Error(t, err)
+
+	// now, the caller is allowed to store the bid
+	b.backend.callerStack = append(b.backend.callerStack, &callerAddr)
+	err = b.confidentialStoreStore(bid.Id, "key", data)
+	require.NoError(t, err)
+
+	val, err := b.confidentialStoreRetrieve(bid.Id, "key")
+	require.NoError(t, err)
+	require.Equal(t, data, val)
+
+	// cannot retrieve the value if the caller is not allowed to
+	b.backend.callerStack = []*common.Address{}
+	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
+	require.Error(t, err)
 }
