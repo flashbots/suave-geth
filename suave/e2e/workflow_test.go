@@ -35,6 +35,7 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
 
@@ -172,12 +173,8 @@ func TestMempool(t *testing.T) {
 		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
 		require.NoError(t, err)
 
-		bids := unpacked[0].([]struct {
-			Id                  [16]uint8        "json:\"id\""
-			DecryptionCondition uint64           "json:\"decryptionCondition\""
-			AllowedPeekers      []common.Address "json:\"allowedPeekers\""
-			Version             string           `json:"version"`
-		})
+		var bids []suave.Bid
+		require.NoError(t, mapstructure.Decode(unpacked[0], &bids))
 
 		require.Equal(t, bid1, suave.Bid{
 			Id:                  bids[0].Id,
