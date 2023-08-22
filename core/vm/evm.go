@@ -46,7 +46,7 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 		if p, ok := PrecompiledContractsSuave[addr]; ok {
 			if evm.Config.IsOffchain {
 				runtimeBackend := NewRuntimeSuaveExecutionBackend(evm, addr)
-				return NewSuavePrecompiledContractWrapper(runtimeBackend, p), true
+				return NewSuavePrecompiledContractWrapper(addr, runtimeBackend, p), true
 			}
 			return p, ok
 		}

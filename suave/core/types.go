@@ -12,12 +12,7 @@ import (
 type Bytes = hexutil.Bytes
 type BidId = [16]byte
 
-type Bid struct {
-	Id                  BidId            `json:"id"`
-	DecryptionCondition uint64           `json:"decryptionCondition"` // For now simply the block number. Should be either derived from the source contract, or be a contract itself
-	AllowedPeekers      []common.Address `json:"allowedPeekers"`
-	Version             string           `json:"version"`
-}
+type Bid = types.Bid
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
