@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -686,32 +687,37 @@ func TestBlockBuildingContract(t *testing.T) {
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
-		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
-		require.NoError(t, err)
-
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
+		//calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
+		//require.NoError(t, err)
 
 		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		cc := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, rpc)
+		cc.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes, fr.ExecutionNode(), testKey)
+
+		/*
+			wrappedTxData := &types.LegacyTx{
+				Nonce:    0,
+				To:       &newBundleBidAddress,
+				Value:    nil,
+				Gas:      1000000,
+				GasPrice: big.NewInt(10),
+				Data:     calldata,
+			}
+
+			offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+				ExecutionNode: fr.ExecutionNode(),
+				Wrapped:       *types.NewTx(wrappedTxData),
+			}), signer, testKey)
+			require.NoError(t, err)
+
+			offchainTxBytes, err := offchainTx.MarshalBinary()
+			require.NoError(t, err)
+
+			var offchainTxHash common.Hash
+			requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		*/
 	}
 
 	block := fr.suethSrv.ProgressChain()
