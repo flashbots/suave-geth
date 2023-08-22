@@ -60,7 +60,13 @@ func sliceTypeCheck(t Type, val reflect.Value) error {
 		}
 	}
 
-	if val.Type().Elem().Kind() != t.Elem.GetType().Kind() {
+	innerTyp := val.Type().Elem()
+	if innerTyp.Kind() == reflect.Ptr {
+		// if the inner value is a pointer, dereference it
+		innerTyp = innerTyp.Elem()
+	}
+
+	if innerTyp.Kind() != t.Elem.GetType().Kind() {
 		return typeErr(formatSliceString(t.Elem.GetType().Kind(), t.Size), val.Type())
 	}
 	return nil

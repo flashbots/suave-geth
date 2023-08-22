@@ -462,21 +462,8 @@ func TestMevShare(t *testing.T) {
 	// ************ 3. Build Share Block ************
 
 	ethHead := fr.ethSrv.CurrentBlock()
-	payloadArgsTuple := struct {
-		Slot           uint64
-		ProposerPubkey []byte
-		Parent         common.Hash
-		Timestamp      uint64
-		FeeRecipient   common.Address
-		GasLimit       uint64
-		Random         common.Hash
-		Withdrawals    []struct {
-			Index     uint64
-			Validator uint64
-			Address   common.Address
-			Amount    uint64
-		}
-	}{
+
+	payloadArgsTuple := types.BuildBlockArgs{
 		Timestamp:    ethHead.Time + uint64(12),
 		FeeRecipient: common.Address{0x42},
 	}
@@ -604,21 +591,8 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		fr.OffchainBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
 		ethHead := fr.ethSrv.CurrentBlock()
-		payloadArgsTuple := struct {
-			Slot           uint64
-			ProposerPubkey []byte
-			Parent         common.Hash
-			Timestamp      uint64
-			FeeRecipient   common.Address
-			GasLimit       uint64
-			Random         common.Hash
-			Withdrawals    []struct {
-				Index     uint64
-				Validator uint64
-				Address   common.Address
-				Amount    uint64
-			}
-		}{
+
+		payloadArgsTuple := types.BuildBlockArgs{
 			Timestamp:    ethHead.Time + uint64(12),
 			FeeRecipient: common.Address{0x42},
 		}
@@ -719,21 +693,8 @@ func TestBlockBuildingContract(t *testing.T) {
 
 	{
 		ethHead := fr.ethSrv.CurrentBlock()
-		payloadArgsTuple := struct {
-			Slot           uint64
-			ProposerPubkey []byte
-			Parent         common.Hash
-			Timestamp      uint64
-			FeeRecipient   common.Address
-			GasLimit       uint64
-			Random         common.Hash
-			Withdrawals    []struct {
-				Index     uint64
-				Validator uint64
-				Address   common.Address
-				Amount    uint64
-			}
-		}{
+
+		payloadArgsTuple := types.BuildBlockArgs{
 			ProposerPubkey: []byte{0x42},
 			Timestamp:      ethHead.Time + uint64(12),
 			FeeRecipient:   common.Address{0x42},
@@ -886,21 +847,8 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	{
 		ethHead := fr.ethSrv.CurrentBlock()
-		payloadArgsTuple := struct {
-			Slot           uint64
-			ProposerPubkey []byte
-			Parent         common.Hash
-			Timestamp      uint64
-			FeeRecipient   common.Address
-			GasLimit       uint64
-			Random         common.Hash
-			Withdrawals    []struct {
-				Index     uint64
-				Validator uint64
-				Address   common.Address
-				Amount    uint64
-			}
-		}{
+
+		payloadArgsTuple := types.BuildBlockArgs{
 			ProposerPubkey: []byte{0x42},
 			Timestamp:      ethHead.Time + uint64(12),
 			FeeRecipient:   common.Address{0x42},
