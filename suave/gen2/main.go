@@ -5,31 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"os"
 	"os/exec"
-	"reflect"
 	"strings"
 	"unicode"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"gopkg.in/yaml.v2"
 )
-
-type function struct {
-	name    string
-	address common.Address
-	input   []field
-	output  output
-}
-
-type output struct {
-	plain  bool
-	none   bool
-	fields []field
-}
-
-type field struct {
-	name string
-	typ  interface{}
-}
 
 func toAddressName(input string) string {
 	var result strings.Builder
@@ -46,104 +30,47 @@ func toAddressName(input string) string {
 	return result.String()
 }
 
-var structs []string
-
-func generateSolidityStructFromInterface(iface interface{}, structName string) string {
-	// check if the struct was generated already
-	for _, s := range structs {
-		if strings.Contains(s, structName) {
-			return ""
-		}
-	}
-
-	ifaceType := reflect.TypeOf(iface).Elem()
-	structCode := fmt.Sprintf("struct %s {\n", structName)
-
-	for i := 0; i < ifaceType.NumField(); i++ {
-		field := ifaceType.Field(i)
-		structCode += fmt.Sprintf("    %s %s;\n", goTypeToSolidityType(field.Type), strings.Title(field.Name))
-	}
-
-	structCode += "}\n"
-	return structCode
+type functionDef struct {
+	Name       string
+	Address    string
+	Input      []field
+	Output     output
+	IsOffchain bool `yaml:"isOffchain"`
 }
 
-func goTypeToSolidityType(goType reflect.Type) string {
-	switch goType.Kind() {
-	case reflect.Ptr:
-		return goTypeToSolidityType(goType.Elem())
-	case reflect.Struct:
-		structName := goType.Name()
-		structs = append(structs, generateSolidityStructFromInterface(reflect.New(goType).Interface(), structName))
-		return structName
-
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-		return "uint256"
-	case reflect.String:
-		return "string"
-	case reflect.Bool:
-		return "bool"
-	case reflect.Slice:
-		if goType.Elem().Kind() == reflect.Uint8 {
-			return "bytes"
-		}
-		return goTypeToSolidityType(goType.Elem()) + "[]"
-	case reflect.Array:
-		if goType.Elem().Kind() == reflect.Uint8 {
-			if goType.Len() == 20 {
-				// address
-				return "address"
-			}
-			return fmt.Sprintf("bytes%d", goType.Len())
-		}
-		return fmt.Sprintf("%s[%d]", goTypeToSolidityType(goType.Elem()), goType.Len())
-	default:
-		panic(fmt.Sprintf("unsupported type %s", goType))
-	}
+type output struct {
+	Plain  bool
+	None   bool
+	Fields []field
 }
 
-func isDynamicType(goType reflect.Type) bool {
-	switch goType.Kind() {
-	case reflect.Ptr:
-		return isDynamicType(goType.Elem())
-	case reflect.Struct:
+type field struct {
+	Name string
+	Typ  string `yaml:"type"`
+}
+
+type typ struct {
+	Name    string
+	TypName string `yaml:"type"`
+}
+
+type structsDef struct {
+	Name   string
+	Fields []typ
+}
+
+type desc struct {
+	Structs   []structsDef
+	Functions []functionDef
+}
+
+func isMemoryType(s string) bool {
+	typ, err := abi.NewType(s, "", nil)
+	if err != nil {
 		return true
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-		return false
-	case reflect.String:
-		return true
-	case reflect.Bool:
-		return false
-	case reflect.Slice:
-		return true
-	case reflect.Array:
-		return false
-	default:
-		panic(fmt.Sprintf("unsupported type %s", goType))
 	}
-}
-
-type Withdrawal struct {
-	Index     uint64
-	Validator uint64
-	Address   string
-	Amount    uint64
-}
-
-type BuildBlockArgs struct {
-	Slot           uint64
-	ProposerPubkey []byte
-	Parent         [32]byte
-	Timestamp      uint64
-	FeeRecipient   string
-	GasLimit       uint64
-	Random         [32]byte
-	Withdrawals    []Withdrawal
-}
-
-type Bid struct {
-	Amount uint64
-	Price  uint64
+	// string, bytes, slices are types in memory
+	return typ.T == abi.StringTy || typ.T == abi.BytesTy || typ.T == abi.SliceTy
 }
 
 func main() {
@@ -152,257 +79,108 @@ func main() {
 	flag.BoolVar(&format, "format", false, "format output")
 	flag.Parse()
 
-	ff := []function{
-		{
-			name:    "confidentialInputs",
-			address: common.HexToAddress("0x0000000000000000000000000000000042010001"),
-			output: output{
-				plain: true,
-			},
-		},
-		{
-			name:    "newBid",
-			address: common.HexToAddress("0x0000000000000000000000000000000042030000"),
-			input: []field{
-				{
-					name: "decryptionCondition",
-					typ:  uint64(0),
-				},
-				{
-					name: "allowedPeekers",
-					typ:  []common.Address{},
-				},
-				{
-					name: "bidType",
-					typ:  string(""),
-				},
-			},
-			output: output{
-				fields: []field{
-					{
-						name: "bid",
-						typ:  &Bid{},
-					},
-				},
-			},
-		},
-		{
-			name:    "fetchBids",
-			address: common.HexToAddress("0x0000000000000000000000000000000042030001"),
-			input: []field{
-				{
-					name: "cond",
-					typ:  uint64(0),
-				},
-				{
-					name: "namespace",
-					typ:  string(""),
-				},
-			},
-			output: output{
-				fields: []field{
-					{
-						name: "bid",
-						typ:  []Bid{},
-					},
-				},
-			},
-		},
-		{
-			name:    "confidentialStoreStore",
-			address: common.HexToAddress("0x0000000000000000000000000000000042020000"),
-			input: []field{
-				{
-					name: "bidId",
-					typ:  [16]byte{},
-				},
-				{
-					name: "key",
-					typ:  string(""),
-				},
-				{
-					name: "data",
-					typ:  []byte{},
-				},
-			},
-			output: output{
-				none: true,
-			},
-		},
-		{
-			name:    "confidentialStoreRetrieve",
-			address: common.HexToAddress("0x0000000000000000000000000000000042020001"),
-			input: []field{
-				{
-					name: "bidId",
-					typ:  [16]byte{},
-				},
-				{
-					name: "key",
-					typ:  string(""),
-				},
-			},
-			output: output{
-				plain: true,
-			},
-		},
-		{
-			name:    "simulateBundle",
-			address: common.HexToAddress("0x0000000000000000000000000000000042100000"),
-			input: []field{
-				{
-					name: "bundleData",
-					typ:  []byte{},
-				},
-			},
-			output: output{
-				fields: []field{
-					{
-						name: "output1",
-						typ:  uint64(0),
-					},
-				},
-			},
-		},
-		{
-			name:    "extractHint",
-			address: common.HexToAddress("0x0000000000000000000000000000000042100037"),
-			input: []field{
-				{
-					name: "bundleData",
-					typ:  []byte{},
-				},
-			},
-			output: output{
-				plain: true,
-			},
-		},
-		{
-			name:    "buildEthBlock",
-			address: common.HexToAddress("0x0000000000000000000000000000000042100001"),
-			input: []field{
-				{
-					name: "blockArgs",
-					typ:  &BuildBlockArgs{},
-				},
-				{
-					name: "bidId",
-					typ:  [16]byte{},
-				},
-				{
-					name: "namespace",
-					typ:  string(""),
-				},
-			},
-			output: output{
-				fields: []field{
-					{
-						name: "output1",
-						typ:  []byte{},
-					},
-					{
-						name: "output2",
-						typ:  []byte{},
-					},
-				},
-			},
-		},
-		{
-			name:    "submitEthBlockBidToRelay",
-			address: common.HexToAddress("0x0000000000000000000000000000000042100002"),
-			input: []field{
-				{
-					name: "relayUrl",
-					typ:  string(""),
-				},
-				{
-					name: "builderBid",
-					typ:  []byte{},
-				},
-			},
-			output: output{
-				plain: true,
-			},
-		},
+	var ff desc
+
+	data, err := os.ReadFile("./suave/gen2/suave.yaml")
+	if err != nil {
+		panic(err)
+	}
+	if err := yaml.Unmarshal(data, &ff); err != nil {
+		panic(err)
 	}
 
 	var (
 		addresses []string
 		functions []string
+		structs   []string
 	)
 
-	for _, f := range ff {
+	for _, ss := range ff.Structs {
+		structRes := []string{
+			fmt.Sprintf("struct %s {\n", ss.Name),
+		}
+		for _, f := range ss.Fields {
+			structRes = append(structRes, fmt.Sprintf("    %s %s;\n", f.TypName, f.Name))
+		}
+		structRes = append(structRes, "}\n")
+		structs = append(structs, strings.Join(structRes, "\n"))
+	}
+
+	for _, f := range ff.Functions {
 		// list of addresses
-		addresses = append(addresses, fmt.Sprintf(`    address public constant %s =
-    	%s;
-		`, toAddressName(f.name), f.address.Hex()))
+		addr := common.HexToAddress(f.Address)
+		addresses = append(addresses, fmt.Sprintf(`address public constant %s = %s;`, toAddressName(f.Name), addr.Hex()))
 
 		// struct types
 		inputs := []string{}
 		inputNames := []string{}
 
-		for _, input := range f.input {
-			inputNames = append(inputNames, input.name)
+		for _, input := range f.Input {
+			inputNames = append(inputNames, input.Name)
 
-			// if it's a struct, generate a struct
-			if reflect.TypeOf(input.typ).Kind() == reflect.Ptr {
-				name := reflect.TypeOf(input.typ).Elem().Name()
-				structs = append(structs, generateSolidityStructFromInterface(input.typ, name))
-				inputs = append(inputs, fmt.Sprintf(`%s memory %s`, name, input.name))
-			} else {
-				var loc string
-				if isDynamicType(reflect.TypeOf(input.typ)) {
-					loc = "memory"
-				}
-				inputs = append(inputs, fmt.Sprintf(`%s %s %s`, goTypeToSolidityType(reflect.TypeOf(input.typ)), loc, input.name))
+			var loc string
+			if isMemoryType(input.Typ) {
+				loc = "memory"
 			}
+
+			inputs = append(inputs, fmt.Sprintf(`%s %s %s`, input.Typ, loc, input.Name))
 		}
 
 		// body of the function. It has three stages:
 		// 1. encode input and call the contract
 		encode := fmt.Sprintf(`(bool success, bytes memory data) = %s.staticcall(
             abi.encode(%s)
-        );`, toAddressName(f.name), strings.Join(inputNames, ", "))
+        );`, toAddressName(f.Name), strings.Join(inputNames, ", "))
 
 		// 2. handle error
 		handlError := fmt.Sprintf(`if (!success) {
             revert PeekerReverted(%s, data);
-        }`, toAddressName(f.name))
+        }`, toAddressName(f.Name))
 
 		// 3. decode output (if output type is defined) and return
-		outputTypesFunc := []string{}
 		outputTypes := []string{}
-		for _, output := range f.output.fields {
-			var loc string
-			if isDynamicType(reflect.TypeOf(output.typ)) {
-				loc = " memory"
-			}
-			outputTypesFunc = append(outputTypesFunc, goTypeToSolidityType(reflect.TypeOf(output.typ))+loc)
-			outputTypes = append(outputTypes, goTypeToSolidityType(reflect.TypeOf(output.typ)))
+		for _, output := range f.Output.Fields {
+			outputTypes = append(outputTypes, output.Typ)
 		}
 
 		var output string
-		if f.output.none {
+		if f.Output.None {
 			// do nothting
-		} else if f.output.plain {
+		} else if f.Output.Plain {
+			outputTypes = []string{"bytes"}
+
 			// return the output
-			outputTypesFunc = []string{"bytes memory"}
 			output = `return data;`
 		} else {
 			output = fmt.Sprintf(`return abi.decode(data, (%s));`, strings.Join(outputTypes, ", "))
 		}
 
 		retFunc := ""
-		if len(outputTypesFunc) > 0 {
-			retFunc = fmt.Sprintf("returns (%s)", strings.Join(outputTypesFunc, ", "))
+		if len(outputTypes) != 0 {
+			// same as 'outputTypes' with with 'memory' if they are dynamic
+			outputTypesWithLoc := []string{}
+			for _, output := range outputTypes {
+				var loc string
+				if isMemoryType(output) {
+					loc = "memory"
+				}
+				outputTypesWithLoc = append(outputTypesWithLoc, fmt.Sprintf("%s %s", output, loc))
+			}
+			retFunc = fmt.Sprintf("returns (%s)", strings.Join(outputTypesWithLoc, ", "))
+		}
+
+		var isOffchain string
+		if f.IsOffchain {
+			isOffchain = `require(isOffchain());`
 		}
 
 		// list of functions
 		functions = append(functions, fmt.Sprintf(`function %s(%s) internal view %s {
+		%s
         %s
         %s
 		%s
-		}`, f.name, strings.Join(inputs, ", "), retFunc, encode, handlError, output))
+		}`, f.Name, strings.Join(inputs, ", "), retFunc, isOffchain, encode, handlError, output))
 	}
 
 	t, err := template.New("template").Parse(templateText)
@@ -485,14 +263,9 @@ func formatSolidity(code string) (string, error) {
 	cmd.Stderr = &errBuf
 
 	// Run the command
-	err = cmd.Run()
-	if err != nil {
+	if err = cmd.Run(); err != nil {
 		return "", fmt.Errorf("error running command: %v", err)
 	}
 
-	// Print the formatted output
-	fmt.Println("Formatted output:")
-	fmt.Println(outBuf.String())
-
-	return "", nil
+	return outBuf.String(), nil
 }

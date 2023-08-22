@@ -1,0 +1,126 @@
+structs:
+  - name: Bid
+    fields:
+      - name: amount
+        type: uint256
+      - name: price
+        type: uint256
+  - name: Withdrawal
+    fields:
+      - name: index
+        type: uint256
+      - name: validator
+        type: uint256
+      - name: addr
+        type: address
+      - name: amount
+        type: uint256
+  - name: BuildBlockArgs
+    fields:
+      - name: slot
+        type: uint256
+      - name: proposerPubkey
+        type: bytes
+      - name: parent
+        type: bytes32
+      - name: timestamp
+        type: uint256
+      - name: feeRecipient
+        type: address
+      - name: gasLimit
+        type: uint256
+      - name: random
+        type: bytes32
+      - name: withdrawals
+        type: Withdrawal[]
+functions:
+  - name: confidentialInputs
+    address: "0x0000000000000000000000000000000042010001"
+    output:
+      plain: true
+  - name: newBid
+    address: "0x0000000000000000000000000000000042030000"
+    input:
+      - name: decryptionCondition
+        type: uint64
+      - name: allowedPeekers
+        type: address[]
+      - name: bidType
+        type: string
+    output:
+      fields:
+        - name: bid
+          type: Bid
+  - name: fetchBids
+    address: "0x0000000000000000000000000000000042030001"
+    input:
+      - name: cond
+        type: uint64
+      - name: namespace
+        type: string
+    output:
+      fields:
+        - name: bid
+          type: Bid[]
+  - name: confidentialStoreStore
+    address: "0x0000000000000000000000000000000042020000"
+    input:
+      - name: bidId
+        type: bytes16
+      - name: key
+        type: string
+      - name: data
+        type: bytes
+    output:
+      none: true
+  - name: confidentialStoreRetrieve
+    address: "0x0000000000000000000000000000000042020001"
+    input:
+      - name: bidId
+        type: bytes16
+      - name: key
+        type: string
+    output:
+      plain: true
+  - name: simulateBundle
+    address: "0x0000000000000000000000000000000042100000"
+    input:
+      - name: bundleData
+        type: bytes
+    output:
+      fields:
+        - name: output1
+          type: uint64
+  - name: extractHint
+    address: "0x0000000000000000000000000000000042100037"
+    isOffchain: true
+    input:
+      - name: bundleData
+        type: bytes
+    output:
+      plain: true
+  - name: buildEthBlock
+    address: "0x0000000000000000000000000000000042100001"
+    input:
+      - name: blockArgs
+        type: BuildBlockArgs
+      - name: bidId
+        type: bytes16
+      - name: namespace
+        type: string
+    output:
+      fields:
+        - name: output1
+          type: bytes
+        - name: output2
+          type: bytes
+  - name: submitEthBlockBidToRelay
+    address: "0x0000000000000000000000000000000042100002"
+    isOffchain: true
+    input:
+      - name: relayUrl
+        type: string
+      - name: builderBid
+        type: bytes
+    output:
+      plain: true

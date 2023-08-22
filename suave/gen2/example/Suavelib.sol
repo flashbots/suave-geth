@@ -1,50 +1,41 @@
-Formatted output:
 pragma solidity ^0.8.8;
 
 library Suave {
     error PeekerReverted(address, bytes);
 
     struct Bid {
-        uint256 Amount;
-        uint256 Price;
+        uint256 amount;
+        uint256 price;
     }
 
     struct Withdrawal {
-        uint256 Index;
-        uint256 Validator;
-        string Address;
-        uint256 Amount;
+        uint256 index;
+        uint256 validator;
+        address addr;
+        uint256 amount;
     }
 
     struct BuildBlockArgs {
-        uint256 Slot;
-        bytes ProposerPubkey;
-        bytes32 Parent;
-        uint256 Timestamp;
-        string FeeRecipient;
-        uint256 GasLimit;
-        bytes32 Random;
-        Withdrawal[] Withdrawals;
+        uint256 slot;
+        bytes proposerPubkey;
+        bytes32 parent;
+        uint256 timestamp;
+        address feeRecipient;
+        uint256 gasLimit;
+        bytes32 random;
+        Withdrawal[] withdrawals;
     }
 
     address public constant IS_OFFCHAIN_ADDR = 0x0000000000000000000000000000000042010000;
 
     address public constant CONFIDENTIAL_INPUTS = 0x0000000000000000000000000000000042010001;
-
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
-
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
-
     address public constant CONFIDENTIAL_STORE_STORE = 0x0000000000000000000000000000000042020000;
-
     address public constant CONFIDENTIAL_STORE_RETRIEVE = 0x0000000000000000000000000000000042020001;
-
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
-
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
-
     address public constant BUILD_ETH_BLOCK = 0x0000000000000000000000000000000042100001;
-
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
     // Returns whether execution is off- or on-chain
@@ -69,7 +60,7 @@ library Suave {
         return data;
     }
 
-    function newBid(uint256 decryptionCondition, address[] memory allowedPeekers, string memory bidType)
+    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, string memory bidType)
         internal
         view
         returns (Bid memory)
@@ -81,7 +72,7 @@ library Suave {
         return abi.decode(data, (Bid));
     }
 
-    function fetchBids(uint256 cond, string memory namespace) internal view returns (Bid[] memory) {
+    function fetchBids(uint64 cond, string memory namespace) internal view returns (Bid[] memory) {
         (bool success, bytes memory data) = FETCH_BIDS.staticcall(abi.encode(cond, namespace));
         if (!success) {
             revert PeekerReverted(FETCH_BIDS, data);
@@ -104,15 +95,16 @@ library Suave {
         return data;
     }
 
-    function simulateBundle(bytes memory bundleData) internal view returns (uint256) {
+    function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
         (bool success, bytes memory data) = SIMULATE_BUNDLE.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
         }
-        return abi.decode(data, (uint256));
+        return abi.decode(data, (uint64));
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
+        require(isOffchain());
         (bool success, bytes memory data) = EXTRACT_HINT.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(EXTRACT_HINT, data);
@@ -137,6 +129,7 @@ library Suave {
         view
         returns (bytes memory)
     {
+        require(isOffchain());
         (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_BID_TO_RELAY.staticcall(abi.encode(relayUrl, builderBid));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BLOCK_BID_TO_RELAY, data);
@@ -144,5 +137,4 @@ library Suave {
         return data;
     }
 }
-
 
