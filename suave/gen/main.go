@@ -348,6 +348,7 @@ function isOffchain() internal view returns (bool b) {
 
 {{range .Functions}}
 function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
+	{{if .IsOffchain}}require(isOffchain());{{end}}
 	(bool success, bytes memory data) = {{encodeAddrName .Name}}.staticcall(abi.encode({{range .Input}}{{.Name}}, {{end}}));
 	if (!success) {
 		revert PeekerReverted({{encodeAddrName .Name}}, data);

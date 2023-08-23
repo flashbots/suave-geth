@@ -103,6 +103,7 @@ library Suave {
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
+        require(isOffchain());
         (bool success, bytes memory data) = EXTRACT_HINT.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(EXTRACT_HINT, data);
@@ -147,6 +148,7 @@ library Suave {
         view
         returns (bytes memory)
     {
+        require(isOffchain());
         (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_BID_TO_RELAY.staticcall(abi.encode(relayUrl, builderBid));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BLOCK_BID_TO_RELAY, data);
