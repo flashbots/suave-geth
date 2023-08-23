@@ -311,15 +311,19 @@ type backendImpl struct {
 
 var _ BackendImpl = &backendImpl{}
 
-func (b *backendImpl) buildEthBlock(blockArgs types.BuildBlockArgs, bid [16]byte, namespace string) ([]byte, []byte, error) {
+func (b *backendImpl) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.BidId, namespace string) ([]byte, []byte, error) {
 	return (&buildEthBlock{}).runImpl(b.backend, blockArgs, bid, namespace)
 }
 
-func (b *backendImpl) confidentialStoreRetrieve(bidId [16]byte, key string) ([]byte, error) {
+func (b *backendImpl) confidentialInputs() ([]byte, error) {
+	return nil, nil
+}
+
+func (b *backendImpl) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
 	return (&confStoreRetrieve{}).runImpl(b.backend, bidId, key)
 }
 
-func (b *backendImpl) confidentialStoreStore(bidId [16]byte, key string, data []byte) error {
+func (b *backendImpl) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {
 	return (&confStoreStore{}).runImpl(b.backend, bidId, key, data)
 }
 

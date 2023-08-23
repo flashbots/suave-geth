@@ -1,34 +1,41 @@
+types:
+  - name: BidId
+    type: bytes16
 structs:
   - name: Bid
     fields:
-      - name: amount
-        type: uint256
-      - name: price
-        type: uint256
+      - name: id
+        type: BidId
+      - name: decryptionCondition
+        type: uint64
+      - name: allowedPeekers
+        type: address[]
+      - name: version
+        type: string
   - name: Withdrawal
     fields:
       - name: index
-        type: uint256
+        type: uint64
       - name: validator
-        type: uint256
-      - name: addr
+        type: uint64
+      - name: Address
         type: address
       - name: amount
-        type: uint256
+        type: uint64
   - name: BuildBlockArgs
     fields:
       - name: slot
-        type: uint256
+        type: uint64
       - name: proposerPubkey
         type: bytes
       - name: parent
         type: bytes32
       - name: timestamp
-        type: uint256
+        type: uint64
       - name: feeRecipient
         type: address
       - name: gasLimit
-        type: uint256
+        type: uint64
       - name: random
         type: bytes32
       - name: withdrawals
@@ -38,6 +45,9 @@ functions:
     address: "0x0000000000000000000000000000000042010001"
     output:
       plain: true
+      fields:
+        - name: output1
+          type: bytes
   - name: newBid
     address: "0x0000000000000000000000000000000042030000"
     input:
@@ -66,7 +76,7 @@ functions:
     address: "0x0000000000000000000000000000000042020000"
     input:
       - name: bidId
-        type: bytes16
+        type: BidId
       - name: key
         type: string
       - name: data
@@ -77,11 +87,14 @@ functions:
     address: "0x0000000000000000000000000000000042020001"
     input:
       - name: bidId
-        type: bytes16
+        type: BidId
       - name: key
         type: string
     output:
       plain: true
+      fields:
+        - name: output1
+          type: bytes
   - name: simulateBundle
     address: "0x0000000000000000000000000000000042100000"
     input:
@@ -99,13 +112,16 @@ functions:
         type: bytes
     output:
       plain: true
+      fields:
+        - name: output1
+          type: bytes
   - name: buildEthBlock
     address: "0x0000000000000000000000000000000042100001"
     input:
       - name: blockArgs
         type: BuildBlockArgs
       - name: bidId
-        type: bytes16
+        type: BidId
       - name: namespace
         type: string
     output:
@@ -124,3 +140,6 @@ functions:
         type: bytes
     output:
       plain: true
+      fields:
+        - name: output1
+          type: bytes
