@@ -34,8 +34,8 @@ func TestEncodeTypeToGolang(t *testing.T) {
 		{"bytes16", "[16]byte"},
 		{"string", "string"},
 		{"address[]", "[]common.Address"},
-		{"Bid", "types.Bid"},
-		{"Bid[]", "[]*types.Bid"},
+		{"Bid", "Bid"},
+		{"Bid[]", "[]*Bid"},
 	}
 
 	for _, c := range cases {
