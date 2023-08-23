@@ -140,7 +140,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := generateABI("./suave/artifacts/Suave.json", ff); err != nil {
+	if err := generateABI("./suave/artifacts/SuaveLib.json", ff); err != nil {
 		panic(err)
 	}
 }

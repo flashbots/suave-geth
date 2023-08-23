@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
-//go:embed Suave.json
+//go:embed SuaveLib.json
 var suaveAbisol []byte
 
 func loadSuaveLib() *abi.ABI {
