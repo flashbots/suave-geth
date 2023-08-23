@@ -81,8 +81,6 @@ functions:
         type: string
       - name: data
         type: bytes
-    output:
-      none: true
   - name: confidentialStoreRetrieve
     address: "0x0000000000000000000000000000000042020001"
     input:

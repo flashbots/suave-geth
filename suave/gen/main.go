@@ -280,7 +280,7 @@ func (b *BackendStub) {{.Name}}(input []byte) (res []byte, err error) {
 		return
 	}
 
-	{{if .Output.None}}
+	{{ if eq (len .Output.Fields) 0 }}
 	return nil, nil
 	{{else if .Output.Plain}}
 	result = {{range .Output.Fields}}{{.Name}} {{end}}
@@ -352,7 +352,7 @@ function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal vi
 	if (!success) {
 		revert PeekerReverted({{encodeAddrName .Name}}, data);
 	}
-	{{if .Output.None}}
+	{{ if eq (len .Output.Fields) 0 }}
 	{{else if .Output.Plain}}
 	return data;
 	{{else}}
@@ -374,7 +374,6 @@ type functionDef struct {
 
 type output struct {
 	Plain  bool
-	None   bool
 	Fields []field
 }
 
