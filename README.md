@@ -171,7 +171,7 @@ All of these newly offered APIs are available to your solidity smart contract th
 
 The virtual machine (MEVM) inside SUAVE nodes have two modes of operation: regular and confidential (sometimes called off-chain). Regular on-chain environment is your usual Ethereum virtual machine environment.
 
-Confidential environment is available to users through a new type of transaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [confidential compute requests](#confidential-compute-requests).
+Confidential environment is available to users through a new type of transaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain` are also executed in the confidential mode. For more on confidential requests see [confidential compute requests](#confidential-compute-requests).
 
 The confidential execution environment provides additional precompiles, both directly and through a convenient [library](#suave-library). Confidential execution is *not* verifiable during on-chain state transition, instead the result of the confidential execution is cached in the transaction (`OffchainExecutedTx`). Users requesting confidential compute requests specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
 
