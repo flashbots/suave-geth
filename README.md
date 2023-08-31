@@ -171,7 +171,7 @@ All of these newly offered APIs are available to your solidity smart contract th
 
 The virtual machine (MEVM) inside SUAVE nodes have two modes of operation: regular and confidential (sometimes called off-chain). Regular on-chain environment is your usual Ethereum virtual machine environment.
 
-Confidential environment is available to users through a new type of ransaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain are also executed in the confidential mode`. For more on confidential requests see [confidential compute requests](#confidential-compute-requests).
+Confidential environment is available to users through a new type of transaction - `OffchainTx` via the usual jsonrpc methods `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call`. Simulations (`eth_call`) requested with a new optional argument `IsOffchain` are also executed in the confidential mode. For more on confidential requests see [confidential compute requests](#confidential-compute-requests).
 
 The confidential execution environment provides additional precompiles, both directly and through a convenient [library](#suave-library). Confidential execution is *not* verifiable during on-chain state transition, instead the result of the confidential execution is cached in the transaction (`OffchainExecutedTx`). Users requesting confidential compute requests specify which execution nodes they trust with execution, and the execution nodes' signature is used for verifying the transaction on-chain.
 
@@ -185,7 +185,7 @@ We introduce two new transaction types: `OffchainTx`, serving as a request of co
 
 ![image](suave/docs/conf_comp_request_flow.png)
 
-confidential compute requests (`OffchainTx`) are only intermediary message between the user requesting confidential computation and the execution node, and are not currently propagated through the mempool or included in blocks. The results of those computations (`OffchainExecutedTx`) are treated as regular transactions.
+confidential compute requests (`OffchainTx`) are only intermediary messages between the user requesting confidential computation and the execution node, and are not currently propagated through the mempool or included in blocks. The results of those computations (`OffchainExecutedTx`) are treated as regular transactions.
 
 ```go
 type OffchainTx struct {
@@ -215,7 +215,7 @@ The basic flow is as follows:
     2. User embeds the transaction from (1.) into an `OffchainTx` together with the desired execution node's address
     3. User signs and sends the confidential computation request to an execution node via `eth_sendRawTransaction` (possibly passing in additional confidential data)
 3. The execution node executes the transaction in the confidential mode, providing access to the usual off-chain APIs
-4. Execution node creates an `OffchainExecutedTx` using the confidential computation request the result of its execution, signs and submits the transaction into the mempool
+4. The execution node creates an `OffchainExecutedTx` using the confidential computation request and the result of its execution, the node then signs and submits the transaction into the mempool
 5. The transaction makes its way into a block, by executing the `OffchainResult` as calldata, as long as the execution node's signature matches the requested executor node in (2.1.)
 
 The user passes in any confidential data through the new `confidential_data` parameter of the `eth_sendRawTransaction` RPC method. The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.
@@ -244,7 +244,7 @@ Each `Bid` has an `Id`, a `DecryptionCondition`, an array of `AllowedPeekers`, a
 
 ### SUAVE library
 
-Along the SUAVE precompiles, we provide a convenient wrapper for calling them from Solidity. The [library](suave/sol/libraries/Suave.sol) makes the precompiles easier to call by providing the signatures, and the library functions themselves simply perform a `staticcall` of the requested precompile.
+Along with the SUAVE precompiles, we provide a convenient wrapper for calling them from Solidity. The [library](suave/sol/libraries/Suave.sol) makes the precompiles easier to call by providing the signatures, and the library functions themselves simply perform a `staticcall` of the requested precompile.
 
 ```solidity
 library Suave {
@@ -345,7 +345,7 @@ The `MempoolOnConfidentialStore` includes three primary methods:
 
 - **FetchBidById**: This method retrieves a bid from the mempool using its ID.
 
-- **FetchBidsByProtocolAndBlock**: This method fetches all bids from a particular block and matching a specified protocol.
+- **FetchBidsByProtocolAndBlock**: This method fetches all bids from a particular block that match a specified protocol.
 
 The mempool operates on the underlying Confidential Store, thereby maintaining the confidentiality of the bids throughout the transaction process. As such, all data access is subject to the Confidential Store's security controls, ensuring privacy and integrity. Please note that while this initial implementation provides an idea of the ideal functionality, the final version will most likely incorporate additional features or modifications.
 
@@ -403,7 +403,7 @@ Like `eth_sendTransaction`, this method accepts an additional, optional confiden
 
 We implement two rpc methods that allow building Ethereum blocks from a list of either transactions or bundles: `BuildEth2Block` and `BuildEth2BlockFromBundles`.
 
-This methods are defined in [BlockChainAPI](internal/ethapi/api.go)
+These methods are defined in [BlockChainAPI](internal/ethapi/api.go)
 
 ```go
 func (s *BlockChainAPI) BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
