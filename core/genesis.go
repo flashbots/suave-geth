@@ -537,7 +537,7 @@ func DefaultSuaveGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.SuaveChainConfig,
 		Timestamp:  1687192941,
-		ExtraData:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000b5feafbdd752ad52afb7e1bd2e40432a485bbb7f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		ExtraData:  hexutil.MustDecode("0x00000000000000000000000000000000000000000000000000000000000000004f91862699aF93251B3e3518E4Ca6278036892520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   30000000,
 		Difficulty: big.NewInt(1),
 		Alloc: map[common.Address]GenesisAccount{
@@ -552,7 +552,7 @@ func DefaultSuaveGenesisBlock() *Genesis {
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
 			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
 
-			common.HexToAddress("0xb5feafbdd752ad52afb7e1bd2e40432a485bbb7f"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
+			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
 		},
 	}
 }
