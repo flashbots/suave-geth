@@ -94,10 +94,6 @@ func (c *confStoreStore) Run(input []byte) ([]byte, error) {
 }
 
 func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
-	if len(backend.callerStack) == 0 {
-		return []byte("not allowed"), errors.New("not allowed in this context")
-	}
-
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -114,6 +110,10 @@ func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byt
 }
 
 func (c *confStoreStore) runImpl(backend *SuaveExecutionBackend, bidId [16]byte, key string, data []byte) error {
+	if len(backend.callerStack) == 0 {
+		return errors.New("not allowed in this context")
+	}
+
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
 	for i := len(backend.callerStack) - 1; i >= 0; i-- {
@@ -151,10 +151,6 @@ func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
 }
 
 func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
-	if len(backend.callerStack) == 0 {
-		return []byte("not allowed"), errors.New("not allowed in this context")
-	}
-
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -167,6 +163,10 @@ func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []
 }
 
 func (c *confStoreRetrieve) runImpl(backend *SuaveExecutionBackend, bidId [16]byte, key string) ([]byte, error) {
+	if len(backend.callerStack) == 0 {
+		return nil, errors.New("not allowed in this context")
+	}
+
 	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
 
 	// Can be zeroes in some fringe cases!
