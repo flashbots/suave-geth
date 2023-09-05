@@ -9,14 +9,15 @@ services:
       - --ws
       - --dev.gaslimit=30000000
       - --datadir=/data
+      - --keystore=/keystore/keystore
       - --allow-insecure-unlock
       - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
-      - --password=/data/password.txt
+      - --password=/keystore/password.txt
       - --mine
       - --miner.etherbase=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
       - --suave.eth.remote_endpoint=suave-enabled-chain:8545
     volumes:
-      - ./suave-chain:/data
+      - ./suave-chain:/keystore
 
   suave-enabled-chain:
     build: ../..
@@ -26,10 +27,11 @@ services:
       - --ws
       - --dev.gaslimit=30000000
       - --datadir=/data
+      - --keystore=/keystore/keystore
       - --allow-insecure-unlock
       - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
-      - --password=/data/password.txt
+      - --password=/keystore/password.txt
       - --mine
       - --miner.etherbase=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
     volumes:
-      - ./suave-enabled-chain:/data
+      - ./suave-enabled-chain:/keystore
