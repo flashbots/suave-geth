@@ -235,17 +235,17 @@ var (
 	errFailedToPackOutput = fmt.Errorf("failed to encode output")
 )
 
-type BackendImpl interface {
+type SuaveRuntime interface {
 	{{range .Functions}}
 	{{.Name}}({{range .Input}}{{.Name}} {{typ2 .Typ}}, {{end}}) ({{range .Output.Fields}}{{typ2 .Typ}}, {{end}}error){{end}}
 }
 
-type BackendStub struct {
-	impl BackendImpl
+type SuaveRuntimeAdapter struct {
+	impl SuaveRuntime
 }
 
 {{range .Functions}}
-func (b *BackendStub) {{.Name}}(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) {{.Name}}(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result []byte

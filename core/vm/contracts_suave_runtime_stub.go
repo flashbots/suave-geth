@@ -16,7 +16,7 @@ var (
 	errFailedToPackOutput  = fmt.Errorf("failed to encode output")
 )
 
-type BackendImpl interface {
+type SuaveRuntime interface {
 	buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error)
 	confidentialInputs() ([]byte, error)
 	confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error)
@@ -28,11 +28,11 @@ type BackendImpl interface {
 	submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error)
 }
 
-type BackendStub struct {
-	impl BackendImpl
+type SuaveRuntimeAdapter struct {
+	impl SuaveRuntime
 }
 
-func (b *BackendStub) buildEthBlock(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) buildEthBlock(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -83,7 +83,7 @@ func (b *BackendStub) buildEthBlock(input []byte) (res []byte, err error) {
 
 }
 
-func (b *BackendStub) confidentialInputs(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) confidentialInputs(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -113,7 +113,7 @@ func (b *BackendStub) confidentialInputs(input []byte) (res []byte, err error) {
 
 }
 
-func (b *BackendStub) confidentialStoreRetrieve(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) confidentialStoreRetrieve(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -153,7 +153,7 @@ func (b *BackendStub) confidentialStoreRetrieve(input []byte) (res []byte, err e
 
 }
 
-func (b *BackendStub) confidentialStoreStore(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) confidentialStoreStore(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -192,7 +192,7 @@ func (b *BackendStub) confidentialStoreStore(input []byte) (res []byte, err erro
 
 }
 
-func (b *BackendStub) extractHint(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) extractHint(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -226,7 +226,7 @@ func (b *BackendStub) extractHint(input []byte) (res []byte, err error) {
 
 }
 
-func (b *BackendStub) fetchBids(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) fetchBids(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -266,7 +266,7 @@ func (b *BackendStub) fetchBids(input []byte) (res []byte, err error) {
 
 }
 
-func (b *BackendStub) newBid(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) newBid(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -308,7 +308,7 @@ func (b *BackendStub) newBid(input []byte) (res []byte, err error) {
 
 }
 
-func (b *BackendStub) simulateBundle(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) simulateBundle(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -346,7 +346,7 @@ func (b *BackendStub) simulateBundle(input []byte) (res []byte, err error) {
 
 }
 
-func (b *BackendStub) submitEthBlockBidToRelay(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) submitEthBlockBidToRelay(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte

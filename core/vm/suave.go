@@ -45,8 +45,8 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 }
 
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
-	stub := &BackendStub{
-		impl: &backendImpl{
+	stub := &SuaveRuntimeAdapter{
+		impl: &suaveRuntime{
 			backend: p.backend,
 		},
 	}
