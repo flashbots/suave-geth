@@ -35,6 +35,7 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
 
@@ -172,12 +173,8 @@ func TestMempool(t *testing.T) {
 		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
 		require.NoError(t, err)
 
-		bids := unpacked[0].([]struct {
-			Id                  [16]uint8        "json:\"id\""
-			DecryptionCondition uint64           "json:\"decryptionCondition\""
-			AllowedPeekers      []common.Address "json:\"allowedPeekers\""
-			Version             string           `json:"version"`
-		})
+		var bids []suave.Bid
+		require.NoError(t, mapstructure.Decode(unpacked[0], &bids))
 
 		require.Equal(t, bid1, suave.Bid{
 			Id:                  bids[0].Id,
@@ -462,21 +459,8 @@ func TestMevShare(t *testing.T) {
 	// ************ 3. Build Share Block ************
 
 	ethHead := fr.ethSrv.CurrentBlock()
-	payloadArgsTuple := struct {
-		Slot           uint64
-		ProposerPubkey []byte
-		Parent         common.Hash
-		Timestamp      uint64
-		FeeRecipient   common.Address
-		GasLimit       uint64
-		Random         common.Hash
-		Withdrawals    []struct {
-			Index     uint64
-			Validator uint64
-			Address   common.Address
-			Amount    uint64
-		}
-	}{
+
+	payloadArgsTuple := types.BuildBlockArgs{
 		Timestamp:    ethHead.Time + uint64(12),
 		FeeRecipient: common.Address{0x42},
 	}
@@ -604,21 +588,8 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		fr.OffchainBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
 		ethHead := fr.ethSrv.CurrentBlock()
-		payloadArgsTuple := struct {
-			Slot           uint64
-			ProposerPubkey []byte
-			Parent         common.Hash
-			Timestamp      uint64
-			FeeRecipient   common.Address
-			GasLimit       uint64
-			Random         common.Hash
-			Withdrawals    []struct {
-				Index     uint64
-				Validator uint64
-				Address   common.Address
-				Amount    uint64
-			}
-		}{
+
+		payloadArgsTuple := types.BuildBlockArgs{
 			Timestamp:    ethHead.Time + uint64(12),
 			FeeRecipient: common.Address{0x42},
 		}
@@ -719,21 +690,8 @@ func TestBlockBuildingContract(t *testing.T) {
 
 	{
 		ethHead := fr.ethSrv.CurrentBlock()
-		payloadArgsTuple := struct {
-			Slot           uint64
-			ProposerPubkey []byte
-			Parent         common.Hash
-			Timestamp      uint64
-			FeeRecipient   common.Address
-			GasLimit       uint64
-			Random         common.Hash
-			Withdrawals    []struct {
-				Index     uint64
-				Validator uint64
-				Address   common.Address
-				Amount    uint64
-			}
-		}{
+
+		payloadArgsTuple := types.BuildBlockArgs{
 			ProposerPubkey: []byte{0x42},
 			Timestamp:      ethHead.Time + uint64(12),
 			FeeRecipient:   common.Address{0x42},
@@ -886,21 +844,8 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	{
 		ethHead := fr.ethSrv.CurrentBlock()
-		payloadArgsTuple := struct {
-			Slot           uint64
-			ProposerPubkey []byte
-			Parent         common.Hash
-			Timestamp      uint64
-			FeeRecipient   common.Address
-			GasLimit       uint64
-			Random         common.Hash
-			Withdrawals    []struct {
-				Index     uint64
-				Validator uint64
-				Address   common.Address
-				Amount    uint64
-			}
-		}{
+
+		payloadArgsTuple := types.BuildBlockArgs{
 			ProposerPubkey: []byte{0x42},
 			Timestamp:      ethHead.Time + uint64(12),
 			FeeRecipient:   common.Address{0x42},
