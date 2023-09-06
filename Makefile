@@ -8,10 +8,10 @@ GOBIN = ./build/bin
 GO ?= latest
 GORUN = env GO111MODULE=on go run
 
-geth:
+suave:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+	@echo "Run \"$(GOBIN)/geth\" to launch suave."
 
 all:
 	$(GORUN) build/ci.go install
