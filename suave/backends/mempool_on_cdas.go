@@ -14,7 +14,7 @@ type MempoolOnConfidentialStore struct {
 }
 
 func NewMempoolOnConfidentialStore(cs suave.ConfidentialStoreBackend) *MempoolOnConfidentialStore {
-	_, err := cs.Initialize(mempoolConfidentialStoreBid, "", nil)
+	_, err := cs.InitializeBid(mempoolConfidentialStoreBid)
 	if err != nil {
 		panic("could not initialize mempool")
 	}

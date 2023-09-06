@@ -202,7 +202,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.BuildBlockArgs, bidId [16]byte, namespace string) ([]byte, []byte, error) {
 	bidIds := []suave.BidId{}
 	// first check for merged bid, else assume regular bid
-	if mergedBidsBytes, err := backend.ConfidentialStoreBackend.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
+	if mergedBidsBytes, err := backend.ConfidentialStoreEngine.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
 
 		if err != nil {
@@ -229,7 +229,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 		switch bid.Version {
 		case "mevshare:v0:matchBids":
 			// fetch the matched ids and merge the bundle
-			matchedBundleIdsBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:mergedBids")
+			matchedBundleIdsBytes, err := backend.ConfidentialStoreEngine.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:mergedBids")
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not retrieve bid ids data for bid %v, from cdas: %w", bid, err)
 			}
@@ -241,7 +241,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 
 			matchBidIds := unpackedBidIds[0].([]suave.BidId)
 
-			userBundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
+			userBundleBytes, err := backend.ConfidentialStoreEngine.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 			}
@@ -251,7 +251,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 				return nil, nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 			}
 
-			matchBundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(matchBidIds[1], buildEthBlockAddress, "mevshare:v0:ethBundles")
+			matchBundleBytes, err := backend.ConfidentialStoreEngine.Retrieve(matchBidIds[1], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 			}
@@ -266,7 +266,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 			mergedBundles = append(mergedBundles, userBundle)
 
 		case "mevshare:v0:unmatchedBundles":
-			bundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:ethBundles")
+			bundleBytes, err := backend.ConfidentialStoreEngine.Retrieve(bid.Id, buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}
@@ -277,7 +277,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 			}
 			mergedBundles = append(mergedBundles, bundle)
 		case "default:v0:ethBundles":
-			bundleBytes, err := backend.ConfidentialStoreBackend.Retrieve(bid.Id, buildEthBlockAddress, "default:v0:ethBundles")
+			bundleBytes, err := backend.ConfidentialStoreEngine.Retrieve(bid.Id, buildEthBlockAddress, "default:v0:ethBundles")
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not retrieve bundle data for bidId %v, from cdas: %w", bid.Id, err)
 			}

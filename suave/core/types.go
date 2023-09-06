@@ -2,6 +2,7 @@ package suave
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,15 +12,19 @@ import (
 
 type Bytes = hexutil.Bytes
 type BidId = [16]byte
-
 type Bid = types.Bid
+
+type BuildBlockArgs = types.BuildBlockArgs
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
+var BidAlreadyPresentError = errors.New("bid already present")
+
 type ConfidentialStoreBackend interface {
-	Initialize(bid Bid, key string, value []byte) (Bid, error)
+	InitializeBid(bid Bid) (Bid, error)
+	FetchBidById(bidId BidId) (Bid, error)
 	Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
-	Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)
+	Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error)
 }
 
 type MempoolBackend interface {
@@ -33,4 +38,16 @@ type OffchainEthBackend interface {
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 }
 
-type BuildBlockArgs = types.BuildBlockArgs
+type PubSub interface {
+	Subscribe() <-chan DAMessage
+	Publish(DAMessage)
+}
+
+type DAMessage struct {
+	Bid       Bid               `json:"bid"`
+	SourceTx  types.Transaction `json:"sourceTx"`
+	Caller    common.Address    `json:"caller"`
+	Key       string            `json:"key"`
+	Value     Bytes             `json:"value"`
+	Signature Bytes             `json:"signature"`
+}

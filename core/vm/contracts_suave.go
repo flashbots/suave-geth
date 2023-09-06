@@ -124,7 +124,7 @@ func (c *confStoreStore) runImpl(backend *SuaveExecutionBackend, bidId [16]byte,
 		}
 	}
 
-	_, err := backend.ConfidentialStoreBackend.Store(bidId, caller, key, data)
+	_, err := backend.ConfidentialStoreEngine.Store(bidId, caller, key, data)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (c *confStoreRetrieve) runImpl(backend *SuaveExecutionBackend, bidId [16]by
 		}
 	}
 
-	data, err := backend.ConfidentialStoreBackend.Retrieve(bidId, caller, key)
+	data, err := backend.ConfidentialStoreEngine.Retrieve(bidId, caller, key)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -233,7 +233,7 @@ func (c *newBid) runImpl(backend *SuaveExecutionBackend, version string, decrypt
 		Version:             version, // TODO : make generic
 	}
 
-	bid, err := backend.ConfidentialStoreBackend.Initialize(bid, "", nil)
+	bid, err := backend.ConfidentialStoreEngine.InitializeBid(bid)
 	if err != nil {
 		return nil, err
 	}

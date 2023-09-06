@@ -229,6 +229,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
+	// TODO: opts, redis store backend
 	cdas := suave_backends.NewLocalConfidentialStore()
 	var suaveEthBackend suave.OffchainEthBackend
 	if config.Suave.SuaveEthRemoteBackendEndpoint != "" {
@@ -237,10 +238,22 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
+	// TODO: opts, redis transport backend
+	// Note that lifecycle has to be tied back to eth lifecycle. Maybe its time to introduce a start/stop based on context?
+	confidentialStoreTransport := suave.MockPubSub{}
+	if err != nil {
+		return nil, err
+	}
+
+	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(cdas, confidentialStoreTransport)
+	if err != nil {
+		return nil, err
+	}
+
 	offchainBackend := &vm.SuaveExecutionBackend{
-		ConfidentialStoreBackend: cdas,
-		MempoolBackend:           suave_backends.NewMempoolOnConfidentialStore(cdas),
-		OffchainEthBackend:       suaveEthBackend,
+		ConfidentialStoreEngine: confidentialStoreEngine,
+		MempoolBackend:          suave_backends.NewMempoolOnConfidentialStore(cdas),
+		OffchainEthBackend:      suaveEthBackend,
 	}
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, offchainBackend}
 	if eth.APIBackend.allowUnprotectedTxs {

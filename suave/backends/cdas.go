@@ -29,10 +29,9 @@ type ACData struct {
 	dataMap map[string][]byte
 }
 
-// Optional key, if provided will initialize with the value
 // This function is *trusted* and not available directly through precompiles
 // In particular wrt bid id not being maliciously crafted
-func (s *LocalConfidentialStore) Initialize(bid suave.Bid, key string, value []byte) (suave.Bid, error) {
+func (s *LocalConfidentialStore) InitializeBid(bid suave.Bid) (suave.Bid, error) {
 	if bid.Id == [16]byte{} {
 		bid.Id = [16]byte(uuid.New())
 	}
@@ -42,15 +41,21 @@ func (s *LocalConfidentialStore) Initialize(bid suave.Bid, key string, value []b
 
 	_, found := s.bids[bid.Id]
 	if found {
-		return suave.Bid{}, errors.New("bid already present")
+		return suave.Bid{}, suave.BidAlreadyPresentError
 	}
-	acData := ACData{bid, make(map[string][]byte)}
-	if key != "" {
-		acData.dataMap[key] = value
-	}
-	s.bids[bid.Id] = acData
+
+	s.bids[bid.Id] = ACData{bid, make(map[string][]byte)}
 
 	return bid, nil
+}
+
+func (s *LocalConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+	bidData, found := s.bids[bidId]
+	if !found {
+		return suave.Bid{}, errors.New("bid not found")
+	}
+
+	return bidData.bid, nil
 }
 
 func (s *LocalConfidentialStore) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {

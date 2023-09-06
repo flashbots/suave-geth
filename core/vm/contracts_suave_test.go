@@ -22,7 +22,7 @@ import (
 type mockSuaveBackend struct {
 }
 
-func (m *mockSuaveBackend) Initialize(bid suave.Bid, key string, value []byte) (suave.Bid, error) {
+func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) (suave.Bid, error) {
 	return suave.Bid{}, nil
 }
 
@@ -54,6 +54,12 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
+func (m *mockSuaveBackend) Subscribe() <-chan suave.DAMessage {
+	return nil
+}
+
+func (m *mockSuaveBackend) Publish(suave.DAMessage) {}
+
 var dummyBlockContext = BlockContext{
 	CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 	Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
@@ -64,10 +70,13 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
+	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend)
+	require.NoError(t, err)
+
 	suaveBackend := &SuaveExecutionBackend{
-		ConfidentialStoreBackend: mockSuaveBackend,
-		MempoolBackend:           mockSuaveBackend,
-		OffchainEthBackend:       mockSuaveBackend,
+		ConfidentialStoreEngine: stubEngine,
+		MempoolBackend:          mockSuaveBackend,
+		OffchainEthBackend:      mockSuaveBackend,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
@@ -133,21 +142,23 @@ func TestSuavePrecompileStub(t *testing.T) {
 	}
 }
 
-func newTestBackend() *backendImpl {
+func newTestBackend(t *testing.T) *backendImpl {
 	confStore := backends.NewLocalConfidentialStore()
+	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{})
+	require.NoError(t, err)
 
 	b := &backendImpl{
 		backend: &SuaveExecutionBackend{
-			ConfidentialStoreBackend: confStore,
-			MempoolBackend:           backends.NewMempoolOnConfidentialStore(confStore),
-			OffchainEthBackend:       &mockSuaveBackend{},
+			ConfidentialStoreEngine: confEngine,
+			MempoolBackend:          backends.NewMempoolOnConfidentialStore(confStore),
+			OffchainEthBackend:      &mockSuaveBackend{},
 		},
 	}
 	return b
 }
 
 func TestSuave_BidWorkflow(t *testing.T) {
-	b := newTestBackend()
+	b := newTestBackend(t)
 
 	bid5, err := b.newBid(5, []common.Address{{0x1}}, "a")
 	require.NoError(t, err)
@@ -177,7 +188,7 @@ func TestSuave_BidWorkflow(t *testing.T) {
 }
 
 func TestSuave_ConfStoreWorkflow(t *testing.T) {
-	b := newTestBackend()
+	b := newTestBackend(t)
 
 	callerAddr := common.Address{0x1}
 	data := []byte{0x1}
