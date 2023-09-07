@@ -22,8 +22,8 @@ import (
 type mockSuaveBackend struct {
 }
 
-func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) (suave.Bid, error) {
-	return suave.Bid{}, nil
+func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) error {
+	return nil
 }
 
 func (m *mockSuaveBackend) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
@@ -34,15 +34,19 @@ func (m *mockSuaveBackend) Retrieve(bid suave.BidId, caller common.Address, key 
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) SubmitBid(suave.Bid) error {
+func (m *mockSuaveBackend) SubmitBid(types.Bid) error {
 	return nil
 }
 
-func (m *mockSuaveBackend) FetchBidById(suave.BidId) (suave.Bid, error) {
+func (m *mockSuaveBackend) FetchEngineBidById(suave.BidId) (suave.Bid, error) {
 	return suave.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (m *mockSuaveBackend) FetchBidById(suave.BidId) (types.Bid, error) {
+	return types.Bid{}, nil
+}
+
+func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
 	return nil
 }
 
@@ -70,7 +74,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend)
+	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	suaveBackend := &SuaveExecutionBackend{
@@ -144,7 +148,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 func newTestBackend(t *testing.T) *backendImpl {
 	confStore := backends.NewLocalConfidentialStore()
-	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{})
+	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{}, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	b := &backendImpl{
@@ -172,11 +176,11 @@ func TestSuave_BidWorkflow(t *testing.T) {
 	cases := []struct {
 		cond      uint64
 		namespace string
-		bids      []suave.Bid
+		bids      []types.Bid
 	}{
 		{0, "a", nil},
-		{5, "a", []suave.Bid{bid5}},
-		{10, "a", []suave.Bid{bid10, bid10b}},
+		{5, "a", []types.Bid{bid5}},
+		{10, "a", []types.Bid{bid10, bid10b}},
 		{11, "a", nil},
 	}
 
@@ -194,7 +198,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	data := []byte{0x1}
 
 	// cannot store a value for a bid that does not exist
-	err := b.confidentialStoreStore([16]byte{}, "key", data)
+	err := b.confidentialStoreStore(common.Hash{}, "key", data)
 	require.Error(t, err)
 
 	bid, err := b.newBid(5, []common.Address{callerAddr}, "a")

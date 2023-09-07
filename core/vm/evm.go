@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
@@ -163,6 +164,11 @@ func NewOffchainEVM(suaveExecutionBackend *SuaveExecutionBackend, blockCtx Block
 	}
 	evm.interpreter = NewEVMInterpreter(evm)
 	return evm
+}
+
+// TODO: refactor, package into confidential request context and set in the contructor
+func (evm *EVM) SetConfidentialRequestTx(tx *types.Transaction) {
+	evm.suaveExecutionBackend.confidentialComputeRequestTx = tx
 }
 
 func (evm *EVM) SetConfidentialInput(data []byte) {

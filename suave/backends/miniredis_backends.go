@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
-	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )
 
@@ -87,29 +86,25 @@ func (r *MiniredisBackend) Publish(message suave.DAMessage) {
 	r.subscriber.Publish(miniredisUpsertTopic, string(data))
 }
 
-func (r *MiniredisBackend) InitializeBid(bid suave.Bid) (suave.Bid, error) {
-	if bid.Id == [16]byte{} {
-		bid.Id = [16]byte(uuid.New())
-	}
-
+func (r *MiniredisBackend) InitializeBid(bid suave.Bid) error {
 	key := formatMiniredisBidKey(bid.Id)
 
 	_, err := r.client.Get(key)
 	if !errors.Is(err, miniredis.ErrKeyNotFound) {
-		return suave.Bid{}, suave.BidAlreadyPresentError
+		return suave.BidAlreadyPresentError
 	}
 
 	data, err := json.Marshal(bid)
 	if err != nil {
-		return suave.Bid{}, err
+		return err
 	}
 
 	r.client.Set(key, string(data))
 
-	return bid, nil
+	return nil
 }
 
-func (r *MiniredisBackend) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+func (r *MiniredisBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, error) {
 	key := formatMiniredisBidKey(bidId)
 
 	data, err := r.client.Get(key)
@@ -127,7 +122,7 @@ func (r *MiniredisBackend) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
 }
 
 func (r *MiniredisBackend) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	bid, err := r.FetchBidById(bidId)
+	bid, err := r.FetchEngineBidById(bidId)
 	if err != nil {
 		return suave.Bid{}, errors.New("bid not present yet")
 	}
@@ -146,7 +141,7 @@ func (r *MiniredisBackend) Store(bidId suave.BidId, caller common.Address, key s
 }
 
 func (r *MiniredisBackend) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := r.FetchBidById(bidId)
+	bid, err := r.FetchEngineBidById(bidId)
 	if err != nil {
 		return []byte{}, errors.New("bid not present yet")
 	}

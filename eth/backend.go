@@ -245,7 +245,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		return nil, err
 	}
 
-	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(cdas, confidentialStoreTransport)
+	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(cdas, confidentialStoreTransport, suave.MockSigner{}, types.LatestSigner(chainConfig))
 	if err != nil {
 		return nil, err
 	}

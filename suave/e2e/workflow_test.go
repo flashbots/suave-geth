@@ -35,7 +35,6 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
-	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
@@ -140,24 +139,24 @@ func TestMempool(t *testing.T) {
 	{
 		targetBlock := uint64(16103213)
 
-		bid1 := suave.Bid{
-			Id:                  suave.BidId(uuid.New()),
+		bid1 := types.Bid{
+			Id:                  suave.RandomBidId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
 		}
 
-		bid2 := suave.Bid{
-			Id:                  suave.BidId(uuid.New()),
+		bid2 := types.Bid{
+			Id:                  suave.RandomBidId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
 		}
 
-		fr.OffchainBackend().MempoolBackend.SubmitBid(bid1)
-		fr.OffchainBackend().MempoolBackend.SubmitBid(bid2)
+		require.NoError(t, fr.OffchainBackend().MempoolBackend.SubmitBid(bid1))
+		require.NoError(t, fr.OffchainBackend().MempoolBackend.SubmitBid(bid2))
 
-		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
+		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes32" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
 		calldata, err := inoutAbi.Inputs.Pack(targetBlock, "default:v0:ethBundles")
 		require.NoError(t, err)
@@ -177,13 +176,13 @@ func TestMempool(t *testing.T) {
 		var bids []suave.Bid
 		require.NoError(t, mapstructure.Decode(unpacked[0], &bids))
 
-		require.Equal(t, bid1, suave.Bid{
+		require.Equal(t, bid1, types.Bid{
 			Id:                  bids[0].Id,
 			DecryptionCondition: bids[0].DecryptionCondition,
 			AllowedPeekers:      bids[0].AllowedPeekers,
 			Version:             bids[0].Version,
 		})
-		require.Equal(t, bid2, suave.Bid{
+		require.Equal(t, bid2, types.Bid{
 			Id:                  bids[1].Id,
 			DecryptionCondition: bids[1].DecryptionCondition,
 			AllowedPeekers:      bids[1].AllowedPeekers,
@@ -268,9 +267,10 @@ func TestBundleBid(t *testing.T) {
 		unpacked, err := bundleBidContract.Abi.Methods["emitBid"].Inputs.Unpack(block.Transactions()[0].Data()[4:])
 		require.NoError(t, err)
 		bid := unpacked[0].(struct {
-			Id                  [16]uint8        "json:\"id\""
+			Id                  [32]uint8        "json:\"id\""
 			DecryptionCondition uint64           "json:\"decryptionCondition\""
 			AllowedPeekers      []common.Address "json:\"allowedPeekers\""
+			AllowedStores       []common.Address "json:\"allowedStores\""
 			Version             string           "json:\"version\""
 		})
 		require.Equal(t, targetBlock, bid.DecryptionCondition)
@@ -282,7 +282,7 @@ func TestBundleBid(t *testing.T) {
 		unpacked, err = bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[0].Data)
 		require.NoError(t, err)
 
-		require.Equal(t, bid.Id, unpacked[0].([16]byte))
+		require.Equal(t, bid.Id, unpacked[0].([32]byte))
 		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
 		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
 
@@ -358,7 +358,7 @@ func TestMevShare(t *testing.T) {
 	// extract share BidId
 	unpacked, err := matchBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
 	require.NoError(t, err)
-	shareBidId := unpacked[0].([16]byte)
+	shareBidId := unpacked[0].([32]byte)
 
 	// ************ 2. Match Portion ************
 	backrunTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
@@ -432,7 +432,7 @@ func TestMevShare(t *testing.T) {
 		unpacked, err := bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
 		require.NoError(t, err)
 
-		bidId := unpacked[0].([16]byte)
+		bidId := unpacked[0].([32]byte)
 		payloadData, err := fr.OffchainBackend().ConfidentialStoreEngine.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
@@ -502,16 +502,18 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	{ // Test the block building precompile through eth_call
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
-		bid := suave.Bid{
-			Id:                  suave.BidId(uuid.New()),
+		bid, err := fr.OffchainBackend().ConfidentialStoreEngine.InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
 			Version:             "default:v0:ethBundles",
-		}
+		}, nil)
+		require.NoError(t, err)
 
-		fr.OffchainBackend().MempoolBackend.SubmitBid(bid)
-		fr.OffchainBackend().ConfidentialStoreEngine.InitializeBid(bid)
-		fr.OffchainBackend().ConfidentialStoreEngine.Store(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
+		_, err = fr.OffchainBackend().ConfidentialStoreEngine.Store(bid.Id, nil, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
+		require.NoError(t, err)
+
+		err = fr.OffchainBackend().MempoolBackend.SubmitBid(bid)
+		require.NoError(t, err)
 
 		ethHead := fr.ethSrv.CurrentBlock()
 

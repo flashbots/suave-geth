@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/google/uuid"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -31,25 +29,21 @@ type ACData struct {
 
 // This function is *trusted* and not available directly through precompiles
 // In particular wrt bid id not being maliciously crafted
-func (s *LocalConfidentialStore) InitializeBid(bid suave.Bid) (suave.Bid, error) {
-	if bid.Id == [16]byte{} {
-		bid.Id = [16]byte(uuid.New())
-	}
-
+func (s *LocalConfidentialStore) InitializeBid(bid suave.Bid) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	_, found := s.bids[bid.Id]
 	if found {
-		return suave.Bid{}, suave.BidAlreadyPresentError
+		return suave.BidAlreadyPresentError
 	}
 
 	s.bids[bid.Id] = ACData{bid, make(map[string][]byte)}
 
-	return bid, nil
+	return nil
 }
 
-func (s *LocalConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+func (s *LocalConfidentialStore) FetchEngineBidById(bidId suave.BidId) (suave.Bid, error) {
 	bidData, found := s.bids[bidId]
 	if !found {
 		return suave.Bid{}, errors.New("bid not found")

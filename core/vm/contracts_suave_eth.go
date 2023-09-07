@@ -109,7 +109,7 @@ func (c *extractHint) runImpl(backend *SuaveExecutionBackend, bundleBytes []byte
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
 		RefundPercent   int                `json:"percent"`
-		MatchId         [16]byte           `json:"MatchId"`
+		MatchId         [32]byte           `json:"MatchId"`
 	}{}
 
 	err := json.Unmarshal(bundleBytes, &bundle)
@@ -199,7 +199,7 @@ func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte
 	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
 }
 
-func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.BuildBlockArgs, bidId [16]byte, namespace string) ([]byte, []byte, error) {
+func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.BuildBlockArgs, bidId common.Hash, namespace string) ([]byte, []byte, error) {
 	bidIds := []suave.BidId{}
 	// first check for merged bid, else assume regular bid
 	if mergedBidsBytes, err := backend.ConfidentialStoreEngine.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
@@ -214,7 +214,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 		bidIds = append(bidIds, bidId)
 	}
 
-	var bidsToMerge = make([]suave.Bid, len(bidIds))
+	var bidsToMerge = make([]types.Bid, len(bidIds))
 	for i, bidId := range bidIds {
 		var err error
 

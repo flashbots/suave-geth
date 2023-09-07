@@ -129,7 +129,8 @@ func encodeType(typ abi.Type, insideTypes, slicePointers bool) string {
 		if typ.Size == 16 {
 			return fmt.Sprintf("[%d]byte", typ.Size)
 		} else if typ.Size == 32 {
-			return "common.Hash"
+			// return "common.Hash"
+			return fmt.Sprintf("[%d]byte", typ.Size)
 		}
 	case abi.AddressTy:
 		return "common.Address"

@@ -7,6 +7,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/stretchr/testify/require"
 )
@@ -22,11 +23,13 @@ func TestMiniredisTransport(t *testing.T) {
 
 	daMsg := suave.DAMessage{
 		Bid: suave.Bid{
-			Id:                  [16]byte{0x42},
+			Id:                  suave.BidId{0x42},
 			DecryptionCondition: uint64(13),
 			AllowedPeekers:      []common.Address{{0x41, 0x39}},
 			Version:             string("vv"),
 		},
+		Value:     []byte{},
+		Signature: []byte{},
 	}
 
 	mb.Publish(daMsg)
@@ -63,16 +66,16 @@ func TestMiniredisStore(t *testing.T) {
 	require.NoError(t, err)
 
 	bid := suave.Bid{
-		Id:                  [16]byte{0x42},
+		Id:                  suave.BidId{0x42},
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
 		Version:             string("vv"),
 	}
 
-	_, err = mb.InitializeBid(bid)
+	err = mb.InitializeBid(bid)
 	require.NoError(t, err)
 
-	fetchedBid, err := mb.FetchBidById(bid.Id)
+	fetchedBid, err := mb.FetchEngineBidById(bid.Id)
 	require.NoError(t, err)
 	require.Equal(t, bid, fetchedBid)
 
@@ -106,12 +109,13 @@ func TestRedisTransport(t *testing.T) {
 
 	daMsg := suave.DAMessage{
 		Bid: suave.Bid{
-			Id:                  [16]byte{0x42},
+			Id:                  suave.BidId{0x42},
 			DecryptionCondition: uint64(13),
 			AllowedPeekers:      []common.Address{{0x41, 0x39}},
 			Version:             string("vv"),
 		},
-		Value: suave.Bytes{},
+		Value:     suave.Bytes{},
+		Signature: []byte{},
 	}
 
 	redisPubSub.Publish(daMsg)
@@ -150,16 +154,16 @@ func TestRedisStore(t *testing.T) {
 	require.NoError(t, err)
 
 	bid := suave.Bid{
-		Id:                  [16]byte{0x42},
+		Id:                  suave.BidId{0x42},
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
 		Version:             string("vv"),
 	}
 
-	_, err = redisStoreBackend.InitializeBid(bid)
+	err = redisStoreBackend.InitializeBid(bid)
 	require.NoError(t, err)
 
-	fetchedBid, err := redisStoreBackend.FetchBidById(bid.Id)
+	fetchedBid, err := redisStoreBackend.FetchEngineBidById(bid.Id)
 	require.NoError(t, err)
 	require.Equal(t, bid, fetchedBid)
 
@@ -194,7 +198,7 @@ func TestEngineOnRedis(t *testing.T) {
 	redisStoreBackend1, err := NewRedisStoreBackend(ctx, mrStore1.Addr())
 	require.NoError(t, err)
 
-	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1)
+	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	redisPubSub2, err := NewRedisPubSub(ctx, mrPubSub.Addr())
@@ -203,34 +207,44 @@ func TestEngineOnRedis(t *testing.T) {
 	redisStoreBackend2, err := NewRedisStoreBackend(ctx, mrStore2.Addr())
 	require.NoError(t, err)
 
-	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2)
+	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	go engine2.Subscribe(ctx)
 
 	// Make sure a store to engine1 is propagated to endine2 through redis->miniredis transport
-	bid := suave.Bid{
-		Id:                  [16]byte{0x42},
+	bid, err := engine1.InitializeBid(types.Bid{
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
+		AllowedStores:       []common.Address{common.Address{}},
 		Version:             string("vv"),
-	}
-
-	_, err = engine1.InitializeBid(bid)
+	}, nil /* creation tx */)
 	require.NoError(t, err)
 
 	// Do not subscribe on redisPubSub2! That would cause one of the subscribers to not receive the message, I think
 	subch := redisPubSub1.Subscribe()
 
 	// Trigger propagation
-	_, err = engine1.Store(bid.Id, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
+	_, err = engine1.Store(bid.Id, nil /* source tx */, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
 	require.NoError(t, err)
 
 	time.Sleep(10 * time.Millisecond)
 
+	submittedBid := suave.Bid{
+		Id:                  bid.Id,
+		DecryptionCondition: bid.DecryptionCondition,
+		AllowedPeekers:      bid.AllowedPeekers,
+		AllowedStores:       bid.AllowedStores,
+		Version:             bid.Version,
+		CreationTx:          nil,
+	}
+
+	var nilAddress common.Address
+	submittedBid.Signature = nilAddress.Bytes()
+
 	select {
 	case msg := <-subch:
-		require.Equal(t, bid, msg.Bid)
+		require.Equal(t, submittedBid, msg.Bid)
 		require.Equal(t, "xx", msg.Key)
 		require.Equal(t, suave.Bytes{0x43, 0x14}, msg.Value)
 		require.Equal(t, bid.AllowedPeekers[0], msg.Caller)
@@ -242,7 +256,7 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	fetchedBid, err := redisStoreBackend2.FetchBidById(bid.Id)
+	fetchedBid, err := redisStoreBackend2.FetchEngineBidById(bid.Id)
 	require.NoError(t, err)
-	require.Equal(t, bid, fetchedBid)
+	require.Equal(t, submittedBid, fetchedBid)
 }

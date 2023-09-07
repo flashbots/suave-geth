@@ -28,12 +28,13 @@ library Suave {
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY =
         0x0000000000000000000000000000000042100002;
 
-	type BidId is bytes16;
+	type BidId is bytes32;
 
     struct Bid {
         BidId id;
         uint64 decryptionCondition;
         address[] allowedPeekers;
+        address[] allowedStores;
         string version;
     }
 

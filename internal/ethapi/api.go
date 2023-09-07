@@ -1941,6 +1941,7 @@ func (s *TransactionAPI) executeOffchainCall(ctx context.Context, tx *types.Tran
 	}
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, s.b), nil)
 	evm, vmError := s.b.GetEVM(ctx, msg, state, header, &vm.Config{IsOffchain: true}, &blockCtx)
+	evm.SetConfidentialRequestTx(tx)
 
 	if confidential != nil {
 		evm.SetConfidentialInput(*confidential)

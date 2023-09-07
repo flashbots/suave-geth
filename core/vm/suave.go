@@ -4,15 +4,17 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
 type SuaveExecutionBackend struct {
-	ConfidentialStoreEngine *suave.ConfidentialStoreEngine
-	MempoolBackend          suave.MempoolBackend
-	OffchainEthBackend      suave.OffchainEthBackend
-	confidentialInputs      []byte
-	callerStack             []*common.Address
+	ConfidentialStoreEngine      *suave.ConfidentialStoreEngine
+	MempoolBackend               suave.MempoolBackend
+	OffchainEthBackend           suave.OffchainEthBackend
+	confidentialComputeRequestTx *types.Transaction
+	confidentialInputs           []byte
+	callerStack                  []*common.Address
 }
 
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
