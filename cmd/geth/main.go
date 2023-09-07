@@ -48,7 +48,7 @@ import (
 )
 
 const (
-	clientIdentifier = "geth" // Client identifier to advertise over the network
+	clientIdentifier = "suave-geth" // Client identifier to advertise over the network
 )
 
 var (
