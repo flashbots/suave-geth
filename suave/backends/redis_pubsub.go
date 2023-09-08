@@ -34,38 +34,59 @@ var (
 )
 
 type RedisPubSub struct {
-	ctx    context.Context
-	client *redis.Client
-	pubsub *redis.PubSub
+	ctx      context.Context
+	cancel   context.CancelFunc
+	redisUri string
+	client   *redis.Client
+	pubsub   *redis.PubSub
 }
 
-func NewRedisPubSub(ctx context.Context, redisURI string) (*RedisPubSub, error) {
-	client, err := connectRedis(redisURI)
-	if err != nil {
-		return nil, err
+func NewRedisPubSub(redisUri string) *RedisPubSub {
+	return &RedisPubSub{
+		redisUri: redisUri,
+	}
+}
+
+func (r *RedisPubSub) Start() error {
+	if r.cancel != nil {
+		r.cancel()
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	r.ctx = ctx
+	r.cancel = cancel
+
+	client, err := connectRedis(r.redisUri)
+	if err != nil {
+		return err
+	}
+	r.client = client
+
+	// Note the race between start and stop, not fixing right now
 	pubsub := client.Subscribe(ctx, redisUpsertTopic)
+	r.pubsub = pubsub
 
-	go func() {
-		<-ctx.Done()
-		pubsub.Close()
-		client.Close()
-	}()
-
-	return &RedisPubSub{
-		ctx:    ctx,
-		client: client,
-		pubsub: pubsub,
-	}, nil
+	return nil
 }
 
-func (r *RedisPubSub) Subscribe() <-chan suave.DAMessage {
+func (r *RedisPubSub) Stop() error {
+	if r.cancel == nil || r.pubsub == nil || r.client == nil {
+		panic("Stop() called before Start()")
+	}
+
+	r.cancel()
+	r.pubsub.Close()
+	r.client.Close()
+
+	return nil
+}
+
+func (r *RedisPubSub) Subscribe(ctx context.Context) <-chan suave.DAMessage {
 	ch := make(chan suave.DAMessage, 16)
 
 	go func() {
-		for r.ctx.Err() == nil {
-			rmsg, err := r.pubsub.ReceiveMessage(r.ctx)
+		for r.ctx.Err() == nil && ctx.Err() == nil {
+			rmsg, err := r.pubsub.ReceiveMessage(ctx)
 			if err != nil {
 				continue
 			}
@@ -91,6 +112,10 @@ func (r *RedisPubSub) Subscribe() <-chan suave.DAMessage {
 			select {
 			case ch <- msg:
 				continue
+			case <-ctx.Done():
+				return
+			case <-r.ctx.Done():
+				return
 			default:
 				log.Warn("dropping transport message due to channel being blocked")
 				continue

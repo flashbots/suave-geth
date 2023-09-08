@@ -22,6 +22,14 @@ func NewLocalConfidentialStore() *LocalConfidentialStore {
 	}
 }
 
+func (s *LocalConfidentialStore) Start() error {
+	return nil
+}
+
+func (s *LocalConfidentialStore) Stop() error {
+	return nil
+}
+
 type ACData struct {
 	bid     suave.Bid
 	dataMap map[string][]byte

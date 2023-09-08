@@ -14,25 +14,46 @@ import (
 )
 
 type RedisStoreBackend struct {
-	ctx    context.Context
-	client *redis.Client
+	ctx      context.Context
+	cancel   context.CancelFunc
+	redisUri string
+	client   *redis.Client
 }
 
-func NewRedisStoreBackend(ctx context.Context, redisURI string) (*RedisStoreBackend, error) {
-	client, err := connectRedis(redisURI)
-	if err != nil {
-		return nil, err
+func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
+	return &RedisStoreBackend{
+		cancel:   nil,
+		redisUri: redisUri,
+	}
+}
+
+func (r *RedisStoreBackend) Start() error {
+	if r.cancel != nil {
+		r.cancel()
 	}
 
-	go func() {
-		<-ctx.Done()
-		client.Close()
-	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	r.cancel = cancel
+	r.ctx = ctx
 
-	return &RedisStoreBackend{
-		ctx:    ctx,
-		client: client,
-	}, nil
+	client, err := connectRedis(r.redisUri)
+	if err != nil {
+		return err
+	}
+	r.client = client
+
+	return nil
+}
+
+func (r *RedisStoreBackend) Stop() error {
+	if r.cancel == nil || r.client == nil {
+		panic("Stop() called before Start()")
+	}
+
+	r.cancel()
+	r.client.Close()
+
+	return nil
 }
 
 func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {

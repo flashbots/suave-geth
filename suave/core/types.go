@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/node"
 )
 
 type Bytes = hexutil.Bytes
@@ -32,6 +33,7 @@ var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 var BidAlreadyPresentError = errors.New("bid already present")
 
 type ConfidentialStoreBackend interface {
+	node.Lifecycle
 	InitializeBid(bid Bid) error
 	FetchEngineBidById(bidId BidId) (Bid, error)
 	Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
@@ -50,7 +52,8 @@ type OffchainEthBackend interface {
 }
 
 type PubSub interface {
-	Subscribe() <-chan DAMessage
+	node.Lifecycle
+	Subscribe(ctx context.Context) <-chan DAMessage
 	Publish(DAMessage)
 }
 

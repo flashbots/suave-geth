@@ -13,10 +13,54 @@ import (
 )
 
 type ConfidentialStoreEngine struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	backend     ConfidentialStoreBackend
 	pubsub      PubSub
 	daSigner    DASigner
 	chainSigner ChainSigner
+}
+
+func (e *ConfidentialStoreEngine) Start() error {
+	if err := e.backend.Start(); err != nil {
+		return err
+	}
+
+	if err := e.pubsub.Start(); err != nil {
+		return err
+	}
+
+	if e.cancel != nil {
+		e.cancel()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancel = cancel
+	e.ctx = ctx
+	go e.Subscribe(ctx)
+
+	return nil
+}
+
+func (e *ConfidentialStoreEngine) Stop() error {
+	if e.cancel == nil {
+		panic("Stop() called before Start()")
+	}
+
+	e.cancel()
+
+	if err := e.backend.Stop(); err != nil {
+		// todo: wrap the error
+		e.pubsub.Stop()
+		return err
+	}
+
+	if err := e.pubsub.Stop(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type DASigner interface {
@@ -44,7 +88,7 @@ func (e *ConfidentialStoreEngine) Subscribe(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case msg := <-e.pubsub.Subscribe():
+		case msg := <-e.pubsub.Subscribe(ctx):
 			err := e.NewMessage(msg)
 			if err != nil {
 				log.Info("could not process new store message: %w", err)
@@ -204,8 +248,11 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 
 type MockPubSub struct{}
 
-func (MockPubSub) Subscribe() <-chan DAMessage { return nil }
-func (MockPubSub) Publish(DAMessage)           {}
+func (MockPubSub) Start() error { return nil }
+func (MockPubSub) Stop() error  { return nil }
+
+func (MockPubSub) Subscribe(context.Context) <-chan DAMessage { return nil }
+func (MockPubSub) Publish(DAMessage)                          {}
 
 type MockSigner struct{}
 

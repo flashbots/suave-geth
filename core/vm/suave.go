@@ -17,6 +17,14 @@ type SuaveExecutionBackend struct {
 	callerStack                  []*common.Address
 }
 
+func (b *SuaveExecutionBackend) Start() error {
+	return b.ConfidentialStoreEngine.Start()
+}
+
+func (b *SuaveExecutionBackend) Stop() error {
+	return b.ConfidentialStoreEngine.Stop()
+}
+
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
 	if !evm.Config.IsOffchain {
 		return nil

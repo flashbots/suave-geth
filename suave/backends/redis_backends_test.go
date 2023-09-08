@@ -13,13 +13,14 @@ import (
 )
 
 func TestMiniredisTransport(t *testing.T) {
+	mb := NewMiniredisBackend()
+	require.NoError(t, mb.Start())
+	t.Cleanup(func() { mb.Stop() })
+
 	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	t.Cleanup(cancel)
 
-	mb, err := NewMiniredisBackend(ctx)
-	require.NoError(t, err)
-
-	msgSub := mb.Subscribe()
+	msgSub := mb.Subscribe(ctx)
 
 	daMsg := suave.DAMessage{
 		Bid: suave.Bid{
@@ -59,11 +60,9 @@ func TestMiniredisTransport(t *testing.T) {
 }
 
 func TestMiniredisStore(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
-
-	mb, err := NewMiniredisBackend(ctx)
-	require.NoError(t, err)
+	mb := NewMiniredisBackend()
+	require.NoError(t, mb.Start())
+	t.Cleanup(func() { mb.Stop() })
 
 	bid := suave.Bid{
 		Id:                  suave.BidId{0x42},
@@ -72,7 +71,7 @@ func TestMiniredisStore(t *testing.T) {
 		Version:             string("vv"),
 	}
 
-	err = mb.InitializeBid(bid)
+	err := mb.InitializeBid(bid)
 	require.NoError(t, err)
 
 	fetchedBid, err := mb.FetchEngineBidById(bid.Id)
@@ -99,13 +98,14 @@ func TestMiniredisStore(t *testing.T) {
 func TestRedisTransport(t *testing.T) {
 	mr := miniredis.RunT(t)
 
+	redisPubSub := NewRedisPubSub(mr.Addr())
+	require.NoError(t, redisPubSub.Start())
+	t.Cleanup(func() { redisPubSub.Stop() })
+
 	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	t.Cleanup(cancel)
 
-	redisPubSub, err := NewRedisPubSub(ctx, mr.Addr())
-	require.NoError(t, err)
-
-	msgSub := redisPubSub.Subscribe()
+	msgSub := redisPubSub.Subscribe(ctx)
 
 	daMsg := suave.DAMessage{
 		Bid: suave.Bid{
@@ -147,11 +147,9 @@ func TestRedisTransport(t *testing.T) {
 func TestRedisStore(t *testing.T) {
 	mr := miniredis.RunT(t)
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
-
-	redisStoreBackend, err := NewRedisStoreBackend(ctx, mr.Addr())
-	require.NoError(t, err)
+	redisStoreBackend := NewRedisStoreBackend(mr.Addr())
+	redisStoreBackend.Start()
+	t.Cleanup(func() { redisStoreBackend.Stop() })
 
 	bid := suave.Bid{
 		Id:                  suave.BidId{0x42},
@@ -160,7 +158,7 @@ func TestRedisStore(t *testing.T) {
 		Version:             string("vv"),
 	}
 
-	err = redisStoreBackend.InitializeBid(bid)
+	err := redisStoreBackend.InitializeBid(bid)
 	require.NoError(t, err)
 
 	fetchedBid, err := redisStoreBackend.FetchEngineBidById(bid.Id)
@@ -189,28 +187,22 @@ func TestEngineOnRedis(t *testing.T) {
 	mrStore2 := miniredis.RunT(t)
 	mrPubSub := mrStore1
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	t.Cleanup(cancel)
-
-	redisPubSub1, err := NewRedisPubSub(ctx, mrPubSub.Addr())
-	require.NoError(t, err)
-
-	redisStoreBackend1, err := NewRedisStoreBackend(ctx, mrStore1.Addr())
-	require.NoError(t, err)
+	redisPubSub1 := NewRedisPubSub(mrPubSub.Addr())
+	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
 	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
-	require.NoError(t, err)
 
-	redisPubSub2, err := NewRedisPubSub(ctx, mrPubSub.Addr())
-	require.NoError(t, err)
+	require.NoError(t, engine1.Start())
+	t.Cleanup(func() { engine1.Stop() })
 
-	redisStoreBackend2, err := NewRedisStoreBackend(ctx, mrStore2.Addr())
-	require.NoError(t, err)
+	redisPubSub2 := NewRedisPubSub(mrPubSub.Addr())
+	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
 
 	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
-	go engine2.Subscribe(ctx)
+	require.NoError(t, engine2.Start())
+	t.Cleanup(func() { engine2.Stop() })
 
 	// Make sure a store to engine1 is propagated to endine2 through redis->miniredis transport
 	bid, err := engine1.InitializeBid(types.Bid{
@@ -221,8 +213,15 @@ func TestEngineOnRedis(t *testing.T) {
 	}, nil /* creation tx */)
 	require.NoError(t, err)
 
-	// Do not subscribe on redisPubSub2! That would cause one of the subscribers to not receive the message, I think
-	subch := redisPubSub1.Subscribe()
+	redisPubSub3 := NewRedisPubSub(mrPubSub.Addr())
+	require.NoError(t, redisPubSub3.Start())
+	t.Cleanup(func() { redisPubSub3.Stop() })
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	t.Cleanup(cancel)
+
+	// Do not subscribe on redisPubSub1 or 2! That would cause one of the subscribers to not receive the message, I think
+	subch := redisPubSub3.Subscribe(ctx)
 
 	// Trigger propagation
 	_, err = engine1.Store(bid.Id, nil /* source tx */, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})

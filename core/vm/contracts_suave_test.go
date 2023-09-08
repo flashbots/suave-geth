@@ -22,6 +22,9 @@ import (
 type mockSuaveBackend struct {
 }
 
+func (m *mockSuaveBackend) Start() error { return nil }
+func (m *mockSuaveBackend) Stop() error  { return nil }
+
 func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) error {
 	return nil
 }
@@ -58,7 +61,7 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) Subscribe() <-chan suave.DAMessage {
+func (m *mockSuaveBackend) Subscribe(context.Context) <-chan suave.DAMessage {
 	return nil
 }
 

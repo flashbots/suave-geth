@@ -27,33 +27,54 @@ var (
 
 type MiniredisBackend struct {
 	ctx        context.Context
+	cancel     context.CancelFunc
 	client     *miniredis.Miniredis
 	subscriber *miniredis.Subscriber
 }
 
-func NewMiniredisBackend(ctx context.Context) (*MiniredisBackend, error) {
+func NewMiniredisBackend() *MiniredisBackend {
+	return &MiniredisBackend{}
+}
+
+func (r *MiniredisBackend) Start() error {
+	if r.cancel != nil {
+		r.cancel()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	r.cancel = cancel
+	r.ctx = ctx
+
 	client, err := miniredis.Run()
 	if err != nil {
-		return nil, err
+		return err
 	}
+	r.client = client
 
 	subscriber := client.NewSubscriber()
 	subscriber.Subscribe(miniredisUpsertTopic)
+	r.subscriber = subscriber
 
-	go func() {
-		<-ctx.Done()
-		subscriber.Close()
-		client.Close()
-	}()
-
-	return &MiniredisBackend{
-		ctx:        ctx,
-		client:     client,
-		subscriber: subscriber,
-	}, nil
+	return nil
 }
 
-func (r *MiniredisBackend) Subscribe() <-chan suave.DAMessage {
+func (r *MiniredisBackend) Stop() error {
+	if r.cancel == nil || r.subscriber == nil || r.client == nil {
+		panic("Stop() called before Start()")
+	}
+
+	r.cancel()
+	r.subscriber.Close()
+	r.client.Close()
+
+	return nil
+}
+
+func (r *MiniredisBackend) Subscribe(ctx context.Context) <-chan suave.DAMessage {
+	if r.cancel == nil || r.subscriber == nil || r.client == nil {
+		panic("Subscribe() called before Start()")
+	}
+
 	ch := make(chan suave.DAMessage, 16)
 
 	go func() {
@@ -65,6 +86,10 @@ func (r *MiniredisBackend) Subscribe() <-chan suave.DAMessage {
 			}
 
 			select {
+			case <-ctx.Done():
+				return
+			case <-r.ctx.Done():
+				return
 			case ch <- msg:
 				continue
 			default:
