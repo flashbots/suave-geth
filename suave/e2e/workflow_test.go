@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
@@ -230,7 +231,9 @@ func TestBundleBid(t *testing.T) {
 	fr := newFramework(t)
 	defer fr.Close()
 
-	rpc := fr.suethSrv.RPCNode()
+	clt := fr.NewSDKClient()
+
+	// rpc := fr.suethSrv.RPCNode()
 
 	{
 		targetBlock := uint64(16103213)
@@ -246,33 +249,12 @@ func TestBundleBid(t *testing.T) {
 		bundleBytes, err := json.Marshal(bundle)
 		require.NoError(t, err)
 
-		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock, allowedPeekers)
-		require.NoError(t, err)
-
-		// Verify via transaction
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
 		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers}, confidentialDataBytes)
+		require.NoError(t, err)
 
 		block := fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
@@ -321,6 +303,7 @@ func TestMevShare(t *testing.T) {
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
+	clt := fr.NewSDKClient()
 
 	// ************ 1. Initial mevshare transaction Portion ************
 
@@ -348,33 +331,14 @@ func TestMevShare(t *testing.T) {
 
 	// Send a bundle bid
 	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
-	calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
-	require.NoError(t, err)
-
-	wrappedTxData := &types.LegacyTx{
-		Nonce:    0,
-		To:       &mevShareAddress,
-		Value:    nil,
-		Gas:      1000069,
-		GasPrice: big.NewInt(10),
-		Data:     calldata,
-	}
-
-	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: fr.ExecutionNode(),
-		Wrapped:       *types.NewTx(wrappedTxData),
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	offchainTxBytes, err := offchainTx.MarshalBinary()
-	require.NoError(t, err)
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
 	confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 	require.NoError(t, err)
 
-	var offchainTxHash common.Hash
-	requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+	bundleBidContractI := sdk.GetContract(mevShareAddress, bundleBidContract.Abi, clt)
+	_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+	require.NoError(t, err)
 
 	//   1a. confirm submission
 	block := fr.suethSrv.ProgressChain()
@@ -416,33 +380,14 @@ func TestMevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	// decryption conditions are assumed to be eth blocks right now
-	backRunCalldata, err := matchBidContract.Abi.Pack("newMatch", targetBlock+1, allowedPeekers, shareBidId)
-	require.NoError(t, err)
-
-	wrappedMatchTxData := &types.LegacyTx{
-		Nonce:    1,
-		To:       &mevShareAddress,
-		Value:    nil,
-		Gas:      1000069,
-		GasPrice: big.NewInt(10),
-		Data:     backRunCalldata,
-	}
-
-	offchainMatchTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: fr.ExecutionNode(),
-		Wrapped:       *types.NewTx(wrappedMatchTxData),
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	offchainMatchTxBytes, err := offchainMatchTx.MarshalBinary()
-	require.NoError(t, err)
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
 	confidentialDataMatchBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 	require.NoError(t, err)
 
-	var offchainMatchTxHash common.Hash
-	requireNoRpcError(t, rpc.Call(&offchainMatchTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainMatchTxBytes), hexutil.Encode(confidentialDataMatchBytes)))
+	cc := sdk.GetContract(mevShareAddress, matchBidContract.Abi, clt)
+	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, shareBidId}, confidentialDataMatchBytes)
+	require.NoError(t, err)
 
 	block = fr.suethSrv.ProgressChain()
 	require.Equal(t, 1, len(block.Transactions()))
@@ -465,29 +410,9 @@ func TestMevShare(t *testing.T) {
 		FeeRecipient: common.Address{0x42},
 	}
 
-	calldata, err = buildEthBlockContract.Abi.Pack("buildMevShare", payloadArgsTuple, targetBlock+1)
+	cc = sdk.GetContract(newBlockBidAddress, buildEthBlockContract.Abi, clt)
+	_, err = cc.SendTransaction("buildMevShare", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
 	require.NoError(t, err)
-
-	wrappedTxDataBB := &types.LegacyTx{
-		Nonce:    2,
-		To:       &newBlockBidAddress,
-		Value:    nil,
-		Gas:      1000000,
-		GasPrice: big.NewInt(10),
-		Data:     calldata,
-	}
-
-	offchainTxBB, err := types.SignTx(types.NewTx(&types.OffchainTx{
-		ExecutionNode: fr.ExecutionNode(),
-		Wrapped:       *types.NewTx(wrappedTxDataBB),
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	offchainTxBytesBB, err := offchainTxBB.MarshalBinary()
-	require.NoError(t, err)
-
-	var offchainTxHashBB common.Hash
-	requireNoRpcError(t, rpc.Call(&offchainTxHashBB, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytesBB)))
 
 	block = fr.suethSrv.ProgressChain() // block = progressChain(t, ethservice, block.Header())
 	require.Equal(t, 1, len(block.Transactions()))
@@ -628,19 +553,16 @@ func TestBlockBuildingContract(t *testing.T) {
 	fr := newFramework(t, WithExecutionNode())
 	defer fr.Close()
 
-	rpc := fr.suethSrv.RPCNode()
+	clt := fr.NewSDKClient()
 
-	// ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
-	// defer cancel()
-
-	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+	ethTx, err := clt.SignTxn(&types.LegacyTx{
 		Nonce:    0,
 		To:       &testAddr,
 		Value:    big.NewInt(1000),
 		Gas:      21000,
 		GasPrice: big.NewInt(13),
 		Data:     []byte{},
-	}), signer, testKey)
+	})
 	require.NoError(t, err)
 
 	bundle := struct {
@@ -657,32 +579,14 @@ func TestBlockBuildingContract(t *testing.T) {
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
-		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
-		require.NoError(t, err)
-
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
 
 		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
+
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+		require.NoError(t, err)
 	}
 
 	block := fr.suethSrv.ProgressChain()
@@ -697,29 +601,10 @@ func TestBlockBuildingContract(t *testing.T) {
 			FeeRecipient:   common.Address{0x42},
 		}
 
-		calldata, err := buildEthBlockContract.Abi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
+		buildEthBlockContractI := sdk.GetContract(newBlockBidAddress, buildEthBlockContract.Abi, clt)
+
+		_, err = buildEthBlockContractI.SendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
 		require.NoError(t, err)
-
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    1,
-			To:       &newBlockBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
 
 		block = fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
@@ -731,6 +616,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
+	clt := fr.NewSDKClient()
 
 	var block *block
 
@@ -761,16 +647,14 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		require.NoError(t, err)
 
 		calldata := append(ethBlockBidSenderContract.Code, abiEncodedRelayUrl...)
-		ccTxData := &types.LegacyTx{
+		tx, err := clt.SignTxn(&types.LegacyTx{
 			Nonce:    0,
 			To:       nil, // contract creation
 			Value:    big.NewInt(0),
 			Gas:      10000000,
 			GasPrice: big.NewInt(10),
 			Data:     calldata,
-		}
-
-		tx, err := types.SignTx(types.NewTx(ccTxData), signer, testKey)
+		})
 		require.NoError(t, err)
 
 		from, _ := types.Sender(signer, tx)
@@ -787,14 +671,14 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		require.Equal(t, uint64(1), block.Receipts[0].Status)
 	}
 
-	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+	ethTx, err := clt.SignTxn(&types.LegacyTx{
 		Nonce:    0,
 		To:       &testAddr,
 		Value:    big.NewInt(1000),
 		Gas:      21000,
 		GasPrice: big.NewInt(13),
 		Data:     []byte{},
-	}), signer, testKey)
+	})
 	require.NoError(t, err)
 
 	bundle := struct {
@@ -811,32 +695,13 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{ethBlockBidSenderAddr, newBundleBidAddress, buildEthBlockAddress}
-		calldata, err := bundleBidContract.Abi.Pack("newBid", targetBlock+1, allowedPeekers)
-		require.NoError(t, err)
-
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    1,
-			To:       &newBundleBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
 
 		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)))
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+		require.NoError(t, err)
 	}
 
 	block = fr.suethSrv.ProgressChain()
@@ -851,29 +716,9 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 			FeeRecipient:   common.Address{0x42},
 		}
 
-		calldata, err := ethBlockBidSenderContract.Abi.Pack("buildFromPool", payloadArgsTuple, targetBlock+1)
+		ethBlockBidSenderContractI := sdk.GetContract(ethBlockBidSenderAddr, ethBlockBidSenderContract.Abi, clt)
+		_, err = ethBlockBidSenderContractI.SendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
 		require.NoError(t, err)
-
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    2,
-			To:       &ethBlockBidSenderAddr,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
 
 		block = fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
@@ -984,6 +829,10 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	}
 
 	return f
+}
+
+func (f *framework) NewSDKClient() *sdk.Client {
+	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
 func (f *framework) OffchainBackend() *vm.SuaveExecutionBackend {
