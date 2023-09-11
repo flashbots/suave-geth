@@ -48,7 +48,7 @@ func (c *simulateBundle) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *simulateBundle) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *simulateBundle) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	egp, err := c.runImpl(backend, input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -70,7 +70,7 @@ func (c *simulateBundle) runImpl(backend *SuaveExecutionBackend, input []byte) (
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	defer cancel()
 
-	envelope, err := backend.OffchainEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
+	envelope, err := backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (c *extractHint) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *extractHint) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *extractHint) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := artifacts.SuaveAbi.Methods["extractHint"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -145,7 +145,7 @@ func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *buildEthBlock) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *buildEthBlock) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
 	if err != nil {
 		return formatPeekerError("could not unpack inputs: %w", err)
@@ -293,7 +293,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 	}
 
 	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
-	envelope, err := backend.OffchainEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
+	envelope, err := backend.ConfidentialEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not build eth block: %w", err)
 	}
@@ -373,7 +373,7 @@ func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *submitEthBlockBidToRelay) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *submitEthBlockBidToRelay) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := artifacts.SuaveAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
 	if err != nil {
 		return formatPeekerError("could not unpack inputs: %w", err)

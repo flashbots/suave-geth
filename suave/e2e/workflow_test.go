@@ -40,7 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsOffchain(t *testing.T) {
+func TestIsConfidential(t *testing.T) {
 	// t.Fatal("not implemented")
 
 	fr := newFramework(t)
@@ -52,51 +52,51 @@ func TestIsOffchain(t *testing.T) {
 	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
 
 	{
-		// Verify eth_call of isOffchainAddress returns 1/0 depending on offchain setting
+		// Verify eth_call of isConfidentialAddress returns 1/0 depending on confidential compute setting
 		var result string
 		requireNoRpcError(t, rpc.Call(&result, "eth_call", ethapi.TransactionArgs{
-			To:         &isOffchainAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
+			To:             &isConfidentialAddress,
+			Gas:            &gas,
+			IsConfidential: true,
+			ChainID:        &chainId,
 		}, "latest"))
 		require.Equal(t, []byte{1}, hexutil.MustDecode(result))
 
 		requireNoRpcError(t, rpc.Call(&result, "eth_call", ethapi.TransactionArgs{
-			To:         &isOffchainAddress,
-			Gas:        &gas,
-			IsOffchain: false,
-			ChainID:    &chainId,
+			To:             &isConfidentialAddress,
+			Gas:            &gas,
+			IsConfidential: false,
+			ChainID:        &chainId,
 		}, "latest"))
 		require.Equal(t, []byte{0}, hexutil.MustDecode(result))
 	}
 
 	{
-		// Verify sending offchain and onchain transactions to isOffchainAddress
+		// Verify sending computation requests and onchain transactions to isConfidentialAddress
 		wrappedTxData := &types.LegacyTx{
 			Nonce:    0,
-			To:       &isOffchainAddress,
+			To:       &isConfidentialAddress,
 			Value:    nil,
 			Gas:      1000000,
 			GasPrice: big.NewInt(10),
 			Data:     []byte{},
 		}
 
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
 
-		offchainTxBytes, err := offchainTx.MarshalBinary()
+		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
+		var confidentialRequestTxHash common.Hash
+		requireNoRpcError(t, rpc.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes)))
 
 		onchainTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
 			Nonce:    1,
-			To:       &isOffchainAddress,
+			To:       &isConfidentialAddress,
 			Value:    nil,
 			Gas:      1000000,
 			GasPrice: big.NewInt(10),
@@ -116,13 +116,13 @@ func TestIsOffchain(t *testing.T) {
 
 		receipts := block.Receipts
 		require.Equal(t, 2, len(receipts))
-		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
+		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 		require.Equal(t, uint8(types.LegacyTxType), receipts[1].Type)
 		require.Equal(t, uint64(1), receipts[1].Status)
 
 		require.Equal(t, 2, len(block.Transactions()))
-		require.Equal(t, []byte{1}, block.Transactions()[0].Data()) // offchain execution relays the offchain result
+		require.Equal(t, []byte{1}, block.Transactions()[0].Data())
 		require.Equal(t, []byte{}, block.Transactions()[1].Data())
 	}
 }
@@ -154,8 +154,8 @@ func TestMempool(t *testing.T) {
 			Version:             "default:v0:ethBundles",
 		}
 
-		fr.OffchainBackend().MempoolBackend.SubmitBid(bid1)
-		fr.OffchainBackend().MempoolBackend.SubmitBid(bid2)
+		fr.SuaveBackend().MempoolBackend.SubmitBid(bid1)
+		fr.SuaveBackend().MempoolBackend.SubmitBid(bid2)
 
 		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
@@ -164,11 +164,11 @@ func TestMempool(t *testing.T) {
 
 		var simResult hexutil.Bytes
 		requireNoRpcError(t, rpc.Call(&simResult, "eth_call", ethapi.TransactionArgs{
-			To:         &fetchBidsAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
-			Data:       (*hexutil.Bytes)(&calldata),
+			To:             &fetchBidsAddress,
+			Gas:            &gas,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&calldata),
 		}, "latest"))
 
 		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
@@ -200,24 +200,24 @@ func TestMempool(t *testing.T) {
 			Data:     calldata,
 		}
 
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ExecutionNode: fr.ExecutionNode(),
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), signer, testKey)
 		require.NoError(t, err)
 
-		offchainTxBytes, err := offchainTx.MarshalBinary()
+		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
 		require.NoError(t, err)
 
-		var offchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes)))
+		var confidentialRequestTxHash common.Hash
+		requireNoRpcError(t, rpc.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes)))
 
 		block := fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
 
 		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
-		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
+		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 1, len(block.Transactions()))
@@ -261,7 +261,7 @@ func TestBundleBid(t *testing.T) {
 
 		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
-		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
+		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 1, len(block.Transactions()))
@@ -286,7 +286,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
 		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
 
-		_, err = fr.OffchainBackend().ConfidentialStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
+		_, err = fr.SuaveBackend().ConfidentialStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
 		require.NoError(t, err)
 	}
 }
@@ -424,7 +424,7 @@ func TestMevShare(t *testing.T) {
 	{ // Fetch the built block id and check that the payload contains mev share trasnactions!
 		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
-		require.Equal(t, uint8(types.OffchainExecutedTxType), receipts[0].Type)
+		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 2, len(receipts[0].Logs))
@@ -433,7 +433,7 @@ func TestMevShare(t *testing.T) {
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
-		payloadData, err := fr.OffchainBackend().ConfidentialStoreBackend.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
+		payloadData, err := fr.SuaveBackend().ConfidentialStoreBackend.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
 		var payloadEnvelope engine.ExecutionPayloadEnvelope
@@ -488,11 +488,11 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	{ // Test the bundle simulation precompile through eth_call
 		var simResult hexutil.Bytes
 		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
-			To:         &simulateBundleAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
-			Data:       (*hexutil.Bytes)(&bundleBytes),
+			To:             &simulateBundleAddress,
+			Gas:            &gas,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&bundleBytes),
 		}, "latest"))
 
 		require.Equal(t, 32, len(simResult))
@@ -509,8 +509,8 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			Version:             "default:v0:ethBundles",
 		}
 
-		fr.OffchainBackend().MempoolBackend.SubmitBid(bid)
-		fr.OffchainBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
+		fr.SuaveBackend().MempoolBackend.SubmitBid(bid)
+		fr.SuaveBackend().ConfidentialStoreBackend.Initialize(bid, "default:v0:ethBundles", bundleBytes)
 
 		ethHead := fr.ethSrv.CurrentBlock()
 
@@ -524,11 +524,11 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 
 		var simResult hexutil.Bytes
 		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
-			To:         &buildEthBlockAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
-			Data:       (*hexutil.Bytes)(&packed),
+			To:             &buildEthBlockAddress,
+			Gas:            &gas,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&packed),
 		}, "latest"))
 
 		require.NotNil(t, simResult)
@@ -835,8 +835,8 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) OffchainBackend() *vm.SuaveExecutionBackend {
-	return f.suethSrv.service.APIBackend.OffchainBackend()
+func (f *framework) SuaveBackend() *vm.SuaveExecutionBackend {
+	return f.suethSrv.service.APIBackend.SuaveBackend()
 }
 
 func (f *framework) ExecutionNode() common.Address {
@@ -866,7 +866,7 @@ var (
 
 	testBalance = big.NewInt(2e18)
 
-	isOffchainAddress = common.HexToAddress("0x42010000")
+	isConfidentialAddress = common.HexToAddress("0x42010000")
 
 	// confidentialStoreAddress = common.HexToAddress("0x42020000")
 	// confStoreRetrieveAddress = common.HexToAddress("0x42020001")
@@ -910,7 +910,7 @@ var (
 		},
 	}
 
-	signer = types.NewOffchainSigner(params.AllEthashProtocolChanges.ChainID)
+	signer = types.NewSuaveSigner(params.AllEthashProtocolChanges.ChainID)
 )
 
 func init() {

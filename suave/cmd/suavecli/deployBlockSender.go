@@ -44,7 +44,7 @@ func cmdDeployBlockSenderContract() {
 
 	genesis := core.DefaultSuaveGenesisBlock()
 
-	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+	suaveSigner := types.NewSuaveSigner(genesis.Config.ChainID)
 
 	ethBlockBidSenderAddr, txHash, _ := sendBlockSenderCreationTx(suaveClient, suaveSigner, privKey, boostRelayUrl)
 

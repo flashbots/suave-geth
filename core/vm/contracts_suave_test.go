@@ -67,11 +67,11 @@ func TestSuavePrecompileStub(t *testing.T) {
 	suaveBackend := &SuaveExecutionBackend{
 		ConfidentialStoreBackend: mockSuaveBackend,
 		MempoolBackend:           mockSuaveBackend,
-		OffchainEthBackend:       mockSuaveBackend,
+		ConfidentialEthBackend:   mockSuaveBackend,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-	vmenv := NewOffchainEVM(suaveBackend, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsOffchain: true})
+	vmenv := NewConfidentialEVM(suaveBackend, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsConfidential: true})
 
 	methods := map[string]common.Address{
 		"extractHint":               extractHintAddress,
@@ -140,7 +140,7 @@ func newTestBackend() *backendImpl {
 		backend: &SuaveExecutionBackend{
 			ConfidentialStoreBackend: confStore,
 			MempoolBackend:           backends.NewMempoolOnConfidentialStore(confStore),
-			OffchainEthBackend:       &mockSuaveBackend{},
+			ConfidentialEthBackend:   &mockSuaveBackend{},
 		},
 	}
 	return b

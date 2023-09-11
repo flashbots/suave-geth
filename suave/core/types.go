@@ -28,7 +28,7 @@ type MempoolBackend interface {
 	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
 }
 
-type OffchainEthBackend interface {
+type ConfidentialEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 }

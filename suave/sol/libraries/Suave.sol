@@ -3,7 +3,7 @@ pragma solidity ^0.8.8;
 library Suave {
     error PeekerReverted(address, bytes);
 
-    address public constant IS_OFFCHAIN_ADDR =
+    address public constant IS_CONFIDENTIAL_ADDR =
         0x0000000000000000000000000000000042010000;
     address public constant CONFIDENTIAL_INPUTS =
         0x0000000000000000000000000000000042010001;
@@ -56,16 +56,16 @@ library Suave {
     }
 
     // Returns whether execution is off- or on-chain
-    function isOffchain() internal view returns (bool b) {
-        (bool success, bytes memory isOffchainBytes) = IS_OFFCHAIN_ADDR.staticcall("");
+    function isConfidential() internal view returns (bool b) {
+        (bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
         if (!success) {
-            revert PeekerReverted(IS_OFFCHAIN_ADDR, isOffchainBytes);
+            revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
         }
         assembly {
             // Load the length of data (first 32 bytes)
-            let len := mload(isOffchainBytes)
+            let len := mload(isConfidentialBytes)
             // Load the data after 32 bytes, so add 0x20
-            b := mload(add(isOffchainBytes, 0x20))
+            b := mload(add(isConfidentialBytes, 0x20))
         }
     }
 
@@ -125,7 +125,7 @@ library Suave {
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
-		require(isOffchain());
+		require(isConfidential());
 
         (bool success, bytes memory data) = EXTRACT_HINT.staticcall(abi.encode(bundleData));
 
@@ -150,7 +150,7 @@ library Suave {
     }
 
     function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid) internal view returns (bool, bytes memory) {
-		require(isOffchain());
+		require(isConfidential());
 
         (bool success, bytes memory err) = SUBMIT_ETH_BLOCK_BID_TO_RELAY.staticcall(
             abi.encode(relayUrl, builderBid)

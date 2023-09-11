@@ -43,7 +43,7 @@ func cmdDeployMevShareContract() {
 
 	genesis := core.DefaultSuaveGenesisBlock()
 
-	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+	suaveSigner := types.NewSuaveSigner(genesis.Config.ChainID)
 
 	mevShareAddr, txHash, err := sendMevShareCreationTx(suaveClient, suaveSigner, privKey)
 	if err != nil {
