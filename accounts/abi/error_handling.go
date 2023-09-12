@@ -19,6 +19,7 @@ package abi
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 )
 
@@ -43,6 +44,8 @@ func formatSliceString(kind reflect.Kind, sliceSize int) string {
 	return fmt.Sprintf("[%d]%v", sliceSize, kind)
 }
 
+var bigIntTyp = reflect.TypeOf(new(big.Int))
+
 // sliceTypeCheck checks that the given slice can by assigned to the reflection
 // type in t.
 func sliceTypeCheck(t Type, val reflect.Value) error {
@@ -61,8 +64,8 @@ func sliceTypeCheck(t Type, val reflect.Value) error {
 	}
 
 	innerTyp := val.Type().Elem()
-	if innerTyp.Kind() == reflect.Ptr {
-		// if the inner value is a pointer, dereference it
+	if innerTyp.Kind() == reflect.Ptr && innerTyp != bigIntTyp {
+		// if the inner value is a pointer and not a big int, dereference it
 		innerTyp = innerTyp.Elem()
 	}
 
