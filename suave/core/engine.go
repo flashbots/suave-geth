@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/exp/slices"
 )
 
@@ -64,8 +65,8 @@ func (e *ConfidentialStoreEngine) Stop() error {
 }
 
 type DASigner interface {
-	Sign(tx *types.Transaction, data []byte) ([]byte, error)
-	Sender(data []byte, tx *types.Transaction) (common.Address, error)
+	Sign(account common.Address, hash []byte) ([]byte, error)
+	Sender(hash []byte, signature []byte) (common.Address, error)
 }
 
 type ChainSigner interface {
@@ -134,12 +135,17 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		CreationTx:          creationTx,
 	}
 
-	bidBytes, err := json.Marshal(daBid)
+	signingAccount, err := ExecutionNodeFromTransaction(creationTx)
 	if err != nil {
-		return types.Bid{}, fmt.Errorf("confidential engine: could not marshal message for signing: %w", err)
+		return types.Bid{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
 	}
 
-	daBid.Signature, err = e.daSigner.Sign(creationTx, bidBytes)
+	bidHash, _, err := HashBid(daBid)
+	if err != nil {
+		return types.Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
+	}
+
+	daBid.Signature, err = e.daSigner.Sign(signingAccount, bidHash)
 	if err != nil {
 		return types.Bid{}, fmt.Errorf("confidential engine: could not sign initialized bid: %w", err)
 	}
@@ -165,12 +171,17 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 		Value:    value,
 	}
 
-	msgBytes, err := json.Marshal(msg)
+	msgHash, _, err := HashMessage(msg)
 	if err != nil {
-		return Bid{}, fmt.Errorf("confidential engine could not marshal message for signing: %w", err)
+		return Bid{}, fmt.Errorf("confidential engine: could not hash message for signing: %w", err)
 	}
 
-	msg.Signature, err = e.daSigner.Sign(sourceTx, msgBytes)
+	signingAccount, err := ExecutionNodeFromTransaction(sourceTx)
+	if err != nil {
+		return Bid{}, fmt.Errorf("confidential engine: could not recover execution node from source transaction: %w", err)
+	}
+
+	msg.Signature, err = e.daSigner.Sign(signingAccount, msgHash)
 	if err != nil {
 		return Bid{}, fmt.Errorf("confidential engine: could not sign message: %w", err)
 	}
@@ -204,22 +215,44 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		return fmt.Errorf("confidential engine: received bids id (%x) does not match the expected (%x)", message.Bid.Id, expectedId)
 	}
 
-	messageSigner, err := e.daSigner.Sender(message.Signature, message.SourceTx)
+	msgHash, _, err := HashMessage(message)
+	if err != nil {
+		return fmt.Errorf("confidential engine: could not hash received message: %w", err)
+	}
+	recoveredMessageSigner, err := e.daSigner.Sender(msgHash, message.Signature)
 	if err != nil {
 		return fmt.Errorf("confidential engine: incorrect message signature: %w", err)
 	}
-
-	_, err = e.daSigner.Sender(message.Bid.Signature, message.Bid.CreationTx)
+	expectedMessageSigner, err := ExecutionNodeFromTransaction(message.SourceTx)
 	if err != nil {
-		return fmt.Errorf("confidential engine: incorrect message signature: %w", err)
+		return fmt.Errorf("confidential engine: could not recover signer from message: %w", err)
+	}
+	if recoveredMessageSigner != expectedMessageSigner {
+		return fmt.Errorf("confidential engine: message signer %x, expected %x", recoveredMessageSigner, expectedMessageSigner)
 	}
 
-	if !slices.Contains(message.Bid.AllowedStores, messageSigner) {
-		return fmt.Errorf("confidential engine: message signer %x not allowed to store on bid %x", messageSigner, message.Bid.Id)
+	bidHash, _, err := HashBid(message.Bid)
+	if err != nil {
+		return fmt.Errorf("confidential engine: could not hash received bid: %w", err)
+	}
+	recoveredBidSigner, err := e.daSigner.Sender(bidHash, message.Bid.Signature)
+	if err != nil {
+		return fmt.Errorf("confidential engine: incorrect bid signature: %w", err)
+	}
+	expectedBidSigner, err := ExecutionNodeFromTransaction(message.Bid.CreationTx)
+	if err != nil {
+		return fmt.Errorf("confidential engine: could not recover signer from bid: %w", err)
+	}
+	if recoveredBidSigner != expectedBidSigner {
+		return fmt.Errorf("confidential engine: bid signer %x, expected %x", recoveredBidSigner, expectedBidSigner)
+	}
+
+	if !slices.Contains(message.Bid.AllowedStores, recoveredMessageSigner) {
+		return fmt.Errorf("confidential engine: message signer %x not allowed to store on bid %x", recoveredMessageSigner, message.Bid.Id)
 	}
 
 	if !slices.Contains(message.Bid.AllowedPeekers, message.Caller) {
-		return fmt.Errorf("confidential engine: message signer %x not allowed to store on bid %x", messageSigner, message.Bid.Id)
+		return fmt.Errorf("confidential engine: caller %x not allowed on bid %x", message.Caller, message.Bid.Id)
 	}
 
 	// TODO: move to types.Sender()
@@ -246,6 +279,35 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	return nil
 }
 
+func HashBid(bid Bid) ([]byte, []byte, error) {
+	bid.Signature = []byte{}
+
+	bidBytes, err := json.Marshal(bid)
+	if err != nil {
+		return []byte{}, []byte{}, err
+	}
+
+	return TextHash(bidBytes), bidBytes, nil
+}
+
+func HashMessage(message DAMessage) ([]byte, []byte, error) {
+	message.Signature = []byte{}
+
+	msgBytes, err := json.Marshal(message)
+	if err != nil {
+		return []byte{}, []byte{}, err
+	}
+
+	return TextHash(msgBytes), msgBytes, nil
+}
+
+func TextHash(data []byte) []byte {
+	msg := fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(data), string(data))
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write([]byte(msg))
+	return hasher.Sum(nil)
+}
+
 type MockPubSub struct{}
 
 func (MockPubSub) Start() error { return nil }
@@ -256,22 +318,12 @@ func (MockPubSub) Publish(DAMessage)                          {}
 
 type MockSigner struct{}
 
-func (MockSigner) Sign(tx *types.Transaction, data []byte) ([]byte, error) {
-	if tx == nil {
-		nilAddr := common.Address{}
-		return nilAddr.Bytes(), nil
-	}
-
-	executionNodeAddr, err := ExecutionNodeFromTransaction(tx)
-	if err != nil {
-		return nil, fmt.Errorf("mock signer: could not get execution node from source transaction: %w", err)
-	}
-
-	return executionNodeAddr.Bytes(), nil
+func (MockSigner) Sign(account common.Address, hash []byte) ([]byte, error) {
+	return account.Bytes(), nil
 }
 
-func (MockSigner) Sender(data []byte, tx *types.Transaction) (common.Address, error) {
-	return common.BytesToAddress(data[len(data)-20:]), nil
+func (MockSigner) Sender(hash []byte, signature []byte) (common.Address, error) {
+	return common.BytesToAddress(signature), nil
 }
 
 type MockChainSigner struct{}

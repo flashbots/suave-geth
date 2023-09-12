@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -253,7 +254,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suave.MockSigner{}, types.LatestSigner(chainConfig))
+	suaveDaSigner := &suave_backends.KeystoreDASigner{Keystore: keystore.NewKeyStore(stack.KeyStoreDir(), keystore.StandardScryptN, keystore.StandardScryptP)}
+
+	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 	if err != nil {
 		return nil, err
 	}

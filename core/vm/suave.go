@@ -18,11 +18,22 @@ type SuaveExecutionBackend struct {
 }
 
 func (b *SuaveExecutionBackend) Start() error {
-	return b.ConfidentialStoreEngine.Start()
+	if err := b.ConfidentialStoreEngine.Start(); err != nil {
+		return err
+	}
+
+	if err := b.MempoolBackend.Start(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *SuaveExecutionBackend) Stop() error {
-	return b.ConfidentialStoreEngine.Stop()
+	b.MempoolBackend.Stop()
+	b.ConfidentialStoreEngine.Stop()
+
+	return nil
 }
 
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {

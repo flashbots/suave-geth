@@ -41,6 +41,7 @@ type ConfidentialStoreBackend interface {
 }
 
 type MempoolBackend interface {
+	node.Lifecycle
 	SubmitBid(types.Bid) error
 	FetchBidById(BidId) (types.Bid, error)
 	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid
