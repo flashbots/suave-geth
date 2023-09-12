@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: geth android ios evm all test clean
+.PHONY: geth suave android ios evm all test clean
 
 GOBIN = ./build/bin
 GO ?= latest
@@ -12,6 +12,12 @@ geth:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+
+suave:
+	$(GORUN) build/ci.go install ./cmd/geth
+	cd $(GOBIN) && rm -f suave && ln -s geth suave
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/suave\" to launch SUAVE."
 
 all:
 	$(GORUN) build/ci.go install
