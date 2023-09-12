@@ -36,3 +36,9 @@ devtools:
 	env GOBIN= go install ./cmd/abigen
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
+
+devnet-up:
+	docker-compose -f ./suave/devenv/docker-compose.yml up -d
+
+devnet-down:
+	docker-compose -f ./suave/devenv/docker-compose.yml down
