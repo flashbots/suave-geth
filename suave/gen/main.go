@@ -282,7 +282,7 @@ func (b *SuaveRuntimeAdapter) {{.Name}}(input []byte) (res []byte, err error) {
 
 	{{ if eq (len .Output.Fields) 0 }}
 	return nil, nil
-	{{else if .Output.Plain}}
+	{{else if .Output.Packed}}
 	result = {{range .Output.Fields}}{{.Name}} {{end}}
 	return result, nil
 	{{else}}
@@ -354,7 +354,7 @@ function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal vi
 		revert PeekerReverted({{encodeAddrName .Name}}, data);
 	}
 	{{ if eq (len .Output.Fields) 0 }}
-	{{else if .Output.Plain}}
+	{{else if .Output.Packed}}
 	return data;
 	{{else}}
 	return abi.decode(data, ({{range .Output.Fields}}{{.Typ}}, {{end}}));
@@ -374,7 +374,7 @@ type functionDef struct {
 }
 
 type output struct {
-	Plain  bool
+	Packed bool
 	Fields []field
 }
 
