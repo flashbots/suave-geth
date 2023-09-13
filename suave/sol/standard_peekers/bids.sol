@@ -30,7 +30,7 @@ contract BundleBidContract is AnyBidContract {
 
 		bytes memory bundleData = this.fetchBidConfidentialBundleData();
 
-		uint64 egp = Suave.simulateBundle(bundleData);
+		(uint64 egp, ) = Suave.simulateBundle(bundleData);
 
 		Suave.Bid memory bid = Suave.newBid(decryptionCondition, bidAllowedPeekers, "default:v0:ethBundles");
 
@@ -63,7 +63,7 @@ contract MevShareBidContract is AnyBidContract {
 		bytes memory bundleData = this.fetchBidConfidentialBundleData();
 
 		// 2. sim bundle
-		uint64 egp = Suave.simulateBundle(bundleData);
+		(uint64 egp, ) = Suave.simulateBundle(bundleData);
 		
 		// 3. extract hint
 		bytes memory hint = Suave.extractHint(bundleData);
@@ -93,7 +93,7 @@ contract MevShareBidContract is AnyBidContract {
 		bytes memory matchBundleData = this.fetchBidConfidentialBundleData();
 
 		// 2. sim match alone for validity
-		uint64 egp = Suave.simulateBundle(matchBundleData);
+		(uint64 egp, ) = Suave.simulateBundle(matchBundleData);
 
 		// 3. extract hint
 		bytes memory matchHint = Suave.extractHint(matchBundleData);

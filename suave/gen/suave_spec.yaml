@@ -102,6 +102,8 @@ functions:
       fields:
         - name: output1
           type: uint64
+        - name: failed
+          type: bool
   - name: extractHint
     address: "0x0000000000000000000000000000000042100037"
     isConfidential: true

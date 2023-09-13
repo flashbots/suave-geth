@@ -498,7 +498,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			Data:           (*hexutil.Bytes)(&calldata),
 		}, "latest"))
 
-		require.Equal(t, 32, len(simResult))
+		require.Equal(t, 64, len(simResult))
 		require.Equal(t, 13, int(simResult[31]))
 	}
 

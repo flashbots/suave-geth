@@ -57,6 +57,8 @@ func (c *simulateBundle) RunConfidential(backend *SuaveExecutionBackend, input [
 	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
 }
 
+var errSimulationFailed = fmt.Errorf("failed simulation")
+
 func (c *simulateBundle) runImpl(backend *SuaveExecutionBackend, input []byte) (*big.Int, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
@@ -72,7 +74,7 @@ func (c *simulateBundle) runImpl(backend *SuaveExecutionBackend, input []byte) (
 
 	envelope, err := backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
-		return nil, err
+		return nil, errSimulationFailed
 	}
 
 	if envelope.ExecutionPayload.GasUsed == 0 {

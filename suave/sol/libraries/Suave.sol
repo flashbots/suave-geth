@@ -135,13 +135,13 @@ library Suave {
         return abi.decode(data, (Bid));
     }
 
-    function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
+    function simulateBundle(bytes memory bundleData) internal view returns (uint64, bool) {
         (bool success, bytes memory data) = SIMULATE_BUNDLE.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
         }
 
-        return abi.decode(data, (uint64));
+        return abi.decode(data, (uint64, bool));
     }
 
     function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)

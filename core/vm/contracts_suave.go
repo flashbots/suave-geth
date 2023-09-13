@@ -355,12 +355,16 @@ func (b *suaveRuntime) newBid(decryptionCondition uint64, allowedPeekers []commo
 	return *bid, nil
 }
 
-func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
+func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, bool, error) {
 	num, err := (&simulateBundle{}).runImpl(b.backend, bundleData)
 	if err != nil {
-		return 0, err
+		if err == errSimulationFailed {
+			// return failed status but not an execution error
+			return 0, true, nil
+		}
+		return 0, true, err
 	}
-	return num.Uint64(), nil
+	return num.Uint64(), false, nil
 }
 
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
