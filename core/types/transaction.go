@@ -42,12 +42,12 @@ var (
 
 // Transaction types.
 const (
-	LegacyTxType           = 0x00
-	AccessListTxType       = 0x01
-	DynamicFeeTxType       = 0x02
-	BlobTxType             = 0x03
-	OffchainTxType         = 0x42
-	OffchainExecutedTxType = 0x43
+	LegacyTxType                     = 0x00
+	AccessListTxType                 = 0x01
+	DynamicFeeTxType                 = 0x02
+	BlobTxType                       = 0x03
+	ConfidentialComputeRequestTxType = 0x42
+	SuaveTxType                      = 0x43
 )
 
 // Transaction is an Ethereum transaction.
@@ -202,12 +202,12 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner BlobTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
-	case OffchainTxType:
-		var inner OffchainTx
+	case ConfidentialComputeRequestTxType:
+		var inner ConfidentialComputeRequest
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
-	case OffchainExecutedTxType:
-		var inner OffchainExecutedTx
+	case SuaveTxType:
+		var inner SuaveTransaction
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
 	default:

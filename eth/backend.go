@@ -230,19 +230,19 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
 	cdas := suave_backends.NewLocalConfidentialStore()
-	var suaveEthBackend suave.OffchainEthBackend
+	var suaveEthBackend suave.ConfidentialEthBackend
 	if config.Suave.SuaveEthRemoteBackendEndpoint != "" {
 		suaveEthBackend = suave_backends.NewRemoteEthBackend(config.Suave.SuaveEthRemoteBackendEndpoint)
 	} else {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	offchainBackend := &vm.SuaveExecutionBackend{
+	suaveBackend := &vm.SuaveExecutionBackend{
 		ConfidentialStoreBackend: cdas,
 		MempoolBackend:           suave_backends.NewMempoolOnConfidentialStore(cdas),
-		OffchainEthBackend:       suaveEthBackend,
+		ConfidentialEthBackend:   suaveEthBackend,
 	}
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, offchainBackend}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveBackend}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}

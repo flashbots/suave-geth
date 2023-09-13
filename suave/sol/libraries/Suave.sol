@@ -4,6 +4,32 @@ library Suave {
     error PeekerReverted(address, bytes);
 
     type BidId is bytes16;
+    address public constant IS_CONFIDENTIAL_ADDR =
+        0x0000000000000000000000000000000042010000;
+    address public constant CONFIDENTIAL_INPUTS =
+        0x0000000000000000000000000000000042010001;
+
+
+    address public constant CONFIDENTIAL_STORE =
+        0x0000000000000000000000000000000042020000;
+    address public constant CONFIDENTIAL_RETRIEVE =
+        0x0000000000000000000000000000000042020001;
+
+    address public constant NEW_BID =
+        0x0000000000000000000000000000000042030000;
+    address public constant FETCH_BIDS =
+        0x0000000000000000000000000000000042030001;
+
+    address public constant SIMULATE_BUNDLE_PEEKER =
+        0x0000000000000000000000000000000042100000;
+    address public constant EXTRACT_HINT =
+        0x0000000000000000000000000000000042100037;
+    address public constant BUILD_ETH_BLOCK_PEEKER =
+        0x0000000000000000000000000000000042100001;
+    address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY =
+        0x0000000000000000000000000000000042100002;
+
+	type BidId is bytes16;
 
     struct Bid {
         BidId id;
@@ -51,16 +77,16 @@ library Suave {
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
     // Returns whether execution is off- or on-chain
-    function isOffchain() internal view returns (bool b) {
-        (bool success, bytes memory isOffchainBytes) = IS_OFFCHAIN_ADDR.staticcall("");
+    function isConfidential() internal view returns (bool b) {
+        (bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
         if (!success) {
-            revert PeekerReverted(IS_OFFCHAIN_ADDR, isOffchainBytes);
+            revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
         }
         assembly {
             // Load the length of data (first 32 bytes)
-            let len := mload(isOffchainBytes)
+            let len := mload(isConfidentialBytes)
             // Load the data after 32 bytes, so add 0x20
-            b := mload(add(isOffchainBytes, 0x20))
+            b := mload(add(isConfidentialBytes, 0x20))
         }
     }
 
@@ -104,6 +130,8 @@ library Suave {
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
         require(isOffchain());
+		require(isConfidential());
+
         (bool success, bytes memory data) = EXTRACT_HINT.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(EXTRACT_HINT, data);
@@ -120,6 +148,8 @@ library Suave {
 
         return abi.decode(data, (Bid[]));
     }
+    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid) internal view returns (bool, bytes memory) {
+		require(isConfidential());
 
     function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, string memory bidType)
         internal

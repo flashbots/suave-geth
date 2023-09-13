@@ -49,12 +49,12 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
-	offchainBackend     *vm.SuaveExecutionBackend
+	suaveBackend        *vm.SuaveExecutionBackend
 }
 
-func (b *EthAPIBackend) OffchainBackend() *vm.SuaveExecutionBackend {
+func (b *EthAPIBackend) SuaveBackend() *vm.SuaveExecutionBackend {
 	// For testing purposes
-	return b.offchainBackend
+	return b.suaveBackend
 }
 
 // ChainConfig returns the active chain configuration.
@@ -265,8 +265,8 @@ func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *st
 		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
 	}
 
-	if vmConfig.IsOffchain {
-		return vm.NewOffchainEVM(b.offchainBackend, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+	if vmConfig.IsConfidential {
+		return vm.NewConfidentialEVM(b.suaveBackend, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
 	} else {
 		return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
 	}

@@ -57,7 +57,7 @@ func cmdSendMevShareBundle() {
 	genesis := core.DefaultSuaveGenesisBlock()
 
 	goerliSigner := types.LatestSigner(core.DefaultGoerliGenesisBlock().Config)
-	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+	suaveSigner := types.NewSuaveSigner(genesis.Config.ChainID)
 
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlInfo, log.StreamHandler(os.Stdout, log.TerminalFormat(true))))
 
@@ -126,13 +126,13 @@ func sendMevShareBidTxs(
 		txJson, _ := mevShareTx.MarshalJSON()
 		log.Info("sendMevShareBidTx", "mevShareTx", string(txJson))
 
-		var offchainTxHash common.Hash
-		err = suaveClient.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(mevShareTxBytes), hexutil.Encode(confidentialDataBytes))
+		var confidentialRequestTxHash common.Hash
+		err = suaveClient.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(mevShareTxBytes), hexutil.Encode(confidentialDataBytes))
 		if err != nil {
 			return mevShareTxHashes, err
 		}
 
-		mevShareTxHashes = append(mevShareTxHashes, mevShareBidData{blockNumber: blockNum, txHash: offchainTxHash})
+		mevShareTxHashes = append(mevShareTxHashes, mevShareBidData{blockNumber: blockNum, txHash: confidentialRequestTxHash})
 	}
 
 	return mevShareTxHashes, nil
@@ -184,7 +184,7 @@ func prepareMevShareBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, e
 		Data:      calldata,
 	}
 
-	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+	confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: executionNodeAddr,
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), suaveSigner, privKey)
@@ -192,10 +192,10 @@ func prepareMevShareBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, e
 		return nil, nil, err
 	}
 
-	offchainTxBytes, err := offchainTx.MarshalBinary()
+	confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return offchainTx, offchainTxBytes, nil
+	return confidentialRequestTx, confidentialRequestTxBytes, nil
 }

@@ -66,15 +66,14 @@ For example:
 
 To get a better understanding of how the MEVM works, let's delve into the deployment of a simple version of `[mev-share](https://github.com/flashbots/mev-share)`, a protocol for orderflow auctions, defined via smart contract on SUAVE. Our journey below will guide you through the steps of deploying simple mev-share and block builder contracts, interacting with them, and ultimately seeing a block land onchain.
 
-- [Intro](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#Intro)
-- [Prerequisites 🛠](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#Prerequisites-%F0%9F%9B%A0)
-- [Walkthrough Overview 🚀](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#Walkthrough-Overview-%F0%9F%9A%80)
-    - [1. Deploy Simple MEV-Share Contract 📜](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#1-Deploy-Simple-MEV-Share-Contract-%F0%9F%93%9C)
-    - [2. Deploy Block Builder Contract 📜](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#2-Deploy-Block-Builder-Contract-%F0%9F%93%9C)
-    - [3. Send Mevshare Bundles 📨](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#3-Send-Mevshare-Bundles-%F0%9F%93%A8)
-    - [4. Send Mevshare Matches 🎯](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#4-Send-Mevshare-Matches-%F0%9F%8E%AF)
-    - [5. Build Block and Relay 🧱](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#5-Build-Block-and-Relay-%F0%9F%A7%B1)
-- [Conclusion 🎓](https://hackmd.io/5BMLvHO8RnaUUN8Tv165XA#Conclusion-%F0%9F%8E%93)
+- [Intro](#simple-mev-share-walkthrough)
+- [Prerequisites 🛠](#prerequisites-)
+- [Walkthrough Overview 🚀](#walkthrough-overview-)
+    - [1. Deploy Simple MEV-Share Contract 📜](#1-deploy-simple-mev-share-contract-)
+    - [2. Deploy Block Builder Contract 📜](#2-deploy-block-builder-contract-)
+    - [3. Send Mevshare Bundles 📨](#3-send-mevshare-bundles-)
+    - [4. Send Mevshare Matches 🎯](#4-send-mevshare-matches-)
+    - [5. Build Block and Relay 🧱](#5-build-block-and-relay-)
 
 ## Prerequisites 🛠
 
@@ -252,7 +251,7 @@ func sendMevShareBidTx(
 		Data:      calldata,
 	}
 
-	mevShareTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+	mevShareTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequestTx{
 		ExecutionNode: executionNodeAddr,
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), suaveSigner, privKey)
@@ -265,9 +264,9 @@ func sendMevShareBidTx(
 		return nil, nil, err
 	}
 
-	var offchainTxHash common.Hash
+	var confidentialRequestTxHash common.Hash
 	err = suaveClient.Call(
-            &offchainTxHash,
+            &confidentialRequestTxHash,
             "eth_sendRawTransaction",
             hexutil.Encode(mevShareTxBytes),
             hexutil.Encode(confidentialDataBytes)
@@ -276,14 +275,14 @@ func sendMevShareBidTx(
 		return mevShareBidData{}, err
 	}
 
-	mevShareTxHash= mevShareBidData{blockNumber: blockNum, txHash: offchainTxHash}
+	mevShareTxHash= mevShareBidData{blockNumber: blockNum, txHash: confidentialRequestTxHash}
 
 	return mevShareTxHash, nil
 }
 
 ```
 
-A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguement are to utilize a new transaction primitive `types.OffchainTx`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#off-chain-transactions).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
+A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguement are to utilize a new transaction primitive `types.ConfidentialComputeRequest`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#confidential-compute-requests).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
 
 ### 4. Send Mevshare Matches 🎯
 

@@ -96,7 +96,7 @@
     },
     {
       "inputs": [],
-      "name": "IS_OFFCHAIN_ADDR",
+      "name": "IS_CONFIDENTIAL_ADDR",
       "outputs": [
         {
           "internalType": "address",

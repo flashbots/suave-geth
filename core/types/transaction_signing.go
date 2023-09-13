@@ -43,7 +43,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int, blockTime uint
 	case config.IsCancun(blockNumber, blockTime):
 		signer = NewCancunSigner(config.ChainID)
 	case config.IsSuave(blockNumber):
-		signer = NewOffchainSigner(config.ChainID)
+		signer = NewSuaveSigner(config.ChainID)
 	case config.IsLondon(blockNumber):
 		signer = NewLondonSigner(config.ChainID)
 	case config.IsBerlin(blockNumber):
@@ -71,7 +71,7 @@ func LatestSigner(config *params.ChainConfig) Signer {
 			return NewCancunSigner(config.ChainID)
 		}
 		if config.SuaveBlock != nil {
-			return NewOffchainSigner(config.ChainID)
+			return NewSuaveSigner(config.ChainID)
 		}
 		if config.LondonBlock != nil {
 			return NewLondonSigner(config.ChainID)
@@ -97,7 +97,7 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 	if chainID == nil {
 		return HomesteadSigner{}
 	}
-	return NewOffchainSigner(chainID)
+	return NewSuaveSigner(chainID)
 }
 
 // SignTx signs the transaction using the given signer and private key.
@@ -252,26 +252,26 @@ func (s cancunSigner) Hash(tx *Transaction) common.Hash {
 
 type suaveSigner struct{ londonSigner }
 
-// NewOffchainSigner returns a signer that accepts
-// - SUAVE offchain transactions
+// NewSuaveSigner returns a signer that accepts
+// - SUAVE compute requests and suave tsx
 // - EIP-1559 dynamic fee transactions
 // - EIP-2930 access list transactions,
 // - EIP-155 replay protected transactions, and
 // - legacy Homestead transactions.
-func NewOffchainSigner(chainId *big.Int) Signer {
+func NewSuaveSigner(chainId *big.Int) Signer {
 	return suaveSigner{londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}}
 }
 
-// For offchain transaction, sender refers to the sender of the original transaction
+// For confidential transaction, sender refers to the sender of the original transaction
 func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != OffchainTxType && tx.Type() != OffchainExecutedTxType {
+	if tx.Type() != ConfidentialComputeRequestTxType && tx.Type() != SuaveTxType {
 		return s.londonSigner.Sender(tx)
 	}
 
-	var offchainTx *Transaction = tx
-	if tx.Type() == OffchainExecutedTxType { // Verify ExecutionNode's signature
-		inner := tx.inner.(*OffchainExecutedTx)
-		offchainTx = NewTx(&OffchainTx{ExecutionNode: inner.ExecutionNode, Wrapped: inner.Wrapped, ChainID: inner.ChainID})
+	var confidentialComputeRequestTx *Transaction = tx
+	if tx.Type() == SuaveTxType { // Verify ExecutionNode's signature
+		inner := tx.inner.(*SuaveTransaction)
+		confidentialComputeRequestTx = NewTx(&ConfidentialComputeRequest{ExecutionNode: inner.ExecutionNode, Wrapped: inner.ConfidentialComputeRequest, ChainID: inner.ChainID})
 
 		V, R, S := tx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
@@ -286,20 +286,20 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 		}
 
 		if recovered != inner.ExecutionNode {
-			return common.Address{}, fmt.Errorf("offchain tx %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.ExecutionNode.Hex())
+			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.ExecutionNode.Hex())
 		}
 	}
 
 	{ // Verify wrapped tx's signature
-		V, R, S := offchainTx.RawSignatureValues()
-		// Offchain txs are defined to use 0 and 1 as their recovery
+		V, R, S := confidentialComputeRequestTx.RawSignatureValues()
+		// compute requests are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V = new(big.Int).Add(V, big.NewInt(27))
-		if offchainTx.ChainId().Cmp(s.chainId) != 0 {
-			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, offchainTx.ChainId(), s.chainId)
+		if confidentialComputeRequestTx.ChainId().Cmp(s.chainId) != 0 {
+			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, confidentialComputeRequestTx.ChainId(), s.chainId)
 		}
 
-		addr, err := recoverPlain(s.Hash(offchainTx), R, S, V, true)
+		addr, err := recoverPlain(s.Hash(confidentialComputeRequestTx), R, S, V, true)
 		if err != nil {
 			return common.Address{}, err
 		}
@@ -314,17 +314,17 @@ func (s suaveSigner) Equal(s2 Signer) bool {
 }
 
 func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	txdataOffchain, ok := tx.inner.(*OffchainTx)
+	txdataConfidential, ok := tx.inner.(*ConfidentialComputeRequest)
 	if ok {
-		if txdataOffchain.ChainID.Sign() != 0 && txdataOffchain.ChainID.Cmp(s.chainId) != 0 {
-			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdataOffchain.ChainID, s.chainId)
+		if txdataConfidential.ChainID.Sign() != 0 && txdataConfidential.ChainID.Cmp(s.chainId) != 0 {
+			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdataConfidential.ChainID, s.chainId)
 		}
 		R, S, _ = decodeSignature(sig)
 		V = big.NewInt(int64(sig[64]))
 		return R, S, V, nil
 	}
 
-	txdataExecuted, ok := tx.inner.(*OffchainExecutedTx)
+	txdataExecuted, ok := tx.inner.(*SuaveTransaction)
 	if ok {
 		if txdataExecuted.ChainID.Sign() != 0 && txdataExecuted.ChainID.Cmp(s.chainId) != 0 {
 			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdataExecuted.ChainID, s.chainId)
@@ -341,20 +341,20 @@ func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.
 // It does not uniquely identify the transaction.
 func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 	switch tx.Type() {
-	case OffchainTxType:
+	case ConfidentialComputeRequestTxType:
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
-				tx.inner.(*OffchainTx).ExecutionNode,
-				s.Hash(&tx.inner.(*OffchainTx).Wrapped),
+				tx.inner.(*ConfidentialComputeRequest).ExecutionNode,
+				s.Hash(&tx.inner.(*ConfidentialComputeRequest).Wrapped),
 			})
-	case OffchainExecutedTxType:
+	case SuaveTxType:
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
-				tx.inner.(*OffchainExecutedTx).ExecutionNode,
-				s.Hash(&tx.inner.(*OffchainExecutedTx).Wrapped),
-				tx.inner.(*OffchainExecutedTx).OffchainResult,
+				tx.inner.(*SuaveTransaction).ExecutionNode,
+				s.Hash(&tx.inner.(*SuaveTransaction).ConfidentialComputeRequest),
+				tx.inner.(*SuaveTransaction).ConfidentialComputeResult,
 			})
 	default:
 		return s.londonSigner.Hash(tx)
