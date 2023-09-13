@@ -57,7 +57,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		Data:     calldata,
 	}
 
-	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: c.client.execNode,
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), signer, c.client.key)
@@ -65,13 +65,13 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
-	offchainTxBytes, err := offchainTx.MarshalBinary()
+	computeRequestBytes, err := computeRequest.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
 	var hash common.Hash
-	if err = c.client.rpc.Call(&hash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes)); err != nil {
+	if err = c.client.rpc.Call(&hash, "eth_sendRawTransaction", hexutil.Encode(computeRequestBytes), hexutil.Encode(confidentialDataBytes)); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +111,7 @@ func (c *Client) getSigner() (types.Signer, error) {
 		return nil, err
 	}
 
-	signer := types.NewOffchainSigner(chainID)
+	signer := types.NewSuaveSigner(chainID)
 	return signer, nil
 }
 

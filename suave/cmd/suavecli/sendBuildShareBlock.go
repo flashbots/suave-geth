@@ -74,7 +74,7 @@ func cmdSendBuildShareBlock() {
 	RequireNoErrorf(err, "could not connect to goerli rpc: %v", err)
 	genesis := core.DefaultSuaveGenesisBlock()
 
-	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+	suaveSigner := types.NewSuaveSigner(genesis.Config.ChainID)
 
 	payloadAttrC := make(chan PayloadAttributesEvent)
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -184,19 +184,19 @@ func sendBuildShareBlockTx(
 		Data:      calldata,
 	}
 
-	offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+	confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: executionNodeAddress,
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), suaveSigner, privKey)
-	RequireNoErrorf(err, "could not sign offchainTx: %v", err)
+	RequireNoErrorf(err, "could not sign confidentialRequestTx: %v", err)
 
-	offchainTxBytes, err := offchainTx.MarshalBinary()
+	confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	var offchainTxHash common.Hash
-	err = suaveClient.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes))
+	var confidentialRequestTxHash common.Hash
+	err = suaveClient.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes))
 
-	return &offchainTxHash, err
+	return &confidentialRequestTxHash, err
 }

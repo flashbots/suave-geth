@@ -10,26 +10,26 @@ import (
 type SuaveExecutionBackend struct {
 	ConfidentialStoreBackend suave.ConfidentialStoreBackend
 	MempoolBackend           suave.MempoolBackend
-	OffchainEthBackend       suave.OffchainEthBackend
+	ConfidentialEthBackend   suave.ConfidentialEthBackend
 	confidentialInputs       []byte
 	callerStack              []*common.Address
 }
 
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
-	if !evm.Config.IsOffchain {
+	if !evm.Config.IsConfidential {
 		return nil
 	}
 
 	return &SuaveExecutionBackend{
 		ConfidentialStoreBackend: evm.suaveExecutionBackend.ConfidentialStoreBackend,
 		MempoolBackend:           evm.suaveExecutionBackend.MempoolBackend,
-		OffchainEthBackend:       evm.suaveExecutionBackend.OffchainEthBackend,
+		ConfidentialEthBackend:   evm.suaveExecutionBackend.ConfidentialEthBackend,
 		confidentialInputs:       evm.suaveExecutionBackend.confidentialInputs,
 		callerStack:              append(evm.suaveExecutionBackend.callerStack, &caller),
 	}
 }
 
-// Implements PrecompiledContract for Offchain smart contracts
+// Implements PrecompiledContract for confidential smart contracts
 type SuavePrecompiledContractWrapper struct {
 	addr     common.Address
 	backend  *SuaveExecutionBackend
@@ -52,11 +52,11 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	}
 
 	switch p.addr {
-	case isOffchainAddress:
-		return (&isOffchainPrecompile{}).RunOffchain(p.backend, input)
+	case isConfidentialAddress:
+		return (&isConfidentialPrecompile{}).RunConfidential(p.backend, input)
 
 	case confidentialInputsAddress:
-		return (&confidentialInputsPrecompile{}).RunOffchain(p.backend, input)
+		return (&confidentialInputsPrecompile{}).RunConfidential(p.backend, input)
 
 	case confStoreStoreAddress:
 		return stub.confidentialStoreStore(input)

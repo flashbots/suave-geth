@@ -65,7 +65,7 @@ func main() {
 }
 
 var (
-	isOffchainAddress = common.HexToAddress("0x42010000")
+	isConfidentialAddress = common.HexToAddress("0x42010000")
 
 	fetchBidsAddress    = common.HexToAddress("0x42030001")
 	newBundleBidAddress = common.HexToAddress("0x42200000")
@@ -152,7 +152,7 @@ func setUpSuaveAndGoerli(privKeyHex *string, executionNodeAddressHex *string, su
 	RequireNoErrorf(err, "could not connect to goerli rpc: %v", err)
 
 	genesis := core.DefaultSuaveGenesisBlock()
-	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+	suaveSigner := types.NewSuaveSigner(genesis.Config.ChainID)
 
 	goerliSigner := types.LatestSigner(core.DefaultGoerliGenesisBlock().Config)
 

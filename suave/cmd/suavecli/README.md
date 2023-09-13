@@ -251,7 +251,7 @@ func sendMevShareBidTx(
 		Data:      calldata,
 	}
 
-	mevShareTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+	mevShareTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequestTx{
 		ExecutionNode: executionNodeAddr,
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), suaveSigner, privKey)
@@ -264,9 +264,9 @@ func sendMevShareBidTx(
 		return nil, nil, err
 	}
 
-	var offchainTxHash common.Hash
+	var confidentialRequestTxHash common.Hash
 	err = suaveClient.Call(
-            &offchainTxHash,
+            &confidentialRequestTxHash,
             "eth_sendRawTransaction",
             hexutil.Encode(mevShareTxBytes),
             hexutil.Encode(confidentialDataBytes)
@@ -275,14 +275,14 @@ func sendMevShareBidTx(
 		return mevShareBidData{}, err
 	}
 
-	mevShareTxHash= mevShareBidData{blockNumber: blockNum, txHash: offchainTxHash}
+	mevShareTxHash= mevShareBidData{blockNumber: blockNum, txHash: confidentialRequestTxHash}
 
 	return mevShareTxHash, nil
 }
 
 ```
 
-A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguement are to utilize a new transaction primitive `types.OffchainTx`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#off-chain-transactions).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
+A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguement are to utilize a new transaction primitive `types.ConfidentialComputeRequest`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#confidential-compute-requests).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
 
 ### 4. Send Mevshare Matches 🎯
 

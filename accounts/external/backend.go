@@ -198,8 +198,8 @@ type signTransactionResult struct {
 // by the external signer. For non-legacy transactions, the chain ID of the
 // transaction overrides the chainID parameter.
 func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
-	if tx.Type() == types.OffchainTxType || tx.Type() == types.OffchainExecutedTxType {
-		return nil, errors.New("off-chain not supported by external signers")
+	if tx.Type() == types.ConfidentialComputeRequestTxType || tx.Type() == types.SuaveTxType {
+		return nil, errors.New("suave txs not supported by external signers")
 	}
 
 	data := hexutil.Bytes(tx.Data())

@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	isOffchainAddress               = common.HexToAddress("0x42010000")
-	errIsOffchainInvalidInputLength = errors.New("invalid input length")
+	isConfidentialAddress               = common.HexToAddress("0x42010000")
+	errIsConfidentialInvalidInputLength = errors.New("invalid input length")
 
 	confidentialInputsAddress = common.HexToAddress("0x42010001")
 
@@ -29,15 +29,15 @@ var (
 
 /* General utility precompiles */
 
-type isOffchainPrecompile struct{}
+type isConfidentialPrecompile struct{}
 
-func (c *isOffchainPrecompile) RequiredGas(input []byte) uint64 {
+func (c *isConfidentialPrecompile) RequiredGas(input []byte) uint64 {
 	return 0 // incurs only the call cost (100)
 }
 
-func (c *isOffchainPrecompile) Run(input []byte) ([]byte, error) {
+func (c *isConfidentialPrecompile) Run(input []byte) ([]byte, error) {
 	if len(input) == 1 {
-		// The precompile was called *directly* off-chain, and the result was cached - return 1
+		// The precompile was called *directly* confidentially, and the result was cached - return 1
 		if input[0] == 0x01 {
 			return []byte{0x01}, nil
 		} else {
@@ -46,15 +46,15 @@ func (c *isOffchainPrecompile) Run(input []byte) ([]byte, error) {
 	}
 
 	if len(input) > 1 {
-		return nil, errIsOffchainInvalidInputLength
+		return nil, errIsConfidentialInvalidInputLength
 	}
 
 	return []byte{0x00}, nil
 }
 
-func (c *isOffchainPrecompile) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *isConfidentialPrecompile) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(input) != 0 {
-		return nil, errIsOffchainInvalidInputLength
+		return nil, errIsConfidentialInvalidInputLength
 	}
 	return []byte{0x01}, nil
 }
@@ -69,7 +69,7 @@ func (c *confidentialInputsPrecompile) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confidentialInputsPrecompile) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *confidentialInputsPrecompile) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	return backend.confidentialInputs, nil
 }
 
@@ -93,7 +93,7 @@ func (c *confStoreStore) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *confStoreStore) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(backend.callerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this context")
 	}
@@ -150,7 +150,7 @@ func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *confStoreRetrieve) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(backend.callerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this context")
 	}
@@ -207,7 +207,7 @@ func (c *newBid) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *newBid) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -264,7 +264,7 @@ func (c *fetchBids) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *fetchBids) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *fetchBids) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err

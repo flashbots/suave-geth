@@ -30,24 +30,24 @@ import (
 type txJSON struct {
 	Type hexutil.Uint64 `json:"type"`
 
-	ChainID              *hexutil.Big    `json:"chainId,omitempty"`
-	Nonce                *hexutil.Uint64 `json:"nonce"`
-	To                   *common.Address `json:"to"`
-	Gas                  *hexutil.Uint64 `json:"gas"`
-	GasPrice             *hexutil.Big    `json:"gasPrice"`
-	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
-	MaxFeePerDataGas     *hexutil.Big    `json:"maxFeePerDataGas,omitempty"`
-	Value                *hexutil.Big    `json:"value"`
-	Input                *hexutil.Bytes  `json:"input"`
-	AccessList           *AccessList     `json:"accessList,omitempty"`
-	BlobVersionedHashes  []common.Hash   `json:"blobVersionedHashes,omitempty"`
-	ExecutionNode        *common.Address `json:"executionNode,omitempty"`
-	Wrapped              *hexutil.Bytes  `json:"wrapped,omitempty"`
-	OffchainResult       *hexutil.Bytes  `json:"offchainResult,omitempty"`
-	V                    *hexutil.Big    `json:"v"`
-	R                    *hexutil.Big    `json:"r"`
-	S                    *hexutil.Big    `json:"s"`
+	ChainID                   *hexutil.Big    `json:"chainId,omitempty"`
+	Nonce                     *hexutil.Uint64 `json:"nonce"`
+	To                        *common.Address `json:"to"`
+	Gas                       *hexutil.Uint64 `json:"gas"`
+	GasPrice                  *hexutil.Big    `json:"gasPrice"`
+	MaxPriorityFeePerGas      *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas              *hexutil.Big    `json:"maxFeePerGas"`
+	MaxFeePerDataGas          *hexutil.Big    `json:"maxFeePerDataGas,omitempty"`
+	Value                     *hexutil.Big    `json:"value"`
+	Input                     *hexutil.Bytes  `json:"input"`
+	AccessList                *AccessList     `json:"accessList,omitempty"`
+	BlobVersionedHashes       []common.Hash   `json:"blobVersionedHashes,omitempty"`
+	ExecutionNode             *common.Address `json:"executionNode,omitempty"`
+	Wrapped                   *hexutil.Bytes  `json:"wrapped,omitempty"`
+	ConfidentialComputeResult *hexutil.Bytes  `json:"confidentialComputeResult,omitempty"`
+	V                         *hexutil.Big    `json:"v"`
+	R                         *hexutil.Big    `json:"r"`
+	S                         *hexutil.Big    `json:"s"`
 
 	// Only used for encoding:
 	Hash common.Hash `json:"hash"`
@@ -116,7 +116,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.R = (*hexutil.Big)(itx.R.ToBig())
 		enc.S = (*hexutil.Big)(itx.S.ToBig())
 
-	case *OffchainTx:
+	case *ConfidentialComputeRequest:
 		enc.ExecutionNode = &itx.ExecutionNode
 
 		wrapped, err := itx.Wrapped.MarshalJSON()
@@ -127,10 +127,10 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Wrapped = (*hexutil.Bytes)(&wrapped)
 		enc.ChainID = (*hexutil.Big)(itx.ChainID)
 
-	case *OffchainExecutedTx:
+	case *SuaveTransaction:
 		enc.ExecutionNode = &itx.ExecutionNode
 
-		wrapped, err := itx.Wrapped.MarshalJSON()
+		wrapped, err := itx.ConfidentialComputeRequest.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +138,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Wrapped = (*hexutil.Bytes)(&wrapped)
 
 		enc.ChainID = (*hexutil.Big)(itx.ChainID)
-		enc.OffchainResult = (*hexutil.Bytes)(&itx.OffchainResult)
+		enc.ConfidentialComputeResult = (*hexutil.Bytes)(&itx.ConfidentialComputeResult)
 		enc.V = (*hexutil.Big)(itx.V)
 		enc.R = (*hexutil.Big)(itx.R)
 		enc.S = (*hexutil.Big)(itx.S)
@@ -377,8 +377,8 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			}
 		}
 
-	case OffchainTxType:
-		var itx OffchainTx
+	case ConfidentialComputeRequestTxType:
+		var itx ConfidentialComputeRequest
 		inner = &itx
 
 		if dec.ExecutionNode == nil {
@@ -404,8 +404,8 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		}
 		itx.ChainID = (*big.Int)(dec.ChainID)
 
-	case OffchainExecutedTxType:
-		var itx OffchainExecutedTx
+	case SuaveTxType:
+		var itx SuaveTransaction
 		inner = &itx
 
 		if dec.ExecutionNode == nil {
@@ -424,10 +424,10 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			return err
 		}
 
-		itx.Wrapped = wrappedTx
+		itx.ConfidentialComputeRequest = wrappedTx
 
-		if dec.OffchainResult != nil {
-			itx.OffchainResult = ([]byte)(*dec.OffchainResult)
+		if dec.ConfidentialComputeResult != nil {
+			itx.ConfidentialComputeResult = ([]byte)(*dec.ConfidentialComputeResult)
 		}
 
 		if dec.ChainID == nil {

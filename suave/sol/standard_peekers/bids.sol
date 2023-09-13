@@ -11,7 +11,7 @@ contract AnyBidContract {
 	);
 
 	function fetchBidConfidentialBundleData() public returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 		
 		bytes memory confidentialInputs = Suave.confidentialInputs();
 		return abi.decode(confidentialInputs, (bytes));
@@ -26,7 +26,7 @@ contract AnyBidContract {
 contract BundleBidContract is AnyBidContract {
 
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers) external payable returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 
 		bytes memory bundleData = this.fetchBidConfidentialBundleData();
 
@@ -59,8 +59,8 @@ contract MevShareBidContract is AnyBidContract {
 	);
 
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers) external payable returns (bytes memory) {
-		// 0. check offchain execution
-		require(Suave.isOffchain());
+		// 0. check confidential execution
+		require(Suave.isConfidential());
 
 		// 1. fetch bundle data
 		bytes memory bundleData = this.fetchBidConfidentialBundleData();
@@ -94,7 +94,7 @@ contract MevShareBidContract is AnyBidContract {
 		// WARNING : this function will copy the original mev share bid
 		// into a new key with potentially different permsissions
 		
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 		// 1. fetch confidential data
 		bytes memory matchBundleData = this.fetchBidConfidentialBundleData();
 
@@ -138,7 +138,7 @@ contract EthBlockBidContract is AnyBidContract {
 	);
 	
 	function buildMevShare(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 
 		Suave.Bid[] memory allShareMatchBids = Suave.fetchBids(blockHeight, "mevshare:v0:matchBids");
 		Suave.Bid[] memory allShareUserBids = Suave.fetchBids(blockHeight, "mevshare:v0:unmatchedBundles");
@@ -190,7 +190,7 @@ contract EthBlockBidContract is AnyBidContract {
 	}
 
 	function buildFromPool(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 
 		Suave.Bid[] memory allBids = Suave.fetchBids(blockHeight, "default:v0:ethBundles");
 		if (allBids.length == 0) {
@@ -225,7 +225,7 @@ contract EthBlockBidContract is AnyBidContract {
 	}
 
 	function buildAndEmit(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.BidId[] memory bids, string memory namespace) public virtual returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 
 		(Suave.Bid memory blockBid, bytes memory builderBid) = this.doBuild(blockArgs, blockHeight, bids, namespace);
 
@@ -255,7 +255,7 @@ contract EthBlockBidContract is AnyBidContract {
 	}
 
 	function unlock(Suave.BidId bidId, bytes memory signedBlindedHeader) public view returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 
 		// TODO: verify the header is correct
 		// TODO: incorporate protocol name
@@ -272,7 +272,7 @@ contract EthBlockBidSenderContract is EthBlockBidContract {
 	}
 
 	function buildAndEmit(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.BidId[] memory bids, string memory namespace) public virtual override returns (bytes memory) {
-		require(Suave.isOffchain());
+		require(Suave.isConfidential());
 
 		(Suave.Bid memory blockBid, bytes memory builderBid) = this.doBuild(blockArgs, blockHeight, bids, namespace);
 		(bool ok, bytes memory err) = Suave.submitEthBlockBidToRelay(boostRelayUrl, builderBid);
