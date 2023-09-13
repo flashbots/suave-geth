@@ -1,35 +1,10 @@
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
 library Suave {
     error PeekerReverted(address, bytes);
 
     type BidId is bytes16;
-    address public constant IS_CONFIDENTIAL_ADDR =
-        0x0000000000000000000000000000000042010000;
-    address public constant CONFIDENTIAL_INPUTS =
-        0x0000000000000000000000000000000042010001;
-
-
-    address public constant CONFIDENTIAL_STORE =
-        0x0000000000000000000000000000000042020000;
-    address public constant CONFIDENTIAL_RETRIEVE =
-        0x0000000000000000000000000000000042020001;
-
-    address public constant NEW_BID =
-        0x0000000000000000000000000000000042030000;
-    address public constant FETCH_BIDS =
-        0x0000000000000000000000000000000042030001;
-
-    address public constant SIMULATE_BUNDLE_PEEKER =
-        0x0000000000000000000000000000000042100000;
-    address public constant EXTRACT_HINT =
-        0x0000000000000000000000000000000042100037;
-    address public constant BUILD_ETH_BLOCK_PEEKER =
-        0x0000000000000000000000000000000042100001;
-    address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY =
-        0x0000000000000000000000000000000042100002;
-
-	type BidId is bytes16;
 
     struct Bid {
         BidId id;
@@ -56,7 +31,7 @@ library Suave {
         uint64 amount;
     }
 
-    address public constant IS_OFFCHAIN_ADDR = 0x0000000000000000000000000000000042010000;
+    address public constant IS_CONFIDENTIAL_ADDR = 0x0000000000000000000000000000000042010000;
 
     address public constant BUILD_ETH_BLOCK = 0x0000000000000000000000000000000042100001;
 
@@ -121,17 +96,15 @@ library Suave {
         return data;
     }
 
-    function confidentialStoreStore(BidId bidId, string memory key, bytes memory data) internal view {
-        (bool success, bytes memory data) = CONFIDENTIAL_STORE_STORE.staticcall(abi.encode(bidId, key, data));
+    function confidentialStoreStore(BidId bidId, string memory key, bytes memory data1) internal view {
+        (bool success, bytes memory data) = CONFIDENTIAL_STORE_STORE.staticcall(abi.encode(bidId, key, data1));
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_STORE_STORE, data);
         }
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
-        require(isOffchain());
-		require(isConfidential());
-
+        require(isConfidential());
         (bool success, bytes memory data) = EXTRACT_HINT.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(EXTRACT_HINT, data);
@@ -148,8 +121,6 @@ library Suave {
 
         return abi.decode(data, (Bid[]));
     }
-    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid) internal view returns (bool, bytes memory) {
-		require(isConfidential());
 
     function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, string memory bidType)
         internal
@@ -178,7 +149,7 @@ library Suave {
         view
         returns (bytes memory)
     {
-        require(isOffchain());
+        require(isConfidential());
         (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_BID_TO_RELAY.staticcall(abi.encode(relayUrl, builderBid));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BLOCK_BID_TO_RELAY, data);

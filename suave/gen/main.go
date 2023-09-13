@@ -310,7 +310,8 @@ var SuaveMethods = map[string]common.Address{
 {{end}}}
 `
 
-var suaveLibTemplate = `pragma solidity ^0.8.8;
+var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.8;
 
 library Suave {
     error PeekerReverted(address, bytes);
@@ -325,7 +326,7 @@ struct {{.Name}} {
 	{{end}} }
 {{end}}
 
-address public constant IS_OFFCHAIN_ADDR =
+address public constant IS_CONFIDENTIAL_ADDR =
 0x0000000000000000000000000000000042010000;
 {{range .Functions}}
 address public constant {{encodeAddrName .Name}} =
@@ -333,22 +334,22 @@ address public constant {{encodeAddrName .Name}} =
 {{end}}
 
 // Returns whether execution is off- or on-chain
-function isOffchain() internal view returns (bool b) {
-	(bool success, bytes memory isOffchainBytes) = IS_OFFCHAIN_ADDR.staticcall("");
+function isConfidential() internal view returns (bool b) {
+	(bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
 	if (!success) {
-		revert PeekerReverted(IS_OFFCHAIN_ADDR, isOffchainBytes);
+		revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
 	}
 	assembly {
 		// Load the length of data (first 32 bytes)
-		let len := mload(isOffchainBytes)
+		let len := mload(isConfidentialBytes)
 		// Load the data after 32 bytes, so add 0x20
-		b := mload(add(isOffchainBytes, 0x20))
+		b := mload(add(isConfidentialBytes, 0x20))
 	}
 }
 
 {{range .Functions}}
 function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
-	{{if .IsOffchain}}require(isOffchain());{{end}}
+	{{if .IsConfidential}}require(isConfidential());{{end}}
 	(bool success, bytes memory data) = {{encodeAddrName .Name}}.staticcall(abi.encode({{range .Input}}{{.Name}}, {{end}}));
 	if (!success) {
 		revert PeekerReverted({{encodeAddrName .Name}}, data);
@@ -366,11 +367,11 @@ function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal vi
 `
 
 type functionDef struct {
-	Name       string
-	Address    string
-	Input      []field
-	Output     output
-	IsOffchain bool `yaml:"isOffchain"`
+	Name           string
+	Address        string
+	Input          []field
+	Output         output
+	IsConfidential bool `yaml:"isConfidential"`
 }
 
 type output struct {

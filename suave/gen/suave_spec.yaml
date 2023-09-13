@@ -79,7 +79,7 @@ functions:
         type: BidId
       - name: key
         type: string
-      - name: data
+      - name: data1
         type: bytes
   - name: confidentialStoreRetrieve
     address: "0x0000000000000000000000000000000042020001"
@@ -104,7 +104,7 @@ functions:
           type: uint64
   - name: extractHint
     address: "0x0000000000000000000000000000000042100037"
-    isOffchain: true
+    isConfidential: true
     input:
       - name: bundleData
         type: bytes
@@ -130,7 +130,7 @@ functions:
           type: bytes
   - name: submitEthBlockBidToRelay
     address: "0x0000000000000000000000000000000042100002"
-    isOffchain: true
+    isConfidential: true
     input:
       - name: relayUrl
         type: string
