@@ -486,13 +486,16 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	require.NoError(t, err)
 
 	{ // Test the bundle simulation precompile through eth_call
+		calldata, err := suaveLibContract.Abi.Methods["simulateBundle"].Inputs.Pack(bundleBytes)
+		require.NoError(t, err)
+
 		var simResult hexutil.Bytes
 		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
 			To:             &simulateBundleAddress,
 			Gas:            &gas,
 			IsConfidential: true,
 			ChainID:        &chainId,
-			Data:           (*hexutil.Bytes)(&bundleBytes),
+			Data:           (*hexutil.Bytes)(&calldata),
 		}, "latest"))
 
 		require.Equal(t, 32, len(simResult))
