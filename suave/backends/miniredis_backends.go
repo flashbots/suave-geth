@@ -116,7 +116,7 @@ func (r *MiniredisBackend) InitializeBid(bid suave.Bid) error {
 
 	_, err := r.client.Get(key)
 	if !errors.Is(err, miniredis.ErrKeyNotFound) {
-		return suave.BidAlreadyPresentError
+		return suave.ErrBidAlreadyPresent
 	}
 
 	data, err := json.Marshal(bid)

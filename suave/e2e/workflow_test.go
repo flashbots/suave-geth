@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -252,7 +253,7 @@ func TestBundleBid(t *testing.T) {
 		require.NoError(t, err)
 
 		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
-		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers}, confidentialDataBytes)
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		require.NoError(t, err)
 
 		block := fr.suethSrv.ProgressChain()
@@ -337,8 +338,8 @@ func TestMevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	bundleBidContractI := sdk.GetContract(mevShareAddress, bundleBidContract.Abi, clt)
-	_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
-	require.NoError(t, err)
+	_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}}, confidentialDataBytes)
+	requireNoRpcError(t, err)
 
 	//   1a. confirm submission
 	block := fr.suethSrv.ProgressChain()
@@ -386,7 +387,7 @@ func TestMevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	cc := sdk.GetContract(mevShareAddress, matchBidContract.Abi, clt)
-	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, shareBidId}, confidentialDataMatchBytes)
+	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}, shareBidId}, confidentialDataMatchBytes)
 	require.NoError(t, err)
 
 	block = fr.suethSrv.ProgressChain()
@@ -502,14 +503,20 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	{ // Test the block building precompile through eth_call
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
+		dummyCreationTx := types.NewTx(&types.OffchainTx{
+			ExecutionNode: fr.ExecutionNode(),
+			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		})
+
 		bid, err := fr.OffchainBackend().ConfidentialStoreEngine.InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
+			AllowedStores:       []common.Address{fr.ExecutionNode()},
 			Version:             "default:v0:ethBundles",
-		}, nil)
+		}, dummyCreationTx)
 		require.NoError(t, err)
 
-		_, err = fr.OffchainBackend().ConfidentialStoreEngine.Store(bid.Id, nil, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
+		_, err = fr.OffchainBackend().ConfidentialStoreEngine.Store(bid.Id, dummyCreationTx, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
 		require.NoError(t, err)
 
 		err = fr.OffchainBackend().MempoolBackend.SubmitBid(bid)
@@ -588,7 +595,7 @@ func TestBlockBuildingContract(t *testing.T) {
 
 		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
 
-		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		require.NoError(t, err)
 	}
 
@@ -703,7 +710,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 		require.NoError(t, err)
 
 		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
-		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		require.NoError(t, err)
 	}
 
@@ -792,6 +799,12 @@ type framework struct {
 
 type frameworkConfig struct {
 	executionNode bool
+	suaveConfig   suave.Config
+}
+
+var defaultFrameworkConfig = frameworkConfig{
+	executionNode: false,
+	suaveConfig:   suave.Config{},
 }
 
 type frameworkOpt func(*frameworkConfig)
@@ -802,10 +815,22 @@ func WithExecutionNode() frameworkOpt {
 	}
 }
 
+func WithRedisStoreBackend(uri string) frameworkOpt {
+	return func(c *frameworkConfig) {
+		c.suaveConfig.RedisStoreUri = uri
+	}
+}
+
+func WithRedisStoreTransport(uri string) frameworkOpt {
+	return func(c *frameworkConfig) {
+		c.suaveConfig.RedisStorePubsubUri = uri
+	}
+}
+
 func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
-	cfg := &frameworkConfig{}
+	cfg := defaultFrameworkConfig
 	for _, opt := range opts {
-		opt(cfg)
+		opt(&cfg)
 	}
 
 	var ethSrv *clientWrapper
@@ -815,14 +840,11 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 		ethEthService.APIs()
 
 		ethSrv = &clientWrapper{t, ethNode, ethEthService}
+
+		cfg.suaveConfig.SuaveEthRemoteBackendEndpoint = ethNode.HTTPEndpoint()
 	}
 
-	var suaveEthRemoteEndpoint string
-	if ethSrv != nil {
-		suaveEthRemoteEndpoint = "http://127.0.0.1:8596"
-	}
-
-	node, ethservice := startSuethService(t, testSuaveGenesis, nil, suave.Config{SuaveEthRemoteBackendEndpoint: suaveEthRemoteEndpoint})
+	node, ethservice := startSuethService(t, testSuaveGenesis, nil, cfg.suaveConfig)
 	ethservice.APIs()
 
 	f := &framework{
@@ -972,12 +994,7 @@ func startEthService(t *testing.T, genesis *core.Genesis, blocks []*types.Block)
 
 	n, err := node.New(&node.Config{
 		HTTPHost: "127.0.0.1",
-		HTTPPort: 8596,
-		P2P: p2p.Config{
-			ListenAddr:  "0.0.0.0:0",
-			NoDiscovery: true,
-			MaxPeers:    25,
-		}})
+	})
 	if err != nil {
 		t.Fatal("can't create node:", err)
 	}
@@ -1036,7 +1053,7 @@ func requireNoRpcError(t *testing.T, rpcErr error) {
 		if err != nil {
 			require.NoError(t, err, rpcErr.Error())
 		} else {
-			require.NoError(t, rpcErr, string(unpacked[1].([]byte)))
+			require.NoError(t, rpcErr, fmt.Sprintf("peeker 0x%x reverted: %s", unpacked[0].(common.Address), unpacked[1].([]byte)))
 		}
 	}
 }

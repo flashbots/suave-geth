@@ -43,6 +43,10 @@ devtools:
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
 
+suavedevtools:
+	./suave/scripts/contracts.sh build
+	go run ./suave/gen/main.go
+
 devnet-up:
 	docker-compose -f ./suave/devenv/docker-compose.yml up -d
 

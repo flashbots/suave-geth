@@ -43,7 +43,7 @@ func (s *LocalConfidentialStore) InitializeBid(bid suave.Bid) error {
 
 	_, found := s.bids[bid.Id]
 	if found {
-		return suave.BidAlreadyPresentError
+		return suave.ErrBidAlreadyPresent
 	}
 
 	s.bids[bid.Id] = ACData{bid, make(map[string][]byte)}

@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/exp/slices"
 )
 
@@ -17,8 +16,10 @@ type ConfidentialStoreEngine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	backend     ConfidentialStoreBackend
-	pubsub      PubSub
+	backend ConfidentialStoreBackend
+	pubsub  PubSub
+	mempool MempoolBackend
+
 	daSigner    DASigner
 	chainSigner ChainSigner
 }
@@ -29,6 +30,10 @@ func (e *ConfidentialStoreEngine) Start() error {
 	}
 
 	if err := e.pubsub.Start(); err != nil {
+		return err
+	}
+
+	if err := e.mempool.Start(); err != nil {
 		return err
 	}
 
@@ -51,13 +56,15 @@ func (e *ConfidentialStoreEngine) Stop() error {
 
 	e.cancel()
 
-	if err := e.backend.Stop(); err != nil {
-		// todo: wrap the error
-		e.pubsub.Stop()
+	e.mempool.Stop()
+
+	if err := e.pubsub.Stop(); err != nil {
 		return err
 	}
 
-	if err := e.pubsub.Stop(); err != nil {
+	if err := e.backend.Stop(); err != nil {
+		// todo: wrap the error
+		e.pubsub.Stop()
 		return err
 	}
 
@@ -65,18 +72,19 @@ func (e *ConfidentialStoreEngine) Stop() error {
 }
 
 type DASigner interface {
-	Sign(account common.Address, hash []byte) ([]byte, error)
-	Sender(hash []byte, signature []byte) (common.Address, error)
+	Sign(account common.Address, data []byte) ([]byte, error)
+	Sender(data []byte, signature []byte) (common.Address, error)
 }
 
 type ChainSigner interface {
 	Sender(tx *types.Transaction) (common.Address, error)
 }
 
-func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
+func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub, mempool MempoolBackend, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
 	engine := &ConfidentialStoreEngine{
 		backend:     backend,
 		pubsub:      pubsub,
+		mempool:     mempool,
 		daSigner:    daSigner,
 		chainSigner: chainSigner,
 	}
@@ -85,14 +93,29 @@ func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub,
 }
 
 func (e *ConfidentialStoreEngine) Subscribe(ctx context.Context) {
+	innerCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	ch := e.pubsub.Subscribe(innerCtx)
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msg := <-e.pubsub.Subscribe(ctx):
+		case msg, ok := <-ch:
+			if !ok {
+				log.Error("Engine: pubsub channel closed, reopenning")
+				cancel()
+				innerCtx, cancel = context.WithCancel(ctx)
+				defer cancel()
+
+				ch = e.pubsub.Subscribe(innerCtx)
+				continue
+			}
 			err := e.NewMessage(msg)
 			if err != nil {
-				log.Info("could not process new store message: %w", err)
+				log.Info("could not process new store message", "err", err)
+			} else {
+				log.Info("Message processed", "msg", msg)
 			}
 		}
 	}
@@ -135,17 +158,17 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		CreationTx:          creationTx,
 	}
 
+	bidBytes, err := SerializeBidForSigning(daBid)
+	if err != nil {
+		return types.Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
+	}
+
 	signingAccount, err := ExecutionNodeFromTransaction(creationTx)
 	if err != nil {
 		return types.Bid{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
 	}
 
-	bidHash, _, err := HashBid(daBid)
-	if err != nil {
-		return types.Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
-	}
-
-	daBid.Signature, err = e.daSigner.Sign(signingAccount, bidHash)
+	daBid.Signature, err = e.daSigner.Sign(signingAccount, bidBytes)
 	if err != nil {
 		return types.Bid{}, fmt.Errorf("confidential engine: could not sign initialized bid: %w", err)
 	}
@@ -171,7 +194,7 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 		Value:    value,
 	}
 
-	msgHash, _, err := HashMessage(msg)
+	msgBytes, err := SerializeMessageForSigning(msg)
 	if err != nil {
 		return Bid{}, fmt.Errorf("confidential engine: could not hash message for signing: %w", err)
 	}
@@ -181,7 +204,7 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 		return Bid{}, fmt.Errorf("confidential engine: could not recover execution node from source transaction: %w", err)
 	}
 
-	msg.Signature, err = e.daSigner.Sign(signingAccount, msgHash)
+	msg.Signature, err = e.daSigner.Sign(signingAccount, msgBytes)
 	if err != nil {
 		return Bid{}, fmt.Errorf("confidential engine: could not sign message: %w", err)
 	}
@@ -199,13 +222,15 @@ func (e *ConfidentialStoreEngine) Retrieve(bidId BidId, caller common.Address, k
 func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	// Note the validation is a work in progress and not guaranteed to be correct!
 
-	expectedId, err := calculateBidId(types.Bid{
+	innerBid := types.Bid{
 		Id:                  message.Bid.Id,
 		AllowedPeekers:      message.Bid.AllowedPeekers,
 		AllowedStores:       message.Bid.AllowedStores,
 		DecryptionCondition: message.Bid.DecryptionCondition,
 		Version:             message.Bid.Version,
-	})
+	}
+
+	expectedId, err := calculateBidId(innerBid)
 
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not calculate received bids id: %w", err)
@@ -215,11 +240,11 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		return fmt.Errorf("confidential engine: received bids id (%x) does not match the expected (%x)", message.Bid.Id, expectedId)
 	}
 
-	msgHash, _, err := HashMessage(message)
+	msgBytes, err := SerializeMessageForSigning(message)
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not hash received message: %w", err)
 	}
-	recoveredMessageSigner, err := e.daSigner.Sender(msgHash, message.Signature)
+	recoveredMessageSigner, err := e.daSigner.Sender(msgBytes, message.Signature)
 	if err != nil {
 		return fmt.Errorf("confidential engine: incorrect message signature: %w", err)
 	}
@@ -231,11 +256,11 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		return fmt.Errorf("confidential engine: message signer %x, expected %x", recoveredMessageSigner, expectedMessageSigner)
 	}
 
-	bidHash, _, err := HashBid(message.Bid)
+	bidBytes, err := SerializeBidForSigning(message.Bid)
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not hash received bid: %w", err)
 	}
-	recoveredBidSigner, err := e.daSigner.Sender(bidHash, message.Bid.Signature)
+	recoveredBidSigner, err := e.daSigner.Sender(bidBytes, message.Bid.Signature)
 	if err != nil {
 		return fmt.Errorf("confidential engine: incorrect bid signature: %w", err)
 	}
@@ -267,8 +292,12 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	}
 
 	err = e.backend.InitializeBid(message.Bid)
-	if err != nil && !errors.Is(err, BidAlreadyPresentError) {
-		panic(fmt.Errorf("unexpected error while initializing bid from transport: %w", err))
+	if err != nil {
+		if !errors.Is(err, ErrBidAlreadyPresent) {
+			return fmt.Errorf("unexpected error while initializing bid from transport: %w", err)
+		}
+	} else {
+		e.mempool.SubmitBid(innerBid)
 	}
 
 	_, err = e.backend.Store(message.Bid.Id, message.Caller, message.Key, message.Value)
@@ -279,33 +308,26 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	return nil
 }
 
-func HashBid(bid Bid) ([]byte, []byte, error) {
+func SerializeBidForSigning(bid Bid) ([]byte, error) {
 	bid.Signature = []byte{}
 
 	bidBytes, err := json.Marshal(bid)
 	if err != nil {
-		return []byte{}, []byte{}, err
+		return []byte{}, err
 	}
 
-	return TextHash(bidBytes), bidBytes, nil
+	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(bidBytes), string(bidBytes))), nil
 }
 
-func HashMessage(message DAMessage) ([]byte, []byte, error) {
+func SerializeMessageForSigning(message DAMessage) ([]byte, error) {
 	message.Signature = []byte{}
 
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
-		return []byte{}, []byte{}, err
+		return []byte{}, err
 	}
 
-	return TextHash(msgBytes), msgBytes, nil
-}
-
-func TextHash(data []byte) []byte {
-	msg := fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(data), string(data))
-	hasher := sha3.NewLegacyKeccak256()
-	hasher.Write([]byte(msg))
-	return hasher.Sum(nil)
+	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(msgBytes), string(msgBytes))), nil
 }
 
 type MockPubSub struct{}
@@ -318,11 +340,11 @@ func (MockPubSub) Publish(DAMessage)                          {}
 
 type MockSigner struct{}
 
-func (MockSigner) Sign(account common.Address, hash []byte) ([]byte, error) {
+func (MockSigner) Sign(account common.Address, data []byte) ([]byte, error) {
 	return account.Bytes(), nil
 }
 
-func (MockSigner) Sender(hash []byte, signature []byte) (common.Address, error) {
+func (MockSigner) Sender(data []byte, signature []byte) (common.Address, error) {
 	return common.BytesToAddress(signature), nil
 }
 
@@ -334,4 +356,16 @@ func (MockChainSigner) Sender(tx *types.Transaction) (common.Address, error) {
 	}
 
 	return *tx.To(), nil
+}
+
+type MockMempool struct{}
+
+func (MockMempool) Start() error { return nil }
+func (MockMempool) Stop() error  { return nil }
+
+func (MockMempool) SubmitBid(types.Bid) error { return nil }
+
+func (MockMempool) FetchBidById(BidId) (types.Bid, error) { return types.Bid{}, nil }
+func (MockMempool) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+	return nil
 }

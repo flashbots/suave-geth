@@ -215,7 +215,7 @@ func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]by
 	decryptionCondition := unpacked[0].(uint64)
 	allowedPeekers := unpacked[1].([]common.Address)
 
-	bid, err := c.runImpl(backend, version, decryptionCondition, allowedPeekers)
+	bid, err := c.runImpl(backend, version, decryptionCondition, allowedPeekers, []common.Address{})
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -223,14 +223,15 @@ func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]by
 	return c.inoutAbi.Outputs.Pack(bid)
 }
 
-func (c *newBid) runImpl(backend *SuaveExecutionBackend, version string, decryptionCondition uint64, allowedPeekers []common.Address) (*types.Bid, error) {
-	// if backend.confidentialComputeRequestTx == nil {
-	// 	return nil, errors.New("newBid: source transaction not present")
-	// }
+func (c *newBid) runImpl(backend *SuaveExecutionBackend, version string, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address) (*types.Bid, error) {
+	if backend.confidentialComputeRequestTx == nil {
+		panic("newBid: source transaction not present")
+	}
 
 	bid, err := backend.ConfidentialStoreEngine.InitializeBid(types.Bid{
 		DecryptionCondition: decryptionCondition,
 		AllowedPeekers:      allowedPeekers,
+		AllowedStores:       allowedStores,
 		Version:             version, // TODO : make generic
 	}, backend.confidentialComputeRequestTx)
 	if err != nil {
@@ -334,8 +335,8 @@ func (b *backendImpl) fetchBids(cond uint64, namespace string) ([]types.Bid, err
 	return bids, nil
 }
 
-func (b *backendImpl) newBid(decryptionCondition uint64, allowedPeekers []common.Address, BidType string) (types.Bid, error) {
-	bid, err := (&newBid{}).runImpl(b.backend, BidType, decryptionCondition, allowedPeekers)
+func (b *backendImpl) newBid(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, BidType string) (types.Bid, error) {
+	bid, err := (&newBid{}).runImpl(b.backend, BidType, decryptionCondition, allowedPeekers, allowedStores)
 	if err != nil {
 		return types.Bid{}, err
 	}

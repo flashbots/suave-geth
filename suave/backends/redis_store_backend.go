@@ -61,7 +61,7 @@ func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
 
 	err := r.client.Get(r.ctx, key).Err()
 	if !errors.Is(err, redis.Nil) {
-		return suave.BidAlreadyPresentError
+		return suave.ErrBidAlreadyPresent
 	}
 
 	data, err := json.Marshal(bid)

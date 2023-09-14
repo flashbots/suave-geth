@@ -25,7 +25,6 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -254,16 +253,17 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	suaveDaSigner := &suave_backends.KeystoreDASigner{Keystore: keystore.NewKeyStore(stack.KeyStoreDir(), keystore.StandardScryptN, keystore.StandardScryptP)}
+	suaveBidMempool := suave_backends.NewMempoolOnConfidentialStore(suave_backends.NewLocalConfidentialStore())
+	suaveDaSigner := &suave_backends.AccountManagerDASigner{Manager: eth.AccountManager()}
 
-	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
+	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveBidMempool, suaveDaSigner, types.LatestSigner(chainConfig))
 	if err != nil {
 		return nil, err
 	}
 
 	offchainBackend := &vm.SuaveExecutionBackend{
 		ConfidentialStoreEngine: confidentialStoreEngine,
-		MempoolBackend:          suave_backends.NewMempoolOnConfidentialStore(confidentialStoreBackend),
+		MempoolBackend:          suaveBidMempool,
 		OffchainEthBackend:      suaveEthBackend,
 	}
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, offchainBackend}

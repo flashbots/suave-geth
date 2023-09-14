@@ -77,7 +77,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
+	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	suaveBackend := &SuaveExecutionBackend{
@@ -127,6 +127,10 @@ func TestSuavePrecompileStub(t *testing.T) {
 		packedInput, err := abiMethod.Inputs.Pack(inputVals...)
 		require.NoError(t, err)
 
+		vmenv.SetConfidentialRequestTx(types.NewTx(&types.OffchainTx{
+			ExecutionNode: common.Address{},
+			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		}))
 		_, _, err = vmenv.Call(AccountRef(common.Address{}), addr, packedInput, 100000000, big.NewInt(0))
 		if err != nil {
 			found := false
@@ -151,14 +155,22 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 func newTestBackend(t *testing.T) *backendImpl {
 	confStore := backends.NewLocalConfidentialStore()
-	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{}, suave.MockSigner{}, suave.MockChainSigner{})
+	suaveMempool := backends.NewMempoolOnConfidentialStore(confStore)
+	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{}, suaveMempool, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
+
+	require.NoError(t, confEngine.Start())
+	t.Cleanup(func() { confEngine.Stop() })
 
 	b := &backendImpl{
 		backend: &SuaveExecutionBackend{
 			ConfidentialStoreEngine: confEngine,
-			MempoolBackend:          backends.NewMempoolOnConfidentialStore(confStore),
+			MempoolBackend:          suaveMempool,
 			OffchainEthBackend:      &mockSuaveBackend{},
+			confidentialComputeRequestTx: types.NewTx(&types.OffchainTx{
+				ExecutionNode: common.Address{},
+				Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+			}),
 		},
 	}
 	return b
@@ -167,13 +179,13 @@ func newTestBackend(t *testing.T) *backendImpl {
 func TestSuave_BidWorkflow(t *testing.T) {
 	b := newTestBackend(t)
 
-	bid5, err := b.newBid(5, []common.Address{{0x1}}, "a")
+	bid5, err := b.newBid(5, []common.Address{{0x1}}, nil, "a")
 	require.NoError(t, err)
 
-	bid10, err := b.newBid(10, []common.Address{{0x1}}, "a")
+	bid10, err := b.newBid(10, []common.Address{{0x1}}, nil, "a")
 	require.NoError(t, err)
 
-	bid10b, err := b.newBid(10, []common.Address{{0x1}}, "a")
+	bid10b, err := b.newBid(10, []common.Address{{0x1}}, nil, "a")
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -204,7 +216,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	err := b.confidentialStoreStore(common.Hash{}, "key", data)
 	require.Error(t, err)
 
-	bid, err := b.newBid(5, []common.Address{callerAddr}, "a")
+	bid, err := b.newBid(5, []common.Address{callerAddr}, nil, "a")
 	require.NoError(t, err)
 
 	// cannot store the bid if the caller is not allowed to

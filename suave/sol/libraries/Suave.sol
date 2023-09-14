@@ -80,8 +80,8 @@ library Suave {
     }
 
     // Generates a new, random id and stores the bid
-    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, string memory BidType) internal view returns (Bid memory) {
-        (bool success, bytes memory bidBytes) = NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers, BidType));
+    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, address[] memory allowedStores, string memory BidType) internal view returns (Bid memory) {
+        (bool success, bytes memory bidBytes) = NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, BidType));
         if (!success) {
             revert PeekerReverted(NEW_BID, bidBytes);
         }

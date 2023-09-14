@@ -22,8 +22,8 @@ func NewMempoolOnConfidentialStore(cs suave.ConfidentialStoreBackend) *MempoolOn
 
 func (m *MempoolOnConfidentialStore) Start() error {
 	err := m.cs.InitializeBid(mempoolConfidentialStoreBid)
-	if err != nil {
-		panic("could not initialize mempool")
+	if err != nil && !errors.Is(err, suave.ErrBidAlreadyPresent) {
+		return fmt.Errorf("mempool: could not initialize: %w", err)
 	}
 
 	return nil
@@ -68,6 +68,7 @@ func (m *MempoolOnConfidentialStore) FetchBidById(bidId suave.BidId) (types.Bid,
 func (m *MempoolOnConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
 	bidsByProtocolBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
 	if err != nil {
+		log.Error("xx", "err", err)
 		return nil
 	}
 	defer log.Info("bids fetched", "bids", string(bidsByProtocolBytes))

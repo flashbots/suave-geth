@@ -30,7 +30,7 @@ type BuildBlockArgs = types.BuildBlockArgs
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
-var BidAlreadyPresentError = errors.New("bid already present")
+var ErrBidAlreadyPresent = errors.New("bid already present")
 
 type ConfidentialStoreBackend interface {
 	node.Lifecycle

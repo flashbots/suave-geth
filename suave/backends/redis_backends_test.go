@@ -2,6 +2,8 @@ package backends
 
 import (
 	"context"
+	"encoding/json"
+	"math/big"
 	"testing"
 	"time"
 
@@ -190,7 +192,7 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub1 := NewRedisPubSub(mrPubSub.Addr())
 	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
-	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
+	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
 
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
@@ -198,11 +200,16 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub2 := NewRedisPubSub(mrPubSub.Addr())
 	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
 
-	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
+	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	require.NoError(t, engine2.Start())
 	t.Cleanup(func() { engine2.Stop() })
+
+	dummyCreationTx := types.NewTx(&types.OffchainTx{
+		ExecutionNode: common.Address{},
+		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	})
 
 	// Make sure a store to engine1 is propagated to endine2 through redis->miniredis transport
 	bid, err := engine1.InitializeBid(types.Bid{
@@ -210,7 +217,7 @@ func TestEngineOnRedis(t *testing.T) {
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
 		AllowedStores:       []common.Address{common.Address{}},
 		Version:             string("vv"),
-	}, nil /* creation tx */)
+	}, dummyCreationTx)
 	require.NoError(t, err)
 
 	redisPubSub3 := NewRedisPubSub(mrPubSub.Addr())
@@ -224,7 +231,8 @@ func TestEngineOnRedis(t *testing.T) {
 	subch := redisPubSub3.Subscribe(ctx)
 
 	// Trigger propagation
-	_, err = engine1.Store(bid.Id, nil /* source tx */, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
+	_, err = engine1.Store(bid.Id, dummyCreationTx, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
+
 	require.NoError(t, err)
 
 	time.Sleep(10 * time.Millisecond)
@@ -235,15 +243,21 @@ func TestEngineOnRedis(t *testing.T) {
 		AllowedPeekers:      bid.AllowedPeekers,
 		AllowedStores:       bid.AllowedStores,
 		Version:             bid.Version,
-		CreationTx:          nil,
+		CreationTx:          dummyCreationTx,
 	}
 
 	var nilAddress common.Address
 	submittedBid.Signature = nilAddress.Bytes()
 
+	submittedBidJson, err := json.Marshal(submittedBid)
+	require.NoError(t, err)
+
 	select {
 	case msg := <-subch:
-		require.Equal(t, submittedBid, msg.Bid)
+		rececivedBidJson, err := json.Marshal(msg.Bid)
+		require.NoError(t, err)
+
+		require.Equal(t, submittedBidJson, rececivedBidJson)
 		require.Equal(t, "xx", msg.Key)
 		require.Equal(t, suave.Bytes{0x43, 0x14}, msg.Value)
 		require.Equal(t, bid.AllowedPeekers[0], msg.Caller)
@@ -257,5 +271,9 @@ func TestEngineOnRedis(t *testing.T) {
 
 	fetchedBid, err := redisStoreBackend2.FetchEngineBidById(bid.Id)
 	require.NoError(t, err)
-	require.Equal(t, submittedBid, fetchedBid)
+
+	fetchedBidJson, err := json.Marshal(fetchedBid)
+	require.NoError(t, err)
+
+	require.Equal(t, submittedBidJson, fetchedBidJson)
 }

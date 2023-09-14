@@ -42,11 +42,12 @@ func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExec
 	}
 
 	return &SuaveExecutionBackend{
-		ConfidentialStoreEngine: evm.suaveExecutionBackend.ConfidentialStoreEngine,
-		MempoolBackend:          evm.suaveExecutionBackend.MempoolBackend,
-		OffchainEthBackend:      evm.suaveExecutionBackend.OffchainEthBackend,
-		confidentialInputs:      evm.suaveExecutionBackend.confidentialInputs,
-		callerStack:             append(evm.suaveExecutionBackend.callerStack, &caller),
+		ConfidentialStoreEngine:      evm.suaveExecutionBackend.ConfidentialStoreEngine,
+		MempoolBackend:               evm.suaveExecutionBackend.MempoolBackend,
+		OffchainEthBackend:           evm.suaveExecutionBackend.OffchainEthBackend,
+		confidentialComputeRequestTx: evm.suaveExecutionBackend.confidentialComputeRequestTx,
+		confidentialInputs:           evm.suaveExecutionBackend.confidentialInputs,
+		callerStack:                  append(evm.suaveExecutionBackend.callerStack, &caller),
 	}
 }
 
