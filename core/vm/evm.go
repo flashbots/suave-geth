@@ -42,10 +42,10 @@ type (
 )
 
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
-	// First check offchain precompiles, only then continue to the regular ones
+	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
 		if p, ok := PrecompiledContractsSuave[addr]; ok {
-			if evm.Config.IsOffchain {
+			if evm.Config.IsConfidential {
 				runtimeBackend := NewRuntimeSuaveExecutionBackend(evm, addr)
 				return NewSuavePrecompiledContractWrapper(addr, runtimeBackend, p), true
 			}
@@ -131,9 +131,9 @@ type EVM struct {
 	// applied in opCall*.
 	callGasTemp uint64
 
-	// Backend for off-chain execution
-	// Set only if EVM was instantiated with NewOffchainEVM
-	// !!! WILL PANIC IF OFFCHAIN EXECUTION REQUESTED AND THIS IS NOT SET
+	// Backend for confidential execution
+	// Set only if EVM was instantiated with NewConfidentialVM
+	// !!! WILL PANIC IF CONFIDENTIAL EXECUTION REQUESTED AND THIS IS NOT SET
 	suaveExecutionBackend *SuaveExecutionBackend
 }
 
@@ -152,7 +152,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	return evm
 }
 
-func NewOffchainEVM(suaveExecutionBackend *SuaveExecutionBackend, blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config) *EVM {
+func NewConfidentialEVM(suaveExecutionBackend *SuaveExecutionBackend, blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config) *EVM {
 	evm := &EVM{
 		Context:               blockCtx,
 		TxContext:             txCtx,

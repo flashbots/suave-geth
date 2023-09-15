@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	isOffchainAddress               = common.HexToAddress("0x42010000")
-	errIsOffchainInvalidInputLength = errors.New("invalid input length")
+	isConfidentialAddress               = common.HexToAddress("0x42010000")
+	errIsConfidentialInvalidInputLength = errors.New("invalid input length")
 
 	confidentialInputsAddress = common.HexToAddress("0x42010001")
 
@@ -27,15 +27,15 @@ var (
 
 /* General utility precompiles */
 
-type isOffchainPrecompile struct{}
+type isConfidentialPrecompile struct{}
 
-func (c *isOffchainPrecompile) RequiredGas(input []byte) uint64 {
+func (c *isConfidentialPrecompile) RequiredGas(input []byte) uint64 {
 	return 0 // incurs only the call cost (100)
 }
 
-func (c *isOffchainPrecompile) Run(input []byte) ([]byte, error) {
+func (c *isConfidentialPrecompile) Run(input []byte) ([]byte, error) {
 	if len(input) == 1 {
-		// The precompile was called *directly* off-chain, and the result was cached - return 1
+		// The precompile was called *directly* confidentially, and the result was cached - return 1
 		if input[0] == 0x01 {
 			return []byte{0x01}, nil
 		} else {
@@ -44,15 +44,15 @@ func (c *isOffchainPrecompile) Run(input []byte) ([]byte, error) {
 	}
 
 	if len(input) > 1 {
-		return nil, errIsOffchainInvalidInputLength
+		return nil, errIsConfidentialInvalidInputLength
 	}
 
 	return []byte{0x00}, nil
 }
 
-func (c *isOffchainPrecompile) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *isConfidentialPrecompile) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(input) != 0 {
-		return nil, errIsOffchainInvalidInputLength
+		return nil, errIsConfidentialInvalidInputLength
 	}
 	return []byte{0x01}, nil
 }
@@ -67,7 +67,7 @@ func (c *confidentialInputsPrecompile) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confidentialInputsPrecompile) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *confidentialInputsPrecompile) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	return backend.confidentialInputs, nil
 }
 
@@ -91,7 +91,7 @@ func (c *confStoreStore) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *confStoreStore) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(backend.callerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this context")
 	}
@@ -112,6 +112,10 @@ func (c *confStoreStore) RunOffchain(backend *SuaveExecutionBackend, input []byt
 }
 
 func (c *confStoreStore) runImpl(backend *SuaveExecutionBackend, bidId suave.BidId, key string, data []byte) error {
+	if len(backend.callerStack) == 0 {
+		return errors.New("not allowed in this context")
+	}
+
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
 	for i := len(backend.callerStack) - 1; i >= 0; i-- {
@@ -148,7 +152,7 @@ func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *confStoreRetrieve) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	if len(backend.callerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this context")
 	}
@@ -165,6 +169,10 @@ func (c *confStoreRetrieve) RunOffchain(backend *SuaveExecutionBackend, input []
 }
 
 func (c *confStoreRetrieve) runImpl(backend *SuaveExecutionBackend, bidId suave.BidId, key string) ([]byte, error) {
+	if len(backend.callerStack) == 0 {
+		return nil, errors.New("not allowed in this context")
+	}
+
 	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
 
 	// Can be zeroes in some fringe cases!
@@ -205,7 +213,7 @@ func (c *newBid) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *newBid) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *newBid) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -264,7 +272,7 @@ func (c *fetchBids) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *fetchBids) RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
+func (c *fetchBids) RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error) {
 	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
@@ -305,29 +313,33 @@ func formatPeekerError(format string, args ...any) ([]byte, error) {
 	return []byte(err.Error()), err
 }
 
-type backendImpl struct {
+type suaveRuntime struct {
 	backend *SuaveExecutionBackend
 }
 
-var _ BackendImpl = &backendImpl{}
+var _ SuaveRuntime = &suaveRuntime{}
 
-func (b *backendImpl) buildEthBlock(blockArgs types.BuildBlockArgs, bid [32]byte, namespace string) ([]byte, []byte, error) {
+func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.BidId, namespace string) ([]byte, []byte, error) {
 	return (&buildEthBlock{}).runImpl(b.backend, blockArgs, bid, namespace)
 }
 
-func (b *backendImpl) confidentialStoreRetrieve(bidId [32]byte, key string) ([]byte, error) {
+func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
+	return nil, nil
+}
+
+func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
 	return (&confStoreRetrieve{}).runImpl(b.backend, bidId, key)
 }
 
-func (b *backendImpl) confidentialStoreStore(bidId [32]byte, key string, data []byte) error {
+func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {
 	return (&confStoreStore{}).runImpl(b.backend, bidId, key, data)
 }
 
-func (b *backendImpl) extractHint(bundleData []byte) ([]byte, error) {
+func (b *suaveRuntime) extractHint(bundleData []byte) ([]byte, error) {
 	return (&extractHint{}).runImpl(b.backend, bundleData)
 }
 
-func (b *backendImpl) fetchBids(cond uint64, namespace string) ([]types.Bid, error) {
+func (b *suaveRuntime) fetchBids(cond uint64, namespace string) ([]types.Bid, error) {
 	bids, err := (&fetchBids{}).runImpl(b.backend, cond, namespace)
 	if err != nil {
 		return nil, err
@@ -335,7 +347,7 @@ func (b *backendImpl) fetchBids(cond uint64, namespace string) ([]types.Bid, err
 	return bids, nil
 }
 
-func (b *backendImpl) newBid(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, BidType string) (types.Bid, error) {
+func (b *suaveRuntime) newBid(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, BidType string) (types.Bid, error) {
 	bid, err := (&newBid{}).runImpl(b.backend, BidType, decryptionCondition, allowedPeekers, allowedStores)
 	if err != nil {
 		return types.Bid{}, err
@@ -343,7 +355,7 @@ func (b *backendImpl) newBid(decryptionCondition uint64, allowedPeekers []common
 	return *bid, nil
 }
 
-func (b *backendImpl) simulateBundle(bundleData []byte) (uint64, error) {
+func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 	num, err := (&simulateBundle{}).runImpl(b.backend, bundleData)
 	if err != nil {
 		return 0, err
@@ -351,6 +363,6 @@ func (b *backendImpl) simulateBundle(bundleData []byte) (uint64, error) {
 	return num.Uint64(), nil
 }
 
-func (b *backendImpl) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
+func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
 	return (&submitEthBlockBidToRelay{}).runImpl(b.backend, relayUrl, builderBid)
 }

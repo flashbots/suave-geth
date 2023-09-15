@@ -550,7 +550,7 @@ func DefaultSuaveGenesisBlock() *Genesis {
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
-			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
+			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isConfidential
 
 			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
 		},
@@ -616,7 +616,7 @@ func DeveloperGenesisBlock(period uint64, gasLimit uint64, faucet common.Address
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
-			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isOffchain
+			common.HexToAddress("0x4201000"): {Balance: big.NewInt(1)}, // isConfidential
 
 			common.HexToAddress("0x4f91862699aF93251B3e3518E4Ca627803689252"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))}, // initial signer
 			common.HexToAddress("0x71B21E9b8029d1E384B71B2A1708005A7d4D0428"): {Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(10000000000))},

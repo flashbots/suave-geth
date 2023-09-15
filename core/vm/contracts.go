@@ -41,10 +41,10 @@ type PrecompiledContract interface {
 }
 
 // SuavePrecompiledContract is an optional interface for precompiled Suave contracts.
-// During off-chain execution the contract will be called with their RunOffchain method.
+// During confidential execution the contract will be called with their RunConfidential method.
 type SuavePrecompiledContract interface {
 	PrecompiledContract
-	RunOffchain(backend *SuaveExecutionBackend, input []byte) ([]byte, error)
+	RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error)
 }
 
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
@@ -85,10 +85,10 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 
 // PrecompiledContractsSuave contains the default set of pre-compiled SUAVE VM
 // contracts used in the suave testnet. It's a superset of Berlin precompiles.
-// Offchain contracts (implementing OffchainPrecompiledContract)
-// are ran with their respective RunOffchain in offchain setting
+// Confidential contracts (implementing SuavePrecompiledContract)
+// are ran with their respective RunConfidential in confidential setting
 var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
-	isOffchainAddress:         &isOffchainPrecompile{},
+	isConfidentialAddress:     &isConfidentialPrecompile{},
 	confidentialInputsAddress: &confidentialInputsPrecompile{},
 
 	confStoreStoreAddress:    newConfStoreStore(),
@@ -185,7 +185,7 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 // - the _remaining_ gas,
 // - any error that occurred
 func RunPrecompiledContract(p PrecompiledContract, input []byte, suppliedGas uint64) (ret []byte, remainingGas uint64, err error) {
-	// TODO: it'd be nice if the offchain contracts' exact gas usage was calculated with execution
+	// TODO: it'd be nice if the confidential contracts' exact gas usage was calculated with execution
 	gasCost := p.RequiredGas(input)
 	if suppliedGas < gasCost {
 		return nil, 0, ErrOutOfGas

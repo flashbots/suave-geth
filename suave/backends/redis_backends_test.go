@@ -206,7 +206,7 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, engine2.Start())
 	t.Cleanup(func() { engine2.Stop() })
 
-	dummyCreationTx := types.NewTx(&types.OffchainTx{
+	dummyCreationTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: common.Address{},
 		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	})

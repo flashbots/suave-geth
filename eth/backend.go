@@ -246,7 +246,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		confidentialStoreTransport = suave.MockPubSub{}
 	}
 
-	var suaveEthBackend suave.OffchainEthBackend
+	var suaveEthBackend suave.ConfidentialEthBackend
 	if config.Suave.SuaveEthRemoteBackendEndpoint != "" {
 		suaveEthBackend = suave_backends.NewRemoteEthBackend(config.Suave.SuaveEthRemoteBackendEndpoint)
 	} else {
@@ -261,12 +261,12 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		return nil, err
 	}
 
-	offchainBackend := &vm.SuaveExecutionBackend{
+	suaveBackend := &vm.SuaveExecutionBackend{
 		ConfidentialStoreEngine: confidentialStoreEngine,
 		MempoolBackend:          suaveBidMempool,
-		OffchainEthBackend:      suaveEthBackend,
+		ConfidentialEthBackend:  suaveEthBackend,
 	}
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, offchainBackend}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveBackend}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}
@@ -538,7 +538,7 @@ func (s *Ethereum) Start() error {
 	// Start the networking layer and the light server if requested
 	s.handler.Start(maxPeers)
 
-	if err := s.APIBackend.offchainBackend.Start(); err != nil {
+	if err := s.APIBackend.suaveBackend.Start(); err != nil {
 		return err
 	}
 
@@ -567,7 +567,7 @@ func (s *Ethereum) Stop() error {
 	s.chainDb.Close()
 	s.eventMux.Stop()
 
-	s.APIBackend.offchainBackend.Stop()
+	s.APIBackend.suaveBackend.Stop()
 
 	return nil
 }

@@ -45,7 +45,7 @@ devtools:
 
 suavedevtools:
 	./suave/scripts/contracts.sh build
-	go run ./suave/gen/main.go
+	go run ./suave/gen/main.go -write
 
 devnet-up:
 	docker-compose -f ./suave/devenv/docker-compose.yml up -d

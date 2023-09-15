@@ -83,22 +83,11 @@ func TestSuavePrecompileStub(t *testing.T) {
 	suaveBackend := &SuaveExecutionBackend{
 		ConfidentialStoreEngine: stubEngine,
 		MempoolBackend:          mockSuaveBackend,
-		OffchainEthBackend:      mockSuaveBackend,
+		ConfidentialEthBackend:  mockSuaveBackend,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-	vmenv := NewOffchainEVM(suaveBackend, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsOffchain: true})
-
-	methods := map[string]common.Address{
-		"extractHint":               extractHintAddress,
-		"fetchBids":                 fetchBidsAddress,
-		"newBid":                    newBidAddress,
-		"simulateBundle":            simulateBundleAddress,
-		"submitEthBlockBidToRelay":  submitEthBlockBidToRelayAddress,
-		"buildEthBlock":             buildEthBlockAddress,
-		"confidentialStoreRetrieve": confStoreRetrieveAddress,
-		"confidentialStoreStore":    confStoreStoreAddress,
-	}
+	vmenv := NewConfidentialEVM(suaveBackend, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsConfidential: true})
 
 	// The objective of the unit test is to make sure that the encoding of the precompile
 	// inputs works as expected from the ABI specification. Thus, we will skip any errors
@@ -116,7 +105,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 		"could not unpack merged bid ids",
 	}
 
-	for name, addr := range methods {
+	for name, addr := range artifacts.SuaveMethods {
 		abiMethod, ok := artifacts.SuaveAbi.Methods[name]
 		if !ok {
 			t.Fatalf("abi method '%s' not found", name)
@@ -127,7 +116,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 		packedInput, err := abiMethod.Inputs.Pack(inputVals...)
 		require.NoError(t, err)
 
-		vmenv.SetConfidentialRequestTx(types.NewTx(&types.OffchainTx{
+		vmenv.SetConfidentialRequestTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ExecutionNode: common.Address{},
 			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		}))
@@ -144,16 +133,9 @@ func TestSuavePrecompileStub(t *testing.T) {
 			}
 		}
 	}
-
-	// error if there are methods in the abi that are not tested
-	for name := range artifacts.SuaveAbi.Methods {
-		if _, ok := methods[name]; !ok {
-			t.Fatalf("abi method '%s' not tested", name)
-		}
-	}
 }
 
-func newTestBackend(t *testing.T) *backendImpl {
+func newTestBackend(t *testing.T) *suaveRuntime {
 	confStore := backends.NewLocalConfidentialStore()
 	suaveMempool := backends.NewMempoolOnConfidentialStore(confStore)
 	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{}, suaveMempool, suave.MockSigner{}, suave.MockChainSigner{})
@@ -162,12 +144,12 @@ func newTestBackend(t *testing.T) *backendImpl {
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })
 
-	b := &backendImpl{
+	b := &suaveRuntime{
 		backend: &SuaveExecutionBackend{
 			ConfidentialStoreEngine: confEngine,
 			MempoolBackend:          suaveMempool,
-			OffchainEthBackend:      &mockSuaveBackend{},
-			confidentialComputeRequestTx: types.NewTx(&types.OffchainTx{
+			ConfidentialEthBackend:  &mockSuaveBackend{},
+			confidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
 				ExecutionNode: common.Address{},
 				Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 			}),
@@ -213,7 +195,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	data := []byte{0x1}
 
 	// cannot store a value for a bid that does not exist
-	err := b.confidentialStoreStore(common.Hash{}, "key", data)
+	err := b.confidentialStoreStore(types.BidId{}, "key", data)
 	require.Error(t, err)
 
 	bid, err := b.newBid(5, []common.Address{callerAddr}, nil, "a")

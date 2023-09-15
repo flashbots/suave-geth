@@ -56,21 +56,21 @@ func cmdSendBundle() {
 	chainId := hexutil.Big(*genesis.Config.ChainID)
 
 	goerliSigner := types.LatestSigner(core.DefaultGoerliGenesisBlock().Config)
-	suaveSigner := types.NewOffchainSigner(genesis.Config.ChainID)
+	suaveSigner := types.NewSuaveSigner(genesis.Config.ChainID)
 
 	gas := hexutil.Uint64(1000000)
 
 	{ // Sanity check
 		var result string
 		rpcErr := suaveClient.Call(&result, "eth_call", ethapi.TransactionArgs{
-			To:         &isOffchainAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
+			To:             &isConfidentialAddress,
+			Gas:            &gas,
+			IsConfidential: true,
+			ChainID:        &chainId,
 		}, "latest")
-		RequireNoErrorf(rpcErr, "could not call isOffchain precompile: %v", unwrapPeekerError(rpcErr))
+		RequireNoErrorf(rpcErr, "could not call IsConfidential precompile: %v", unwrapPeekerError(rpcErr))
 		if result != "0x01" {
-			utils.Fatalf("unexpected result from offchain call %s, expected 0x01", result)
+			utils.Fatalf("unexpected result from confidential call %s, expected 0x01", result)
 		}
 
 		log.Info("Suave node seems sane, continuing")
@@ -123,7 +123,7 @@ func cmdSendBundle() {
 	err = suaveClient.Call(&suaveGp, "eth_gasPrice")
 	RequireNoErrorf(err, "could not call eth_gasPrice on suave: %v", err)
 
-	offchainInnerTxTemplate := &types.LegacyTx{
+	confidentialInnerTxTemplate := &types.LegacyTx{
 		Nonce:    suaveAccNonce, // will be incremented later on
 		To:       &newBundleBidAddress,
 		Value:    nil,
@@ -132,7 +132,7 @@ func cmdSendBundle() {
 		Data:     nil, // FillMe!
 	}
 
-	executedOffchainTxHashes := []common.Hash{}
+	suaveTxHashes := []common.Hash{}
 
 	var currentGoerliBlockNumber hexutil.Uint64
 	err = goerliClient.Call(&currentGoerliBlockNumber, "eth_blockNumber")
@@ -146,29 +146,29 @@ func cmdSendBundle() {
 		calldata, err := bundleBidAbi.Pack("newBid", cTargetBlock, allowedPeekers)
 		RequireNoErrorf(err, "could not pack newBid args: %v", err)
 
-		offchainInnerTx := *offchainInnerTxTemplate
-		offchainInnerTx.Data = calldata
-		offchainInnerTxTemplate.Nonce += 1
+		confidentialRequestInnerTx := *confidentialInnerTxTemplate
+		confidentialRequestInnerTx.Data = calldata
+		confidentialInnerTxTemplate.Nonce += 1
 
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ExecutionNode: executionNodeAddress,
-			Wrapped:       *types.NewTx(&offchainInnerTx),
+			Wrapped:       *types.NewTx(&confidentialRequestInnerTx),
 		}), suaveSigner, privKey)
-		RequireNoErrorf(err, "could not sign offchainTx: %v", err)
+		RequireNoErrorf(err, "could not sign confidentialRequestTx: %v", err)
 
-		offchainTxBytes, err := offchainTx.MarshalBinary()
-		RequireNoErrorf(err, "could not marshal offchainTx: %v", err)
+		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
+		RequireNoErrorf(err, "could not marshal confidentialRequestTx: %v", err)
 
 		confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(ethBundleBytes)
 		RequireNoErrorf(err, "could not pack bundle confidential data: %v", err)
 
-		var offchainTxHash common.Hash
-		rpcErr := suaveClient.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes), hexutil.Encode(confidentialDataBytes))
+		var confidentialRequestTxHash common.Hash
+		rpcErr := suaveClient.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes), hexutil.Encode(confidentialDataBytes))
 		RequireNoErrorf(rpcErr, "could not send bundle bid: %v", unwrapPeekerError(rpcErr))
-		executedOffchainTxHashes = append(executedOffchainTxHashes, offchainTxHash)
+		suaveTxHashes = append(suaveTxHashes, confidentialRequestTxHash)
 	}
 
-	log.Info("Submitted bundle to suave", "executedOffchainTxHashes", executedOffchainTxHashes)
+	log.Info("Submitted bundle to suave", "suaveTxHashes", suaveTxHashes)
 
 	{ // Bid mempool sanity check
 		packedCondBytes, err := suaveLibAbi.Methods["fetchBids"].Inputs.Pack(minTargetBlock)
@@ -176,11 +176,11 @@ func cmdSendBundle() {
 
 		var result hexutil.Bytes
 		rpcErr := suaveClient.Call(&result, "eth_call", ethapi.TransactionArgs{
-			To:         &fetchBidsAddress,
-			Gas:        &gas,
-			IsOffchain: true,
-			ChainID:    &chainId,
-			Data:       (*hexutil.Bytes)(&packedCondBytes),
+			To:             &fetchBidsAddress,
+			Gas:            &gas,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&packedCondBytes),
 		}, "latest")
 		RequireNoErrorf(rpcErr, "could not pack fetchBids: %v", unwrapPeekerError(rpcErr))
 		unpackedBids, err := suaveLibAbi.Methods["fetchBids"].Outputs.Unpack(result)
@@ -248,17 +248,17 @@ func cmdSendBundle() {
 			Data:     calldata,
 		}
 
-		offchainTx, err := types.SignTx(types.NewTx(&types.OffchainTx{
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ExecutionNode: executionNodeAddress,
 			Wrapped:       *types.NewTx(wrappedTxData),
 		}), suaveSigner, privKey)
 		RequireNoErrorf(err, "could not sign block build request: %v", err)
 
-		offchainTxBytes, err := offchainTx.MarshalBinary()
+		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
 		RequireNoErrorf(err, "could not marshal block build request: %v", err)
 
-		var offchainTxHash common.Hash
-		rpcErr := suaveClient.Call(&offchainTxHash, "eth_sendRawTransaction", hexutil.Encode(offchainTxBytes))
+		var confidentialRequestTxHash common.Hash
+		rpcErr := suaveClient.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes))
 		RequireNoErrorf(rpcErr, "block building peeker failed: %v", unwrapPeekerError(rpcErr))
 	}
 

@@ -122,12 +122,12 @@ func (e *ConfidentialStoreEngine) Subscribe(ctx context.Context) {
 }
 
 func ExecutionNodeFromTransaction(tx *types.Transaction) (common.Address, error) {
-	innerExecutedTx, ok := types.CastTxInner[*types.OffchainExecutedTx](tx)
+	innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
 	if ok {
 		return innerExecutedTx.ExecutionNode, nil
 	}
 
-	innerRequestTx, ok := types.CastTxInner[*types.OffchainTx](tx)
+	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 	if ok {
 		return innerRequestTx.ExecutionNode, nil
 	}
@@ -141,7 +141,7 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		return types.Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)
 	}
 
-	var emptyId common.Hash
+	var emptyId [32]byte
 	if bid.Id == emptyId {
 		bid.Id = expectedId
 	} else if bid.Id != expectedId {

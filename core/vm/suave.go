@@ -11,7 +11,7 @@ import (
 type SuaveExecutionBackend struct {
 	ConfidentialStoreEngine      *suave.ConfidentialStoreEngine
 	MempoolBackend               suave.MempoolBackend
-	OffchainEthBackend           suave.OffchainEthBackend
+	ConfidentialEthBackend       suave.ConfidentialEthBackend
 	confidentialComputeRequestTx *types.Transaction
 	confidentialInputs           []byte
 	callerStack                  []*common.Address
@@ -37,21 +37,21 @@ func (b *SuaveExecutionBackend) Stop() error {
 }
 
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
-	if !evm.Config.IsOffchain {
+	if !evm.Config.IsConfidential {
 		return nil
 	}
 
 	return &SuaveExecutionBackend{
 		ConfidentialStoreEngine:      evm.suaveExecutionBackend.ConfidentialStoreEngine,
 		MempoolBackend:               evm.suaveExecutionBackend.MempoolBackend,
-		OffchainEthBackend:           evm.suaveExecutionBackend.OffchainEthBackend,
+		ConfidentialEthBackend:       evm.suaveExecutionBackend.ConfidentialEthBackend,
 		confidentialComputeRequestTx: evm.suaveExecutionBackend.confidentialComputeRequestTx,
 		confidentialInputs:           evm.suaveExecutionBackend.confidentialInputs,
 		callerStack:                  append(evm.suaveExecutionBackend.callerStack, &caller),
 	}
 }
 
-// Implements PrecompiledContract for Offchain smart contracts
+// Implements PrecompiledContract for confidential smart contracts
 type SuavePrecompiledContractWrapper struct {
 	addr     common.Address
 	backend  *SuaveExecutionBackend
@@ -67,18 +67,18 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 }
 
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
-	stub := &BackendStub{
-		impl: &backendImpl{
+	stub := &SuaveRuntimeAdapter{
+		impl: &suaveRuntime{
 			backend: p.backend,
 		},
 	}
 
 	switch p.addr {
-	case isOffchainAddress:
-		return (&isOffchainPrecompile{}).RunOffchain(p.backend, input)
+	case isConfidentialAddress:
+		return (&isConfidentialPrecompile{}).RunConfidential(p.backend, input)
 
 	case confidentialInputsAddress:
-		return (&confidentialInputsPrecompile{}).RunOffchain(p.backend, input)
+		return (&confidentialInputsPrecompile{}).RunConfidential(p.backend, input)
 
 	case confStoreStoreAddress:
 		return stub.confidentialStoreStore(input)
