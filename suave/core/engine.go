@@ -136,10 +136,6 @@ func ExecutionNodeFromTransaction(tx *types.Transaction) (common.Address, error)
 }
 
 func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types.Transaction) (types.Bid, error) {
-	if bid.Salt == emptyId {
-		bid.Salt = RandomBidId()
-	}
-
 	expectedId, err := calculateBidId(bid)
 	if err != nil {
 		return types.Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)

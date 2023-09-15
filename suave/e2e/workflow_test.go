@@ -1,4 +1,4 @@
-package main
+package e2e
 
 import (
 	"context"
@@ -249,10 +249,10 @@ func TestBundleBid(t *testing.T) {
 		bundleBytes, err := json.Marshal(bundle)
 		require.NoError(t, err)
 
-		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, BundleBidContract.Abi, clt)
 		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
 
@@ -265,7 +265,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 1, len(block.Transactions()))
-		unpacked, err := bundleBidContract.Abi.Methods["emitBid"].Inputs.Unpack(block.Transactions()[0].Data()[4:])
+		unpacked, err := BundleBidContract.Abi.Methods["emitBid"].Inputs.Unpack(block.Transactions()[0].Data()[4:])
 		require.NoError(t, err)
 		bid := unpacked[0].(struct {
 			Id                  [16]uint8        "json:\"id\""
@@ -281,7 +281,7 @@ func TestBundleBid(t *testing.T) {
 		require.NotNil(t, receipts[0].Logs[0])
 		require.Equal(t, newBundleBidAddress, receipts[0].Logs[0].Address)
 
-		unpacked, err = bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[0].Data)
+		unpacked, err = BundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[0].Data)
 		require.NoError(t, err)
 
 		require.Equal(t, bid.Id, unpacked[0].([16]byte))
@@ -335,10 +335,10 @@ func TestMevShare(t *testing.T) {
 	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
-	confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+	confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 	require.NoError(t, err)
 
-	bundleBidContractI := sdk.GetContract(mevShareAddress, bundleBidContract.Abi, clt)
+	bundleBidContractI := sdk.GetContract(mevShareAddress, BundleBidContract.Abi, clt)
 	_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}}, confidentialDataBytes)
 	requireNoRpcError(t, err)
 
@@ -358,7 +358,7 @@ func TestMevShare(t *testing.T) {
 	require.NotEmpty(t, r.Logs)
 
 	// extract share BidId
-	unpacked, err := matchBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
+	unpacked, err := MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
 	require.NoError(t, err)
 	shareBidId := unpacked[0].([16]byte)
 
@@ -384,12 +384,12 @@ func TestMevShare(t *testing.T) {
 	// decryption conditions are assumed to be eth blocks right now
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
-	confidentialDataMatchBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
+	confidentialDataMatchBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 	require.NoError(t, err)
 
-	cc := sdk.GetContract(mevShareAddress, matchBidContract.Abi, clt)
+	cc := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
 	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}, shareBidId}, confidentialDataMatchBytes)
-	require.NoError(t, err)
+	requireNoRpcError(t, err)
 
 	block = fr.suethSrv.ProgressChain()
 	require.Equal(t, 1, len(block.Transactions()))
@@ -431,7 +431,7 @@ func TestMevShare(t *testing.T) {
 
 		require.Equal(t, 2, len(receipts[0].Logs))
 		require.NotNil(t, receipts[0].Logs[1])
-		unpacked, err := bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
+		unpacked, err := BundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
@@ -594,10 +594,10 @@ func TestBlockBuildingContract(t *testing.T) {
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
 
-		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, BundleBidContract.Abi, clt)
 
 		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		require.NoError(t, err)
@@ -710,12 +710,12 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{ethBlockBidSenderAddr, newBundleBidAddress, buildEthBlockAddress}
 
-		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt)
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, BundleBidContract.Abi, clt)
 		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
-		require.NoError(t, err)
+		requireNoRpcError(t, err)
 	}
 
 	block = fr.suethSrv.ProgressChain()
@@ -920,10 +920,10 @@ var (
 		Alloc: core.GenesisAlloc{
 			testAddr:              {Balance: testBalance},
 			testAddr2:             {Balance: testBalance},
-			newBundleBidAddress:   {Balance: big.NewInt(0), Code: bundleBidContract.DeployedCode},
+			newBundleBidAddress:   {Balance: big.NewInt(0), Code: BundleBidContract.DeployedCode},
 			newBlockBidAddress:    {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			blockBidSenderAddress: {Balance: big.NewInt(0), Code: ethBlockBidSenderContract.DeployedCode},
-			mevShareAddress:       {Balance: big.NewInt(0), Code: matchBidContract.DeployedCode},
+			mevShareAddress:       {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
 		},
 	}
 

@@ -1,4 +1,4 @@
-package main
+package e2e
 
 import (
 	"encoding/json"
@@ -56,10 +56,10 @@ func TestRedisBackends(t *testing.T) {
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
 
-		confidentialDataBytes, err := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		bundleBidContractI := sdk.GetContract(newBundleBidAddress, bundleBidContract.Abi, clt1)
+		bundleBidContractI := sdk.GetContract(newBundleBidAddress, BundleBidContract.Abi, clt1)
 
 		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr1.ExecutionNode(), fr2.ExecutionNode()}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
