@@ -44,7 +44,7 @@ devtools:
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
 
 devnet-up:
-	docker-compose -f ./suave/devenv/docker-compose.yml up -d
+	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
 
 devnet-down:
 	docker-compose -f ./suave/devenv/docker-compose.yml down
