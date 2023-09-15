@@ -73,7 +73,7 @@ func TestRedisBackends(t *testing.T) {
 	// TODO: explicitly check if fr2 received the bid
 
 	{
-		ethHead := fr1.ethSrv.CurrentBlock()
+		ethHead := fr2.ethSrv.CurrentBlock()
 
 		payloadArgsTuple := types.BuildBlockArgs{
 			ProposerPubkey: []byte{0x42},

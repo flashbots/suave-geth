@@ -8,17 +8,18 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
-	"golang.org/x/exp/slices"
 )
 
 type LocalConfidentialStore struct {
-	lock sync.Mutex
-	bids map[suave.BidId]ACData
+	lock    sync.Mutex
+	bids    map[suave.BidId]suave.Bid
+	dataMap map[string][]byte
 }
 
 func NewLocalConfidentialStore() *LocalConfidentialStore {
 	return &LocalConfidentialStore{
-		bids: make(map[suave.BidId]ACData),
+		bids:    make(map[suave.BidId]suave.Bid),
+		dataMap: make(map[string][]byte),
 	}
 }
 
@@ -28,11 +29,6 @@ func (s *LocalConfidentialStore) Start() error {
 
 func (s *LocalConfidentialStore) Stop() error {
 	return nil
-}
-
-type ACData struct {
-	bid     suave.Bid
-	dataMap map[string][]byte
 }
 
 // This function is *trusted* and not available directly through precompiles
@@ -46,53 +42,35 @@ func (s *LocalConfidentialStore) InitializeBid(bid suave.Bid) error {
 		return suave.ErrBidAlreadyPresent
 	}
 
-	s.bids[bid.Id] = ACData{bid, make(map[string][]byte)}
+	s.bids[bid.Id] = bid
 
 	return nil
 }
 
 func (s *LocalConfidentialStore) FetchEngineBidById(bidId suave.BidId) (suave.Bid, error) {
-	bidData, found := s.bids[bidId]
+	bid, found := s.bids[bidId]
 	if !found {
 		return suave.Bid{}, errors.New("bid not found")
 	}
 
-	return bidData.bid, nil
+	return bid, nil
 }
 
-func (s *LocalConfidentialStore) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
+func (s *LocalConfidentialStore) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	bidAcd, found := s.bids[bidId]
-	if !found {
-		return suave.Bid{}, errors.New("bid not initialized")
-	}
+	s.dataMap[fmt.Sprintf("%x-%s", bid.Id, key)] = append(make([]byte, 0, len(value)), value...)
 
-	if !slices.Contains(bidAcd.bid.AllowedPeekers, caller) {
-		return suave.Bid{}, fmt.Errorf("%x not allowed to store %s on %x", caller, key, bidId)
-	}
-
-	bidAcd.dataMap[key] = append(make([]byte, 0, len(value)), value...)
-
-	defer log.Trace("CSSW", "caller", caller, "key", key, "value", value, "stored", s.bids[bidId].dataMap[key])
-	return bidAcd.bid, nil
+	defer log.Trace("CSSW", "caller", caller, "key", key, "value", value, "stored", s.dataMap[fmt.Sprintf("%x-%s", bid.Id, key)])
+	return bid, nil
 }
 
-func (s *LocalConfidentialStore) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
+func (s *LocalConfidentialStore) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	bidAcd, found := s.bids[bidId]
-	if !found {
-		return []byte{}, fmt.Errorf("%v not found", bidId)
-	}
-
-	if !slices.Contains(bidAcd.bid.AllowedPeekers, caller) {
-		return []byte{}, fmt.Errorf("%x not allowed to fetch %s on %x", caller, key, bidId)
-	}
-
-	data, found := bidAcd.dataMap[key]
+	data, found := s.dataMap[fmt.Sprintf("%x-%s", bid.Id, key)]
 	if !found {
 		return []byte{}, fmt.Errorf("data for key %s not found", key)
 	}

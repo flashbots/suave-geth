@@ -184,8 +184,13 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error) {
 	bid, err := e.backend.FetchEngineBidById(bidId)
 	if err != nil {
-		return Bid{}, fmt.Errorf("confidential engine could not fetch bid: %w", err)
+		return Bid{}, fmt.Errorf("confidential engine: could not fetch bid %x while storing: %w", bidId, err)
 	}
+
+	if !slices.Contains(bid.AllowedPeekers, caller) {
+		return Bid{}, fmt.Errorf("confidential engine: %x not allowed to store %s on %x", caller, key, bidId)
+	}
+
 	msg := DAMessage{
 		Bid:      bid,
 		SourceTx: sourceTx,
@@ -212,11 +217,20 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 	// TODO: avoid marshalling twice
 	e.pubsub.Publish(msg)
 
-	return e.backend.Store(bidId, caller, key, value)
+	return e.backend.Store(bid, caller, key, value)
 }
 
 func (e *ConfidentialStoreEngine) Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error) {
-	return e.backend.Retrieve(bidId, caller, key)
+	bid, err := e.backend.FetchEngineBidById(bidId)
+	if err != nil {
+		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", bidId, err)
+	}
+
+	if !slices.Contains(bid.AllowedPeekers, caller) {
+		return []byte{}, fmt.Errorf("confidential engine: %x not allowed to retrieve %s on %x", caller, key, bidId)
+	}
+
+	return e.backend.Retrieve(bid, caller, key)
 }
 
 func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
@@ -301,7 +315,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		e.mempool.SubmitBid(innerBid)
 	}
 
-	_, err = e.backend.Store(message.Bid.Id, message.Caller, message.Key, message.Value)
+	_, err = e.backend.Store(message.Bid, message.Caller, message.Key, message.Value)
 	if err != nil {
 		panic(fmt.Errorf("unexpected error while storing, the message was not validated properly: %w (%v)", err, message.Caller))
 	}

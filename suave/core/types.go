@@ -37,8 +37,8 @@ type ConfidentialStoreBackend interface {
 	node.Lifecycle
 	InitializeBid(bid Bid) error
 	FetchEngineBidById(bidId BidId) (Bid, error)
-	Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
-	Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error)
+	Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
+	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)
 }
 
 type MempoolBackend interface {

@@ -40,35 +40,41 @@ var (
 )
 
 func (m *MempoolOnConfidentialStore) SubmitBid(bid types.Bid) error {
-	m.cs.Store(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("id-%x", bid.Id), suave.MustEncode(bid))
-
 	defer log.Info("bid submitted", "bid", bid, "store", m.cs.Store)
 
 	var bidsByBlockAndProtocol []types.Bid
-	bidsByBlockAndProtocolBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition))
+	bidsByBlockAndProtocolBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition))
 	if err == nil {
 		bidsByBlockAndProtocol = suave.MustDecode[[]types.Bid](bidsByBlockAndProtocolBytes)
 	}
 	// store bid by block number and by protocol + block number
 	bidsByBlockAndProtocol = append(bidsByBlockAndProtocol, bid)
 
-	m.cs.Store(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition), suave.MustEncode(bidsByBlockAndProtocol))
+	m.cs.Store(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition), suave.MustEncode(bidsByBlockAndProtocol))
 
 	return nil
 }
 
 func (m *MempoolOnConfidentialStore) FetchBidById(bidId suave.BidId) (types.Bid, error) {
-	bidBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("id-%x", bidId))
+	engineBid, err := m.cs.FetchEngineBidById(bidId)
 	if err != nil {
+		log.Error("bid missing!", "id", bidId, "err", err)
 		return types.Bid{}, errors.New("not found")
 	}
-	return suave.MustDecode[types.Bid](bidBytes), nil
+
+	return types.Bid{
+		Id:                  engineBid.Id,
+		Salt:                engineBid.Salt,
+		DecryptionCondition: engineBid.DecryptionCondition,
+		AllowedPeekers:      engineBid.AllowedPeekers,
+		AllowedStores:       engineBid.AllowedStores,
+		Version:             engineBid.Version,
+	}, nil
 }
 
 func (m *MempoolOnConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
-	bidsByProtocolBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid.Id, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
+	bidsByProtocolBytes, err := m.cs.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
 	if err != nil {
-		log.Error("xx", "err", err)
 		return nil
 	}
 	defer log.Info("bids fetched", "bids", string(bidsByProtocolBytes))

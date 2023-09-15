@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/go-redis/redis/v8"
-	"golang.org/x/exp/slices"
 )
 
 type RedisStoreBackend struct {
@@ -94,18 +93,9 @@ func (r *RedisStoreBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, er
 	return bid, nil
 }
 
-func (r *RedisStoreBackend) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	bid, err := r.FetchEngineBidById(bidId)
-	if err != nil {
-		return suave.Bid{}, fmt.Errorf("could not fetch bid from redis: %w", err)
-	}
-
-	if !slices.Contains(bid.AllowedPeekers, caller) {
-		return suave.Bid{}, fmt.Errorf("%x not allowed to store %s on %x", caller, key, bidId)
-	}
-
-	storeKey := formatRedisBidValueKey(bid, key)
-	err = r.client.Set(r.ctx, storeKey, string(value), time.Second).Err()
+func (r *RedisStoreBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
+	storeKey := formatRedisBidValueKey(bid.Id, key)
+	err := r.client.Set(r.ctx, storeKey, string(value), time.Second).Err()
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("unexpected redis error: %w", err)
 	}
@@ -113,17 +103,8 @@ func (r *RedisStoreBackend) Store(bidId suave.BidId, caller common.Address, key 
 	return bid, nil
 }
 
-func (r *RedisStoreBackend) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := r.FetchEngineBidById(bidId)
-	if err != nil {
-		return []byte{}, errors.New("bid not present yet")
-	}
-
-	if !slices.Contains(bid.AllowedPeekers, caller) {
-		return []byte{}, fmt.Errorf("%x not allowed to fetch %s on %x", caller, key, bidId)
-	}
-
-	storeKey := formatRedisBidValueKey(bid, key)
+func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
+	storeKey := formatRedisBidValueKey(bid.Id, key)
 	data, err := r.client.Get(r.ctx, storeKey).Bytes()
 	if err != nil {
 		return []byte{}, fmt.Errorf("unexpected redis error: %w, %s, %v", err, storeKey, r.client.Keys(context.TODO(), "*").String())

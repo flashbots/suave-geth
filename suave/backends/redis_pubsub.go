@@ -28,8 +28,8 @@ var (
 		return fmt.Sprintf("bid-%x", bidId)
 	}
 
-	formatRedisBidValueKey = func(bid suave.Bid, key string) string {
-		return fmt.Sprintf("bid-data-%x-%s", bid.Id, key) // TODO: should also include the hash of the bid at least
+	formatRedisBidValueKey = func(bidId suave.BidId, key string) string {
+		return fmt.Sprintf("bid-data-%x-%s", bidId, key) // TODO: should also include the hash of the bid at least
 	}
 )
 

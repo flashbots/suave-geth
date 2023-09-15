@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
-	"golang.org/x/exp/slices"
 )
 
 var (
@@ -146,18 +145,9 @@ func (r *MiniredisBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, err
 	return bid, nil
 }
 
-func (r *MiniredisBackend) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	bid, err := r.FetchEngineBidById(bidId)
-	if err != nil {
-		return suave.Bid{}, errors.New("bid not present yet")
-	}
-
-	if !slices.Contains(bid.AllowedPeekers, caller) {
-		return suave.Bid{}, fmt.Errorf("%x not allowed to store %s on %x", caller, key, bidId)
-	}
-
+func (r *MiniredisBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	storeKey := formatMiniredisBidValueKey(bid, key)
-	err = r.client.Set(storeKey, string(value))
+	err := r.client.Set(storeKey, string(value))
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("unexpected redis error: %w", err)
 	}
@@ -165,16 +155,7 @@ func (r *MiniredisBackend) Store(bidId suave.BidId, caller common.Address, key s
 	return bid, nil
 }
 
-func (r *MiniredisBackend) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := r.FetchEngineBidById(bidId)
-	if err != nil {
-		return []byte{}, errors.New("bid not present yet")
-	}
-
-	if !slices.Contains(bid.AllowedPeekers, caller) {
-		return []byte{}, fmt.Errorf("%x not allowed to fetch %s on %x", caller, key, bidId)
-	}
-
+func (r *MiniredisBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
 	storeKey := formatMiniredisBidValueKey(bid, key)
 	data, err := r.client.Get(storeKey)
 	if err != nil {

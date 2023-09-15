@@ -29,11 +29,11 @@ func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) error {
 	return nil
 }
 
-func (m *mockSuaveBackend) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
+func (m *mockSuaveBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	return suave.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) Retrieve(bid suave.BidId, caller common.Address, key string) ([]byte, error) {
+func (m *mockSuaveBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -98,6 +98,9 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// json error when the precompile expects to decode a json object encoded as []byte
 		// in the precompile input.
 		"invalid character",
+		"not allowed to store",
+		"not allowed to retrieve",
+		"unknown bid version",
 		// error from a precompile that expects to make an http request from an input value.
 		"could not send request to relay",
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the

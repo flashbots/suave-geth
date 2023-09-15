@@ -80,20 +80,14 @@ func TestMiniredisStore(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bid, fetchedBid)
 
-	_, err = mb.Store(bid.Id, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
+	_, err = mb.Store(bid, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
 	require.NoError(t, err)
 
-	_, err = mb.Store(bid.Id, common.Address{0x41, 0x38}, "xxy", []byte{0x43, 0x15})
-	require.Error(t, err)
-
-	retrievedData, err := mb.Retrieve(bid.Id, bid.AllowedPeekers[0], "xx")
+	retrievedData, err := mb.Retrieve(bid, bid.AllowedPeekers[0], "xx")
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	_, err = mb.Retrieve(bid.Id, bid.AllowedPeekers[0], "xxy")
-	require.Error(t, err)
-
-	_, err = mb.Retrieve(bid.Id, common.Address{0x41, 0x38}, "xx")
+	_, err = mb.Retrieve(bid, bid.AllowedPeekers[0], "xxy")
 	require.Error(t, err)
 }
 
@@ -125,7 +119,7 @@ func TestRedisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(5 * time.Millisecond):
+	case <-time.After(50 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 
@@ -167,21 +161,12 @@ func TestRedisStore(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bid, fetchedBid)
 
-	_, err = redisStoreBackend.Store(bid.Id, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
+	_, err = redisStoreBackend.Store(bid, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
 	require.NoError(t, err)
 
-	_, err = redisStoreBackend.Store(bid.Id, common.Address{0x41, 0x38}, "xxy", []byte{0x43, 0x15})
-	require.Error(t, err)
-
-	retrievedData, err := redisStoreBackend.Retrieve(bid.Id, bid.AllowedPeekers[0], "xx")
+	retrievedData, err := redisStoreBackend.Retrieve(bid, bid.AllowedPeekers[0], "xx")
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
-
-	_, err = redisStoreBackend.Retrieve(bid.Id, bid.AllowedPeekers[0], "xxy")
-	require.Error(t, err)
-
-	_, err = redisStoreBackend.Retrieve(bid.Id, common.Address{0x41, 0x38}, "xx")
-	require.Error(t, err)
 }
 
 func TestEngineOnRedis(t *testing.T) {

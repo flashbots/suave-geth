@@ -414,7 +414,7 @@ func TestMevShare(t *testing.T) {
 
 	cc = sdk.GetContract(newBlockBidAddress, buildEthBlockContract.Abi, clt)
 	_, err = cc.SendTransaction("buildMevShare", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
-	require.NoError(t, err)
+	requireNoRpcError(t, err)
 
 	block = fr.suethSrv.ProgressChain() // block = progressChain(t, ethservice, block.Header())
 	require.Equal(t, 1, len(block.Transactions()))
@@ -849,7 +849,6 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	}
 
 	node, ethservice := startSuethService(t, testSuaveGenesis, nil, cfg.suaveConfig)
-	ethservice.APIs()
 
 	f := &framework{
 		t:        t,

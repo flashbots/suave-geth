@@ -253,7 +253,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	suaveBidMempool := suave_backends.NewMempoolOnConfidentialStore(suave_backends.NewLocalConfidentialStore())
+	suaveBidMempool := suave_backends.NewMempoolOnConfidentialStore(confidentialStoreBackend)
 	suaveDaSigner := &suave_backends.AccountManagerDASigner{Manager: eth.AccountManager()}
 
 	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveBidMempool, suaveDaSigner, types.LatestSigner(chainConfig))

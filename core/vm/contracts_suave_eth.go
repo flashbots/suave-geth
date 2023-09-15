@@ -208,7 +208,6 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not unpack merged bid ids: %w", err)
 		}
-		log.Info("x", "x", unpacked, "x", mergedBidsBytes)
 		bidIds = unpacked[0].([][16]byte)
 	} else {
 		bidIds = append(bidIds, bidId)
