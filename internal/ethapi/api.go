@@ -1021,8 +1021,20 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 		blockOverrides.Apply(&blockCtx)
 	}
 
+	var suaveCtx *vm.SuaveContext
+	if args.IsConfidential {
+		suaveCtx = &vm.SuaveContext{
+			Backend:                      nil, // Set by backend, would be better to set it here already
+			ConfidentialComputeRequestTx: args.ToTransaction(),
+		}
+
+		if args.ConfidentialInputs != nil {
+			suaveCtx.ConfidentialInputs = []byte(*args.ConfidentialInputs)
+		}
+	}
+
 	vmConfig := vm.Config{NoBaseFee: true, IsConfidential: args.IsConfidential}
-	evm, vmError := b.GetEVM(ctx, msg, state, header, &vmConfig, &blockCtx)
+	evm, vmError := b.GetEVM(ctx, msg, state, header, &vmConfig, &blockCtx, suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1586,7 +1598,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		// Apply the transaction with the access list tracer
 		tracer := logger.NewAccessListTracer(accessList, args.from(), to, precompiles)
 		config := vm.Config{Tracer: tracer, NoBaseFee: true}
-		vmenv, _ := b.GetEVM(ctx, msg, statedb, header, &config, nil)
+		vmenv, _ := b.GetEVM(ctx, msg, statedb, header, &config, nil, nil)
 		res, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.GasLimit))
 		if err != nil {
 			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", args.toTransaction().Hash(), err)
@@ -1940,12 +1952,16 @@ func (s *TransactionAPI) executeConfidentialCall(ctx context.Context, tx *types.
 		return nil, err
 	}
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, s.b), nil)
-	evm, vmError := s.b.GetEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx)
-	evm.SetConfidentialRequestTx(tx)
+
+	suaveCtx := vm.SuaveContext{
+		ConfidentialComputeRequestTx: tx,
+	}
 
 	if confidential != nil {
-		evm.SetConfidentialInput(*confidential)
+		suaveCtx.ConfidentialInputs = []byte(*confidential)
 	}
+
+	evm, vmError := s.b.GetEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)

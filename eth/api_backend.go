@@ -253,7 +253,7 @@ func (b *EthAPIBackend) GetTd(ctx context.Context, hash common.Hash) *big.Int {
 	return nil
 }
 
-func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext) (*vm.EVM, func() error) {
+func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext, suaveCtx *vm.SuaveContext) (*vm.EVM, func() error) {
 	if vmConfig == nil {
 		vmConfig = b.eth.blockchain.GetVMConfig()
 	}
@@ -266,7 +266,11 @@ func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *st
 	}
 
 	if vmConfig.IsConfidential {
-		return vm.NewConfidentialEVM(b.suaveBackend, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+		suaveCtxCopy := *suaveCtx
+		if suaveCtx.Backend == nil {
+			suaveCtxCopy.Backend = b.suaveBackend
+		}
+		return vm.NewConfidentialEVM(suaveCtxCopy, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
 	} else {
 		return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
 	}

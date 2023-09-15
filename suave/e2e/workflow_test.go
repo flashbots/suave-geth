@@ -48,23 +48,20 @@ func TestIsConfidential(t *testing.T) {
 
 	rpc := fr.suethSrv.RPCNode()
 
-	gas := hexutil.Uint64(1000000)
 	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
 
 	{
 		// Verify eth_call of isConfidentialAddress returns 1/0 depending on confidential compute setting
 		var result string
-		requireNoRpcError(t, rpc.Call(&result, "eth_call", ethapi.TransactionArgs{
+		requireNoRpcError(t, rpc.Call(&result, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
 			To:             &isConfidentialAddress,
-			Gas:            &gas,
 			IsConfidential: true,
 			ChainID:        &chainId,
-		}, "latest"))
+		}), "latest"))
 		require.Equal(t, []byte{1}, hexutil.MustDecode(result))
 
 		requireNoRpcError(t, rpc.Call(&result, "eth_call", ethapi.TransactionArgs{
 			To:             &isConfidentialAddress,
-			Gas:            &gas,
 			IsConfidential: false,
 			ChainID:        &chainId,
 		}, "latest"))
@@ -163,13 +160,13 @@ func TestMempool(t *testing.T) {
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.Call(&simResult, "eth_call", ethapi.TransactionArgs{
+		requireNoRpcError(t, rpc.Call(&simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
 			To:             &fetchBidsAddress,
 			Gas:            &gas,
 			IsConfidential: true,
 			ChainID:        &chainId,
 			Data:           (*hexutil.Bytes)(&calldata),
-		}, "latest"))
+		}), "latest"))
 
 		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
 		require.NoError(t, err)
@@ -492,13 +489,13 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
+		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
 			To:             &simulateBundleAddress,
 			Gas:            &gas,
 			IsConfidential: true,
 			ChainID:        &chainId,
 			Data:           (*hexutil.Bytes)(&calldata),
-		}, "latest"))
+		}), "latest"))
 
 		require.Equal(t, 32, len(simResult))
 		require.Equal(t, 13, int(simResult[31]))
@@ -537,13 +534,13 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", ethapi.TransactionArgs{
+		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
 			To:             &buildEthBlockAddress,
 			Gas:            &gas,
 			IsConfidential: true,
 			ChainID:        &chainId,
 			Data:           (*hexutil.Bytes)(&packed),
-		}, "latest"))
+		}), "latest"))
 
 		require.NotNil(t, simResult)
 
@@ -1077,4 +1074,28 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 	}
 
 	return inoutAbi.Methods[method]
+}
+
+func setTxArgsDefaults(args ethapi.TransactionArgs) ethapi.TransactionArgs {
+	if args.Gas == nil {
+		gas := hexutil.Uint64(1000000)
+		args.Gas = &gas
+	}
+
+	if args.Nonce == nil {
+		nonce := hexutil.Uint64(0)
+		args.Nonce = &nonce
+	}
+
+	if args.GasPrice == nil {
+		value := big.NewInt(0)
+		args.GasPrice = (*hexutil.Big)(value)
+	}
+
+	if args.Value == nil {
+		value := big.NewInt(0)
+		args.Value = (*hexutil.Big)(value)
+	}
+
+	return args
 }

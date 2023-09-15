@@ -80,14 +80,20 @@ func TestSuavePrecompileStub(t *testing.T) {
 	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
-	suaveBackend := &SuaveExecutionBackend{
-		ConfidentialStoreEngine: stubEngine,
-		MempoolBackend:          mockSuaveBackend,
-		ConfidentialEthBackend:  mockSuaveBackend,
+	suaveContext := SuaveContext{
+		Backend: &SuaveExecutionBackend{
+			ConfidentialStoreEngine: stubEngine,
+			MempoolBackend:          mockSuaveBackend,
+			ConfidentialEthBackend:  mockSuaveBackend,
+		},
+		ConfidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
+			ExecutionNode: common.Address{},
+			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		}),
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-	vmenv := NewConfidentialEVM(suaveBackend, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsConfidential: true})
+	vmenv := NewConfidentialEVM(suaveContext, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsConfidential: true})
 
 	// The objective of the unit test is to make sure that the encoding of the precompile
 	// inputs works as expected from the ABI specification. Thus, we will skip any errors
@@ -119,10 +125,6 @@ func TestSuavePrecompileStub(t *testing.T) {
 		packedInput, err := abiMethod.Inputs.Pack(inputVals...)
 		require.NoError(t, err)
 
-		vmenv.SetConfidentialRequestTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: common.Address{},
-			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-		}))
 		_, _, err = vmenv.Call(AccountRef(common.Address{}), addr, packedInput, 100000000, big.NewInt(0))
 		if err != nil {
 			found := false
@@ -148,11 +150,13 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 	t.Cleanup(func() { confEngine.Stop() })
 
 	b := &suaveRuntime{
-		backend: &SuaveExecutionBackend{
-			ConfidentialStoreEngine: confEngine,
-			MempoolBackend:          suaveMempool,
-			ConfidentialEthBackend:  &mockSuaveBackend{},
-			confidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
+		suaveContext: &SuaveContext{
+			Backend: &SuaveExecutionBackend{
+				ConfidentialStoreEngine: confEngine,
+				MempoolBackend:          suaveMempool,
+				ConfidentialEthBackend:  &mockSuaveBackend{},
+			},
+			ConfidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
 				ExecutionNode: common.Address{},
 				Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 			}),
@@ -209,7 +213,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Error(t, err)
 
 	// now, the caller is allowed to store the bid
-	b.backend.callerStack = append(b.backend.callerStack, &callerAddr)
+	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &callerAddr)
 	err = b.confidentialStoreStore(bid.Id, "key", data)
 	require.NoError(t, err)
 
@@ -218,7 +222,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Equal(t, data, val)
 
 	// cannot retrieve the value if the caller is not allowed to
-	b.backend.callerStack = []*common.Address{}
+	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
 	require.Error(t, err)
 }

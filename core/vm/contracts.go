@@ -44,7 +44,7 @@ type PrecompiledContract interface {
 // During confidential execution the contract will be called with their RunConfidential method.
 type SuavePrecompiledContract interface {
 	PrecompiledContract
-	RunConfidential(backend *SuaveExecutionBackend, input []byte) ([]byte, error)
+	RunConfidential(context *SuaveContext, input []byte) ([]byte, error)
 }
 
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum

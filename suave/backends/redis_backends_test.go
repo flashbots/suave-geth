@@ -178,6 +178,7 @@ func TestEngineOnRedis(t *testing.T) {
 	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
 	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
+	require.NoError(t, err)
 
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })

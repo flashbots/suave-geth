@@ -8,13 +8,17 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
+type SuaveContext struct {
+	Backend                      *SuaveExecutionBackend
+	ConfidentialComputeRequestTx *types.Transaction
+	ConfidentialInputs           []byte
+	CallerStack                  []*common.Address
+}
+
 type SuaveExecutionBackend struct {
-	ConfidentialStoreEngine      *suave.ConfidentialStoreEngine
-	MempoolBackend               suave.MempoolBackend
-	ConfidentialEthBackend       suave.ConfidentialEthBackend
-	confidentialComputeRequestTx *types.Transaction
-	confidentialInputs           []byte
-	callerStack                  []*common.Address
+	ConfidentialStoreEngine *suave.ConfidentialStoreEngine
+	MempoolBackend          suave.MempoolBackend
+	ConfidentialEthBackend  suave.ConfidentialEthBackend
 }
 
 func (b *SuaveExecutionBackend) Start() error {
@@ -36,30 +40,28 @@ func (b *SuaveExecutionBackend) Stop() error {
 	return nil
 }
 
-func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
+func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 	if !evm.Config.IsConfidential {
 		return nil
 	}
 
-	return &SuaveExecutionBackend{
-		ConfidentialStoreEngine:      evm.suaveExecutionBackend.ConfidentialStoreEngine,
-		MempoolBackend:               evm.suaveExecutionBackend.MempoolBackend,
-		ConfidentialEthBackend:       evm.suaveExecutionBackend.ConfidentialEthBackend,
-		confidentialComputeRequestTx: evm.suaveExecutionBackend.confidentialComputeRequestTx,
-		confidentialInputs:           evm.suaveExecutionBackend.confidentialInputs,
-		callerStack:                  append(evm.suaveExecutionBackend.callerStack, &caller),
+	return &SuaveContext{
+		Backend:                      evm.SuaveContext.Backend,
+		ConfidentialComputeRequestTx: evm.SuaveContext.ConfidentialComputeRequestTx,
+		ConfidentialInputs:           evm.SuaveContext.ConfidentialInputs,
+		CallerStack:                  append(evm.SuaveContext.CallerStack, &caller),
 	}
 }
 
 // Implements PrecompiledContract for confidential smart contracts
 type SuavePrecompiledContractWrapper struct {
-	addr     common.Address
-	backend  *SuaveExecutionBackend
-	contract SuavePrecompiledContract
+	addr         common.Address
+	suaveContext *SuaveContext
+	contract     SuavePrecompiledContract
 }
 
-func NewSuavePrecompiledContractWrapper(addr common.Address, backend *SuaveExecutionBackend, contract SuavePrecompiledContract) *SuavePrecompiledContractWrapper {
-	return &SuavePrecompiledContractWrapper{addr: addr, backend: backend, contract: contract}
+func NewSuavePrecompiledContractWrapper(addr common.Address, suaveContext *SuaveContext, contract SuavePrecompiledContract) *SuavePrecompiledContractWrapper {
+	return &SuavePrecompiledContractWrapper{addr: addr, suaveContext: suaveContext, contract: contract}
 }
 
 func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
@@ -69,16 +71,16 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	stub := &SuaveRuntimeAdapter{
 		impl: &suaveRuntime{
-			backend: p.backend,
+			suaveContext: p.suaveContext,
 		},
 	}
 
 	switch p.addr {
 	case isConfidentialAddress:
-		return (&isConfidentialPrecompile{}).RunConfidential(p.backend, input)
+		return (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confidentialInputsAddress:
-		return (&confidentialInputsPrecompile{}).RunConfidential(p.backend, input)
+		return (&confidentialInputsPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confStoreStoreAddress:
 		return stub.confidentialStoreStore(input)

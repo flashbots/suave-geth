@@ -105,14 +105,14 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 // It's important to note that any errors returned by the interpreter should be
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
-func (in *EVMInterpreter) Run(backend *SuaveExecutionBackend, contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
+func (in *EVMInterpreter) Run(suaveContext *SuaveContext, contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
-	prevBackend := in.evm.suaveExecutionBackend
-	in.evm.suaveExecutionBackend = backend
+	prevBackend := in.evm.SuaveContext
+	in.evm.SuaveContext = suaveContext
 	defer func() {
 		in.evm.depth--
-		in.evm.suaveExecutionBackend = prevBackend
+		in.evm.SuaveContext = prevBackend
 	}()
 
 	// Make sure the readOnly is only set if we aren't in readOnly yet.
