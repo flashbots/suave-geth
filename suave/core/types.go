@@ -12,10 +12,11 @@ import (
 )
 
 type Bytes = hexutil.Bytes
-type BidId = [32]byte
+type BidId = types.BidId
 
 type Bid struct {
-	Id                  BidId
+	Id                  types.BidId
+	Salt                types.BidId
 	DecryptionCondition uint64
 	AllowedPeekers      []common.Address
 	AllowedStores       []common.Address

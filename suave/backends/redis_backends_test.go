@@ -239,6 +239,7 @@ func TestEngineOnRedis(t *testing.T) {
 
 	submittedBid := suave.Bid{
 		Id:                  bid.Id,
+		Salt:                bid.Salt,
 		DecryptionCondition: bid.DecryptionCondition,
 		AllowedPeekers:      bid.AllowedPeekers,
 		AllowedStores:       bid.AllowedStores,

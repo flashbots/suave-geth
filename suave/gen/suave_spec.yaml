@@ -1,10 +1,12 @@
 types:
   - name: BidId
-    type: bytes32
+    type: bytes16
 structs:
   - name: Bid
     fields:
       - name: id
+        type: BidId
+      - name: salt
         type: BidId
       - name: decryptionCondition
         type: uint64

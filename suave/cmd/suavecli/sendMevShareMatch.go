@@ -51,8 +51,8 @@ func cmdSendMevShareMatch() {
 	mevshareAddresss := common.HexToAddress(*mevshareAddressHex)
 	blockSenderAddress := common.HexToAddress(*blockSenderHex)
 
-	matchBidIdBytes := [32]byte{}
-	copy(matchBidIdBytes[:], []byte(*matchBidId)[:32])
+	matchBidIdBytes := [16]byte{}
+	copy(matchBidIdBytes[:], []byte(*matchBidId)[:16])
 	log.Debug("converted matchBidId to bytes", "matchBidIdBytes", matchBidIdBytes)
 
 	suaveClient, err := rpc.DialContext(context.TODO(), *suaveRpc)
@@ -98,7 +98,7 @@ func sendMevShareMatchTx(
 	mevShareAddr common.Address,
 	blockSenderAddr common.Address,
 	executionNodeAddr common.Address,
-	matchBidId [32]byte,
+	matchBidId types.BidId,
 	// account specific
 	privKey *ecdsa.PrivateKey,
 ) (*common.Hash, error) {
@@ -139,7 +139,7 @@ func prepareEthBackrunBundle(
 	goerliClient *rpc.Client,
 	goerliSigner types.Signer,
 	privKey *ecdsa.PrivateKey,
-	matchBidId [32]byte,
+	matchBidId types.BidId,
 ) (types.SBundle, []byte, error) {
 	var goerliAccNonce hexutil.Uint64
 	err := goerliClient.Call(&goerliAccNonce, "eth_getTransactionCount", crypto.PubkeyToAddress(privKey.PublicKey), "latest")

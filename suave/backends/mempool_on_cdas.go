@@ -34,7 +34,7 @@ func (m *MempoolOnConfidentialStore) Stop() error {
 }
 
 var (
-	mempoolConfStoreId          = common.Hash{0x39}
+	mempoolConfStoreId          = types.BidId{0x39}
 	mempoolConfStoreAddr        = common.HexToAddress("0x39")
 	mempoolConfidentialStoreBid = suave.Bid{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
 )

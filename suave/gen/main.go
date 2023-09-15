@@ -158,8 +158,8 @@ func encodeTypeToGolang(str string, insideTypes bool, slicePointers bool) string
 			return "common.Address"
 		case "bytes":
 			return "[]byte"
-		//case "bytes32":
-		//	return "common.Hash"
+		case "bytes32":
+			return "common.Hash"
 		case "bool":
 			return "bool"
 		case "string":

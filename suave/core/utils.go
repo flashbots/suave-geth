@@ -9,36 +9,24 @@ import (
 )
 
 var bidUuidSpace = uuid.UUID{0x42}
+var emptyId [16]byte
 
-func calculateBidId(bid types.Bid) (BidId, error) {
-	var emptyId [32]byte
-	if bid.Id == emptyId {
-		randomUuid := uuid.New()
-		copy(bid.Id[:], randomUuid[:])
-	}
+func calculateBidId(bid types.Bid) (types.BidId, error) {
+	copy(bid.Id[:], emptyId[:])
 
-	// clear second half
-	for i := 16; i < 32; i++ {
-		bid.Id[i] = 0
-	}
 	body, err := json.Marshal(bid)
 	if err != nil {
-		return BidId{}, fmt.Errorf("could not marshal bid to calculate its id: %w", err)
+		return types.BidId{}, fmt.Errorf("could not marshal bid to calculate its id: %w", err)
 	}
 
-	// hash part
 	uuidv5 := uuid.NewSHA1(bidUuidSpace, body)
+	copy(bid.Id[:], uuidv5[:])
 
-	copy(bid.Id[16:], uuidv5[:])
 	return bid.Id, nil
 }
 
-func RandomBidId() BidId {
-	var bidId [32]byte
-
-	randomUuid := uuid.New()
-	copy(bidId[:], randomUuid[:])
-	return bidId
+func RandomBidId() types.BidId {
+	return types.BidId(uuid.New())
 }
 
 func MustEncode[T any](data T) []byte {

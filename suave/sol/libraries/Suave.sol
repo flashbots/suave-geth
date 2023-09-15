@@ -4,10 +4,11 @@ pragma solidity ^0.8.8;
 library Suave {
     error PeekerReverted(address, bytes);
 
-    type BidId is bytes32;
+    type BidId is bytes16;
 
     struct Bid {
         BidId id;
+        BidId salt;
         uint64 decryptionCondition;
         address[] allowedPeekers;
         address[] allowedStores;

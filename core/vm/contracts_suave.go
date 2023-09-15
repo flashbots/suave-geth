@@ -101,7 +101,7 @@ func (c *confStoreStore) RunConfidential(backend *SuaveExecutionBackend, input [
 		return []byte(err.Error()), err
 	}
 
-	bidId := unpacked[0].(common.Hash)
+	bidId := unpacked[0].(types.BidId)
 	key := unpacked[1].(string)
 	data := unpacked[2].([]byte)
 

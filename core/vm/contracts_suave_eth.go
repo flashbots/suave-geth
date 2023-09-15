@@ -109,7 +109,7 @@ func (c *extractHint) runImpl(backend *SuaveExecutionBackend, bundleBytes []byte
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
 		RefundPercent   int                `json:"percent"`
-		MatchId         [32]byte           `json:"MatchId"`
+		MatchId         types.BidId        `json:"MatchId"`
 	}{}
 
 	err := json.Unmarshal(bundleBytes, &bundle)
@@ -155,11 +155,11 @@ func (c *buildEthBlock) RunConfidential(backend *SuaveExecutionBackend, input []
 	blockArgsRaw := unpacked[0].(struct {
 		Slot           uint64         "json:\"slot\""
 		ProposerPubkey []uint8        "json:\"proposerPubkey\""
-		Parent         [32]uint8      "json:\"parent\""
+		Parent         common.Hash    "json:\"parent\""
 		Timestamp      uint64         "json:\"timestamp\""
 		FeeRecipient   common.Address "json:\"feeRecipient\""
 		GasLimit       uint64         "json:\"gasLimit\""
-		Random         [32]uint8      "json:\"random\""
+		Random         common.Hash    "json:\"random\""
 		Withdrawals    []struct {
 			Index     uint64         "json:\"index\""
 			Validator uint64         "json:\"validator\""
@@ -200,7 +200,7 @@ func (c *buildEthBlock) RunConfidential(backend *SuaveExecutionBackend, input []
 }
 
 func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
-	bidIds := []suave.BidId{}
+	bidIds := [][16]byte{}
 	// first check for merged bid, else assume regular bid
 	if mergedBidsBytes, err := backend.ConfidentialStoreEngine.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
@@ -209,7 +209,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 			return nil, nil, fmt.Errorf("could not unpack merged bid ids: %w", err)
 		}
 		log.Info("x", "x", unpacked, "x", mergedBidsBytes)
-		bidIds = unpacked[0].([]suave.BidId)
+		bidIds = unpacked[0].([][16]byte)
 	} else {
 		bidIds = append(bidIds, bidId)
 	}
@@ -239,7 +239,7 @@ func (c *buildEthBlock) runImpl(backend *SuaveExecutionBackend, blockArgs types.
 				return nil, nil, fmt.Errorf("could not unpack bid ids data for bid %v, from cdas: %w", bid, err)
 			}
 
-			matchBidIds := unpackedBidIds[0].([]suave.BidId)
+			matchBidIds := unpackedBidIds[0].([][16]byte)
 
 			userBundleBytes, err := backend.ConfidentialStoreEngine.Retrieve(matchBidIds[0], buildEthBlockAddress, "mevshare:v0:ethBundles")
 			if err != nil {

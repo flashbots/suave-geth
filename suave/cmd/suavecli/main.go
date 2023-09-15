@@ -132,7 +132,7 @@ func extractBidId(suaveClient *rpc.Client, txHash common.Hash) (suave.BidId, err
 		if err != nil {
 			return suave.BidId{0}, err
 		}
-		shareBidId := unpacked[0].([32]byte)
+		shareBidId := unpacked[0].([16]byte)
 		return shareBidId, nil
 	}
 

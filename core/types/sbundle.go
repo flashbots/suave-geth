@@ -10,5 +10,5 @@ type SBundle struct {
 	Txs             Transactions  `json:"txs"`
 	RevertingHashes []common.Hash `json:"revertingHashes,omitempty"`
 	RefundPercent   int           `json:"percent,omitempty"`
-	MatchId         [32]byte      `json:"MatchId,omitempty"`
+	MatchId         BidId         `json:"MatchId,omitempty"`
 }
