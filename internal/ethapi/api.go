@@ -1831,6 +1831,7 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 	return common.Hash{}, fmt.Errorf("method not allowed")
 
 	// Look up the wallet containing the requested signer
+	//nolint:all
 	account := accounts.Account{Address: args.from()}
 
 	wallet, err := s.b.AccountManager().Find(account)
