@@ -165,7 +165,7 @@ var (
 		Usage:    "suave network: pre-configured proof-of-authority suave test network",
 		Category: flags.EthCategory,
 	}
-	ChainFlag = &cli.StringFlag{
+	CustomChainFlag = &cli.StringFlag{
 		Name:     "chain",
 		Usage:    "Path to a custom chain specification file",
 		Category: flags.EthCategory,
@@ -955,7 +955,7 @@ var (
 		GoerliFlag,
 		SuaveFlag,
 		SepoliaFlag,
-		ChainFlag,
+		CustomChainFlag,
 	}
 	// NetworkFlags is the flag group of all built-in supported networks.
 	NetworkFlags = append([]cli.Flag{MainnetFlag}, TestnetFlags...)
@@ -1661,7 +1661,7 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	// Avoid conflicting network flags
-	CheckExclusive(ctx, MainnetFlag, DeveloperFlag, RinkebyFlag, GoerliFlag, SepoliaFlag, SuaveFlag)
+	CheckExclusive(ctx, MainnetFlag, DeveloperFlag, RinkebyFlag, GoerliFlag, SepoliaFlag, SuaveFlag, CustomChainFlag)
 	CheckExclusive(ctx, LightServeFlag, SyncModeFlag, "light")
 	CheckExclusive(ctx, DeveloperFlag, ExternalSignerFlag) // Can't use both ephemeral unlocked and external signer
 	if ctx.String(GCModeFlag.Name) == "archive" && ctx.Uint64(TxLookupLimitFlag.Name) != 0 {
@@ -1899,9 +1899,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		if !ctx.IsSet(MinerGasPriceFlag.Name) {
 			cfg.Miner.GasPrice = big.NewInt(1)
 		}
-	case ctx.IsSet(ChainFlag.Name):
+	case ctx.IsSet(CustomChainFlag.Name):
 		// initialize the chain from a genesis file
-		genesis, genesisHash, err := initCustomGenesis(ctx, stack, ctx.String(ChainFlag.Name))
+		genesis, genesisHash, err := initCustomGenesis(ctx, stack, ctx.String(CustomChainFlag.Name))
 		if err != nil {
 			Fatalf("Failed to initialize genesis from file: %v", err)
 		}
