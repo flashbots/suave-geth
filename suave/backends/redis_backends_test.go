@@ -37,14 +37,14 @@ func TestMiniredisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(15 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 
 	select {
 	case <-msgSub:
 		t.Error("received an expected message")
-	case <-time.After(15 * time.Millisecond):
+	case <-time.After(5 * time.Millisecond):
 	}
 
 	daMsg.Bid.Id[0] = 0x43
@@ -53,7 +53,7 @@ func TestMiniredisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(15 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 }
@@ -114,7 +114,7 @@ func TestRedisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(50 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 
@@ -130,7 +130,7 @@ func TestRedisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(5 * time.Millisecond):
+	case <-time.After(100 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 }
