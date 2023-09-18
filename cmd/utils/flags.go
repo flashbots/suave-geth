@@ -31,7 +31,6 @@ import (
 	"os"
 	"path/filepath"
 	godebug "runtime/debug"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1047,12 +1046,6 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.RinkebyBootnodes
 	case ctx.Bool(GoerliFlag.Name):
 		urls = params.GoerliBootnodes
-	case ctx.IsSet(ChainFlag.Name):
-		jsonGenesis, err := readJSONGenesis(ctx.String(ChainFlag.Name))
-		if err != nil {
-			Fatalf("Failed to read bootstrap nodes from genesis %s: %v", ChainFlag.Name, err)
-		}
-		urls = jsonGenesis.Bootnodes
 	}
 
 	// don't apply defaults if BootstrapNodes is already set
@@ -2265,71 +2258,16 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 	return preloads
 }
 
-// jsonGenesis is an empowered version of the traditional Geth genesis file
-type jsonGenesis struct {
-	core *core.Genesis `json:"-"`
-
-	Config struct {
-		Clique struct {
-			// Signers is the list of initial validators of the clique protocol
-			Signers []string `json:"signers"`
-		} `json:"clique,omitempty"`
-	} `json:"config"`
-
-	Bootnodes []string `json:"bootnodes"`
-}
-
-func readJSONGenesis(genesisPath string) (*jsonGenesis, error) {
-	genesisRaw, err := os.ReadFile(genesisPath)
-	if err != nil {
-		return nil, err
-	}
-
-	coreGenesis := new(core.Genesis)
-	if err := json.Unmarshal(genesisRaw, coreGenesis); err != nil {
-		return nil, fmt.Errorf("invalid genesis file: %v", err)
-	}
-
-	genesis := new(jsonGenesis)
-	if err := json.Unmarshal(genesisRaw, genesis); err != nil {
-		return nil, fmt.Errorf("invalid genesis file: %v", err)
-	}
-
-	genesis.core = coreGenesis
-	return genesis, nil
-}
-
 // initCustomGenesis is a simplified version of the initGenesis command
 func initCustomGenesis(ctx *cli.Context, stack *node.Node, genesisPath string) (*core.Genesis, common.Hash, error) {
-	genesis, err := readJSONGenesis(genesisPath)
+	genesisRaw, err := os.ReadFile(genesisPath)
 	if err != nil {
 		return nil, common.Hash{}, err
 	}
 
-	// if we are running Clique, read the initial validator set from the Config.Clique.Signers path
-	// and build the extra genesis data as [(32 byte), signer1, signer2, (65 byte)] where the
-	// signers are sorted by their address
-	if genesis.core.Config.Clique != nil {
-		signersStr := genesis.Config.Clique.Signers
-		if len(signersStr) == 0 {
-			return nil, common.Hash{}, fmt.Errorf("no initial signers for Clique")
-		}
-
-		signers := make([]common.Address, len(signersStr))
-		for i, signerStr := range signersStr {
-			signers[i] = common.HexToAddress(signerStr)
-		}
-
-		sort.Slice(signers, func(i, j int) bool {
-			return bytes.Compare(signers[i][:], signers[j][:]) < 0
-		})
-
-		extra := make([]byte, 32)
-		for _, addr := range signers {
-			extra = append(extra, addr.Bytes()...)
-		}
-		extra = append(extra, make([]byte, 65)...)
-		genesis.core.ExtraData = extra
+	genesis := new(core.Genesis)
+	if err := json.Unmarshal(genesisRaw, genesis); err != nil {
+		return nil, common.Hash{}, fmt.Errorf("invalid genesis file: %v", err)
 	}
 
 	chaindb, err := stack.OpenDatabaseWithFreezer("chaindata", 0, 0, ctx.String(AncientFlag.Name), "", false)
@@ -2339,12 +2277,12 @@ func initCustomGenesis(ctx *cli.Context, stack *node.Node, genesisPath string) (
 	triedb := trie.NewDatabaseWithConfig(chaindb, &trie.Config{
 		Preimages: false,
 	})
-	_, hash, err := core.SetupGenesisBlock(chaindb, triedb, genesis.core)
+	_, hash, err := core.SetupGenesisBlock(chaindb, triedb, genesis)
 	if err != nil {
 		return nil, common.Hash{}, err
 	}
 	chaindb.Close()
 
 	log.Info("Successfully wrote genesis state", "database", "chaindata", "hash", hash)
-	return genesis.core, hash, nil
+	return genesis, hash, nil
 }
