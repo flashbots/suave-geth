@@ -1828,6 +1828,8 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionArgs, confidential *hexutil.Bytes) (common.Hash, error) {
+	return common.Hash{}, fmt.Errorf("method not allowed")
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.from()}
 
