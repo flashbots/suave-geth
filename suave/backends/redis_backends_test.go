@@ -1,7 +1,6 @@
 package backends
 
 import (
-	"context"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -19,10 +18,8 @@ func TestMiniredisTransport(t *testing.T) {
 	require.NoError(t, mb.Start())
 	t.Cleanup(func() { mb.Stop() })
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	msgSub, cancel := mb.Subscribe()
 	t.Cleanup(cancel)
-
-	msgSub := mb.Subscribe(ctx)
 
 	daMsg := suave.DAMessage{
 		Bid: suave.Bid{
@@ -40,14 +37,14 @@ func TestMiniredisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(5 * time.Millisecond):
+	case <-time.After(15 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 
 	select {
 	case <-msgSub:
 		t.Error("received an expected message")
-	case <-time.After(5 * time.Millisecond):
+	case <-time.After(15 * time.Millisecond):
 	}
 
 	daMsg.Bid.Id[0] = 0x43
@@ -56,7 +53,7 @@ func TestMiniredisTransport(t *testing.T) {
 	select {
 	case msg := <-msgSub:
 		require.Equal(t, daMsg, msg)
-	case <-time.After(5 * time.Millisecond):
+	case <-time.After(15 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 }
@@ -98,10 +95,8 @@ func TestRedisTransport(t *testing.T) {
 	require.NoError(t, redisPubSub.Start())
 	t.Cleanup(func() { redisPubSub.Stop() })
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	msgSub, cancel := redisPubSub.Subscribe()
 	t.Cleanup(cancel)
-
-	msgSub := redisPubSub.Subscribe(ctx)
 
 	daMsg := suave.DAMessage{
 		Bid: suave.Bid{
@@ -210,11 +205,9 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, redisPubSub3.Start())
 	t.Cleanup(func() { redisPubSub3.Stop() })
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	t.Cleanup(cancel)
-
 	// Do not subscribe on redisPubSub1 or 2! That would cause one of the subscribers to not receive the message, I think
-	subch := redisPubSub3.Subscribe(ctx)
+	subch, cancel := redisPubSub3.Subscribe()
+	t.Cleanup(cancel)
 
 	// Trigger propagation
 	_, err = engine1.Store(bid.Id, dummyCreationTx, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})

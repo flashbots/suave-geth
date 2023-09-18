@@ -61,8 +61,8 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) Subscribe(context.Context) <-chan suave.DAMessage {
-	return nil
+func (m *mockSuaveBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+	return nil, func() {}
 }
 
 func (m *mockSuaveBackend) Publish(suave.DAMessage) {}

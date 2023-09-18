@@ -44,7 +44,7 @@ func (e *ConfidentialStoreEngine) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel
 	e.ctx = ctx
-	go e.Subscribe(ctx)
+	go e.ProcessMessages()
 
 	return nil
 }
@@ -55,18 +55,9 @@ func (e *ConfidentialStoreEngine) Stop() error {
 	}
 
 	e.cancel()
-
 	e.mempool.Stop()
-
-	if err := e.pubsub.Stop(); err != nil {
-		return err
-	}
-
-	if err := e.backend.Stop(); err != nil {
-		// todo: wrap the error
-		e.pubsub.Stop()
-		return err
-	}
+	e.pubsub.Stop()
+	e.backend.Stop()
 
 	return nil
 }
@@ -92,25 +83,15 @@ func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub,
 	return engine, nil
 }
 
-func (e *ConfidentialStoreEngine) Subscribe(ctx context.Context) {
-	innerCtx, cancel := context.WithCancel(ctx)
+func (e *ConfidentialStoreEngine) ProcessMessages() {
+	ch, cancel := e.pubsub.Subscribe()
 	defer cancel()
 
-	ch := e.pubsub.Subscribe(innerCtx)
 	for {
 		select {
-		case <-ctx.Done():
+		case <-e.ctx.Done(): // Stop() called
 			return
-		case msg, ok := <-ch:
-			if !ok {
-				log.Error("Engine: pubsub channel closed, reopenning")
-				cancel()
-				innerCtx, cancel = context.WithCancel(ctx)
-				defer cancel()
-
-				ch = e.pubsub.Subscribe(innerCtx)
-				continue
-			}
+		case msg := <-ch:
 			err := e.NewMessage(msg)
 			if err != nil {
 				log.Info("could not process new store message", "err", err)
@@ -350,8 +331,10 @@ type MockPubSub struct{}
 func (MockPubSub) Start() error { return nil }
 func (MockPubSub) Stop() error  { return nil }
 
-func (MockPubSub) Subscribe(context.Context) <-chan DAMessage { return nil }
-func (MockPubSub) Publish(DAMessage)                          {}
+func (MockPubSub) Subscribe() (<-chan DAMessage, context.CancelFunc) {
+	return nil, func() {}
+}
+func (MockPubSub) Publish(DAMessage) {}
 
 type MockSigner struct{}
 

@@ -25,10 +25,9 @@ var (
 )
 
 type MiniredisBackend struct {
-	ctx        context.Context
-	cancel     context.CancelFunc
-	client     *miniredis.Miniredis
-	subscriber *miniredis.Subscriber
+	ctx    context.Context
+	cancel context.CancelFunc
+	client *miniredis.Miniredis
 }
 
 func NewMiniredisBackend() *MiniredisBackend {
@@ -46,48 +45,55 @@ func (r *MiniredisBackend) Start() error {
 
 	client, err := miniredis.Run()
 	if err != nil {
+		r.cancel()
 		return err
 	}
 	r.client = client
-
-	subscriber := client.NewSubscriber()
-	subscriber.Subscribe(miniredisUpsertTopic)
-	r.subscriber = subscriber
 
 	return nil
 }
 
 func (r *MiniredisBackend) Stop() error {
-	if r.cancel == nil || r.subscriber == nil || r.client == nil {
+	if r.cancel == nil || r.client == nil {
 		panic("Stop() called before Start()")
 	}
 
 	r.cancel()
-	r.subscriber.Close()
 	r.client.Close()
 
 	return nil
 }
 
-func (r *MiniredisBackend) Subscribe(ctx context.Context) <-chan suave.DAMessage {
-	if r.cancel == nil || r.subscriber == nil || r.client == nil {
-		panic("Subscribe() called before Start()")
-	}
+func (r *MiniredisBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(r.ctx)
 
 	ch := make(chan suave.DAMessage, 16)
 
+	subscriber := r.client.NewSubscriber()
+	subscriber.Subscribe(miniredisUpsertTopic)
+
 	go func() {
-		for rmsg := range r.subscriber.Messages() {
+		defer close(ch)
+		defer subscriber.Close()
+
+		for {
 			var msg suave.DAMessage
-			err := json.Unmarshal([]byte(rmsg.Message), &msg)
-			if err != nil {
-				log.Debug("could not parse message from subscription", "err", err, "msg", rmsg.Message)
+			select {
+
+			case <-ctx.Done():
+				log.Info("Miniredis: closing subscription")
+				return
+			case rmsg := <-subscriber.Messages():
+				err := json.Unmarshal([]byte(rmsg.Message), &msg)
+				if err != nil {
+					log.Debug("could not parse message from subscription", "err", err, "msg", rmsg.Message)
+					continue
+				}
 			}
 
 			select {
 			case <-ctx.Done():
-				return
-			case <-r.ctx.Done():
+				log.Info("Miniredis: closing subscription")
 				return
 			case ch <- msg:
 				continue
@@ -96,9 +102,10 @@ func (r *MiniredisBackend) Subscribe(ctx context.Context) <-chan suave.DAMessage
 				continue
 			}
 		}
+
 	}()
 
-	return ch
+	return ch, cancel
 }
 
 func (r *MiniredisBackend) Publish(message suave.DAMessage) {
@@ -107,7 +114,7 @@ func (r *MiniredisBackend) Publish(message suave.DAMessage) {
 		panic(fmt.Errorf("could not marshal message: %w", err))
 	}
 
-	r.subscriber.Publish(miniredisUpsertTopic, string(data))
+	r.client.Publish(miniredisUpsertTopic, string(data))
 }
 
 func (r *MiniredisBackend) InitializeBid(bid suave.Bid) error {

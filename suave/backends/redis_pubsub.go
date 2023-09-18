@@ -38,7 +38,6 @@ type RedisPubSub struct {
 	cancel   context.CancelFunc
 	redisUri string
 	client   *redis.Client
-	pubsub   *redis.PubSub
 }
 
 func NewRedisPubSub(redisUri string) *RedisPubSub {
@@ -62,34 +61,42 @@ func (r *RedisPubSub) Start() error {
 	}
 	r.client = client
 
-	// Note the race between start and stop, not fixing right now
-	pubsub := client.Subscribe(ctx, redisUpsertTopic)
-	r.pubsub = pubsub
-
 	return nil
 }
 
 func (r *RedisPubSub) Stop() error {
-	if r.cancel == nil || r.pubsub == nil || r.client == nil {
+	if r.cancel == nil || r.client == nil {
 		panic("Stop() called before Start()")
 	}
 
 	r.cancel()
-	r.pubsub.Close()
 	r.client.Close()
 
 	return nil
 }
 
-func (r *RedisPubSub) Subscribe(ctx context.Context) <-chan suave.DAMessage {
+func (r *RedisPubSub) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
 	ch := make(chan suave.DAMessage, 16)
+	ctx, cancel := context.WithCancel(r.ctx)
+
+	// Each subscriber has its own PubSub as it blocks on receive!
+	pubsub := r.client.Subscribe(ctx, redisUpsertTopic)
 
 	go func() {
-		for r.ctx.Err() == nil && ctx.Err() == nil {
-			rmsg, err := r.pubsub.ReceiveMessage(ctx)
+		defer close(ch)
+		defer pubsub.Close()
+
+		for ctx.Err() == nil /* run until Stop() or cancel() called */ {
+			rmsg, err := pubsub.ReceiveMessage(ctx)
 			if err != nil {
-				// TODO: do we have to reconnect?
-				log.Warn("Redis pubsub: error while receiving messages", "err", err)
+				if ctx.Err() != nil {
+					// Stop() or cancel() called, simply exit
+					log.Info("Redis pubsub: closing subscription")
+					return
+				}
+
+				// Reconnection is not necessary as it's handled by redis.PubSub, simply log the error and continue
+				log.Error("Redis pubsub: error while receiving messages", "err", err)
 				continue
 			}
 
@@ -115,20 +122,19 @@ func (r *RedisPubSub) Subscribe(ctx context.Context) <-chan suave.DAMessage {
 
 			log.Debug("Redis pubsub: new message", "msg", msg)
 			select {
+			case <-ctx.Done():
+				log.Info("Redis pubsub: closing subscription")
+				return
 			case ch <- msg:
 				continue
-			case <-ctx.Done():
-				return
-			case <-r.ctx.Done():
-				return
 			default:
-				log.Warn("dropping transport message due to channel being blocked")
+				log.Error("dropping transport message due to channel being blocked")
 				continue
 			}
 		}
 	}()
 
-	return ch
+	return ch, cancel
 }
 
 func (r *RedisPubSub) Publish(message suave.DAMessage) {

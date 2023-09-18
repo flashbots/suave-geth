@@ -55,7 +55,7 @@ type ConfidentialEthBackend interface {
 
 type PubSub interface {
 	node.Lifecycle
-	Subscribe(ctx context.Context) <-chan DAMessage
+	Subscribe() (<-chan DAMessage, context.CancelFunc)
 	Publish(DAMessage)
 }
 
