@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -15,17 +14,15 @@ import (
 )
 
 func TestRedisBackends(t *testing.T) {
-	mrStore1 := miniredis.RunT(t)
-	mrStore2 := miniredis.RunT(t)
-	mrPubSub := mrStore1
+	withMiniredisTransportOpt := WithRedisTransportOpt(t)
 
-	fr1 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(mrStore1.Addr()), WithRedisStoreTransport(mrPubSub.Addr()))
+	fr1 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(), withMiniredisTransportOpt)
 	t.Cleanup(fr1.Close)
 
 	var keystoreBackend *keystore.KeyStore = fr1.suethSrv.service.APIBackend.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	keystoreBackend.ImportECDSA(testKey, "")
 
-	fr2 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(mrStore2.Addr()), WithRedisStoreTransport(mrPubSub.Addr()))
+	fr2 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(), withMiniredisTransportOpt)
 	t.Cleanup(fr2.Close)
 
 	clt1 := fr1.NewSDKClient()

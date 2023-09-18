@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	builderCapella "github.com/attestantio/go-builder-client/api/capella"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -799,8 +800,9 @@ type framework struct {
 }
 
 type frameworkConfig struct {
-	executionNode bool
-	suaveConfig   suave.Config
+	executionNode     bool
+	redisStoreBackend bool
+	suaveConfig       suave.Config
 }
 
 var defaultFrameworkConfig = frameworkConfig{
@@ -816,15 +818,16 @@ func WithExecutionNode() frameworkOpt {
 	}
 }
 
-func WithRedisStoreBackend(uri string) frameworkOpt {
+func WithRedisStoreBackend() frameworkOpt {
 	return func(c *frameworkConfig) {
-		c.suaveConfig.RedisStoreUri = uri
+		c.redisStoreBackend = true
 	}
 }
 
-func WithRedisStoreTransport(uri string) frameworkOpt {
+func WithRedisTransportOpt(t *testing.T) frameworkOpt {
+	mr := miniredis.RunT(t)
 	return func(c *frameworkConfig) {
-		c.suaveConfig.RedisStorePubsubUri = uri
+		c.suaveConfig.RedisStorePubsubUri = mr.Addr()
 	}
 }
 
@@ -843,6 +846,11 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 		ethSrv = &clientWrapper{t, ethNode, ethEthService}
 
 		cfg.suaveConfig.SuaveEthRemoteBackendEndpoint = ethNode.HTTPEndpoint()
+	}
+
+	if cfg.redisStoreBackend {
+		mr := miniredis.RunT(t)
+		cfg.suaveConfig.RedisStoreUri = mr.Addr()
 	}
 
 	node, ethservice := startSuethService(t, testSuaveGenesis, nil, cfg.suaveConfig)
