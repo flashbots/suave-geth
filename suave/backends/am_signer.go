@@ -30,3 +30,7 @@ func (w *AccountManagerDASigner) Sender(data []byte, signature []byte) (common.A
 
 	return recoveredAcc, nil
 }
+
+func (w *AccountManagerDASigner) LocalAddresses() []common.Address {
+	return w.Manager.Accounts()
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )
 
@@ -22,6 +23,9 @@ type ConfidentialStoreEngine struct {
 
 	daSigner    DASigner
 	chainSigner ChainSigner
+
+	storeUUID      uuid.UUID
+	localAddresses map[common.Address]struct{}
 }
 
 func (e *ConfidentialStoreEngine) Start() error {
@@ -65,6 +69,7 @@ func (e *ConfidentialStoreEngine) Stop() error {
 type DASigner interface {
 	Sign(account common.Address, data []byte) ([]byte, error)
 	Sender(data []byte, signature []byte) (common.Address, error)
+	LocalAddresses() []common.Address
 }
 
 type ChainSigner interface {
@@ -72,12 +77,19 @@ type ChainSigner interface {
 }
 
 func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub, mempool MempoolBackend, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
+	localAddresses := make(map[common.Address]struct{})
+	for _, addr := range daSigner.LocalAddresses() {
+		localAddresses[addr] = struct{}{}
+	}
+
 	engine := &ConfidentialStoreEngine{
-		backend:     backend,
-		pubsub:      pubsub,
-		mempool:     mempool,
-		daSigner:    daSigner,
-		chainSigner: chainSigner,
+		backend:        backend,
+		pubsub:         pubsub,
+		mempool:        mempool,
+		daSigner:       daSigner,
+		chainSigner:    chainSigner,
+		storeUUID:      uuid.New(),
+		localAddresses: localAddresses,
 	}
 
 	return engine, nil
@@ -173,11 +185,12 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 	}
 
 	msg := DAMessage{
-		Bid:      bid,
-		SourceTx: sourceTx,
-		Caller:   caller,
-		Key:      key,
-		Value:    value,
+		Bid:       bid,
+		SourceTx:  sourceTx,
+		Caller:    caller,
+		Key:       key,
+		Value:     value,
+		StoreUUID: e.storeUUID,
 	}
 
 	msgBytes, err := SerializeMessageForSigning(msg)
@@ -250,6 +263,14 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	}
 	if recoveredMessageSigner != expectedMessageSigner {
 		return fmt.Errorf("confidential engine: message signer %x, expected %x", recoveredMessageSigner, expectedMessageSigner)
+	}
+
+	if message.StoreUUID == e.storeUUID {
+		if _, found := e.localAddresses[recoveredMessageSigner]; found {
+			return nil
+		}
+		// Message from self!
+		log.Info("Confidential engine: message is spoofing our storeUUID, processing anyway", "message", message)
 	}
 
 	bidBytes, err := SerializeBidForSigning(message.Bid)
@@ -344,6 +365,10 @@ func (MockSigner) Sign(account common.Address, data []byte) ([]byte, error) {
 
 func (MockSigner) Sender(data []byte, signature []byte) (common.Address, error) {
 	return common.BytesToAddress(signature), nil
+}
+
+func (MockSigner) LocalAddresses() []common.Address {
+	return []common.Address{}
 }
 
 type MockChainSigner struct{}

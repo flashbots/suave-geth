@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/google/uuid"
 )
 
 type Bytes = hexutil.Bytes
@@ -65,5 +66,6 @@ type DAMessage struct {
 	Caller    common.Address     `json:"caller"`
 	Key       string             `json:"key"`
 	Value     Bytes              `json:"value"`
+	StoreUUID uuid.UUID          `json:"storeUUID"`
 	Signature Bytes              `json:"signature"`
 }
