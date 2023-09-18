@@ -1047,6 +1047,12 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.RinkebyBootnodes
 	case ctx.Bool(GoerliFlag.Name):
 		urls = params.GoerliBootnodes
+	case ctx.IsSet(CustomChainFlag.Name):
+		jsonGenesis, err := readJSONGenesis(ctx.String(CustomChainFlag.Name))
+		if err != nil {
+			Fatalf("Failed to read bootstrap nodes from genesis %s: %v", CustomChainFlag.Name, err)
+		}
+		urls = jsonGenesis.Bootnodes
 	}
 
 	// don't apply defaults if BootstrapNodes is already set
@@ -2269,6 +2275,8 @@ type jsonGenesis struct {
 			InitialSigners []string `json:"initial_signers"`
 		} `json:"clique,omitempty"`
 	} `json:"config"`
+
+	Bootnodes []string `json:"bootnodes"`
 }
 
 func readJSONGenesis(genesisPath string) (*jsonGenesis, error) {
