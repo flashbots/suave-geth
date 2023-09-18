@@ -143,7 +143,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 func newTestBackend(t *testing.T) *suaveRuntime {
 	confStore := backends.NewLocalConfidentialStore()
 	suaveMempool := backends.NewMempoolOnConfidentialStore(confStore)
-	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockPubSub{}, suaveMempool, suave.MockSigner{}, suave.MockChainSigner{})
+	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suaveMempool, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	require.NoError(t, confEngine.Start())

@@ -54,7 +54,7 @@ type ConfidentialEthBackend interface {
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 }
 
-type PubSub interface {
+type StoreTransportTopic interface {
 	node.Lifecycle
 	Subscribe() (<-chan DAMessage, context.CancelFunc)
 	Publish(DAMessage)

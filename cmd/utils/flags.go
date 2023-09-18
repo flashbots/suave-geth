@@ -516,8 +516,8 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
-	SuaveConfidentialPubsubRedisEndpointFlag = &cli.StringFlag{
-		Name:     "suave.confidential.redis-pubsub-endpoint",
+	SuaveConfidentialTransportRedisEndpointFlag = &cli.StringFlag{
+		Name:     "suave.confidential.redis-transport-endpoint",
 		Usage:    "Redis endpoint to use as confidential store transport (default: no transport)",
 		Category: flags.SuaveCategory,
 	}
@@ -1661,8 +1661,8 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
 	}
 
-	if ctx.IsSet(SuaveConfidentialPubsubRedisEndpointFlag.Name) {
-		cfg.RedisStorePubsubUri = ctx.String(SuaveConfidentialPubsubRedisEndpointFlag.Name)
+	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {
+		cfg.RedisStorePubsubUri = ctx.String(SuaveConfidentialTransportRedisEndpointFlag.Name)
 	}
 
 	if ctx.IsSet(SuaveConfidentialStoreRedisEndpointFlag.Name) {

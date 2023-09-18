@@ -17,9 +17,9 @@ type ConfidentialStoreEngine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	backend ConfidentialStoreBackend
-	pubsub  PubSub
-	mempool MempoolBackend
+	backend        ConfidentialStoreBackend
+	transportTopic StoreTransportTopic
+	mempool        MempoolBackend
 
 	daSigner    DASigner
 	chainSigner ChainSigner
@@ -33,7 +33,7 @@ func (e *ConfidentialStoreEngine) Start() error {
 		return err
 	}
 
-	if err := e.pubsub.Start(); err != nil {
+	if err := e.transportTopic.Start(); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (e *ConfidentialStoreEngine) Stop() error {
 
 	e.cancel()
 	e.mempool.Stop()
-	e.pubsub.Stop()
+	e.transportTopic.Stop()
 	e.backend.Stop()
 
 	return nil
@@ -76,7 +76,7 @@ type ChainSigner interface {
 	Sender(tx *types.Transaction) (common.Address, error)
 }
 
-func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub, mempool MempoolBackend, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
+func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, mempool MempoolBackend, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
 	localAddresses := make(map[common.Address]struct{})
 	for _, addr := range daSigner.LocalAddresses() {
 		localAddresses[addr] = struct{}{}
@@ -84,7 +84,7 @@ func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub,
 
 	engine := &ConfidentialStoreEngine{
 		backend:        backend,
-		pubsub:         pubsub,
+		transportTopic: transportTopic,
 		mempool:        mempool,
 		daSigner:       daSigner,
 		chainSigner:    chainSigner,
@@ -96,7 +96,7 @@ func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, pubsub PubSub,
 }
 
 func (e *ConfidentialStoreEngine) ProcessMessages() {
-	ch, cancel := e.pubsub.Subscribe()
+	ch, cancel := e.transportTopic.Subscribe()
 	defer cancel()
 
 	for {
@@ -209,7 +209,7 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 	}
 
 	// TODO: avoid marshalling twice
-	e.pubsub.Publish(msg)
+	e.transportTopic.Publish(msg)
 
 	return e.backend.Store(bid, caller, key, value)
 }
@@ -347,15 +347,15 @@ func SerializeMessageForSigning(message DAMessage) ([]byte, error) {
 	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(msgBytes), string(msgBytes))), nil
 }
 
-type MockPubSub struct{}
+type MockTransport struct{}
 
-func (MockPubSub) Start() error { return nil }
-func (MockPubSub) Stop() error  { return nil }
+func (MockTransport) Start() error { return nil }
+func (MockTransport) Stop() error  { return nil }
 
-func (MockPubSub) Subscribe() (<-chan DAMessage, context.CancelFunc) {
+func (MockTransport) Subscribe() (<-chan DAMessage, context.CancelFunc) {
 	return nil, func() {}
 }
-func (MockPubSub) Publish(DAMessage) {}
+func (MockTransport) Publish(DAMessage) {}
 
 type MockSigner struct{}
 

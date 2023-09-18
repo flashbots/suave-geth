@@ -239,11 +239,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		confidentialStoreBackend = suave_backends.NewLocalConfidentialStore()
 	}
 
-	var confidentialStoreTransport suave.PubSub
+	var confidentialStoreTransport suave.StoreTransportTopic
 	if config.Suave.RedisStorePubsubUri != "" {
-		confidentialStoreTransport = suave_backends.NewRedisPubSub(config.Suave.RedisStorePubsubUri)
+		confidentialStoreTransport = suave_backends.NewRedisPubSubTransport(config.Suave.RedisStorePubsubUri)
 	} else {
-		confidentialStoreTransport = suave.MockPubSub{}
+		confidentialStoreTransport = suave.MockTransport{}
 	}
 
 	var suaveEthBackend suave.ConfidentialEthBackend

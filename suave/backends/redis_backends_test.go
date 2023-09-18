@@ -91,7 +91,7 @@ func TestMiniredisStore(t *testing.T) {
 func TestRedisTransport(t *testing.T) {
 	mr := miniredis.RunT(t)
 
-	redisPubSub := NewRedisPubSub(mr.Addr())
+	redisPubSub := NewRedisPubSubTransport(mr.Addr())
 	require.NoError(t, redisPubSub.Start())
 	t.Cleanup(func() { redisPubSub.Stop() })
 
@@ -169,7 +169,7 @@ func TestEngineOnRedis(t *testing.T) {
 	mrStore2 := miniredis.RunT(t)
 	mrPubSub := mrStore1
 
-	redisPubSub1 := NewRedisPubSub(mrPubSub.Addr())
+	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
 	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
@@ -178,7 +178,7 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
-	redisPubSub2 := NewRedisPubSub(mrPubSub.Addr())
+	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
 
 	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
@@ -201,7 +201,7 @@ func TestEngineOnRedis(t *testing.T) {
 	}, dummyCreationTx)
 	require.NoError(t, err)
 
-	redisPubSub3 := NewRedisPubSub(mrPubSub.Addr())
+	redisPubSub3 := NewRedisPubSubTransport(mrPubSub.Addr())
 	require.NoError(t, redisPubSub3.Start())
 	t.Cleanup(func() { redisPubSub3.Stop() })
 

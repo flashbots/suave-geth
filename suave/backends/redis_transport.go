@@ -33,20 +33,20 @@ var (
 	}
 )
 
-type RedisPubSub struct {
+type RedisPubSubTransport struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	redisUri string
 	client   *redis.Client
 }
 
-func NewRedisPubSub(redisUri string) *RedisPubSub {
-	return &RedisPubSub{
+func NewRedisPubSubTransport(redisUri string) *RedisPubSubTransport {
+	return &RedisPubSubTransport{
 		redisUri: redisUri,
 	}
 }
 
-func (r *RedisPubSub) Start() error {
+func (r *RedisPubSubTransport) Start() error {
 	if r.cancel != nil {
 		r.cancel()
 	}
@@ -64,7 +64,7 @@ func (r *RedisPubSub) Start() error {
 	return nil
 }
 
-func (r *RedisPubSub) Stop() error {
+func (r *RedisPubSubTransport) Stop() error {
 	if r.cancel == nil || r.client == nil {
 		panic("Stop() called before Start()")
 	}
@@ -75,7 +75,7 @@ func (r *RedisPubSub) Stop() error {
 	return nil
 }
 
-func (r *RedisPubSub) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
 	ch := make(chan suave.DAMessage, 16)
 	ctx, cancel := context.WithCancel(r.ctx)
 
@@ -137,7 +137,7 @@ func (r *RedisPubSub) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
 	return ch, cancel
 }
 
-func (r *RedisPubSub) Publish(message suave.DAMessage) {
+func (r *RedisPubSubTransport) Publish(message suave.DAMessage) {
 	log.Trace("Rebids pubsub: publishing", "message", message)
 	data, err := json.Marshal(message)
 	if err != nil {
