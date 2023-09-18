@@ -79,7 +79,6 @@ func (r *MiniredisBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFu
 		for {
 			var msg suave.DAMessage
 			select {
-
 			case <-ctx.Done():
 				log.Info("Miniredis: closing subscription")
 				return
@@ -102,7 +101,6 @@ func (r *MiniredisBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFu
 				continue
 			}
 		}
-
 	}()
 
 	return ch, cancel
