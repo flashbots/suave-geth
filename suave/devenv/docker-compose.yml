@@ -16,7 +16,6 @@ services:
       - --ws.addr=0.0.0.0
       - --datadir=/data
       - --keystore=/keystore/keystore
-      - --allow-insecure-unlock
       - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
       - --password=/keystore/password.txt
     depends_on:
