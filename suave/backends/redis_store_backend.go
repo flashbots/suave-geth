@@ -12,6 +12,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+var ffStoreTTL = 24 * time.Hour
+
 type RedisStoreBackend struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -68,7 +70,7 @@ func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
 		return err
 	}
 
-	err = r.client.Set(r.ctx, key, string(data), time.Second).Err()
+	err = r.client.Set(r.ctx, key, string(data), ffStoreTTL).Err()
 	if err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ func (r *RedisStoreBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, er
 
 func (r *RedisStoreBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	storeKey := formatRedisBidValueKey(bid.Id, key)
-	err := r.client.Set(r.ctx, storeKey, string(value), time.Second).Err()
+	err := r.client.Set(r.ctx, storeKey, string(value), ffStoreTTL).Err()
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("unexpected redis error: %w", err)
 	}
