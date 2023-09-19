@@ -1506,6 +1506,13 @@ func SetDataDir(ctx *cli.Context, cfg *node.Config) {
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "sepolia")
 	case ctx.Bool(SuaveFlag.Name) && cfg.DataDir == node.DefaultDataDir():
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "suave")
+	case ctx.IsSet(CustomChainFlag.Name) && cfg.DataDir == node.DefaultDataDir():
+		genesis, err := readJSONGenesis(ctx.String(CustomChainFlag.Name))
+		if err == nil {
+			// best effort, it will raise an error later on, we do not need to
+			// catch it here.
+			cfg.DataDir = filepath.Join(node.DefaultDataDir(), genesis.Name)
+		}
 	}
 }
 
@@ -2269,6 +2276,8 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 type jsonGenesis struct {
 	core *core.Genesis `json:"-"`
 
+	Name string `json:"name"`
+
 	Config struct {
 		Clique struct {
 			// Signers is the list of initial validators of the clique protocol
@@ -2293,6 +2302,9 @@ func readJSONGenesis(genesisPath string) (*jsonGenesis, error) {
 	genesis := new(jsonGenesis)
 	if err := json.Unmarshal(genesisRaw, genesis); err != nil {
 		return nil, fmt.Errorf("invalid genesis file: %v", err)
+	}
+	if genesis.Name == "" {
+		return nil, fmt.Errorf("genesis.json file must have a name field")
 	}
 
 	genesis.core = coreGenesis
