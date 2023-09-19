@@ -305,7 +305,7 @@ The Confidential Store is an integral part of the SUAVE chain, designed to facil
 
 The current, and certainly not final, implementation of the Confidential Store is managed by the `ConfidentialStoreEngine`. The engine consists of a storage backend, which holds the raw data, and a transport topic, which relays synchronization messages between nodes.  
 We provide two storage backends to the confidential store engine: the `LocalConfidentialStore`, storing data in memory in a simple dictionary, and `RedisStoreBackend`, storing data in redis. To enable redis as the storage backed, pass redis endpoint via `--suave.confidential.redis-store-endpoint`.  
-For synchronization of confidential stores via transport we provide an implementation using a shared Redis PubSub in `RedisPubSubTransport`, as well as a *crude* synchronization protocol. To enable redis transport, pass redis endpoint via `--suave.confidential.redis-transport-endpoint`.  
+For synchronization of confidential stores via transport we provide an implementation using a shared Redis PubSub in `RedisPubSubTransport`, as well as a *crude* synchronization protocol. To enable redis transport, pass redis endpoint via `--suave.confidential.redis-transport-endpoint`. Note that Redis transport only synchronizes *current* state, there is no initial synchronization - a newly connected node will not have access to old data.  
 
 ![image](suave/docs/confidential_store_engine.png)
 
