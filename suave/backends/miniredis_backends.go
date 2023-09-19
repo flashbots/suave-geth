@@ -97,7 +97,8 @@ func (r *MiniredisBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFu
 func (r *MiniredisBackend) Publish(message suave.DAMessage) {
 	data, err := json.Marshal(message)
 	if err != nil {
-		panic(fmt.Errorf("could not marshal message: %w", err))
+		log.Error("Miniredis: could not marshal message", "err", err)
+		return
 	}
 
 	r.client.Publish(redisUpsertTopic, string(data))
