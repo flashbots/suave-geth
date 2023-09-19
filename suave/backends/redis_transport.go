@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -24,14 +23,6 @@ var (
 	redisReadTimeoutSec     = cli.GetEnvInt("REDIS_READ_TIMEOUT_SEC", 0)     // 0 means use default (3 sec)
 	redisPoolTimeoutSec     = cli.GetEnvInt("REDIS_POOL_TIMEOUT_SEC", 0)     // 0 means use default (ReadTimeout + 1 sec)
 	redisWriteTimeoutSec    = cli.GetEnvInt("REDIS_WRITE_TIMEOUT_SEC", 0)    // 0 means use default (3 seconds)
-
-	formatRedisBidKey = func(bidId suave.BidId) string {
-		return fmt.Sprintf("bid-%x", bidId)
-	}
-
-	formatRedisBidValueKey = func(bidId suave.BidId, key string) string {
-		return fmt.Sprintf("bid-data-%x-%s", bidId, key) // TODO: should also include the hash of the bid at least
-	}
 )
 
 type RedisPubSubTransport struct {
@@ -146,7 +137,7 @@ func (r *RedisPubSubTransport) Publish(message suave.DAMessage) {
 		return
 	}
 
-	r.client.Publish(r.ctx, miniredisUpsertTopic, string(data))
+	r.client.Publish(r.ctx, redisUpsertTopic, string(data))
 }
 
 func connectRedis(redisURI string) (*redis.Client, error) {

@@ -12,7 +12,17 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-var ffStoreTTL = 24 * time.Hour
+var (
+	formatRedisBidKey = func(bidId suave.BidId) string {
+		return fmt.Sprintf("bid-%x", bidId)
+	}
+
+	formatRedisBidValueKey = func(bidId suave.BidId, key string) string {
+		return fmt.Sprintf("bid-data-%x-%s", bidId, key)
+	}
+
+	ffStoreTTL = 24 * time.Hour
+)
 
 type RedisStoreBackend struct {
 	ctx      context.Context

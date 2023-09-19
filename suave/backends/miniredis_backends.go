@@ -12,18 +12,6 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
-var (
-	miniredisUpsertTopic = "store:upsert"
-
-	formatMiniredisBidKey = func(bidId suave.BidId) string {
-		return fmt.Sprintf("bid-%x", bidId)
-	}
-
-	formatMiniredisBidValueKey = func(bid suave.Bid, key string) string {
-		return fmt.Sprintf("bid-data-%x-%s", bid.Id, key) // TODO: should also include the hash of the bid at least
-	}
-)
-
 type MiniredisBackend struct {
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -70,7 +58,7 @@ func (r *MiniredisBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFu
 	ch := make(chan suave.DAMessage, 16)
 
 	subscriber := r.client.NewSubscriber()
-	subscriber.Subscribe(miniredisUpsertTopic)
+	subscriber.Subscribe(redisUpsertTopic)
 
 	go func() {
 		defer close(ch)
@@ -112,11 +100,11 @@ func (r *MiniredisBackend) Publish(message suave.DAMessage) {
 		panic(fmt.Errorf("could not marshal message: %w", err))
 	}
 
-	r.client.Publish(miniredisUpsertTopic, string(data))
+	r.client.Publish(redisUpsertTopic, string(data))
 }
 
 func (r *MiniredisBackend) InitializeBid(bid suave.Bid) error {
-	key := formatMiniredisBidKey(bid.Id)
+	key := formatRedisBidKey(bid.Id)
 
 	_, err := r.client.Get(key)
 	if !errors.Is(err, miniredis.ErrKeyNotFound) {
@@ -134,7 +122,7 @@ func (r *MiniredisBackend) InitializeBid(bid suave.Bid) error {
 }
 
 func (r *MiniredisBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, error) {
-	key := formatMiniredisBidKey(bidId)
+	key := formatRedisBidKey(bidId)
 
 	data, err := r.client.Get(key)
 	if err != nil {
@@ -151,7 +139,7 @@ func (r *MiniredisBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, err
 }
 
 func (r *MiniredisBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	storeKey := formatMiniredisBidValueKey(bid, key)
+	storeKey := formatRedisBidValueKey(bid.Id, key)
 	err := r.client.Set(storeKey, string(value))
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("unexpected redis error: %w", err)
@@ -161,7 +149,7 @@ func (r *MiniredisBackend) Store(bid suave.Bid, caller common.Address, key strin
 }
 
 func (r *MiniredisBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
-	storeKey := formatMiniredisBidValueKey(bid, key)
+	storeKey := formatRedisBidValueKey(bid.Id, key)
 	data, err := r.client.Get(storeKey)
 	if err != nil {
 		return []byte{}, fmt.Errorf("unexpected redis error: %w", err)
