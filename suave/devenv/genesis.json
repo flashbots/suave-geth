@@ -1,0 +1,41 @@
+{
+  "name": "xxx",
+  "config": {
+    "chainId": 1337,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "suaveBlock": 0,
+    "clique": {
+      "period": 1,
+      "epoch": 30000,
+      "initial_signers": [
+        "1967a08Ca1eE988062E47DbfDa429D9543a7799C",
+        "E25EB0412BF1692f28287969CBAB084076F4Bb96",
+        "9AA51950F72a7dAA4d9E95585AD4f4d137e4BFDe"
+      ]
+    }
+  },
+  "difficulty": "1",
+  "gasLimit": "8000000",
+  "alloc": {
+    "1967a08Ca1eE988062E47DbfDa429D9543a7799C": {
+      "balance": "99999999999999999999999999999"
+    },
+    "E25EB0412BF1692f28287969CBAB084076F4Bb96": {
+      "balance": "99999999999999999999999999999"
+    },
+    "9AA51950F72a7dAA4d9E95585AD4f4d137e4BFDe": {
+      "balance": "99999999999999999999999999999"
+    }
+  },
+  "bootnodes": [
+    "enode://91223e2ff1314a393e8d358a03d8fe975e2b01756c9e14ca6ac743cfaee9074bcb93925953014045044257ebd6d5d01e14240e4fd391d9d5ed79cfd3b791c8c3@bootnode:0?discport=30301"
+  ]
+}
