@@ -74,16 +74,19 @@ services:
     build: ../..
     command:
       - --chain=/genesis.json
-      - --syncmode=full
-      - --allow-insecure-unlock
-      - --keystore=/keystore
-      - --unlock=0x1967a08Ca1eE988062E47DbfDa429D9543a7799C
+      - --http
+      - --http.port=8545
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.corsdomain=*
+      - --keystore=/keystore/keystore
+      - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
       - --password=/keystore/password.txt
-      - --mine
-      - --miner.etherbase=0x1967a08Ca1eE988062E47DbfDa429D9543a7799C
     volumes:
-      - ./mevm1/keystore:/keystore
+      - ./suave-ex-node:/keystore
       - ./genesis.json:/genesis.json
+    ports:
+      - 8545:8545
     networks:
       suave:
     depends_on:
