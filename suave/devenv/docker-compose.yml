@@ -34,3 +34,64 @@ services:
       - --ws
     ports:
       - 8555:8545
+
+  blockscout-db-init:
+    extends:
+      file: ./blockscout/services/docker-compose-db.yml
+      service: blockscout-db-init
+
+  blockscout-db:
+    extends:
+      file: ./blockscout/services/docker-compose-db.yml
+      service: blockscout-db
+
+  blockscout-all-in-one:
+    image: blockscout/blockscout-suave-all-in-one:latest
+    pull_policy: always
+    container_name: blockscout-all-in-one
+    environment:
+      MICROSERVICE_SC_VERIFIER_ENABLED: true
+      MICROSERVICE_SC_VERIFIER_URL: https://eth-bytecode-db.services.blockscout.com/
+      MICROSERVICE_VISUALIZE_SOL2UML_ENABLED: true
+      MICROSERVICE_VISUALIZE_SOL2UML_URL: https://visualizer.services.blockscout.com/
+      API_V2_ENABLED: true
+      INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER: true
+      INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER: true
+      DATABASE_URL: postgresql://blockscout:ceWb1MeLBEeOIfk65gU8EjF8@blockscout-db:5432/blockscout
+      ETHEREUM_JSONRPC_HTTP_URL: http://host.docker.internal:8545
+      ETHEREUM_JSONRPC_TRACE_URL: http://host.docker.internal:8545
+      CHAIN_TYPE: suave
+      ECTO_USE_SSL: false
+      POOL_SIZE: 30
+      DISABLE_EXCHANGE_RATES: true
+      CHAIN_ID: 5
+      SUAVE_BID_CONTRACTS: 0x8f21fdd6b4f4cacd33151777a46c122797c8bf17
+      NEXT_PUBLIC_APP_HOST: localhost
+      NEXT_PUBLIC_NETWORK_NAME: SUAVE
+      NEXT_PUBLIC_NETWORK_SHORT_NAME: SUAVE
+      NEXT_PUBLIC_NETWORK_ID: 5
+      NEXT_PUBLIC_API_HOST: localhost
+      NEXT_PUBLIC_API_PORT: 4000
+      NEXT_PUBLIC_API_PROTOCOL: http
+      NEXT_PUBLIC_VISUALIZE_API_HOST: https://visualizer.services.blockscout.com/
+      NEXT_PUBLIC_IS_TESTNET: true
+      NEXT_PUBLIC_IS_SUAVE_CHAIN: true
+      NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL: ws
+      NEXT_PUBLIC_API_SPEC_URL: https://raw.githubusercontent.com/blockscout/blockscout-api-v2-swagger/main/swagger.yaml
+      NEXT_PUBLIC_NETWORK_CURRENCY_NAME: Ether
+      NEXT_PUBLIC_NETWORK_CURRENCY_SYMBOL: ETH
+      NEXT_PUBLIC_NETWORK_CURRENCY_DECIMALS: 18
+      NEXT_PUBLIC_API_BASE_PATH: /
+      NEXT_PUBLIC_APP_PROTOCOL: http
+      NEXT_PUBLIC_HOMEPAGE_CHARTS: "['daily_txs']"
+      NEXT_PUBLIC_NETWORK_LOGO: https://raw.githubusercontent.com/blockscout/frontend-configs/main/configs/network-logos/suave-light.png
+      NEXT_PUBLIC_NETWORK_LOGO_DARK: https://raw.githubusercontent.com/blockscout/frontend-configs/main/configs/network-logos/suave-light.png
+      NEXT_PUBLIC_NETWORK_ICON: https://raw.githubusercontent.com/blockscout/frontend-configs/main/configs/network-icons/suave-short.png
+      NEXT_PUBLIC_NETWORK_ICON_DARK: https://raw.githubusercontent.com/blockscout/frontend-configs/main/configs/network-icons/suave-short.png
+      NEXT_PUBLIC_HOMEPAGE_PLATE_BACKGROUND: rgba(46, 46, 46, 1)
+      NEXT_PUBLIC_HOMEPAGE_PLATE_TEXT_COLOR: rgba(48, 210, 248, 1)
+      NEXT_PUBLIC_OG_IMAGE_URL: https://raw.githubusercontent.com/blockscout/frontend-configs/main/configs/og-images/suave-testnet.png
+
+    ports:
+      - 4000:4000
+      - 3000:3000
