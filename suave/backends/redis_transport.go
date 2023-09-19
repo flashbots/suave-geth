@@ -3,6 +3,7 @@ package backends
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ func (r *RedisPubSubTransport) Start() error {
 
 func (r *RedisPubSubTransport) Stop() error {
 	if r.cancel == nil || r.client == nil {
-		panic("Stop() called before Start()")
+		return errors.New("Redis pubsub: Stop() called before Start()")
 	}
 
 	r.cancel()
@@ -138,10 +139,11 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 }
 
 func (r *RedisPubSubTransport) Publish(message suave.DAMessage) {
-	log.Trace("Rebids pubsub: publishing", "message", message)
+	log.Trace("Redis pubsub: publishing", "message", message)
 	data, err := json.Marshal(message)
 	if err != nil {
-		panic(fmt.Errorf("could not marshal message: %w", err))
+		log.Error("Redis pubsub: could not marshal message", "err", err)
+		return
 	}
 
 	r.client.Publish(r.ctx, miniredisUpsertTopic, string(data))

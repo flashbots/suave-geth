@@ -48,7 +48,7 @@ func (r *RedisStoreBackend) Start() error {
 
 func (r *RedisStoreBackend) Stop() error {
 	if r.cancel == nil || r.client == nil {
-		panic("Stop() called before Start()")
+		return errors.New("Redis store: Stop() called before Start()")
 	}
 
 	r.cancel()

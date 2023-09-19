@@ -55,13 +55,21 @@ func (e *ConfidentialStoreEngine) Start() error {
 
 func (e *ConfidentialStoreEngine) Stop() error {
 	if e.cancel == nil {
-		panic("Stop() called before Start()")
+		return errors.New("Confidential engine: Stop() called before Start()")
 	}
 
 	e.cancel()
-	e.mempool.Stop()
-	e.transportTopic.Stop()
-	e.backend.Stop()
+	if err := e.mempool.Stop(); err != nil {
+		log.Warn("Confidential engine: error while stopping mempool", "err", err)
+	}
+
+	if err := e.transportTopic.Stop(); err != nil {
+		log.Warn("Confidential engine: error while stopping transport", "err", err)
+	}
+
+	if err := e.backend.Stop(); err != nil {
+		log.Warn("Confidential engine: error while stopping transport", "err", err)
+	}
 
 	return nil
 }

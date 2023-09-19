@@ -55,7 +55,7 @@ func (r *MiniredisBackend) Start() error {
 
 func (r *MiniredisBackend) Stop() error {
 	if r.cancel == nil || r.client == nil {
-		panic("Stop() called before Start()")
+		return errors.New("Minireddis: Stop() called before Start()")
 	}
 
 	r.cancel()
