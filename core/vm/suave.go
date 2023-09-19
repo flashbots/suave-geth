@@ -9,6 +9,7 @@ import (
 )
 
 type SuaveContext struct {
+	// TODO: MEVM access to Backend should be restricted to only the necessary functions!
 	Backend                      *SuaveExecutionBackend
 	ConfidentialComputeRequestTx *types.Transaction
 	ConfidentialInputs           []byte
