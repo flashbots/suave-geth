@@ -31,7 +31,7 @@ var SuaveMethods = map[string]common.Address{
 	"submitEthBlockBidToRelay":  submitEthBlockBidToRelayAddr,
 }
 
-func ResolvePrecompileAddr(addr common.Address) string {
+func PrecompileAddressToName(addr common.Address) string {
 	switch addr {
 	case buildEthBlockAddr:
 		return "buildEthBlock"

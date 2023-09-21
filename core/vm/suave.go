@@ -55,7 +55,7 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	}
 
 	if metrics.EnabledExpensive {
-		precompileName := artifacts.ResolvePrecompileAddr(p.addr)
+		precompileName := artifacts.PrecompileAddressToName(p.addr)
 		metrics.GetOrRegisterMeter("suave/runtime/"+precompileName, nil).Mark(1)
 
 		now := time.Now()

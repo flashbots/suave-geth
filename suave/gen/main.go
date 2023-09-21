@@ -312,7 +312,7 @@ var SuaveMethods = map[string]common.Address{
 {{range .Functions}}"{{.Name}}": {{.Name}}Addr,
 {{end}}}
 
-func ResolvePrecompileAddr(addr common.Address) string {
+func PrecompileAddressToName(addr common.Address) string {
 	switch addr { {{range .Functions}}
 	case {{.Name}}Addr:
 		return "{{.Name}}"{{end}}
