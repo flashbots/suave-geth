@@ -11,7 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/metrics"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+)
+
+var (
+	confStorePrecompileStoreMeter    = metrics.NewRegisteredMeter("suave/confstore/store", nil)
+	confStorePrecompileRetrieveMeter = metrics.NewRegisteredMeter("suave/confstore/retrieve", nil)
 )
 
 var (
@@ -128,6 +134,10 @@ func (c *confStoreStore) runImpl(backend *SuaveExecutionBackend, bidId [16]byte,
 		}
 	}
 
+	if metrics.Enabled {
+		confStorePrecompileStoreMeter.Mark(int64(len(data)))
+	}
+
 	_, err := backend.ConfidentialStoreBackend.Store(bidId, caller, key, data)
 	if err != nil {
 		return err
@@ -190,6 +200,10 @@ func (c *confStoreRetrieve) runImpl(backend *SuaveExecutionBackend, bidId [16]by
 	data, err := backend.ConfidentialStoreBackend.Retrieve(bidId, caller, key)
 	if err != nil {
 		return []byte(err.Error()), err
+	}
+
+	if metrics.Enabled {
+		confStorePrecompileRetrieveMeter.Mark(int64(len(data)))
 	}
 
 	return data, nil
