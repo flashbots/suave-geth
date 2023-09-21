@@ -28,8 +28,54 @@ type SuaveRuntime interface {
 	submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error)
 }
 
+var (
+	buildEthBlockAddr             = common.HexToAddress("0x0000000000000000000000000000000042100001")
+	confidentialInputsAddr        = common.HexToAddress("0x0000000000000000000000000000000042010001")
+	confidentialStoreRetrieveAddr = common.HexToAddress("0x0000000000000000000000000000000042020001")
+	confidentialStoreStoreAddr    = common.HexToAddress("0x0000000000000000000000000000000042020000")
+	extractHintAddr               = common.HexToAddress("0x0000000000000000000000000000000042100037")
+	fetchBidsAddr                 = common.HexToAddress("0x0000000000000000000000000000000042030001")
+	newBidAddr                    = common.HexToAddress("0x0000000000000000000000000000000042030000")
+	simulateBundleAddr            = common.HexToAddress("0x0000000000000000000000000000000042100000")
+	submitEthBlockBidToRelayAddr  = common.HexToAddress("0x0000000000000000000000000000000042100002")
+)
+
 type SuaveRuntimeAdapter struct {
 	impl SuaveRuntime
+}
+
+func (b *SuaveRuntimeAdapter) run(addr common.Address, input []byte) ([]byte, error) {
+	switch addr {
+	case buildEthBlockAddr:
+		return b.buildEthBlock(input)
+
+	case confidentialInputsAddr:
+		return b.confidentialInputs(input)
+
+	case confidentialStoreRetrieveAddr:
+		return b.confidentialStoreRetrieve(input)
+
+	case confidentialStoreStoreAddr:
+		return b.confidentialStoreStore(input)
+
+	case extractHintAddr:
+		return b.extractHint(input)
+
+	case fetchBidsAddr:
+		return b.fetchBids(input)
+
+	case newBidAddr:
+		return b.newBid(input)
+
+	case simulateBundleAddr:
+		return b.simulateBundle(input)
+
+	case submitEthBlockBidToRelayAddr:
+		return b.submitEthBlockBidToRelay(input)
+
+	default:
+		return nil, fmt.Errorf("suave precompile not found for " + addr.String())
+	}
 }
 
 func (b *SuaveRuntimeAdapter) buildEthBlock(input []byte) (res []byte, err error) {

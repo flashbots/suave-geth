@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
@@ -51,37 +49,10 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		},
 	}
 
-	switch p.addr {
-	case isConfidentialAddress:
+	if p.addr == isConfidentialAddress {
+		// 'isConfidential' is a special precompile
 		return (&isConfidentialPrecompile{}).RunConfidential(p.backend, input)
-
-	case confidentialInputsAddress:
-		return (&confidentialInputsPrecompile{}).RunConfidential(p.backend, input)
-
-	case confStoreStoreAddress:
-		return stub.confidentialStoreStore(input)
-
-	case confStoreRetrieveAddress:
-		return stub.confidentialStoreRetrieve(input)
-
-	case newBidAddress:
-		return stub.newBid(input)
-
-	case fetchBidsAddress:
-		return stub.fetchBids(input)
-
-	case extractHintAddress:
-		return stub.extractHint(input)
-
-	case simulateBundleAddress:
-		return stub.simulateBundle(input)
-
-	case buildEthBlockAddress:
-		return stub.buildEthBlock(input)
-
-	case submitEthBlockBidToRelayAddress:
-		return stub.submitEthBlockBidToRelay(input)
 	}
 
-	return nil, fmt.Errorf("precompile %s not found", p.addr)
+	return stub.run(p.addr, input)
 }
