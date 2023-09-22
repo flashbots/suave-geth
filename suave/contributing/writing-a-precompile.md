@@ -9,7 +9,7 @@ The Solidity binding, also known as `SuaveLib` is a Solidity library that Suave 
 
 The bindings abstract from the developer any encoding/decoding and error management and provide an standard format for both runtimes to communicate with each other.
 
-You can find the full `yaml` specification [here]().
+You can find the full `yaml` specification [here](../gen/suave_spec.yaml).
 
 ## Specification
 
