@@ -192,6 +192,7 @@ var (
 		utils.SuaveEthRemoteBackendEndpointFlag,
 		utils.SuaveConfidentialTransportRedisEndpointFlag,
 		utils.SuaveConfidentialStoreRedisEndpointFlag,
+		utils.SuaveConfidentialStorePebbleDbPathFlag,
 		utils.SuaveEthBundleSigningKeyFlag,
 		utils.SuaveEthBlockSigningKeyFlag,
 		utils.SuaveDevModeFlag,
