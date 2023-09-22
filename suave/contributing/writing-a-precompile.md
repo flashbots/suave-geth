@@ -73,7 +73,7 @@ functions:
 
 Now, we are going to write a custom SUAVE precompile to perform the "add" operation.
 
-First, modify the SUAVE precompile [specification]() and add a new entry in the `functions` section:
+First, modify the SUAVE precompile [specification](../gen/suave_spec.yaml) and add a new entry in the `functions` section:
 
 ````yaml
 functions:
@@ -96,7 +96,7 @@ Second, run the code generator:
 $ go run suave/gen/main.go --write
 ```
 
-If there are no errors and the `--write` flag is set, the bindings will be regenerated [here]() and [here]().
+If there are no errors and the `--write` flag is set, the bindings will be regenerated [here](../sol/libraries/Suave.sol) and [here](../../core/vm/contracts_suave_runtime_adapter.go).
 
 In the Golang skeleton, a new `Add` function has been created:
 
