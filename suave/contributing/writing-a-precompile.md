@@ -31,7 +31,7 @@ functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
     output:
-      plain: true
+      packed: true
       fields:
         - name: output1
           type: bytes
