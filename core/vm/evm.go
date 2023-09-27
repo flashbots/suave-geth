@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/holiman/uint256"
 )
 
@@ -46,6 +47,8 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 		if p, ok := PrecompiledContractsSuave[addr]; ok {
 			if evm.Config.IsConfidential {
 				runtimeBackend := NewRuntimeSuaveExecutionBackend(evm, addr)
+				runtimeBackend.evm = evm
+
 				return NewSuavePrecompiledContractWrapper(addr, runtimeBackend, p), true
 			}
 			return p, ok
@@ -134,6 +137,8 @@ type EVM struct {
 	// Set only if EVM was instantiated with NewConfidentialVM
 	// !!! WILL PANIC IF CONFIDENTIAL EXECUTION REQUESTED AND THIS IS NOT SET
 	suaveExecutionBackend *SuaveExecutionBackend
+
+	newBids []suave.Bid
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -163,6 +168,10 @@ func NewConfidentialEVM(suaveExecutionBackend *SuaveExecutionBackend, blockCtx B
 	}
 	evm.interpreter = NewEVMInterpreter(evm)
 	return evm
+}
+
+func (evm *EVM) GetBids() []suave.Bid {
+	return evm.newBids
 }
 
 func (evm *EVM) SetConfidentialInput(data []byte) {

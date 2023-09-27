@@ -16,6 +16,9 @@ type SuaveExecutionBackend struct {
 	ConfidentialEthBackend   suave.ConfidentialEthBackend
 	confidentialInputs       []byte
 	callerStack              []*common.Address
+
+	// helper
+	evm *EVM
 }
 
 func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {

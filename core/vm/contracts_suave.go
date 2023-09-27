@@ -260,6 +260,8 @@ func (c *newBid) runImpl(backend *SuaveExecutionBackend, version string, decrypt
 		return nil, err
 	}
 
+	backend.evm.newBids = append(backend.evm.newBids, bid)
+
 	err = backend.MempoolBackend.SubmitBid(bid)
 	if err != nil {
 		return nil, err

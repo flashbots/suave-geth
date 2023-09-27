@@ -69,6 +69,9 @@ type Receipt struct {
 	BlockHash        common.Hash `json:"blockHash,omitempty"`
 	BlockNumber      *big.Int    `json:"blockNumber,omitempty"`
 	TransactionIndex uint        `json:"transactionIndex"`
+
+	// Suave fields: Extra fields from suave.
+	Bids []Bid `json:"bids,omitempty"`
 }
 
 type receiptMarshaling struct {
@@ -95,6 +98,7 @@ type storedReceiptRLP struct {
 	PostStateOrStatus []byte
 	CumulativeGasUsed uint64
 	Logs              []*Log
+	Bids              []Bid
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
@@ -265,6 +269,13 @@ func (r *ReceiptForStorage) EncodeRLP(_w io.Writer) error {
 		}
 	}
 	w.ListEnd(logList)
+	bidList := w.List()
+	for _, bid := range r.Bids {
+		if err := rlp.Encode(w, bid); err != nil {
+			return err
+		}
+	}
+	w.ListEnd(bidList)
 	w.ListEnd(outerList)
 	return w.Flush()
 }
@@ -282,7 +293,7 @@ func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
 	r.CumulativeGasUsed = stored.CumulativeGasUsed
 	r.Logs = stored.Logs
 	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
-
+	r.Bids = stored.Bids
 	return nil
 }
 
