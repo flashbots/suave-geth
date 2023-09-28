@@ -8,8 +8,10 @@ library Suave {
 
     struct Bid {
         BidId id;
+        BidId salt;
         uint64 decryptionCondition;
         address[] allowedPeekers;
+        address[] allowedStores;
         string version;
     }
 
@@ -122,12 +124,14 @@ library Suave {
         return abi.decode(data, (Bid[]));
     }
 
-    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, string memory bidType)
-        internal
-        view
-        returns (Bid memory)
-    {
-        (bool success, bytes memory data) = NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers, bidType));
+    function newBid(
+        uint64 decryptionCondition,
+        address[] memory allowedPeekers,
+        address[] memory allowedStores,
+        string memory bidType
+    ) internal view returns (Bid memory) {
+        (bool success, bytes memory data) =
+            NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, bidType));
         if (!success) {
             revert PeekerReverted(NEW_BID, data);
         }

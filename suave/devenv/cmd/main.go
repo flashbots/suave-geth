@@ -125,7 +125,7 @@ func main() {
 
 				confidentialDataBytes, _ := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 
-				txnResult, err := mevShareContract.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+				txnResult, err := mevShareContract.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 				if err != nil {
 					return err
 				}
@@ -169,7 +169,7 @@ func main() {
 				targetBlock := uint64(1)
 				allowedPeekers := []common.Address{mevShareContract.Address()}
 
-				txnResult, err := mevShareContract.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, bidId}, confidentialDataMatchBytes)
+				txnResult, err := mevShareContract.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}, bidId}, confidentialDataMatchBytes)
 				if err != nil {
 					return err
 				}

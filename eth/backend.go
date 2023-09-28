@@ -229,7 +229,23 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	cdas := suave_backends.NewLocalConfidentialStore()
+	// TODO: opts, redis store backend
+	var confidentialStoreBackend suave.ConfidentialStoreBackend
+	if config.Suave.RedisStoreUri == "dev" {
+		confidentialStoreBackend = suave_backends.NewMiniredisBackend()
+	} else if config.Suave.RedisStoreUri != "" {
+		confidentialStoreBackend = suave_backends.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+	} else {
+		confidentialStoreBackend = suave_backends.NewLocalConfidentialStore()
+	}
+
+	var confidentialStoreTransport suave.StoreTransportTopic
+	if config.Suave.RedisStorePubsubUri != "" {
+		confidentialStoreTransport = suave_backends.NewRedisPubSubTransport(config.Suave.RedisStorePubsubUri)
+	} else {
+		confidentialStoreTransport = suave.MockTransport{}
+	}
+
 	var suaveEthBackend suave.ConfidentialEthBackend
 	if config.Suave.SuaveEthRemoteBackendEndpoint != "" {
 		suaveEthBackend = suave_backends.NewRemoteEthBackend(config.Suave.SuaveEthRemoteBackendEndpoint)
@@ -237,10 +253,18 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
+	suaveBidMempool := suave_backends.NewMempoolOnConfidentialStore(confidentialStoreBackend)
+	suaveDaSigner := &suave_backends.AccountManagerDASigner{Manager: eth.AccountManager()}
+
+	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveBidMempool, suaveDaSigner, types.LatestSigner(chainConfig))
+	if err != nil {
+		return nil, err
+	}
+
 	suaveBackend := &vm.SuaveExecutionBackend{
-		ConfidentialStoreBackend: cdas,
-		MempoolBackend:           suave_backends.NewMempoolOnConfidentialStore(cdas),
-		ConfidentialEthBackend:   suaveEthBackend,
+		ConfidentialStoreEngine: confidentialStoreEngine,
+		MempoolBackend:          suaveBidMempool,
+		ConfidentialEthBackend:  suaveEthBackend,
 	}
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveBackend}
 	if eth.APIBackend.allowUnprotectedTxs {
@@ -513,6 +537,11 @@ func (s *Ethereum) Start() error {
 	}
 	// Start the networking layer and the light server if requested
 	s.handler.Start(maxPeers)
+
+	if err := s.APIBackend.suaveBackend.Start(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -537,6 +566,8 @@ func (s *Ethereum) Stop() error {
 
 	s.chainDb.Close()
 	s.eventMux.Stop()
+
+	s.APIBackend.suaveBackend.Stop()
 
 	return nil
 }

@@ -147,21 +147,20 @@ graph TB
     classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px, color:#333;
 ```
 
-The capabilities enabled by this modified runtime are exposed via the APIs `ConfidentialStoreBackend` , `MempoolBackend`, `ConfidentialEthBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
+The capabilities enabled by this modified runtime are exposed to the virtual machine via `SuaveContext` and its components.
 
 ```go
-func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
-	if !evm.Config.IsConfidential {
-		return nil
-	}
+type SuaveContext struct {
+    Backend                      *SuaveExecutionBackend
+    ConfidentialComputeRequestTx *types.Transaction
+    ConfidentialInputs           []byte
+    CallerStack                  []*common.Address
+}
 
-	return &SuaveExecutionBackend{
-		ConfidentialStoreBackend: evm.suaveExecutionBackend.ConfidentialStoreBackend,
-		MempoolBackned:           evm.suaveExecutionBackend.MempoolBackned,
-		ConfidentialEthBackend:   evm.suaveExecutionBackend.ConfidentialEthBackend,
-		confidentialInputs:       evm.suaveExecutionBackend.confidentialInputs,
-		callerStack:              append(evm.suaveExecutionBackend.callerStack, &caller),
-	}
+type SuaveExecutionBackend struct {
+    ConfidentialStoreEngine *suave.ConfidentialStoreEngine
+    MempoolBackend          suave.MempoolBackend
+    ConfidentialEthBackend  suave.ConfidentialEthBackend
 }
 ```
 
@@ -234,13 +233,15 @@ A `Bid` is a data structure encapsulating key information about a transaction on
 ```go
 type Bid struct {
 	Id                  BidId            `json:"id"`
+	Salt                BidId            `json:"salt"`
 	DecryptionCondition uint64           `json:"decryptionCondition"`
 	AllowedPeekers      []common.Address `json:"allowedPeekers"`
+	AllowedStores       []common.Address `json:"allowedStores"`
 	Version             string           `json:"version"`
 }
 ```
 
-Each `Bid` has an `Id`, a `DecryptionCondition`, an array of `AllowedPeekers`, and a `Version`. The `DecryptionCondition` signifies the block number at which the bid can be decrypted and is typically derived from the source contract or may even be a contract itself. The `AllowedPeekers` are the addresses that are permitted to access the data associated with the bid, providing an added layer of access control. The `Version` indicates the version of the protocol used for the bid.
+Each `Bid` has a `Id` (uuid v5), a `Salt` (random uuid v4),  a `DecryptionCondition`, an array of `AllowedPeekers` and `AllowedStores`, and a `Version`. The `DecryptionCondition` signifies the block number at which the bid can be decrypted and is typically derived from the source contract or may even be a contract itself. The `AllowedPeekers` are the addresses that are permitted to access the data associated with the bid, providing an added layer of access control. The `AllowedStores` are the confidential stores which should be granted access to the bid's data (currently not enforced). The `Version` indicates the version of the protocol used for the bid.
 
 ### SUAVE library
 
@@ -254,8 +255,11 @@ library Suave {
 
     struct Bid {
         BidId id;
+        BidId salt;
         uint64 decryptionCondition;
         address[] allowedPeekers;
+        address[] allowedStores;
+        string version;
     }
 
     function isConfidential() internal view returns (bool b)
@@ -273,12 +277,13 @@ library Suave {
 
 ### Confidential APIs
 
-Confidential precompiles have access to the following [Confidential APIs](suave/core/types.go) during execution.
+Confidential precompiles have access to the following [Confidential APIs](suave/core/types.go) during execution.  
+This is subject to change!  
 
 ```go
-type ConfidentialStoreBackend interface {
-    Initialize(bid Bid, key string, value []byte) (Bid, error)
-    Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
+type ConfidentialStoreEngine interface {
+    Initialize(bid Bid, creationTx *types.Transaction, key string, value []byte) (Bid, error)
+    Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error)
     Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)
 }
 
@@ -298,26 +303,16 @@ type ConfidentialEthBackend interface {
 
 The Confidential Store is an integral part of the SUAVE chain, designed to facilitate secure and privacy-preserving transactions and smart contract interactions. It functions as a key-value store where users can safely store and retrieve confidential data related to their bids. The Confidential Store restricts access (both reading and writing) only to the allowed peekers of each bid, allowing developers to define the entire data model of their application!
 
-The current, and certainly not final, implementation of the Confidential Store is managed by the `LocalConfidentialStore` struct. It provides thread-safe access to the bids' confidential data. The `LocalConfidentialStore` struct is composed of a mutex lock and a map of bid data, `ACData`, indexed by a `BidId`.
+The current, and certainly not final, implementation of the Confidential Store is managed by the `ConfidentialStoreEngine`. The engine consists of a storage backend, which holds the raw data, and a transport topic, which relays synchronization messages between nodes.  
+We provide two storage backends to the confidential store engine: the `LocalConfidentialStore`, storing data in memory in a simple dictionary, and `RedisStoreBackend`, storing data in redis. To enable redis as the storage backed, pass redis endpoint via `--suave.confidential.redis-store-endpoint`.  
+For synchronization of confidential stores via transport we provide an implementation using a shared Redis PubSub in `RedisPubSubTransport`, as well as a *crude* synchronization protocol. To enable redis transport, pass redis endpoint via `--suave.confidential.redis-transport-endpoint`. Note that Redis transport only synchronizes *current* state, there is no initial synchronization - a newly connected node will not have access to old data.  
+Redis as either storage backend or transport is *temporary* and will be removed once we have a well-tested p2p solution.  
 
-```go
-type LocalConfidentialStore struct {
-	lock sync.Mutex
-	bids map[suave.BidId]ACData
-}
-```
-`ACData` is another struct that contains a `bid` and a `dataMap`. The `dataMap` is a key-value store that holds the actual confidential data of the bids.
+![image](suave/docs/confidential_store_engine.png)
 
-```go
-type ACData struct {
-	bid     suave.Bid
-	dataMap map[string][]byte
-}
-```
+The `ConfidentialStoreEngine` provides the following key methods:
 
-The `LocalConfidentialStore` provides the following key methods:
-
-- **Initialize**: This method is used to initialize a bid with a given `bid.Id`. If no `bid.Id` is provided, a new one is created. The method is trusted, meaning it is not directly accessible through precompiles.
+- **Initialize**: This method is used to initialize a bid. The method is trusted, meaning it is not directly accessible through precompiles. The method returns the initialized bid, importantly with the `Id` field set.
 - **Store**: This method stores a given value under a specified key in a bid's `dataMap`. Access is restricted only to addresses listed in the bid's `AllowedPeekers`.
 - **Retrieve**: This method retrieves data associated with a given key from a bid's `dataMap`. Similar to the `Store` method, access is restricted only to addresses listed in the bid's `AllowedPeekers`.
 

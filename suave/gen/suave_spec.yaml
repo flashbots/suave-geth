@@ -6,9 +6,13 @@ structs:
     fields:
       - name: id
         type: BidId
+      - name: salt
+        type: BidId
       - name: decryptionCondition
         type: uint64
       - name: allowedPeekers
+        type: address[]
+      - name: allowedStores
         type: address[]
       - name: version
         type: string
@@ -54,6 +58,8 @@ functions:
       - name: decryptionCondition
         type: uint64
       - name: allowedPeekers
+        type: address[]
+      - name: allowedStores
         type: address[]
       - name: bidType
         type: string

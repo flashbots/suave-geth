@@ -5,42 +5,67 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
-type SuaveExecutionBackend struct {
-	ConfidentialStoreBackend suave.ConfidentialStoreBackend
-	MempoolBackend           suave.MempoolBackend
-	ConfidentialEthBackend   suave.ConfidentialEthBackend
-	confidentialInputs       []byte
-	callerStack              []*common.Address
+type SuaveContext struct {
+	// TODO: MEVM access to Backend should be restricted to only the necessary functions!
+	Backend                      *SuaveExecutionBackend
+	ConfidentialComputeRequestTx *types.Transaction
+	ConfidentialInputs           []byte
+	CallerStack                  []*common.Address
 }
 
-func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
+type SuaveExecutionBackend struct {
+	ConfidentialStoreEngine *suave.ConfidentialStoreEngine
+	MempoolBackend          suave.MempoolBackend
+	ConfidentialEthBackend  suave.ConfidentialEthBackend
+}
+
+func (b *SuaveExecutionBackend) Start() error {
+	if err := b.ConfidentialStoreEngine.Start(); err != nil {
+		return err
+	}
+
+	if err := b.MempoolBackend.Start(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *SuaveExecutionBackend) Stop() error {
+	b.MempoolBackend.Stop()
+	b.ConfidentialStoreEngine.Stop()
+
+	return nil
+}
+
+func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 	if !evm.Config.IsConfidential {
 		return nil
 	}
 
-	return &SuaveExecutionBackend{
-		ConfidentialStoreBackend: evm.suaveExecutionBackend.ConfidentialStoreBackend,
-		MempoolBackend:           evm.suaveExecutionBackend.MempoolBackend,
-		ConfidentialEthBackend:   evm.suaveExecutionBackend.ConfidentialEthBackend,
-		confidentialInputs:       evm.suaveExecutionBackend.confidentialInputs,
-		callerStack:              append(evm.suaveExecutionBackend.callerStack, &caller),
+	return &SuaveContext{
+		Backend:                      evm.SuaveContext.Backend,
+		ConfidentialComputeRequestTx: evm.SuaveContext.ConfidentialComputeRequestTx,
+		ConfidentialInputs:           evm.SuaveContext.ConfidentialInputs,
+		CallerStack:                  append(evm.SuaveContext.CallerStack, &caller),
 	}
 }
 
 // Implements PrecompiledContract for confidential smart contracts
 type SuavePrecompiledContractWrapper struct {
-	addr     common.Address
-	backend  *SuaveExecutionBackend
-	contract SuavePrecompiledContract
+	addr         common.Address
+	suaveContext *SuaveContext
+	contract     SuavePrecompiledContract
 }
 
-func NewSuavePrecompiledContractWrapper(addr common.Address, backend *SuaveExecutionBackend, contract SuavePrecompiledContract) *SuavePrecompiledContractWrapper {
-	return &SuavePrecompiledContractWrapper{addr: addr, backend: backend, contract: contract}
+func NewSuavePrecompiledContractWrapper(addr common.Address, suaveContext *SuaveContext, contract SuavePrecompiledContract) *SuavePrecompiledContractWrapper {
+	return &SuavePrecompiledContractWrapper{addr: addr, suaveContext: suaveContext, contract: contract}
 }
 
 func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
@@ -50,7 +75,7 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	stub := &SuaveRuntimeAdapter{
 		impl: &suaveRuntime{
-			backend: p.backend,
+			suaveContext: p.suaveContext,
 		},
 	}
 
@@ -66,10 +91,10 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 
 	switch p.addr {
 	case isConfidentialAddress:
-		return (&isConfidentialPrecompile{}).RunConfidential(p.backend, input)
+		return (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confidentialInputsAddress:
-		return (&confidentialInputsPrecompile{}).RunConfidential(p.backend, input)
+		return (&confidentialInputsPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confStoreStoreAddress:
 		return stub.confidentialStoreStore(input)

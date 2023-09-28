@@ -2,30 +2,51 @@ package suave
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/node"
+	"github.com/google/uuid"
 )
 
 type Bytes = hexutil.Bytes
-type BidId = [16]byte
+type BidId = types.BidId
 
-type Bid = types.Bid
+type Bid struct {
+	Id                  types.BidId
+	Salt                types.BidId
+	DecryptionCondition uint64
+	AllowedPeekers      []common.Address
+	AllowedStores       []common.Address
+	Version             string
+	CreationTx          *types.Transaction
+	Signature           []byte
+}
+
+type MEVMBid = types.Bid
+
+type BuildBlockArgs = types.BuildBlockArgs
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
+var ErrBidAlreadyPresent = errors.New("bid already present")
+
 type ConfidentialStoreBackend interface {
-	Initialize(bid Bid, key string, value []byte) (Bid, error)
-	Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
-	Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)
+	node.Lifecycle
+	InitializeBid(bid Bid) error
+	FetchEngineBidById(bidId BidId) (Bid, error)
+	Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
+	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)
 }
 
 type MempoolBackend interface {
-	SubmitBid(Bid) error
-	FetchBidById(BidId) (Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
+	node.Lifecycle
+	SubmitBid(types.Bid) error
+	FetchBidById(BidId) (types.Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid
 }
 
 type ConfidentialEthBackend interface {
@@ -33,4 +54,18 @@ type ConfidentialEthBackend interface {
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 }
 
-type BuildBlockArgs = types.BuildBlockArgs
+type StoreTransportTopic interface {
+	node.Lifecycle
+	Subscribe() (<-chan DAMessage, context.CancelFunc)
+	Publish(DAMessage)
+}
+
+type DAMessage struct {
+	Bid       Bid                `json:"bid"`
+	SourceTx  *types.Transaction `json:"sourceTx"`
+	Caller    common.Address     `json:"caller"`
+	Key       string             `json:"key"`
+	Value     Bytes              `json:"value"`
+	StoreUUID uuid.UUID          `json:"storeUUID"`
+	Signature Bytes              `json:"signature"`
+}

@@ -98,7 +98,7 @@ func sendMevShareMatchTx(
 	mevShareAddr common.Address,
 	blockSenderAddr common.Address,
 	executionNodeAddr common.Address,
-	matchBidId [16]byte,
+	matchBidId types.BidId,
 	// account specific
 	privKey *ecdsa.PrivateKey,
 ) (*common.Hash, error) {
@@ -139,7 +139,7 @@ func prepareEthBackrunBundle(
 	goerliClient *rpc.Client,
 	goerliSigner types.Signer,
 	privKey *ecdsa.PrivateKey,
-	matchBidId [16]byte,
+	matchBidId types.BidId,
 ) (types.SBundle, []byte, error) {
 	var goerliAccNonce hexutil.Uint64
 	err := goerliClient.Call(&goerliAccNonce, "eth_getTransactionCount", crypto.PubkeyToAddress(privKey.PublicKey), "latest")

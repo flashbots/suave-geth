@@ -524,6 +524,18 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveConfidentialTransportRedisEndpointFlag = &cli.StringFlag{
+		Name:     "suave.confidential.redis-transport-endpoint",
+		Usage:    "Redis endpoint to use as confidential store transport (default: no transport)",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveConfidentialStoreRedisEndpointFlag = &cli.StringFlag{
+		Name:     "suave.confidential.redis-store-endpoint",
+		Usage:    "Redis endpoint to use as confidential storage backend (default: local store)",
+		Category: flags.SuaveCategory,
+	}
+
 	// Account settings
 	UnlockedAccountFlag = &cli.StringFlag{
 		Name:     "unlock",
@@ -1669,6 +1681,14 @@ func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 	if ctx.IsSet(SuaveEthRemoteBackendEndpointFlag.Name) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {
+		cfg.RedisStorePubsubUri = ctx.String(SuaveConfidentialTransportRedisEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveConfidentialStoreRedisEndpointFlag.Name) {
+		cfg.RedisStoreUri = ctx.String(SuaveConfidentialStoreRedisEndpointFlag.Name)
 	}
 }
 

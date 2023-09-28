@@ -44,6 +44,7 @@ type TransactionArgs struct {
 	Value                *hexutil.Big    `json:"value"`
 	ExecutionNode        *common.Address `json:"executionNode"`
 	IsConfidential       bool            `json:"IsConfidential"`
+	ConfidentialInputs   *hexutil.Bytes  `json:"confidentialInputs"` // TODO: testme
 	Nonce                *hexutil.Uint64 `json:"nonce"`
 
 	// We accept "data" and "input" for backwards-compatibility reasons.
