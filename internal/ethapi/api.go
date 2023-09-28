@@ -19,6 +19,7 @@ package ethapi
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -1388,7 +1389,7 @@ type RPCTransaction struct {
 	Accesses                  *types.AccessList `json:"accessList,omitempty"`
 	ChainID                   *hexutil.Big      `json:"chainId,omitempty"`
 	ExecutionNode             *common.Address   `json:"executionNode,omitempty"`
-	Wrapped                   *hexutil.Bytes    `json:"wrapped,omitempty"`
+	Wrapped                   *json.RawMessage  `json:"wrapped,omitempty"`
 	ConfidentialComputeResult *hexutil.Bytes    `json:"confidentialComputeResult,omitempty"`
 	V                         *hexutil.Big      `json:"v"`
 	R                         *hexutil.Big      `json:"r"`
@@ -1461,7 +1462,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
-		result.Wrapped = (*hexutil.Bytes)(&wrappedBytes)
+		result.Wrapped = (*json.RawMessage)(&wrappedBytes)
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.SuaveTxType:
 		inner, ok := types.CastTxInner[*types.SuaveTransaction](tx)
@@ -1479,7 +1480,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
-		result.Wrapped = (*hexutil.Bytes)(&wrappedBytes)
+		result.Wrapped = (*json.RawMessage)(&wrappedBytes)
 		result.ConfidentialComputeResult = (*hexutil.Bytes)(&inner.ConfidentialComputeResult)
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	}
@@ -1840,7 +1841,10 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionArgs, confidential *hexutil.Bytes) (common.Hash, error) {
+	return common.Hash{}, fmt.Errorf("method not allowed")
+
 	// Look up the wallet containing the requested signer
+	//nolint:all
 	account := accounts.Account{Address: args.from()}
 
 	wallet, err := s.b.AccountManager().Find(account)

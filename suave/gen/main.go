@@ -303,9 +303,22 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// List of suave precompile addresses
+var ( {{range .Functions}}{{.Name}}Addr = common.HexToAddress("{{.Address}}")
+{{end}}
+)
+
 var SuaveMethods = map[string]common.Address{
-{{range .Functions}}"{{.Name}}": common.HexToAddress("{{.Address}}"),
+{{range .Functions}}"{{.Name}}": {{.Name}}Addr,
 {{end}}}
+
+func PrecompileAddressToName(addr common.Address) string {
+	switch addr { {{range .Functions}}
+	case {{.Name}}Addr:
+		return "{{.Name}}"{{end}}
+	}
+	return ""
+}
 `
 
 var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED

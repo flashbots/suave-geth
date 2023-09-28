@@ -30,24 +30,24 @@ import (
 type txJSON struct {
 	Type hexutil.Uint64 `json:"type"`
 
-	ChainID                   *hexutil.Big    `json:"chainId,omitempty"`
-	Nonce                     *hexutil.Uint64 `json:"nonce"`
-	To                        *common.Address `json:"to"`
-	Gas                       *hexutil.Uint64 `json:"gas"`
-	GasPrice                  *hexutil.Big    `json:"gasPrice"`
-	MaxPriorityFeePerGas      *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	MaxFeePerGas              *hexutil.Big    `json:"maxFeePerGas"`
-	MaxFeePerDataGas          *hexutil.Big    `json:"maxFeePerDataGas,omitempty"`
-	Value                     *hexutil.Big    `json:"value"`
-	Input                     *hexutil.Bytes  `json:"input"`
-	AccessList                *AccessList     `json:"accessList,omitempty"`
-	BlobVersionedHashes       []common.Hash   `json:"blobVersionedHashes,omitempty"`
-	ExecutionNode             *common.Address `json:"executionNode,omitempty"`
-	Wrapped                   *hexutil.Bytes  `json:"wrapped,omitempty"`
-	ConfidentialComputeResult *hexutil.Bytes  `json:"confidentialComputeResult,omitempty"`
-	V                         *hexutil.Big    `json:"v"`
-	R                         *hexutil.Big    `json:"r"`
-	S                         *hexutil.Big    `json:"s"`
+	ChainID                   *hexutil.Big     `json:"chainId,omitempty"`
+	Nonce                     *hexutil.Uint64  `json:"nonce"`
+	To                        *common.Address  `json:"to"`
+	Gas                       *hexutil.Uint64  `json:"gas"`
+	GasPrice                  *hexutil.Big     `json:"gasPrice"`
+	MaxPriorityFeePerGas      *hexutil.Big     `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas              *hexutil.Big     `json:"maxFeePerGas"`
+	MaxFeePerDataGas          *hexutil.Big     `json:"maxFeePerDataGas,omitempty"`
+	Value                     *hexutil.Big     `json:"value"`
+	Input                     *hexutil.Bytes   `json:"input"`
+	AccessList                *AccessList      `json:"accessList,omitempty"`
+	BlobVersionedHashes       []common.Hash    `json:"blobVersionedHashes,omitempty"`
+	ExecutionNode             *common.Address  `json:"executionNode,omitempty"`
+	Wrapped                   *json.RawMessage `json:"wrapped,omitempty"`
+	ConfidentialComputeResult *hexutil.Bytes   `json:"confidentialComputeResult,omitempty"`
+	V                         *hexutil.Big     `json:"v"`
+	R                         *hexutil.Big     `json:"r"`
+	S                         *hexutil.Big     `json:"s"`
 
 	// Only used for encoding:
 	Hash common.Hash `json:"hash"`
@@ -124,7 +124,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 
-		enc.Wrapped = (*hexutil.Bytes)(&wrapped)
+		enc.Wrapped = (*json.RawMessage)(&wrapped)
 		enc.ChainID = (*hexutil.Big)(itx.ChainID)
 
 	case *SuaveTransaction:
@@ -135,7 +135,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 
-		enc.Wrapped = (*hexutil.Bytes)(&wrapped)
+		enc.Wrapped = (*json.RawMessage)(&wrapped)
 
 		enc.ChainID = (*hexutil.Big)(itx.ChainID)
 		enc.ConfidentialComputeResult = (*hexutil.Bytes)(&itx.ConfidentialComputeResult)

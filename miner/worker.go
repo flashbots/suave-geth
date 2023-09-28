@@ -648,8 +648,7 @@ func (w *worker) mainLoop() {
 				// Special case, if the consensus engine is 0 period clique(dev mode),
 				// submit sealing work here since all empty submission will be rejected
 				// by clique. Of course the advance sealing(empty submission) is disabled.
-				if w.chainConfig.Clique != nil && false { // && w.chainConfig.Clique.Period == 0 {
-					// Don't commit empty!
+				if w.chainConfig.Clique != nil && w.chainConfig.Clique.Period == 0 {
 					w.commitWork(nil, true, time.Now().Unix())
 				}
 			}
@@ -728,9 +727,6 @@ func (w *worker) resultLoop() {
 		case block := <-w.resultCh:
 			// Short circuit when receiving empty result.
 			if block == nil {
-				continue
-			}
-			if block.Transactions().Len() == 0 {
 				continue
 			}
 			// Short circuit when receiving duplicate result caused by resubmitting.

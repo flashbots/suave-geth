@@ -2,9 +2,12 @@ package vm
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -74,6 +77,16 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		impl: &suaveRuntime{
 			suaveContext: p.suaveContext,
 		},
+	}
+
+	if metrics.EnabledExpensive {
+		precompileName := artifacts.PrecompileAddressToName(p.addr)
+		metrics.GetOrRegisterMeter("suave/runtime/"+precompileName, nil).Mark(1)
+
+		now := time.Now()
+		defer func() {
+			metrics.GetOrRegisterTimer("suave/runtime/"+precompileName+"/duration", nil).Update(time.Since(now))
+		}()
 	}
 
 	switch p.addr {
