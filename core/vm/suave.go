@@ -14,8 +14,6 @@ import (
 // ConfidentialStore represents the API for the confidential store
 // required by Suave runtime.
 type ConfidentialStore interface {
-	Start() error
-	Stop() error
 	InitializeBid(bid types.Bid, creationTx *types.Transaction) (types.Bid, error)
 	Store(bidId suave.BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (suave.Bid, error)
 	Retrieve(bid types.BidId, caller common.Address, key string) ([]byte, error)
@@ -33,7 +31,6 @@ type SuaveContext struct {
 
 type SuaveExecutionBackend struct {
 	ConfidentialStoreEngine ConfidentialStore
-	MempoolBackend          suave.MempoolBackend
 	ConfidentialEthBackend  suave.ConfidentialEthBackend
 }
 

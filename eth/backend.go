@@ -100,6 +100,9 @@ type Ethereum struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 
 	shutdownTracker *shutdowncheck.ShutdownTracker // Tracks if and when the node has shutdown ungracefully
+
+	// Suave fields
+	ConfidentialStore *suave.ConfidentialStoreEngine
 }
 
 // New creates a new Ethereum object (including the
@@ -261,11 +264,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		return nil, err
 	}
 
+	eth.ConfidentialStore = confidentialStoreEngine
 	stack.RegisterLifecycle(confidentialStoreEngine)
 
 	suaveBackend := &vm.SuaveExecutionBackend{
 		ConfidentialStoreEngine: confidentialStoreEngine,
-		MempoolBackend:          suaveBidMempool,
 		ConfidentialEthBackend:  suaveEthBackend,
 	}
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveBackend}

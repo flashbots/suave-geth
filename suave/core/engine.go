@@ -187,6 +187,10 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 	return bid, nil
 }
 
+func (e *ConfidentialStoreEngine) SubmitBid(bid types.Bid) error {
+	return e.mempool.SubmitBid(bid)
+}
+
 func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (types.Bid, error) {
 	return e.mempool.FetchBidById(bidId)
 }
