@@ -217,7 +217,7 @@ func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.Buil
 	for i, bidId := range bidIds {
 		var err error
 
-		bidsToMerge[i], err = suaveContext.Backend.MempoolBackend.FetchBidById(bidId)
+		bidsToMerge[i], err = suaveContext.Backend.ConfidentialStoreEngine.FetchBidById(bidId)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not fetch bid id %v: %w", bidId, err)
 		}

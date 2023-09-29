@@ -179,7 +179,20 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		return types.Bid{}, fmt.Errorf("confidential engine: store backend failed to initialize bid: %w", err)
 	}
 
+	// send the bid to the internal mempool
+	if err := e.mempool.SubmitBid(bid); err != nil {
+		return types.Bid{}, fmt.Errorf("failed to submit to mempool: %w", err)
+	}
+
 	return bid, nil
+}
+
+func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (types.Bid, error) {
+	return e.mempool.FetchBidById(bidId)
+}
+
+func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+	return e.mempool.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 }
 
 func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error) {

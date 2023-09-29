@@ -83,8 +83,8 @@ func TestSuavePrecompileStub(t *testing.T) {
 	suaveContext := SuaveContext{
 		Backend: &SuaveExecutionBackend{
 			ConfidentialStoreEngine: stubEngine,
-			MempoolBackend:          mockSuaveBackend,
-			ConfidentialEthBackend:  mockSuaveBackend,
+			// MempoolBackend:          mockSuaveBackend,
+			ConfidentialEthBackend: mockSuaveBackend,
 		},
 		ConfidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
 			ExecutionNode: common.Address{},
@@ -153,8 +153,8 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 		suaveContext: &SuaveContext{
 			Backend: &SuaveExecutionBackend{
 				ConfidentialStoreEngine: confEngine,
-				MempoolBackend:          suaveMempool,
-				ConfidentialEthBackend:  &mockSuaveBackend{},
+				// MempoolBackend:          suaveMempool,
+				ConfidentialEthBackend: &mockSuaveBackend{},
 			},
 			ConfidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
 				ExecutionNode: common.Address{},
