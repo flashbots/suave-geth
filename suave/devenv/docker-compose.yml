@@ -61,6 +61,8 @@ services:
         DATABASE_URL: postgresql://postgres:@host.docker.internal:7432/blockscout?ssl=false
         CHAIN_ID: '1337'
         POOL_SIZE: 30
+        CHAIN_TYPE: 'suave'
+        SUAVE_BID_CONTRACTS: '0x8f21fdd6b4f4cacd33151777a46c122797c8bf17'
 
   visualizer:
     extends:
