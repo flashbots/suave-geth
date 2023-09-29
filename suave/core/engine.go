@@ -344,7 +344,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 
 	_, err = e.backend.Store(message.Bid, message.Caller, message.Key, message.Value)
 	if err != nil {
-		panic(fmt.Errorf("unexpected error while storing, the message was not validated properly: %w (%v)", err, message.Caller))
+		return fmt.Errorf("unexpected error while storing: %w", err)
 	}
 
 	return nil
