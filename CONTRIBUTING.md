@@ -4,7 +4,7 @@ Welcome to the Flashbots collective!
 
 Thanks for your help improving the project! We are so happy to have you! We just ask you to be nice when you play with us.
 
-Please start by reading our [license agreement](#individual-contributor-license-agreement) below, and our [code of conduct](suave/CODE_OF_CONDUCT.md).
+Please start by reading our [license agreement](#individual-contributor-license-agreement) below, and our [code of conduct](./CODE_OF_CONDUCT.md).
 
 ## Code style
 
