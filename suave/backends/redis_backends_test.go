@@ -97,7 +97,7 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
-	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
+	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	require.NoError(t, engine1.Start())
@@ -106,7 +106,7 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
 
-	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
+	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	require.NoError(t, engine2.Start())

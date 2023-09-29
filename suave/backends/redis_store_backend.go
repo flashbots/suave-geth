@@ -9,6 +9,8 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/go-redis/redis/v8"
 )
@@ -38,10 +40,11 @@ func NewLocalConfidentialStore() *RedisStoreBackend {
 }
 
 func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
-	return &RedisStoreBackend{
+	r := &RedisStoreBackend{
 		cancel:   nil,
 		redisUri: redisUri,
 	}
+	return r
 }
 
 func (r *RedisStoreBackend) Start() error {
@@ -68,6 +71,11 @@ func (r *RedisStoreBackend) Start() error {
 		return err
 	}
 	r.client = client
+
+	err = r.InitializeBid(mempoolConfidentialStoreBid)
+	if err != nil && !errors.Is(err, suave.ErrBidAlreadyPresent) {
+		return fmt.Errorf("mempool: could not initialize: %w", err)
+	}
 
 	return nil
 }
@@ -142,4 +150,46 @@ func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key s
 	}
 
 	return data, nil
+}
+
+func (r *RedisStoreBackend) SubmitBid(bid types.Bid) error {
+	defer log.Info("bid submitted", "bid", bid, "store", r.Store)
+
+	var bidsByBlockAndProtocol []types.Bid
+	bidsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition))
+	if err == nil {
+		bidsByBlockAndProtocol = suave.MustDecode[[]types.Bid](bidsByBlockAndProtocolBytes)
+	}
+	// store bid by block number and by protocol + block number
+	bidsByBlockAndProtocol = append(bidsByBlockAndProtocol, bid)
+
+	r.Store(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition), suave.MustEncode(bidsByBlockAndProtocol))
+
+	return nil
+}
+
+func (r *RedisStoreBackend) FetchBidById(bidId suave.BidId) (types.Bid, error) {
+	engineBid, err := r.FetchEngineBidById(bidId)
+	if err != nil {
+		log.Error("bid missing!", "id", bidId, "err", err)
+		return types.Bid{}, errors.New("not found")
+	}
+
+	return types.Bid{
+		Id:                  engineBid.Id,
+		Salt:                engineBid.Salt,
+		DecryptionCondition: engineBid.DecryptionCondition,
+		AllowedPeekers:      engineBid.AllowedPeekers,
+		AllowedStores:       engineBid.AllowedStores,
+		Version:             engineBid.Version,
+	}, nil
+}
+
+func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+	bidsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
+	if err != nil {
+		return nil
+	}
+	defer log.Info("bids fetched", "bids", string(bidsByProtocolBytes))
+	return suave.MustDecode[[]types.Bid](bidsByProtocolBytes)
 }

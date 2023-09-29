@@ -42,6 +42,18 @@ func (*FakeStoreBackend) Retrieve(bid Bid, caller common.Address, key string) ([
 	return nil, errors.New("not implemented")
 }
 
+func (*FakeStoreBackend) FetchBidById(BidId) (types.Bid, error) {
+	return types.Bid{}, nil
+}
+
+func (*FakeStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+	return nil
+}
+
+func (*FakeStoreBackend) SubmitBid(types.Bid) error {
+	return nil
+}
+
 func TestOwnMessageDropping(t *testing.T) {
 	var wasCalled *bool = new(bool)
 	fakeStore := FakeStoreBackend{OnStore: func(bid Bid, caller common.Address, key string, value []byte) (Bid, error) {
@@ -50,7 +62,7 @@ func TestOwnMessageDropping(t *testing.T) {
 	}}
 
 	fakeDaSigner := FakeDASigner{localAddresses: []common.Address{{0x42}}}
-	engine, err := NewConfidentialStoreEngine(&fakeStore, MockTransport{}, MockMempool{}, fakeDaSigner, MockChainSigner{})
+	engine, err := NewConfidentialStoreEngine(&fakeStore, MockTransport{}, fakeDaSigner, MockChainSigner{})
 	require.NoError(t, err)
 
 	dummyCreationTx := types.NewTx(&types.ConfidentialComputeRequest{
