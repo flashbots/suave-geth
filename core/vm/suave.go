@@ -37,20 +37,6 @@ type SuaveExecutionBackend struct {
 	ConfidentialEthBackend  suave.ConfidentialEthBackend
 }
 
-func (b *SuaveExecutionBackend) Start() error {
-	if err := b.ConfidentialStoreEngine.Start(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *SuaveExecutionBackend) Stop() error {
-	b.MempoolBackend.Stop()
-	b.ConfidentialStoreEngine.Stop()
-
-	return nil
-}
-
 func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 	if !evm.Config.IsConfidential {
 		return nil

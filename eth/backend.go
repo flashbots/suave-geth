@@ -261,6 +261,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		return nil, err
 	}
 
+	stack.RegisterLifecycle(confidentialStoreEngine)
+
 	suaveBackend := &vm.SuaveExecutionBackend{
 		ConfidentialStoreEngine: confidentialStoreEngine,
 		MempoolBackend:          suaveBidMempool,
@@ -538,10 +540,6 @@ func (s *Ethereum) Start() error {
 	// Start the networking layer and the light server if requested
 	s.handler.Start(maxPeers)
 
-	if err := s.APIBackend.suaveBackend.Start(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -566,8 +564,6 @@ func (s *Ethereum) Stop() error {
 
 	s.chainDb.Close()
 	s.eventMux.Stop()
-
-	s.APIBackend.suaveBackend.Stop()
 
 	return nil
 }
