@@ -179,10 +179,10 @@ func TestSuave_BidWorkflow(t *testing.T) {
 		namespace string
 		bids      []types.Bid
 	}{
-		{0, "a", nil},
+		{0, "a", []types.Bid{}},
 		{5, "a", []types.Bid{bid5}},
 		{10, "a", []types.Bid{bid10, bid10b}},
-		{11, "a", nil},
+		{11, "a", []types.Bid{}},
 	}
 
 	for _, c := range cases {
