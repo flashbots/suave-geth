@@ -248,10 +248,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	suaveBidMempool := suave_backends.NewMempoolOnConfidentialStore(confidentialStoreBackend)
 	suaveDaSigner := &suave_backends.AccountManagerDASigner{Manager: eth.AccountManager()}
 
-	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveBidMempool, suaveDaSigner, types.LatestSigner(chainConfig))
+	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 	if err != nil {
 		return nil, err
 	}
