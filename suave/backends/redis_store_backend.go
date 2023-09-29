@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/ethereum/go-ethereum/common"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/go-redis/redis/v8"
@@ -29,6 +30,11 @@ type RedisStoreBackend struct {
 	cancel   context.CancelFunc
 	redisUri string
 	client   *redis.Client
+	local    *miniredis.Miniredis
+}
+
+func NewLocalConfidentialStore() *RedisStoreBackend {
+	return NewRedisStoreBackend("")
 }
 
 func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
@@ -39,6 +45,16 @@ func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
 }
 
 func (r *RedisStoreBackend) Start() error {
+	if r.redisUri == "" {
+		// create a mini-redis instance
+		localRedis, err := miniredis.Run()
+		if err != nil {
+			return err
+		}
+		r.local = localRedis
+		r.redisUri = localRedis.Addr()
+	}
+
 	if r.cancel != nil {
 		r.cancel()
 	}
@@ -61,6 +77,9 @@ func (r *RedisStoreBackend) Stop() error {
 		return errors.New("Redis store: Stop() called before Start()")
 	}
 
+	if r.local != nil {
+		r.local.Close()
+	}
 	r.cancel()
 	r.client.Close()
 

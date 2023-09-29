@@ -232,15 +232,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	// TODO: opts, redis store backend
-	var confidentialStoreBackend suave.ConfidentialStoreBackend
-	if config.Suave.RedisStoreUri == "dev" {
-		confidentialStoreBackend = suave_backends.NewMiniredisBackend()
-	} else if config.Suave.RedisStoreUri != "" {
-		confidentialStoreBackend = suave_backends.NewRedisStoreBackend(config.Suave.RedisStoreUri)
-	} else {
-		confidentialStoreBackend = suave_backends.NewLocalConfidentialStore()
-	}
+	confidentialStoreBackend := suave_backends.NewRedisStoreBackend(config.Suave.RedisStoreUri)
 
 	var confidentialStoreTransport suave.StoreTransportTopic
 	if config.Suave.RedisStorePubsubUri != "" {

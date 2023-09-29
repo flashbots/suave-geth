@@ -45,6 +45,7 @@ type TransactionArgs struct {
 	ExecutionNode        *common.Address `json:"executionNode"`
 	IsConfidential       bool            `json:"IsConfidential"`
 	ConfidentialInputs   *hexutil.Bytes  `json:"confidentialInputs"` // TODO: testme
+	ConfidentialResult   *hexutil.Bytes  `json:"ConfidentialResult"` // TODO: testme
 	Nonce                *hexutil.Uint64 `json:"nonce"`
 
 	// We accept "data" and "input" for backwards-compatibility reasons.
@@ -313,6 +314,30 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			Value:      (*big.Int)(args.Value),
 			Data:       args.data(),
 			AccessList: *args.AccessList,
+		}
+	case args.ConfidentialResult != nil:
+		requestArgs := *args
+		requestArgs.ConfidentialResult = nil
+
+		var confResult []byte
+		if args.ConfidentialResult != nil {
+			confResult = []byte(*args.ConfidentialResult)
+		}
+
+		data = &types.SuaveTransaction{
+			ExecutionNode:              *args.ExecutionNode,
+			ChainID:                    (*big.Int)(args.ChainID),
+			ConfidentialComputeRequest: *requestArgs.toTransaction(),
+			ConfidentialComputeResult:  confResult,
+		}
+	case args.ExecutionNode != nil:
+		wrappedArgs := *args
+		wrappedArgs.ExecutionNode = nil
+
+		data = &types.ConfidentialComputeRequest{
+			ExecutionNode: *args.ExecutionNode,
+			Wrapped:       *wrappedArgs.toTransaction(),
+			ChainID:       (*big.Int)(args.ChainID),
 		}
 	default:
 		data = &types.LegacyTx{

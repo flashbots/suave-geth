@@ -2006,7 +2006,7 @@ func (s *TransactionAPI) executeConfidentialCall(ctx context.Context, tx *types.
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: confidentialRequestTx.Wrapped, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: *tx, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), s.b.ChainConfig().ChainID)
 	if err != nil {
