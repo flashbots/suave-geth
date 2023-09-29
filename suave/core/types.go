@@ -47,6 +47,7 @@ var ErrBidAlreadyPresent = errors.New("bid already present")
 
 type ConfidentialStoreBackend interface {
 	node.Lifecycle
+
 	InitializeBid(bid Bid) error
 	Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
 	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)

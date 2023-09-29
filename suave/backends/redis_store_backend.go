@@ -40,10 +40,11 @@ func NewLocalConfidentialStore() *RedisStoreBackend {
 }
 
 func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
-	return &RedisStoreBackend{
+	r := &RedisStoreBackend{
 		cancel:   nil,
 		redisUri: redisUri,
 	}
+	return r
 }
 
 func (r *RedisStoreBackend) Start() error {
@@ -70,6 +71,11 @@ func (r *RedisStoreBackend) Start() error {
 		return err
 	}
 	r.client = client
+
+	err = r.InitializeBid(mempoolConfidentialStoreBid)
+	if err != nil && !errors.Is(err, suave.ErrBidAlreadyPresent) {
+		return fmt.Errorf("mempool: could not initialize: %w", err)
+	}
 
 	return nil
 }
