@@ -19,6 +19,7 @@ type ConfidentialStoreEngine struct {
 
 	backend        ConfidentialStoreBackend
 	transportTopic StoreTransportTopic
+	mempool        MempoolBackend
 
 	daSigner    DASigner
 	chainSigner ChainSigner
@@ -36,10 +37,8 @@ func (e *ConfidentialStoreEngine) Start() error {
 		return err
 	}
 
-	// start mempool
-	err := e.backend.InitializeBid(mempoolConfidentialStoreBid)
-	if err != nil && !errors.Is(err, ErrBidAlreadyPresent) {
-		return fmt.Errorf("mempool: could not initialize: %w", err)
+	if err := e.mempool.Start(); err != nil {
+		return err
 	}
 
 	if e.cancel != nil {
@@ -60,6 +59,9 @@ func (e *ConfidentialStoreEngine) Stop() error {
 	}
 
 	e.cancel()
+	if err := e.mempool.Stop(); err != nil {
+		log.Warn("Confidential engine: error while stopping mempool", "err", err)
+	}
 
 	if err := e.transportTopic.Stop(); err != nil {
 		log.Warn("Confidential engine: error while stopping transport", "err", err)
@@ -82,7 +84,7 @@ type ChainSigner interface {
 	Sender(tx *types.Transaction) (common.Address, error)
 }
 
-func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
+func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, mempool MempoolBackend, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
 	localAddresses := make(map[common.Address]struct{})
 	for _, addr := range daSigner.LocalAddresses() {
 		localAddresses[addr] = struct{}{}
@@ -91,6 +93,7 @@ func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic
 	engine := &ConfidentialStoreEngine{
 		backend:        backend,
 		transportTopic: transportTopic,
+		mempool:        mempool,
 		daSigner:       daSigner,
 		chainSigner:    chainSigner,
 		storeUUID:      uuid.New(),
@@ -177,59 +180,23 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 	}
 
 	// send the bid to the internal mempool
-	if err := e.SubmitBid(bid); err != nil {
+	if err := e.mempool.SubmitBid(bid); err != nil {
 		return types.Bid{}, fmt.Errorf("failed to submit to mempool: %w", err)
 	}
 
 	return bid, nil
 }
 
-var (
-	mempoolConfStoreId          = types.BidId{0x39}
-	mempoolConfStoreAddr        = common.HexToAddress("0x39")
-	mempoolConfidentialStoreBid = Bid{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
-)
-
 func (e *ConfidentialStoreEngine) SubmitBid(bid types.Bid) error {
-	defer log.Info("bid submitted", "bid", bid, "store")
-
-	var bidsByBlockAndProtocol []types.Bid
-	bidsByBlockAndProtocolBytes, err := e.backend.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition))
-	if err == nil {
-		bidsByBlockAndProtocol = MustDecode[[]types.Bid](bidsByBlockAndProtocolBytes)
-	}
-	// store bid by block number and by protocol + block number
-	bidsByBlockAndProtocol = append(bidsByBlockAndProtocol, bid)
-
-	e.backend.Store(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition), MustEncode(bidsByBlockAndProtocol))
-
-	return nil
+	return e.mempool.SubmitBid(bid)
 }
 
 func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (types.Bid, error) {
-	engineBid, err := e.backend.FetchEngineBidById(bidId)
-	if err != nil {
-		log.Error("bid missing!", "id", bidId, "err", err)
-		return types.Bid{}, errors.New("not found")
-	}
-
-	return types.Bid{
-		Id:                  engineBid.Id,
-		Salt:                engineBid.Salt,
-		DecryptionCondition: engineBid.DecryptionCondition,
-		AllowedPeekers:      engineBid.AllowedPeekers,
-		AllowedStores:       engineBid.AllowedStores,
-		Version:             engineBid.Version,
-	}, nil
+	return e.mempool.FetchBidById(bidId)
 }
 
 func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
-	bidsByProtocolBytes, err := e.backend.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
-	if err != nil {
-		return nil
-	}
-	defer log.Info("bids fetched", "bids", string(bidsByProtocolBytes))
-	return MustDecode[[]types.Bid](bidsByProtocolBytes)
+	return e.mempool.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 }
 
 func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error) {
@@ -372,7 +339,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 			return fmt.Errorf("unexpected error while initializing bid from transport: %w", err)
 		}
 	} else {
-		e.SubmitBid(innerBid)
+		e.mempool.SubmitBid(innerBid)
 	}
 
 	_, err = e.backend.Store(message.Bid, message.Caller, message.Key, message.Value)
@@ -437,4 +404,16 @@ func (MockChainSigner) Sender(tx *types.Transaction) (common.Address, error) {
 	}
 
 	return *tx.To(), nil
+}
+
+type MockMempool struct{}
+
+func (MockMempool) Start() error { return nil }
+func (MockMempool) Stop() error  { return nil }
+
+func (MockMempool) SubmitBid(types.Bid) error { return nil }
+
+func (MockMempool) FetchBidById(BidId) (types.Bid, error) { return types.Bid{}, nil }
+func (MockMempool) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+	return nil
 }
