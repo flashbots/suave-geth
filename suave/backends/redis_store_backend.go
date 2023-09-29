@@ -152,6 +152,12 @@ func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key s
 	return data, nil
 }
 
+var (
+	mempoolConfStoreId          = types.BidId{0x39}
+	mempoolConfStoreAddr        = common.HexToAddress("0x39")
+	mempoolConfidentialStoreBid = suave.Bid{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
+)
+
 func (r *RedisStoreBackend) SubmitBid(bid types.Bid) error {
 	defer log.Info("bid submitted", "bid", bid, "store", r.Store)
 
