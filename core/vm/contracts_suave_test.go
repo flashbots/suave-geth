@@ -45,11 +45,11 @@ func (m *mockSuaveBackend) FetchEngineBidById(suave.BidId) (suave.Bid, error) {
 	return suave.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidById(suave.BidId) (types.Bid, error) {
-	return types.Bid{}, nil
+func (m *mockSuaveBackend) FetchBidById(suave.BidId) (suave.Bid, error) {
+	return suave.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
 	return nil
 }
 
@@ -77,7 +77,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockMempool{}, suave.MockSigner{}, suave.MockChainSigner{})
+	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	suaveContext := SuaveContext{
@@ -141,8 +141,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 func newTestBackend(t *testing.T) *suaveRuntime {
 	confStore := backends.NewLocalConfidentialStore()
-	suaveMempool := backends.NewMempoolOnConfidentialStore(confStore)
-	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suaveMempool, suave.MockSigner{}, suave.MockChainSigner{})
+	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, err)
 
 	require.NoError(t, confEngine.Start())

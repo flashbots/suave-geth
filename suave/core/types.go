@@ -26,6 +26,17 @@ type Bid struct {
 	Signature           []byte
 }
 
+func (b *Bid) ToInnerBid() types.Bid {
+	return types.Bid{
+		Id:                  b.Id,
+		Salt:                b.Salt,
+		DecryptionCondition: b.DecryptionCondition,
+		AllowedPeekers:      b.AllowedPeekers,
+		AllowedStores:       b.AllowedStores,
+		Version:             b.Version,
+	}
+}
+
 type MEVMBid = types.Bid
 
 type BuildBlockArgs = types.BuildBlockArgs
@@ -37,16 +48,10 @@ var ErrBidAlreadyPresent = errors.New("bid already present")
 type ConfidentialStoreBackend interface {
 	node.Lifecycle
 	InitializeBid(bid Bid) error
-	FetchEngineBidById(bidId BidId) (Bid, error)
 	Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
 	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)
-}
-
-type MempoolBackend interface {
-	node.Lifecycle
-	SubmitBid(types.Bid) error
-	FetchBidById(BidId) (types.Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid
+	FetchBidById(BidId) (Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
 }
 
 type ConfidentialEthBackend interface {

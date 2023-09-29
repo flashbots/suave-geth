@@ -19,7 +19,6 @@ type ConfidentialStoreEngine struct {
 
 	backend        ConfidentialStoreBackend
 	transportTopic StoreTransportTopic
-	mempool        MempoolBackend
 
 	daSigner    DASigner
 	chainSigner ChainSigner
@@ -34,10 +33,6 @@ func (e *ConfidentialStoreEngine) Start() error {
 	}
 
 	if err := e.transportTopic.Start(); err != nil {
-		return err
-	}
-
-	if err := e.mempool.Start(); err != nil {
 		return err
 	}
 
@@ -59,9 +54,6 @@ func (e *ConfidentialStoreEngine) Stop() error {
 	}
 
 	e.cancel()
-	if err := e.mempool.Stop(); err != nil {
-		log.Warn("Confidential engine: error while stopping mempool", "err", err)
-	}
 
 	if err := e.transportTopic.Stop(); err != nil {
 		log.Warn("Confidential engine: error while stopping transport", "err", err)
@@ -84,7 +76,7 @@ type ChainSigner interface {
 	Sender(tx *types.Transaction) (common.Address, error)
 }
 
-func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, mempool MempoolBackend, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
+func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) (*ConfidentialStoreEngine, error) {
 	localAddresses := make(map[common.Address]struct{})
 	for _, addr := range daSigner.LocalAddresses() {
 		localAddresses[addr] = struct{}{}
@@ -93,7 +85,6 @@ func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic
 	engine := &ConfidentialStoreEngine{
 		backend:        backend,
 		transportTopic: transportTopic,
-		mempool:        mempool,
 		daSigner:       daSigner,
 		chainSigner:    chainSigner,
 		storeUUID:      uuid.New(),
@@ -179,28 +170,23 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		return types.Bid{}, fmt.Errorf("confidential engine: store backend failed to initialize bid: %w", err)
 	}
 
-	// send the bid to the internal mempool
-	if err := e.mempool.SubmitBid(bid); err != nil {
-		return types.Bid{}, fmt.Errorf("failed to submit to mempool: %w", err)
-	}
-
 	return bid, nil
 }
 
-func (e *ConfidentialStoreEngine) SubmitBid(bid types.Bid) error {
-	return e.mempool.SubmitBid(bid)
+func (e *ConfidentialStoreEngine) StoreBid(bid Bid) error {
+	return e.backend.InitializeBid(bid)
 }
 
-func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (types.Bid, error) {
-	return e.mempool.FetchBidById(bidId)
+func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (Bid, error) {
+	return e.backend.FetchBidById(bidId)
 }
 
-func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
-	return e.mempool.FetchBidsByProtocolAndBlock(blockNumber, namespace)
+func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
+	return e.backend.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 }
 
 func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error) {
-	bid, err := e.backend.FetchEngineBidById(bidId)
+	bid, err := e.backend.FetchBidById(bidId)
 	if err != nil {
 		return Bid{}, fmt.Errorf("confidential engine: could not fetch bid %x while storing: %w", bidId, err)
 	}
@@ -240,7 +226,7 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 }
 
 func (e *ConfidentialStoreEngine) Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := e.backend.FetchEngineBidById(bidId)
+	bid, err := e.backend.FetchBidById(bidId)
 	if err != nil {
 		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", bidId, err)
 	}
@@ -338,8 +324,6 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		if !errors.Is(err, ErrBidAlreadyPresent) {
 			return fmt.Errorf("unexpected error while initializing bid from transport: %w", err)
 		}
-	} else {
-		e.mempool.SubmitBid(innerBid)
 	}
 
 	_, err = e.backend.Store(message.Bid, message.Caller, message.Key, message.Value)
@@ -404,16 +388,4 @@ func (MockChainSigner) Sender(tx *types.Transaction) (common.Address, error) {
 	}
 
 	return *tx.To(), nil
-}
-
-type MockMempool struct{}
-
-func (MockMempool) Start() error { return nil }
-func (MockMempool) Stop() error  { return nil }
-
-func (MockMempool) SubmitBid(types.Bid) error { return nil }
-
-func (MockMempool) FetchBidById(BidId) (types.Bid, error) { return types.Bid{}, nil }
-func (MockMempool) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
-	return nil
 }

@@ -137,22 +137,22 @@ func TestMempool(t *testing.T) {
 	{
 		targetBlock := uint64(16103213)
 
-		bid1 := types.Bid{
+		bid1 := suave.Bid{
 			Id:                  suave.RandomBidId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
 		}
 
-		bid2 := types.Bid{
+		bid2 := suave.Bid{
 			Id:                  suave.RandomBidId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
 		}
 
-		require.NoError(t, fr.ConfidentialStore().SubmitBid(bid1))
-		require.NoError(t, fr.ConfidentialStore().SubmitBid(bid2))
+		require.NoError(t, fr.ConfidentialStore().StoreBid(bid1))
+		require.NoError(t, fr.ConfidentialStore().StoreBid(bid2))
 
 		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
@@ -174,13 +174,13 @@ func TestMempool(t *testing.T) {
 		var bids []suave.Bid
 		require.NoError(t, mapstructure.Decode(unpacked[0], &bids))
 
-		require.Equal(t, bid1, types.Bid{
+		require.Equal(t, bid1, suave.Bid{
 			Id:                  bids[0].Id,
 			DecryptionCondition: bids[0].DecryptionCondition,
 			AllowedPeekers:      bids[0].AllowedPeekers,
 			Version:             bids[0].Version,
 		})
-		require.Equal(t, bid2, types.Bid{
+		require.Equal(t, bid2, suave.Bid{
 			Id:                  bids[1].Id,
 			DecryptionCondition: bids[1].DecryptionCondition,
 			AllowedPeekers:      bids[1].AllowedPeekers,

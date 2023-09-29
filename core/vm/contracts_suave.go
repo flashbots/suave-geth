@@ -300,7 +300,13 @@ func (c *fetchBids) RunConfidential(suaveContext *SuaveContext, input []byte) ([
 }
 
 func (c *fetchBids) runImpl(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
-	bids := suaveContext.Backend.ConfidentialStoreEngine.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+	bids1 := suaveContext.Backend.ConfidentialStoreEngine.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+
+	bids := make([]types.Bid, 0, len(bids1))
+	for _, bid := range bids1 {
+		bids = append(bids, bid.ToInnerBid())
+	}
+
 	return bids, nil
 }
 
