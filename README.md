@@ -5,7 +5,7 @@
 
 [SUAVE](https://writings.flashbots.net/the-future-of-mev-is-suave) is designed to keep the benefits of MEV well distributed by enabling centralized infrastructure (builders, relays, centralized RFQ routing, etc.) to be programmed as smart contracts on a decentralized blockchain.
 
-`suave-geth` is a work-in-progress Golang SUAVE client consisting of two separable components: chain nodes and MEVM nodes. SUAVE clients offer confidential execution for smart contracts, enabled by extended precompiles for enhanced MEV functionalities, including confidential requests, transaction simulation, block building, and relay boosting.
+`suave-geth` is a work-in-progress Golang SUAVE client consisting of two separable components: chain nodes and MEVM nodes. SUAVE clients offer confidential execution for smart contracts, enabled by extended precompiles for MEV applications, including confidential requests, transaction simulation, block building, and relay boosting.
 
 Please [visit our documentation](https://suave.flashbots.net) for further details.
 
