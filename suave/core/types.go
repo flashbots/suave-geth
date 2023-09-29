@@ -42,6 +42,13 @@ type ConfidentialStoreBackend interface {
 	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)
 }
 
+type MempoolBackend interface {
+	node.Lifecycle
+	SubmitBid(types.Bid) error
+	FetchBidById(BidId) (types.Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid
+}
+
 type ConfidentialEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
