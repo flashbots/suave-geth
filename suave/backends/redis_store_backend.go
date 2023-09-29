@@ -33,6 +33,10 @@ type RedisStoreBackend struct {
 	local    *miniredis.Miniredis
 }
 
+func NewLocalConfidentialStore() *RedisStoreBackend {
+	return NewRedisStoreBackend("")
+}
+
 func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
 	return &RedisStoreBackend{
 		cancel:   nil,
