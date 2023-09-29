@@ -15,6 +15,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+var _ suave.ConfidentialStoreBackend = &RedisStoreBackend{}
+
 var (
 	formatRedisBidKey = func(bidId suave.BidId) string {
 		return fmt.Sprintf("bid-%x", bidId)
@@ -33,10 +35,6 @@ type RedisStoreBackend struct {
 	redisUri string
 	client   *redis.Client
 	local    *miniredis.Miniredis
-}
-
-func NewLocalConfidentialStore() *RedisStoreBackend {
-	return NewRedisStoreBackend("")
 }
 
 func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
