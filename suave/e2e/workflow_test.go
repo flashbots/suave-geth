@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -152,8 +151,8 @@ func TestMempool(t *testing.T) {
 			Version:             "default:v0:ethBundles",
 		}
 
-		require.NoError(t, fr.SuaveBackend().MempoolBackend.SubmitBid(bid1))
-		require.NoError(t, fr.SuaveBackend().MempoolBackend.SubmitBid(bid2))
+		require.NoError(t, fr.ConfidentialStore().SubmitBid(bid1))
+		require.NoError(t, fr.ConfidentialStore().SubmitBid(bid2))
 
 		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
@@ -286,7 +285,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
 		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
 
-		_, err = fr.SuaveBackend().ConfidentialStoreEngine.Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
+		_, err = fr.ConfidentialStore().Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
 		require.NoError(t, err)
 	}
 }
@@ -433,7 +432,7 @@ func TestMevShare(t *testing.T) {
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
-		payloadData, err := fr.SuaveBackend().ConfidentialStoreEngine.Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
+		payloadData, err := fr.ConfidentialStore().Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
 		var payloadEnvelope engine.ExecutionPayloadEnvelope
@@ -510,7 +509,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		})
 
-		bid, err := fr.SuaveBackend().ConfidentialStoreEngine.InitializeBid(types.Bid{
+		bid, err := fr.ConfidentialStore().InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
 			AllowedStores:       []common.Address{fr.ExecutionNode()},
@@ -518,10 +517,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		}, dummyCreationTx)
 		require.NoError(t, err)
 
-		_, err = fr.SuaveBackend().ConfidentialStoreEngine.Store(bid.Id, dummyCreationTx, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
-		require.NoError(t, err)
-
-		err = fr.SuaveBackend().MempoolBackend.SubmitBid(bid)
+		_, err = fr.ConfidentialStore().Store(bid.Id, dummyCreationTx, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
 		require.NoError(t, err)
 
 		ethHead := fr.ethSrv.CurrentBlock()
@@ -868,8 +864,8 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) SuaveBackend() *vm.SuaveExecutionBackend {
-	return f.suethSrv.service.APIBackend.SuaveBackend()
+func (f *framework) ConfidentialStore() *suave.ConfidentialStoreEngine {
+	return f.suethSrv.service.ConfidentialStore
 }
 
 func (f *framework) ExecutionNode() common.Address {

@@ -261,11 +261,6 @@ func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionC
 		return nil, err
 	}
 
-	err = suaveContext.Backend.MempoolBackend.SubmitBid(bid)
-	if err != nil {
-		return nil, err
-	}
-
 	return &bid, nil
 }
 
@@ -305,7 +300,7 @@ func (c *fetchBids) RunConfidential(suaveContext *SuaveContext, input []byte) ([
 }
 
 func (c *fetchBids) runImpl(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
-	bids := suaveContext.Backend.MempoolBackend.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+	bids := suaveContext.Backend.ConfidentialStoreEngine.FetchBidsByProtocolAndBlock(targetBlock, namespace)
 	return bids, nil
 }
 

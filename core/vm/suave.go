@@ -11,6 +11,16 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
+// ConfidentialStore represents the API for the confidential store
+// required by Suave runtime.
+type ConfidentialStore interface {
+	InitializeBid(bid types.Bid, creationTx *types.Transaction) (types.Bid, error)
+	Store(bidId suave.BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (suave.Bid, error)
+	Retrieve(bid types.BidId, caller common.Address, key string) ([]byte, error)
+	FetchBidById(suave.BidId) (types.Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid
+}
+
 type SuaveContext struct {
 	// TODO: MEVM access to Backend should be restricted to only the necessary functions!
 	Backend                      *SuaveExecutionBackend
@@ -20,28 +30,8 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
-	ConfidentialStoreEngine *suave.ConfidentialStoreEngine
-	MempoolBackend          suave.MempoolBackend
+	ConfidentialStoreEngine ConfidentialStore
 	ConfidentialEthBackend  suave.ConfidentialEthBackend
-}
-
-func (b *SuaveExecutionBackend) Start() error {
-	if err := b.ConfidentialStoreEngine.Start(); err != nil {
-		return err
-	}
-
-	if err := b.MempoolBackend.Start(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (b *SuaveExecutionBackend) Stop() error {
-	b.MempoolBackend.Stop()
-	b.ConfidentialStoreEngine.Stop()
-
-	return nil
 }
 
 func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
