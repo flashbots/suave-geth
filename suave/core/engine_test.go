@@ -50,7 +50,7 @@ func TestOwnMessageDropping(t *testing.T) {
 	}}
 
 	fakeDaSigner := FakeDASigner{localAddresses: []common.Address{{0x42}}}
-	engine, err := NewConfidentialStoreEngine(&fakeStore, MockTransport{}, MockMempool{}, fakeDaSigner, MockChainSigner{})
+	engine, err := NewConfidentialStoreEngine(&fakeStore, MockTransport{}, fakeDaSigner, MockChainSigner{})
 	require.NoError(t, err)
 
 	dummyCreationTx := types.NewTx(&types.ConfidentialComputeRequest{
