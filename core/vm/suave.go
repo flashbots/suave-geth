@@ -30,7 +30,7 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
-	ConfidentialStore      *suave.TransactionalStore
+	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
 
