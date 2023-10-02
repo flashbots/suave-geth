@@ -38,48 +38,38 @@ func NewRemoteEthBackend(endpoint string) *RemoteEthBackend {
 	}
 }
 
-func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *RemoteEthBackend) call(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	if e.client == nil {
 		// should lock
 		var err error
 		client, err := rpc.DialContext(ctx, e.endpoint)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		e.client = client
 	}
 
-	var result engine.ExecutionPayloadEnvelope
-	err := e.client.CallContext(ctx, &result, "eth_buildEth2Block", args, txs)
+	err := e.client.CallContext(ctx, &result, method, args...)
 	if err != nil {
 		client := e.client
 		e.client = nil
 		client.Close()
-		return nil, err
+		return err
 	}
 
-	return &result, nil
+	return nil
+}
+
+func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	var result engine.ExecutionPayloadEnvelope
+	err := e.call(ctx, &result, "eth_buildEth2Block", args, txs)
+
+	return &result, err
 }
 
 func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
-	if e.client == nil {
-		// should lock
-		var err error
-		client, err := rpc.DialContext(ctx, e.endpoint)
-		if err != nil {
-			return nil, err
-		}
-		e.client = client
-	}
-
 	var result engine.ExecutionPayloadEnvelope
-	err := e.client.CallContext(ctx, &result, "eth_buildEth2BlockFromBundles", args, bundles)
-	if err != nil {
-		client := e.client
-		e.client = nil
-		client.Close()
-		return nil, err
-	}
+	err := e.call(ctx, &result, "eth_buildEth2BlockFromBundles", args, bundles)
 
-	return &result, nil
+	return &result, err
 }
