@@ -102,11 +102,10 @@ func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64,
 
 	res := []suave.Bid{}
 	for _, id := range bidIDs {
-		bid, err := l.FetchBidById(id)
-		if err != nil {
-			continue
+		bid, found := l.bids[id]
+		if found {
+			res = append(res, bid)
 		}
-		res = append(res, bid)
 	}
 
 	return res
