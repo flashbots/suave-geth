@@ -17,8 +17,8 @@ type ConfidentialStore interface {
 	InitializeBid(bid types.Bid, creationTx *types.Transaction) (types.Bid, error)
 	Store(bidId suave.BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (suave.Bid, error)
 	Retrieve(bid types.BidId, caller common.Address, key string) ([]byte, error)
-	FetchBidById(suave.BidId) (types.Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid
+	FetchBidById(suave.BidId) (suave.Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid
 }
 
 type SuaveContext struct {

@@ -170,28 +170,23 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		return types.Bid{}, fmt.Errorf("confidential engine: store backend failed to initialize bid: %w", err)
 	}
 
-	// send the bid to the internal mempool
-	if err := e.backend.SubmitBid(bid); err != nil {
-		return types.Bid{}, fmt.Errorf("failed to submit to mempool: %w", err)
-	}
-
 	return bid, nil
 }
 
-func (e *ConfidentialStoreEngine) SubmitBid(bid types.Bid) error {
-	return e.backend.SubmitBid(bid)
+func (e *ConfidentialStoreEngine) StoreBid(bid Bid) error {
+	return e.backend.InitializeBid(bid)
 }
 
-func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (types.Bid, error) {
+func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (Bid, error) {
 	return e.backend.FetchBidById(bidId)
 }
 
-func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
 	return e.backend.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 }
 
 func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error) {
-	bid, err := e.backend.FetchEngineBidById(bidId)
+	bid, err := e.backend.FetchBidById(bidId)
 	if err != nil {
 		return Bid{}, fmt.Errorf("confidential engine: could not fetch bid %x while storing: %w", bidId, err)
 	}
@@ -231,7 +226,7 @@ func (e *ConfidentialStoreEngine) Store(bidId BidId, sourceTx *types.Transaction
 }
 
 func (e *ConfidentialStoreEngine) Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := e.backend.FetchEngineBidById(bidId)
+	bid, err := e.backend.FetchBidById(bidId)
 	if err != nil {
 		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", bidId, err)
 	}
@@ -329,8 +324,6 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		if !errors.Is(err, ErrBidAlreadyPresent) {
 			return fmt.Errorf("unexpected error while initializing bid from transport: %w", err)
 		}
-	} else {
-		e.backend.SubmitBid(innerBid)
 	}
 
 	_, err = e.backend.Store(message.Bid, message.Caller, message.Key, message.Value)

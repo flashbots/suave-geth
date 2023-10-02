@@ -60,35 +60,6 @@ func TestRedisTransport(t *testing.T) {
 	}
 }
 
-func TestRedisStore(t *testing.T) {
-	mr := miniredis.RunT(t)
-
-	redisStoreBackend := NewRedisStoreBackend(mr.Addr())
-	redisStoreBackend.Start()
-	t.Cleanup(func() { redisStoreBackend.Stop() })
-
-	bid := suave.Bid{
-		Id:                  suave.BidId{0x42},
-		DecryptionCondition: uint64(13),
-		AllowedPeekers:      []common.Address{{0x41, 0x39}},
-		Version:             string("vv"),
-	}
-
-	err := redisStoreBackend.InitializeBid(bid)
-	require.NoError(t, err)
-
-	fetchedBid, err := redisStoreBackend.FetchEngineBidById(bid.Id)
-	require.NoError(t, err)
-	require.Equal(t, bid, fetchedBid)
-
-	_, err = redisStoreBackend.Store(bid, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
-	require.NoError(t, err)
-
-	retrievedData, err := redisStoreBackend.Retrieve(bid, bid.AllowedPeekers[0], "xx")
-	require.NoError(t, err)
-	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
-}
-
 func TestEngineOnRedis(t *testing.T) {
 	mrStore1 := miniredis.RunT(t)
 	mrStore2 := miniredis.RunT(t)
@@ -174,7 +145,7 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	fetchedBid, err := redisStoreBackend2.FetchEngineBidById(bid.Id)
+	fetchedBid, err := redisStoreBackend2.FetchBidById(bid.Id)
 	require.NoError(t, err)
 
 	fetchedBidJson, err := json.Marshal(fetchedBid)

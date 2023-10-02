@@ -42,11 +42,11 @@ func (*FakeStoreBackend) Retrieve(bid Bid, caller common.Address, key string) ([
 	return nil, errors.New("not implemented")
 }
 
-func (*FakeStoreBackend) FetchBidById(BidId) (types.Bid, error) {
-	return types.Bid{}, nil
+func (*FakeStoreBackend) FetchBidById(BidId) (Bid, error) {
+	return Bid{}, nil
 }
 
-func (*FakeStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []types.Bid {
+func (*FakeStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
 	return nil
 }
 
