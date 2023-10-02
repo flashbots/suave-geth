@@ -93,26 +93,34 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 			}
 
 			var msg suave.DAMessage
-			err = json.Unmarshal([]byte(rmsg.Payload), &msg)
+			msgBytes := common.Hex2Bytes(rmsg.Payload)
 			if err != nil {
-				log.Trace("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
+				log.Info("Redis pubsub: could not decode message from subscription", "err", err, "msg", rmsg.Payload)
+				continue
+			}
+
+			err = json.Unmarshal(msgBytes, &msg)
+			if err != nil {
+				log.Info("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
 				continue
 			}
 
 			// For some reason the caller, key, and value fields are not parsed correctly
 			// TODO: debug
 			m := make(map[string]interface{})
-			err = json.Unmarshal([]byte(rmsg.Payload), &m)
+			err = json.Unmarshal(msgBytes, &m)
 			if err != nil {
-				log.Trace("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
+				log.Info("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
 				continue
 			}
 
-			msg.Caller = common.HexToAddress(m["caller"].(string))
-			msg.Key = m["key"].(string)
-			msg.Value = common.FromHex(m["value"].(string))
+			/*
+				msg.Caller = common.HexToAddress(m["caller"].(string))
+				msg.Key = m["key"].(string)
+				msg.Value = common.FromHex(m["value"].(string))
+			*/
 
-			log.Debug("Redis pubsub: new message", "msg", msg)
+			log.Info("Redis pubsub: new message", "msg", msg)
 			select {
 			case <-ctx.Done():
 				log.Info("Redis pubsub: closing subscription")
@@ -137,7 +145,7 @@ func (r *RedisPubSubTransport) Publish(message suave.DAMessage) {
 		return
 	}
 
-	r.client.Publish(r.ctx, redisUpsertTopic, string(data))
+	r.client.Publish(r.ctx, redisUpsertTopic, common.Bytes2Hex(data))
 }
 
 func connectRedis(redisURI string) (*redis.Client, error) {

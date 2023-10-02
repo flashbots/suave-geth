@@ -136,7 +136,7 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 		confStorePrecompileStoreMeter.Mark(int64(len(data)))
 	}
 
-	_, err := suaveContext.Backend.ConfidentialStoreEngine.Store(bidId, suaveContext.ConfidentialComputeRequestTx, caller, key, data)
+	_, err := suaveContext.Backend.ConfidentialStore.Store(bidId, caller, key, data)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidI
 		}
 	}
 
-	data, err := suaveContext.Backend.ConfidentialStoreEngine.Retrieve(bidId, caller, key)
+	data, err := suaveContext.Backend.ConfidentialStore.Retrieve(bidId, caller, key)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -250,13 +250,13 @@ func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionC
 		panic("newBid: source transaction not present")
 	}
 
-	bid, err := suaveContext.Backend.ConfidentialStoreEngine.InitializeBid(types.Bid{
+	bid, err := suaveContext.Backend.ConfidentialStore.InitializeBid(types.Bid{
 		Salt:                suave.RandomBidId(),
 		DecryptionCondition: decryptionCondition,
 		AllowedPeekers:      allowedPeekers,
 		AllowedStores:       allowedStores,
 		Version:             version, // TODO : make generic
-	}, suaveContext.ConfidentialComputeRequestTx)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +300,7 @@ func (c *fetchBids) RunConfidential(suaveContext *SuaveContext, input []byte) ([
 }
 
 func (c *fetchBids) runImpl(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
-	bids1 := suaveContext.Backend.ConfidentialStoreEngine.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+	bids1 := suaveContext.Backend.ConfidentialStore.FetchBidsByProtocolAndBlock(targetBlock, namespace)
 
 	bids := make([]types.Bid, 0, len(bids1))
 	for _, bid := range bids1 {

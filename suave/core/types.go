@@ -43,7 +43,20 @@ type BuildBlockArgs = types.BuildBlockArgs
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
-var ErrBidAlreadyPresent = errors.New("bid already present")
+var (
+	ErrBidAlreadyPresent = errors.New("bid already present")
+	ErrUnsignedFinalize  = errors.New("finalize called with unsigned transaction, refusing to propagate")
+)
+
+type DASigner interface {
+	Sign(account common.Address, data []byte) ([]byte, error)
+	Sender(data []byte, signature []byte) (common.Address, error)
+	LocalAddresses() []common.Address
+}
+
+type ChainSigner interface {
+	Sender(tx *types.Transaction) (common.Address, error)
+}
 
 type ConfidentialStoreBackend interface {
 	node.Lifecycle
@@ -67,11 +80,15 @@ type StoreTransportTopic interface {
 }
 
 type DAMessage struct {
-	Bid       Bid                `json:"bid"`
-	SourceTx  *types.Transaction `json:"sourceTx"`
-	Caller    common.Address     `json:"caller"`
-	Key       string             `json:"key"`
-	Value     Bytes              `json:"value"`
-	StoreUUID uuid.UUID          `json:"storeUUID"`
-	Signature Bytes              `json:"signature"`
+	SourceTx    *types.Transaction `json:"sourceTx"`
+	StoreWrites []StoreWrite       `json:"storeWrites"`
+	StoreUUID   uuid.UUID          `json:"storeUUID"`
+	Signature   Bytes              `json:"signature"`
+}
+
+type StoreWrite struct {
+	Bid    Bid            `json:"bid"`
+	Caller common.Address `json:"caller"`
+	Key    string         `json:"key"`
+	Value  Bytes          `json:"value"`
 }

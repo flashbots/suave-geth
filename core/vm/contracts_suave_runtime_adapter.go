@@ -298,6 +298,7 @@ func (b *SuaveRuntimeAdapter) newBid(input []byte) (res []byte, err error) {
 	)
 
 	if bid, err = b.impl.newBid(decryptionCondition, allowedPeekers, allowedStores, bidType); err != nil {
+		res = []byte(err.Error())
 		return
 	}
 

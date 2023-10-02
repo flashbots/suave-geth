@@ -9,6 +9,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/stretchr/testify/require"
 )
@@ -24,13 +25,15 @@ func TestRedisTransport(t *testing.T) {
 	t.Cleanup(cancel)
 
 	daMsg := suave.DAMessage{
-		Bid: suave.Bid{
-			Id:                  suave.BidId{0x42},
-			DecryptionCondition: uint64(13),
-			AllowedPeekers:      []common.Address{{0x41, 0x39}},
-			Version:             string("vv"),
-		},
-		Value:     suave.Bytes{},
+		StoreWrites: []suave.StoreWrite{{
+			Bid: suave.Bid{
+				Id:                  suave.BidId{0x42},
+				DecryptionCondition: uint64(13),
+				AllowedPeekers:      []common.Address{{0x41, 0x39}},
+				Version:             string("vv"),
+			},
+			Value: suave.Bytes{},
+		}},
 		Signature: []byte{},
 	}
 
@@ -49,7 +52,7 @@ func TestRedisTransport(t *testing.T) {
 	case <-time.After(5 * time.Millisecond):
 	}
 
-	daMsg.Bid.Id[0] = 0x43
+	daMsg.StoreWrites[0].Bid.Id[0] = 0x43
 	redisPubSub.Publish(daMsg)
 
 	select {
@@ -68,25 +71,23 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
-	engine1, err := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
-	require.NoError(t, err)
-
+	engine1 := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
 
-	engine2, err := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
-	require.NoError(t, err)
-
+	engine2 := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
 	require.NoError(t, engine2.Start())
 	t.Cleanup(func() { engine2.Stop() })
 
-	dummyCreationTx := types.NewTx(&types.ConfidentialComputeRequest{
+	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: common.Address{},
 		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-	})
+	}), types.NewSuaveSigner(new(big.Int)), testKey)
+	require.NoError(t, err)
 
 	// Make sure a store to engine1 is propagated to endine2 through redis->miniredis transport
 	bid, err := engine1.InitializeBid(types.Bid{
@@ -106,8 +107,12 @@ func TestEngineOnRedis(t *testing.T) {
 	t.Cleanup(cancel)
 
 	// Trigger propagation
-	_, err = engine1.Store(bid.Id, dummyCreationTx, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
-
+	err = engine1.Finalize(dummyCreationTx, nil, []suave.StoreWrite{{
+		Bid:    bid,
+		Caller: bid.AllowedPeekers[0],
+		Key:    "xx",
+		Value:  []byte{0x43, 0x14},
+	}})
 	require.NoError(t, err)
 
 	time.Sleep(10 * time.Millisecond)
@@ -128,15 +133,17 @@ func TestEngineOnRedis(t *testing.T) {
 	submittedBidJson, err := json.Marshal(submittedBid)
 	require.NoError(t, err)
 
+	// require.NoError(t, engine1.Finalize(dummyCreationTx))
+
 	select {
 	case msg := <-subch:
-		rececivedBidJson, err := json.Marshal(msg.Bid)
+		rececivedBidJson, err := json.Marshal(msg.StoreWrites[0].Bid)
 		require.NoError(t, err)
 
 		require.Equal(t, submittedBidJson, rececivedBidJson)
-		require.Equal(t, "xx", msg.Key)
-		require.Equal(t, suave.Bytes{0x43, 0x14}, msg.Value)
-		require.Equal(t, bid.AllowedPeekers[0], msg.Caller)
+		require.Equal(t, "xx", msg.StoreWrites[0].Key)
+		require.Equal(t, suave.Bytes{0x43, 0x14}, msg.StoreWrites[0].Value)
+		require.Equal(t, bid.AllowedPeekers[0], msg.StoreWrites[0].Caller)
 	case <-time.After(20 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
