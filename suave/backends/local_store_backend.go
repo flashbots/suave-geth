@@ -79,6 +79,9 @@ func (l *LocalConfidentialStore) Retrieve(bid suave.Bid, caller common.Address, 
 }
 
 func (l *LocalConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	bid, found := l.bids[bidId]
 	if !found {
 		return suave.Bid{}, errors.New("bid not found")
@@ -88,6 +91,9 @@ func (l *LocalConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, err
 }
 
 func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	indexKey := fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber)
 	bidIDs, ok := l.index[indexKey]
 	if !ok {
