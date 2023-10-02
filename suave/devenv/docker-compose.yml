@@ -35,71 +35,44 @@ services:
     ports:
       - 8555:8545
 
-  redis_db:
-    extends:
-      file: ./blockscout/services/docker-compose-redis.yml
-      service: redis_db
-
-  db:
+  blockscout-db-init:
     extends:
       file: ./blockscout/services/docker-compose-db.yml
-      service: db
+      service: blockscout-db-init
 
-  backend:
+  blockscout-db:
+    extends:
+      file: ./blockscout/services/docker-compose-db.yml
+      service: blockscout-db
+
+  blockscout-backend:
     depends_on:
-      - db
-      - redis_db
+      - blockscout-db
     extends:
       file: ./blockscout/services/docker-compose-backend.yml
-      service: backend
+      service: blockscout-backend
     links:
-      - db:database
-    environment:
-        ETHEREUM_JSONRPC_VARIANT: geth
-        ETHEREUM_JSONRPC_HTTP_URL: http://host.docker.internal:8545/
-        ETHEREUM_JSONRPC_TRACE_URL: http://host.docker.internal:8545/
-        DATABASE_URL: postgresql://postgres:@host.docker.internal:7432/blockscout?ssl=false
-        CHAIN_ID: '1337'
-        POOL_SIZE: 30
-        CHAIN_TYPE: 'suave'
-        SUAVE_BID_CONTRACTS: '0x8f21fdd6b4f4cacd33151777a46c122797c8bf17'
+      - blockscout-db:database
 
-  visualizer:
-    extends:
-      file: ./blockscout/services/docker-compose-visualizer.yml
-      service: visualizer
-
-  sig-provider:
-    extends:
-      file: ./blockscout/services/docker-compose-sig-provider.yml
-      service: sig-provider
-
-  frontend:
+  blockscout-frontend:
     depends_on:
-      - backend
+      - blockscout-backend
     extends:
       file: ./blockscout/services/docker-compose-frontend.yml
-      service: frontend
+      service: blockscout-frontend
 
-  stats-db:
+  blockscout-stats:
     depends_on:
-      - backend
+      - blockscout-db
     extends:
       file: ./blockscout/services/docker-compose-stats.yml
-      service: stats-db
+      service: blockscout-stats
 
-  stats:
+  blockscout-proxy:
     depends_on:
-      - stats-db
-    extends:
-      file: ./blockscout/services/docker-compose-stats.yml
-      service: stats
-
-  proxy:
-    depends_on:
-      - backend
-      - frontend
-      - stats
+      - blockscout-backend
+      - blockscout-frontend
+      - blockscout-stats
     extends:
       file: ./blockscout/services/docker-compose-nginx.yml
-      service: proxy
+      service: blockscout-proxy

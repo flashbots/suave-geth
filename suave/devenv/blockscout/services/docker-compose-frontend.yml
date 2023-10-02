@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  frontend:
+  blockscout-frontend:
     image: ghcr.io/blockscout/frontend:${FRONTEND_DOCKER_TAG:-v1.11.2}
     pull_policy: always
     platform: linux/amd64
     restart: always
-    container_name: 'frontend'
+    container_name: 'blockscout-frontend'
     env_file:
       -  ../envs/common-frontend.env

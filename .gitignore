@@ -48,8 +48,6 @@ profile.cov
 /dashboard/assets/package-lock.json
 
 /suave/devenv/blockscout/services/blockscout-db-data
-/suave/devenv/blockscout/services/redis-data
-/suave/devenv/blockscout/services/stats-db-data
 
 **/yarn-error.log
 logs/
