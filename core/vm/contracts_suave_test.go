@@ -53,11 +53,11 @@ func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, names
 	return nil
 }
 
-func (m *mockSuaveBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (m *mockSuaveBackend) BuildEth2Block(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (m *mockSuaveBackend) BuildEth2BlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
 	return nil, nil
 }
 

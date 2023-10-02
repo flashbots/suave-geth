@@ -70,7 +70,7 @@ func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	defer cancel()
 
-	envelope, err := suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
+	envelope, err := suaveContext.Backend.ConfidentialEthBackend.BuildEth2Block(ctx, nil, bundle.Txs)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.Buil
 	}
 
 	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
-	envelope, err := suaveContext.Backend.ConfidentialEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
+	envelope, err := suaveContext.Backend.ConfidentialEthBackend.BuildEth2BlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not build eth block: %w", err)
 	}

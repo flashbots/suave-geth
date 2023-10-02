@@ -11,14 +11,19 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 )
 
+var (
+	_ EthBackend = &EthMock{}
+	_ EthBackend = &RemoteEthBackend{}
+)
+
 type EthMock struct{}
 
-func (e *EthMock) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthMock) BuildEth2Block(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	block := types.NewBlock(&types.Header{GasUsed: 1000}, txs, nil, nil, trie.NewStackTrie(nil))
 	return engine.BlockToExecutableData(block, big.NewInt(11000)), nil
 }
 
-func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthMock) BuildEth2BlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
 	var txs types.Transactions
 	for _, bundle := range bundles {
 		txs = append(txs, bundle.Txs...)
@@ -60,14 +65,14 @@ func (e *RemoteEthBackend) call(ctx context.Context, result interface{}, method 
 	return nil
 }
 
-func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *RemoteEthBackend) BuildEth2Block(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	var result engine.ExecutionPayloadEnvelope
 	err := e.call(ctx, &result, "eth_buildEth2Block", args, txs)
 
 	return &result, err
 }
 
-func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *RemoteEthBackend) BuildEth2BlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
 	var result engine.ExecutionPayloadEnvelope
 	err := e.call(ctx, &result, "eth_buildEth2BlockFromBundles", args, bundles)
 

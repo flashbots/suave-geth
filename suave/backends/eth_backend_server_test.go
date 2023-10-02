@@ -21,10 +21,10 @@ func TestEthBackend_Compatibility(t *testing.T) {
 
 	clt := &RemoteEthBackend{client: rpc.DialInProc(srv)}
 
-	_, err := clt.BuildEthBlock(context.Background(), &types.BuildBlockArgs{}, nil)
+	_, err := clt.BuildEth2Block(context.Background(), &types.BuildBlockArgs{}, nil)
 	require.NoError(t, err)
 
-	_, err = clt.BuildEthBlockFromBundles(context.Background(), &types.BuildBlockArgs{}, nil)
+	_, err = clt.BuildEth2BlockFromBundles(context.Background(), &types.BuildBlockArgs{}, nil)
 	require.NoError(t, err)
 }
 
