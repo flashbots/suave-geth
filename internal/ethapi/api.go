@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/scwallet"
-	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -1326,48 +1325,6 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 		fields["totalDifficulty"] = (*hexutil.Big)(s.b.GetTd(ctx, b.Hash()))
 	}
 	return fields, err
-}
-
-func (s *BlockChainAPI) BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
-	if buildArgs == nil {
-		head := s.b.CurrentHeader()
-		buildArgs = &types.BuildBlockArgs{
-			Parent:       head.Hash(),
-			Timestamp:    head.Time + uint64(12),
-			FeeRecipient: common.Address{0x42},
-			GasLimit:     30000000,
-			Random:       head.Root,
-			Withdrawals:  nil,
-		}
-	}
-
-	block, profit, err := s.b.BuildBlockFromTxs(ctx, buildArgs, txs)
-	if err != nil {
-		return nil, err
-	}
-
-	return engine.BlockToExecutableData(block, profit), nil
-}
-
-func (s *BlockChainAPI) BuildEth2BlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
-	if buildArgs == nil {
-		head := s.b.CurrentHeader()
-		buildArgs = &types.BuildBlockArgs{
-			Parent:       head.Hash(),
-			Timestamp:    head.Time + uint64(12),
-			FeeRecipient: common.Address{0x42},
-			GasLimit:     30000000,
-			Random:       head.Root,
-			Withdrawals:  nil,
-		}
-	}
-
-	block, profit, err := s.b.BuildBlockFromBundles(ctx, buildArgs, bundles)
-	if err != nil {
-		return nil, err
-	}
-
-	return engine.BlockToExecutableData(block, profit), nil
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
