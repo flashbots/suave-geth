@@ -1,0 +1,57 @@
+project_name: suave
+builds:
+  - id: darwin-arm64
+    main: ./cmd/geth
+    binary: suave
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    tags:
+      - netgo
+    ldflags: -s -w
+
+  - id: darwin-amd64
+    main: ./cmd/geth
+    binary: suave
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    tags:
+      - netgo
+    ldflags: -s -w
+
+  - id: linux-amd64
+    main: ./cmd/geth
+    binary: suave
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CC=gcc
+      - CXX=g++
+    tags:
+      - netgo
+    ldflags: -s -w -extldflags "-static"
+
+  - id: linux-arm64
+    main: ./cmd/geth
+    binary: suave
+    goos:
+      - linux
+    goarch:
+      - arm64
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    tags:
+      - netgo
+    ldflags: -s -w -extldflags "-static"

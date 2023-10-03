@@ -52,3 +52,13 @@ devnet-up:
 
 devnet-down:
 	docker-compose -f ./suave/devenv/docker-compose.yml down
+
+release:
+	docker run \
+		--rm --privileged \
+		-e CGO_ENABLED=1 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(HOME)/.docker/config.json:/root/.docker/config.json \
+		-v `pwd`:/go/src/$(PACKAGE_NAME) -w /go/src/$(PACKAGE_NAME) \
+		goreleaser/goreleaser-cross:v1.20.5 \
+		--skip-publish --config .goreleaser-build.yaml --rm-dist --snapshot
