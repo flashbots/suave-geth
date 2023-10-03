@@ -23,5 +23,8 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
+      - name: Install gox
+        run: go install github.com/mitchellh/gox@latest
+
       - name: Build artifacts
         run: ./suave/scripts/build-release.sh
