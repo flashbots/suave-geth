@@ -1861,7 +1861,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
 	case ctx.Bool(SuaveFlag.Name):
 		if !ctx.IsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 424242
+			cfg.NetworkId = 16813125
 		}
 		cfg.Genesis = core.DefaultSuaveGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.SuaveGenesisHash)
