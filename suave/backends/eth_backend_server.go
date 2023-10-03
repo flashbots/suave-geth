@@ -12,8 +12,8 @@ import (
 
 // EthBackend is the set of functions exposed from the SUAVE-enabled node
 type EthBackend interface {
-	BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
-	BuildEth2BlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
+	BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
+	BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 }
 
 var _ EthBackend = &EthBackendServer{}
@@ -34,7 +34,7 @@ func NewEthBackendServer(b EthBackendServerBackend) *EthBackendServer {
 	return &EthBackendServer{b}
 }
 
-func (e *EthBackendServer) BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
 		buildArgs = &types.BuildBlockArgs{
@@ -55,7 +55,7 @@ func (e *EthBackendServer) BuildEth2Block(ctx context.Context, buildArgs *types.
 	return engine.BlockToExecutableData(block, profit), nil
 }
 
-func (e *EthBackendServer) BuildEth2BlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
 		buildArgs = &types.BuildBlockArgs{
