@@ -81,7 +81,6 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: common.Address{},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	})
 
 	suaveContext := SuaveContext{
@@ -149,7 +148,6 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: common.Address{},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	})
 
 	b := &suaveRuntime{
