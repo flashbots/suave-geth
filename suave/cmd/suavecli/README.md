@@ -91,11 +91,11 @@ Ensure these details for the command line tool are on hand:
 - `privKeyHex` : private key as hex (for testing)
 - `relay_url` : address of boost relay that the contract will send blocks to
 
-## Walktrhough
+## Walkthrough
 
 ### 1. Deploy Simple MEV-Share Contract 📜
 
-Our first step is to deploy the [compiled byte code](https://github.com/flashbots/suave-geth/blob/suave-poc/cmd/suavecli/deployMevShareByteCode.go) from our `mev-share` contract. As you will see, deploying on SUAVE feels just like deploying on any other EVM chain. First we gather our transaction details, nounce and gas price, sign the transaction, and then send using the normal `eth_sendRawTransaction` using your `suaveClient`
+Our first step is to deploy the [compiled byte code](https://github.com/flashbots/suave-geth/blob/8f443af444d59c512d0983c30b82ad14dd4eab8d/suave/cmd/suavecli/deployMevShareByteCode.go) from our `mev-share` contract. As you will see, deploying on SUAVE feels just like deploying on any other EVM chain. First we gather our transaction details, nounce and gas price, sign the transaction, and then send using the normal `eth_sendRawTransaction` using your `suaveClient`
 
 ```go
 	mevShareAddrPtr, txHash, err := sendMevShareCreationTx(suaveClient, suaveSigner, privKey)
@@ -282,7 +282,7 @@ func sendMevShareBidTx(
 
 ```
 
-A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguement are to utilize a new transaction primitive `types.ConfidentialComputeRequest`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#confidential-compute-requests).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
+A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguments are to utilize a new transaction primitive `types.ConfidentialComputeRequest`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#confidential-compute-requests).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
 
 ### 4. Send Mevshare Matches 🎯
 
