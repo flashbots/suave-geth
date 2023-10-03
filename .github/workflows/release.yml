@@ -30,15 +30,17 @@ jobs:
         run: ./suave/scripts/build-release.sh
 
       - name: Generate changelog
-        run: ./suave/scripts/parse-changelog.sh 0.0.1 > changelog_0.0.1.md
+        run: ./suave/scripts/parse-changelog.sh 0.0.2 > changelog_0.0.2.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: 0.0.1
-          release_name: 0.0.1
-          body_path: changelog_0.0.1.md
+          tag_name: 0.0.2
+          body_path: changelog_0.0.2.md
           draft: false
           prerelease: false
+          files: |
+            ./pkg/darwin_amd64.zip
+            ./pkg/linux_amd64.zip
