@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -102,7 +103,17 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 
 // SignTx signs the transaction using the given signer and private key.
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
+	if tx.Type() == ConfidentialComputeRequestTxType {
+		inner, ok := CastTxInner[*ConfidentialComputeRequest](tx)
+		if !ok {
+			return nil, errors.New("incorrect inner cast!")
+		}
+		inner.ConfidentialInputsHash = crypto.Keccak256Hash(inner.ConfidentialInputs)
+		tx = NewTx(inner)
+	}
+
 	h := s.Hash(tx)
+	log.Info("xx", "hash", h)
 	sig, err := crypto.Sign(h[:], prv)
 	if err != nil {
 		return nil, err
@@ -113,12 +124,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 // SignNewTx creates a transaction and signs it.
 func SignNewTx(prv *ecdsa.PrivateKey, s Signer, txdata TxData) (*Transaction, error) {
 	tx := NewTx(txdata)
-	h := s.Hash(tx)
-	sig, err := crypto.Sign(h[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return tx.WithSignature(s, sig)
+	return SignTx(tx, s, prv)
 }
 
 // MustSignNewTx creates a transaction and signs it.
@@ -264,14 +270,10 @@ func NewSuaveSigner(chainId *big.Int) Signer {
 
 // For confidential transaction, sender refers to the sender of the original transaction
 func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != ConfidentialComputeRequestTxType && tx.Type() != SuaveTxType {
-		return s.londonSigner.Sender(tx)
-	}
-
-	var ccr *Transaction = tx
-	if tx.Type() == SuaveTxType { // Verify ExecutionNode's signature
-		inner := tx.inner.(*SuaveTransaction)
-		ccr = &inner.ConfidentialComputeRequest
+	var ccr *ConfidentialComputeRecord
+	switch txdata := tx.inner.(type) {
+	case *SuaveTransaction:
+		ccr = &txdata.ConfidentialComputeRequest
 
 		V, R, S := tx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
@@ -285,20 +287,31 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, err
 		}
 
-		if recovered != inner.ExecutionNode {
-			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.ExecutionNode.Hex())
+		if recovered != txdata.ExecutionNode {
+			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), txdata.ExecutionNode.Hex())
 		}
+	case *ConfidentialComputeRequest:
+		ccr = &txdata.ConfidentialComputeRecord
+
+		if txdata.ConfidentialInputsHash != crypto.Keccak256Hash(txdata.ConfidentialInputs) {
+			return common.Address{}, errors.New("confidential inputs hash mismatch")
+		}
+	case *ConfidentialComputeRecord:
+		ccr = txdata
+	default:
+		return s.londonSigner.Sender(tx)
 	}
 
-	{ // Verify wrapped tx's signature
-		V, R, S := ccr.RawSignatureValues()
+	{ // Verify record tx's signature
+		ccrTx := NewTx(ccr)
+		V, R, S := ccrTx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V = new(big.Int).Add(V, big.NewInt(27))
-		if ccr.ChainId().Cmp(s.chainId) != 0 {
-			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, ccr.ChainId(), s.chainId)
+		if ccrTx.ChainId().Cmp(s.chainId) != 0 {
+			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, ccrTx.ChainId(), s.chainId)
 		}
-		return recoverPlain(s.Hash(ccr), R, S, V, true)
+		return recoverPlain(s.Hash(ccrTx), R, S, V, true)
 	}
 }
 
@@ -309,14 +322,21 @@ func (s suaveSigner) Equal(s2 Signer) bool {
 
 func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	switch txdata := tx.inner.(type) {
-	case *ConfidentialComputeRequest:
+	case *SuaveTransaction:
 		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
 			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
 		}
 		R, S, _ = decodeSignature(sig)
 		V = big.NewInt(int64(sig[64]))
 		return R, S, V, nil
-	case *SuaveTransaction:
+	case *ConfidentialComputeRecord:
+		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
+			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
+		}
+		R, S, _ = decodeSignature(sig)
+		V = big.NewInt(int64(sig[64]))
+		return R, S, V, nil
+	case *ConfidentialComputeRequest:
 		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
 			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
 		}
@@ -332,11 +352,20 @@ func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.
 // It does not uniquely identify the transaction.
 func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 	switch txdata := tx.inner.(type) {
-	case *ConfidentialComputeRequest:
+	case *SuaveTransaction:
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
 				txdata.ExecutionNode,
+				s.Hash(NewTx(&txdata.ConfidentialComputeRequest)),
+				txdata.ConfidentialComputeResult,
+			})
+	case *ConfidentialComputeRequest:
+		return prefixedRlpHash(
+			ConfidentialComputeRecordTxType, // Note: this is the same as the Record so that hashes match!
+			[]interface{}{
+				txdata.ExecutionNode,
+				txdata.ConfidentialInputsHash,
 				tx.Nonce(),
 				tx.GasPrice(),
 				tx.Gas(),
@@ -344,13 +373,18 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 				tx.Value(),
 				tx.Data(),
 			})
-	case *SuaveTransaction:
+	case *ConfidentialComputeRecord:
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
 				txdata.ExecutionNode,
-				s.Hash(&txdata.ConfidentialComputeRequest),
-				txdata.ConfidentialComputeResult,
+				txdata.ConfidentialInputsHash,
+				tx.Nonce(),
+				tx.GasPrice(),
+				tx.Gas(),
+				tx.To(),
+				tx.Value(),
+				tx.Data(),
 			})
 	default:
 		return s.londonSigner.Hash(tx)
