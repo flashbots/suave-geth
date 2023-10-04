@@ -2011,10 +2011,6 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		return nil, nil, nil, err
 	}
 
-	log.Info("xx", "chainid", tx.ChainId())
-	acc1, err := types.NewSuaveSigner(tx.ChainId()).Sender(tx)
-	log.Info("xx", "acc1", acc1, "err", err)
-
 	// will copy the inner tx again!
 	return signed, result, storeFinalize, nil
 }
