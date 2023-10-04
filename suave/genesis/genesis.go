@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// Right now there is only a test.json file because
+// the binary does not compile if the embed.FS is empty.
+//
 //go:embed *.json
 var genesisFiles embed.FS
 
