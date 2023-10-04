@@ -62,14 +62,14 @@ func (e *RemoteEthBackend) call(ctx context.Context, result interface{}, method 
 
 func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	var result engine.ExecutionPayloadEnvelope
-	err := e.call(ctx, &result, "eth_buildEth2Block", args, txs)
+	err := e.call(ctx, &result, "suavex_buildEth2Block", args, txs)
 
 	return &result, err
 }
 
 func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
 	var result engine.ExecutionPayloadEnvelope
-	err := e.call(ctx, &result, "eth_buildEth2BlockFromBundles", args, bundles)
+	err := e.call(ctx, &result, "suavex_buildEth2BlockFromBundles", args, bundles)
 
 	return &result, err
 }
