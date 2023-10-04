@@ -77,18 +77,19 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine, err := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
-	require.NoError(t, err)
+	stubEngine := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
+
+	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+		ExecutionNode: common.Address{},
+		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	})
 
 	suaveContext := SuaveContext{
 		Backend: &SuaveExecutionBackend{
-			ConfidentialStoreEngine: stubEngine,
-			ConfidentialEthBackend:  mockSuaveBackend,
+			ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
+			ConfidentialEthBackend: mockSuaveBackend,
 		},
-		ConfidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: common.Address{},
-			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-		}),
+		ConfidentialComputeRequestTx: reqTx,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
@@ -141,22 +142,23 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 func newTestBackend(t *testing.T) *suaveRuntime {
 	confStore := backends.NewLocalConfidentialStore()
-	confEngine, err := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
-	require.NoError(t, err)
+	confEngine := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
 
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })
 
+	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+		ExecutionNode: common.Address{},
+		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	})
+
 	b := &suaveRuntime{
 		suaveContext: &SuaveContext{
 			Backend: &SuaveExecutionBackend{
-				ConfidentialStoreEngine: confEngine,
-				ConfidentialEthBackend:  &mockSuaveBackend{},
+				ConfidentialStore:      confEngine.NewTransactionalStore(reqTx),
+				ConfidentialEthBackend: &mockSuaveBackend{},
 			},
-			ConfidentialComputeRequestTx: types.NewTx(&types.ConfidentialComputeRequest{
-				ExecutionNode: common.Address{},
-				Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-			}),
+			ConfidentialComputeRequestTx: reqTx,
 		},
 	}
 	return b

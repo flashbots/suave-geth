@@ -136,23 +136,27 @@ func TestMempool(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
+		creationTx := types.NewTx(&types.ConfidentialComputeRequest{ExecutionNode: fr.ExecutionNode(), Wrapped: *types.NewTx(&types.LegacyTx{})})
 
-		bid1 := suave.Bid{
-			Id:                  suave.RandomBidId(),
+		bid1, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
+			Salt:                suave.RandomBidId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
-		}
+		}, creationTx)
 
-		bid2 := suave.Bid{
-			Id:                  suave.RandomBidId(),
+		require.NoError(t, err)
+
+		bid2, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
+			Salt:                suave.RandomBidId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
-		}
+		}, creationTx)
+		require.NoError(t, err)
 
-		require.NoError(t, fr.ConfidentialStore().StoreBid(bid1))
-		require.NoError(t, fr.ConfidentialStore().StoreBid(bid2))
+		require.NoError(t, fr.ConfidentialStoreBackend().InitializeBid(bid1))
+		require.NoError(t, fr.ConfidentialStoreBackend().InitializeBid(bid2))
 
 		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
 
@@ -174,18 +178,17 @@ func TestMempool(t *testing.T) {
 		var bids []suave.Bid
 		require.NoError(t, mapstructure.Decode(unpacked[0], &bids))
 
-		require.Equal(t, bid1, suave.Bid{
-			Id:                  bids[0].Id,
-			DecryptionCondition: bids[0].DecryptionCondition,
-			AllowedPeekers:      bids[0].AllowedPeekers,
-			Version:             bids[0].Version,
-		})
-		require.Equal(t, bid2, suave.Bid{
-			Id:                  bids[1].Id,
-			DecryptionCondition: bids[1].DecryptionCondition,
-			AllowedPeekers:      bids[1].AllowedPeekers,
-			Version:             bids[1].Version,
-		})
+		require.Equal(t, bid1.Id, bids[0].Id)
+		require.Equal(t, bid1.Salt, bids[0].Salt)
+		require.Equal(t, bid1.DecryptionCondition, bids[0].DecryptionCondition)
+		require.Equal(t, bid1.AllowedPeekers, bids[0].AllowedPeekers)
+		require.Equal(t, bid1.Version, bids[0].Version)
+
+		require.Equal(t, bid2.Id, bids[1].Id)
+		require.Equal(t, bid2.Salt, bids[1].Salt)
+		require.Equal(t, bid2.DecryptionCondition, bids[1].DecryptionCondition)
+		require.Equal(t, bid2.AllowedPeekers, bids[1].AllowedPeekers)
+		require.Equal(t, bid2.Version, bids[1].Version)
 
 		// Verify via transaction
 		wrappedTxData := &types.LegacyTx{
@@ -285,7 +288,7 @@ func TestBundleBid(t *testing.T) {
 		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
 		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
 
-		_, err = fr.ConfidentialStore().Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
+		_, err = fr.ConfidentialEngine().Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
 		require.NoError(t, err)
 	}
 }
@@ -432,7 +435,7 @@ func TestMevShare(t *testing.T) {
 		require.NoError(t, err)
 
 		bidId := unpacked[0].([16]byte)
-		payloadData, err := fr.ConfidentialStore().Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
+		payloadData, err := fr.ConfidentialEngine().Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
 		var payloadEnvelope engine.ExecutionPayloadEnvelope
@@ -504,12 +507,13 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	{ // Test the block building precompile through eth_call
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
-		dummyCreationTx := types.NewTx(&types.ConfidentialComputeRequest{
+		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
 			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+			Wrapped:       *types.NewTx(&types.LegacyTx{}),
 		})
+		require.NoError(t, err)
 
-		bid, err := fr.ConfidentialStore().InitializeBid(types.Bid{
+		bid, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
 			AllowedStores:       []common.Address{fr.ExecutionNode()},
@@ -517,7 +521,13 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		}, dummyCreationTx)
 		require.NoError(t, err)
 
-		_, err = fr.ConfidentialStore().Store(bid.Id, dummyCreationTx, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundles", bundleBytes)
+		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []suave.StoreWrite{{
+
+			Bid:    bid,
+			Caller: common.Address{0x41, 0x42, 0x43},
+			Key:    "default:v0:ethBundles",
+			Value:  bundleBytes,
+		}})
 		require.NoError(t, err)
 
 		ethHead := fr.ethSrv.CurrentBlock()
@@ -802,8 +812,9 @@ type frameworkConfig struct {
 }
 
 var defaultFrameworkConfig = frameworkConfig{
-	executionNode: false,
-	suaveConfig:   suave.Config{},
+	executionNode:     false,
+	redisStoreBackend: false,
+	suaveConfig:       suave.Config{},
 }
 
 type frameworkOpt func(*frameworkConfig)
@@ -864,8 +875,12 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) ConfidentialStore() *suave.ConfidentialStoreEngine {
-	return f.suethSrv.service.ConfidentialStore
+func (f *framework) ConfidentialStoreBackend() suave.ConfidentialStoreBackend {
+	return f.suethSrv.service.APIBackend.SuaveEngine().Backend()
+}
+
+func (f *framework) ConfidentialEngine() *suave.ConfidentialStoreEngine {
+	return f.suethSrv.service.APIBackend.SuaveEngine()
 }
 
 func (f *framework) ExecutionNode() common.Address {

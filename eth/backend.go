@@ -101,9 +101,6 @@ type Ethereum struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 
 	shutdownTracker *shutdowncheck.ShutdownTracker // Tracks if and when the node has shutdown ungracefully
-
-	// Suave fields
-	ConfidentialStore *suave.ConfidentialStoreEngine
 }
 
 // New creates a new Ethereum object (including the
@@ -233,7 +230,12 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	confidentialStoreBackend := suave_backends.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+	var confidentialStoreBackend suave.ConfidentialStoreBackend
+	if config.Suave.RedisStoreUri != "" {
+		confidentialStoreBackend = suave_backends.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+	} else {
+		confidentialStoreBackend = suave_backends.NewLocalConfidentialStore()
+	}
 
 	var confidentialStoreTransport suave.StoreTransportTopic
 	if config.Suave.RedisStorePubsubUri != "" {
@@ -251,19 +253,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	suaveDaSigner := &suave_backends.AccountManagerDASigner{Manager: eth.AccountManager()}
 
-	confidentialStoreEngine, err := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
-	if err != nil {
-		return nil, err
-	}
+	confidentialStoreEngine := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 
-	eth.ConfidentialStore = confidentialStoreEngine
-	stack.RegisterLifecycle(confidentialStoreEngine)
-
-	suaveBackend := &vm.SuaveExecutionBackend{
-		ConfidentialStoreEngine: confidentialStoreEngine,
-		ConfidentialEthBackend:  suaveEthBackend,
-	}
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveBackend}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, confidentialStoreEngine, suaveEthBackend}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}
@@ -291,6 +283,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterAPIs(eth.APIs())
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
+	stack.RegisterLifecycle(confidentialStoreEngine)
 
 	// Successful startup; push a marker and check previous unclean shutdowns.
 	eth.shutdownTracker.MarkStartup()

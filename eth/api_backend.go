@@ -49,12 +49,13 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
-	suaveBackend        *vm.SuaveExecutionBackend
+	suaveEngine         *suave.ConfidentialStoreEngine
+	suaveEthBackend     suave.ConfidentialEthBackend
 }
 
-func (b *EthAPIBackend) SuaveBackend() *vm.SuaveExecutionBackend {
-	// For testing purposes
-	return b.suaveBackend
+// For testing purposes
+func (b *EthAPIBackend) SuaveEngine() *suave.ConfidentialStoreEngine {
+	return b.suaveEngine
 }
 
 // ChainConfig returns the active chain configuration.
@@ -253,7 +254,7 @@ func (b *EthAPIBackend) GetTd(ctx context.Context, hash common.Hash) *big.Int {
 	return nil
 }
 
-func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext, suaveCtx *vm.SuaveContext) (*vm.EVM, func() error) {
+func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext) (*vm.EVM, func() error) {
 	if vmConfig == nil {
 		vmConfig = b.eth.blockchain.GetVMConfig()
 	}
@@ -265,15 +266,28 @@ func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *st
 		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
 	}
 
-	if vmConfig.IsConfidential {
-		suaveCtxCopy := *suaveCtx
-		if suaveCtx.Backend == nil {
-			suaveCtxCopy.Backend = b.suaveBackend
-		}
-		return vm.NewConfidentialEVM(suaveCtxCopy, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
-	} else {
-		return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+	return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+}
+
+func (b *EthAPIBackend) GetMEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext, suaveCtx *vm.SuaveContext) (*vm.EVM, func() error, func() error) {
+	if vmConfig == nil {
+		vmConfig = b.eth.blockchain.GetVMConfig()
 	}
+	txContext := core.NewEVMTxContext(msg)
+	var context vm.BlockContext
+	if blockCtx != nil {
+		context = *blockCtx
+	} else {
+		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
+	}
+
+	suaveCtxCopy := *suaveCtx
+	storeTransaction := b.suaveEngine.NewTransactionalStore(suaveCtx.ConfidentialComputeRequestTx)
+	suaveCtxCopy.Backend = &vm.SuaveExecutionBackend{
+		ConfidentialStore:      storeTransaction,
+		ConfidentialEthBackend: b.suaveEthBackend,
+	}
+	return vm.NewConfidentialEVM(suaveCtxCopy, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), storeTransaction.Finalize, state.Error
 }
 
 func (b *EthAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {

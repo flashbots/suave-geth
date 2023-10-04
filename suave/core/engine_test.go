@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -62,13 +63,15 @@ func TestOwnMessageDropping(t *testing.T) {
 	}}
 
 	fakeDaSigner := FakeDASigner{localAddresses: []common.Address{{0x42}}}
-	engine, err := NewConfidentialStoreEngine(&fakeStore, MockTransport{}, fakeDaSigner, MockChainSigner{})
-	require.NoError(t, err)
+	engine := NewConfidentialStoreEngine(&fakeStore, MockTransport{}, fakeDaSigner, MockChainSigner{})
 
-	dummyCreationTx := types.NewTx(&types.ConfidentialComputeRequest{
+	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	// testKeyAddress := crypto.PubkeyToAddress(testKey.PublicKey)
+	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: common.Address{0x42},
 		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-	})
+	}), types.NewSuaveSigner(new(big.Int)), testKey)
+	require.NoError(t, err)
 
 	bidId, err := calculateBidId(types.Bid{
 		AllowedStores:  []common.Address{{0x42}},
@@ -82,7 +85,7 @@ func TestOwnMessageDropping(t *testing.T) {
 		AllowedPeekers: []common.Address{{}},
 	}
 
-	testBidBytes, err := SerializeBidForSigning(testBid)
+	testBidBytes, err := SerializeBidForSigning(&testBid)
 	require.NoError(t, err)
 
 	testBid.Signature, err = fakeDaSigner.Sign(common.Address{0x42}, testBidBytes)
@@ -91,12 +94,12 @@ func TestOwnMessageDropping(t *testing.T) {
 	*wasCalled = false
 
 	daMessage := DAMessage{
-		Bid:       testBid,
-		SourceTx:  dummyCreationTx,
-		StoreUUID: engine.storeUUID,
+		SourceTx:    dummyCreationTx,
+		StoreUUID:   engine.storeUUID,
+		StoreWrites: []StoreWrite{{Bid: testBid}},
 	}
 
-	daMessageBytes, err := SerializeMessageForSigning(daMessage)
+	daMessageBytes, err := SerializeMessageForSigning(&daMessage)
 	require.NoError(t, err)
 
 	daMessage.Signature, err = fakeDaSigner.Sign(common.Address{0x42}, daMessageBytes)
@@ -108,7 +111,7 @@ func TestOwnMessageDropping(t *testing.T) {
 	// require.True(t, *wasCalled)
 
 	daMessage.StoreUUID = uuid.New()
-	daMessageBytes, err = SerializeMessageForSigning(daMessage)
+	daMessageBytes, err = SerializeMessageForSigning(&daMessage)
 	require.NoError(t, err)
 
 	daMessage.Signature, err = fakeDaSigner.Sign(common.Address{0x42}, daMessageBytes)
