@@ -759,6 +759,26 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	require.True(t, ok)
 }
 
+func TestE2EPrecompile_Call(t *testing.T) {
+	// This end-to-end tests that the callx precompile gets called from a confidential request
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// We reuse the same address for both the source and target contract
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	expectedNum := big.NewInt(101)
+	_, err := sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, expectedNum}, nil)
+	require.NoError(t, err)
+
+	incorrectNum := big.NewInt(102)
+	_, err = sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, incorrectNum}, nil)
+	require.Error(t, err)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
@@ -908,6 +928,8 @@ var (
 	// testAddr is the Ethereum address of the tester account.
 	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
+	testAddr3 = common.Address{0x3}
+
 	testBalance = big.NewInt(2e18)
 
 	isConfidentialAddress = common.HexToAddress("0x42010000")
@@ -939,6 +961,7 @@ var (
 			newBlockBidAddress:    {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			blockBidSenderAddress: {Balance: big.NewInt(0), Code: ethBlockBidSenderContract.DeployedCode},
 			mevShareAddress:       {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
+			testAddr3:             {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
 		},
 	}
 
@@ -951,6 +974,7 @@ var (
 		Alloc: core.GenesisAlloc{
 			testAddr:  {Balance: testBalance},
 			testAddr2: {Balance: testBalance},
+			testAddr3: {Balance: big.NewInt(0), Code: exampleCallTargetContract.DeployedCode},
 		},
 	}
 

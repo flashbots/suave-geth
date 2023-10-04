@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -337,7 +336,7 @@ type suaveRuntime struct {
 var _ SuaveRuntime = &suaveRuntime{}
 
 func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byte, error) {
-	return b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
+	return (&ethCallPrecompile{}).runImpl(b.suaveContext, contractAddr, input)
 }
 
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.BidId, namespace string) ([]byte, []byte, error) {
