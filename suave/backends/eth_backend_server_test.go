@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,9 @@ func TestEthBackend_Compatibility(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = clt.BuildEthBlockFromBundles(context.Background(), &types.BuildBlockArgs{}, nil)
+	require.NoError(t, err)
+
+	_, err = clt.Call(context.Background(), common.Address{}, nil)
 	require.NoError(t, err)
 }
 
@@ -47,4 +51,8 @@ func (n *mockBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suav
 	}
 	block := types.NewBlock(&types.Header{GasUsed: 1000, BaseFee: big.NewInt(1)}, txs, nil, nil, trie.NewStackTrie(nil))
 	return block, big.NewInt(11000), nil
+}
+
+func (n *mockBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	return []byte{0x1}, nil
 }

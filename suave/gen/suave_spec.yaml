@@ -147,3 +147,14 @@ functions:
       fields:
         - name: output1
           type: bytes
+  - name: ethcall
+    address: "0x0000000000000000000000000000000042100003"
+    input:
+      - name: contractAddr
+        type: address
+      - name: input1
+        type: bytes
+    output:
+      fields:
+        - name: output1
+          type: bytes
