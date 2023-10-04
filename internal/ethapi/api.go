@@ -1439,7 +1439,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		}
 
 		result.ExecutionNode = &inner.ExecutionNode
-		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
 
 		// if a legacy transaction has an EIP-155 chain id, include it explicitly
 		if id := tx.ChainId(); id.Sign() != 0 {

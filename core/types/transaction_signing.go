@@ -337,7 +337,6 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 			tx.Type(),
 			[]interface{}{
 				txdata.ExecutionNode,
-				txdata.ConfidentialInputsHash,
 				tx.Nonce(),
 				tx.GasPrice(),
 				tx.Gas(),

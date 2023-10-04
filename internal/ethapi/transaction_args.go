@@ -347,10 +347,6 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			Data:          args.data(),
 		}
 
-		if args.ConfidentialInputsHash != nil {
-			ccrData.ConfidentialInputsHash = *args.ConfidentialInputsHash
-		}
-
 		data = ccrData
 	default:
 		data = &types.LegacyTx{

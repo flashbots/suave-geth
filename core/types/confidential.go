@@ -14,8 +14,7 @@ type ConfidentialComputeRequest struct {
 	Value    *big.Int
 	Data     []byte
 
-	ExecutionNode          common.Address
-	ConfidentialInputsHash common.Hash
+	ExecutionNode common.Address
 
 	ChainID *big.Int
 	V, R, S *big.Int
@@ -24,12 +23,11 @@ type ConfidentialComputeRequest struct {
 // copy creates a deep copy of the transaction data and initializes all fields.
 func (tx *ConfidentialComputeRequest) copy() TxData {
 	cpy := &ConfidentialComputeRequest{
-		Nonce:                  tx.Nonce,
-		To:                     copyAddressPtr(tx.To),
-		Data:                   common.CopyBytes(tx.Data),
-		Gas:                    tx.Gas,
-		ExecutionNode:          tx.ExecutionNode,
-		ConfidentialInputsHash: tx.ConfidentialInputsHash,
+		Nonce:         tx.Nonce,
+		To:            copyAddressPtr(tx.To),
+		Data:          common.CopyBytes(tx.Data),
+		Gas:           tx.Gas,
+		ExecutionNode: tx.ExecutionNode,
 
 		Value:    new(big.Int),
 		GasPrice: new(big.Int),

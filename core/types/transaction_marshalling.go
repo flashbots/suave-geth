@@ -119,7 +119,6 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 
 	case *ConfidentialComputeRequest:
 		enc.ExecutionNode = &itx.ExecutionNode
-		enc.ConfidentialInputsHash = itx.ConfidentialInputsHash
 		enc.Nonce = (*hexutil.Uint64)(&itx.Nonce)
 		enc.To = tx.To()
 		enc.Gas = (*hexutil.Uint64)(&itx.Gas)
@@ -389,8 +388,6 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'executionNode' in transaction")
 		}
 		itx.ExecutionNode = *dec.ExecutionNode
-
-		itx.ConfidentialInputsHash = dec.ConfidentialInputsHash
 
 		if dec.Nonce == nil {
 			return errors.New("missing required field 'nonce' in transaction")
