@@ -138,6 +138,10 @@ func main() {
 		panic(err)
 	}
 
+	if err := applyTemplate(suaveLibForgeTemplate, ff, "./suave/sol/libraries/SuaveForge.sol"); err != nil {
+		panic(err)
+	}
+
 	if err := generateABI("./suave/artifacts/SuaveLib.json", ff); err != nil {
 		panic(err)
 	}
@@ -322,6 +326,62 @@ func PrecompileAddressToName(addr common.Address) string {
 `
 
 var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.8;
+
+library Suave {
+    error PeekerReverted(address, bytes);
+
+{{range .Types}}
+type {{.Name}} is {{.Typ}};
+{{end}}
+
+{{range .Structs}}
+struct {{.Name}} {
+	{{range .Fields}}{{.Typ}} {{.Name}};
+	{{end}} }
+{{end}}
+
+address public constant IS_CONFIDENTIAL_ADDR =
+0x0000000000000000000000000000000042010000;
+{{range .Functions}}
+address public constant {{encodeAddrName .Name}} =
+{{.Address}};
+{{end}}
+
+// Returns whether execution is off- or on-chain
+function isConfidential() internal view returns (bool b) {
+	(bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
+	if (!success) {
+		revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
+	}
+	assembly {
+		// Load the length of data (first 32 bytes)
+		let len := mload(isConfidentialBytes)
+		// Load the data after 32 bytes, so add 0x20
+		b := mload(add(isConfidentialBytes, 0x20))
+	}
+}
+
+{{range .Functions}}
+function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
+	{{if .IsConfidential}}require(isConfidential());{{end}}
+	(bool success, bytes memory data) = {{encodeAddrName .Name}}.staticcall(abi.encode({{range .Input}}{{.Name}}, {{end}}));
+	if (!success) {
+		revert PeekerReverted({{encodeAddrName .Name}}, data);
+	}
+	{{ if eq (len .Output.Fields) 0 }}
+	{{else if .Output.Packed}}
+	return data;
+	{{else}}
+	return abi.decode(data, ({{range .Output.Fields}}{{.Typ}}, {{end}}));
+	{{end}}
+}
+{{end}}
+
+}
+`
+
+var suaveLibForgeTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
 library Suave {
