@@ -315,7 +315,7 @@ func (s *Ethereum) APIs() []rpc.API {
 
 	// Append SUAVE-enabled node backend
 	apis = append(apis, rpc.API{
-		Namespace: "eth", // TODO
+		Namespace: "suavex",
 		Service:   backends.NewEthBackendServer(s.APIBackend),
 	})
 
