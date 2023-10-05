@@ -95,13 +95,13 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 			var msg suave.DAMessage
 			msgBytes := common.Hex2Bytes(rmsg.Payload)
 			if err != nil {
-				log.Info("Redis pubsub: could not decode message from subscription", "err", err, "msg", rmsg.Payload)
+				log.Trace("Redis pubsub: could not decode message from subscription", "err", err, "msg", rmsg.Payload)
 				continue
 			}
 
 			err = json.Unmarshal(msgBytes, &msg)
 			if err != nil {
-				log.Info("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
+				log.Trace("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
 				continue
 			}
 
@@ -110,7 +110,7 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 			m := make(map[string]interface{})
 			err = json.Unmarshal(msgBytes, &m)
 			if err != nil {
-				log.Info("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
+				log.Trace("Redis pubsub: could not parse message from subscription", "err", err, "msg", rmsg.Payload)
 				continue
 			}
 
@@ -120,7 +120,7 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 				msg.Value = common.FromHex(m["value"].(string))
 			*/
 
-			log.Info("Redis pubsub: new message", "msg", msg)
+			log.Debug("Redis pubsub: new message", "msg", msg)
 			select {
 			case <-ctx.Done():
 				log.Info("Redis pubsub: closing subscription")

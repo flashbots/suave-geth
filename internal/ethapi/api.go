@@ -1373,7 +1373,8 @@ type RPCTransaction struct {
 	Accesses                  *types.AccessList `json:"accessList,omitempty"`
 	ChainID                   *hexutil.Big      `json:"chainId,omitempty"`
 	ExecutionNode             *common.Address   `json:"executionNode,omitempty"`
-	Wrapped                   *json.RawMessage  `json:"wrapped,omitempty"`
+	ConfidentialInputsHash    *common.Hash      `json:"confidentialInputsHash,omitempty"`
+	RequestRecord             *json.RawMessage  `json:"requestRecord,omitempty"`
 	ConfidentialComputeResult *hexutil.Bytes    `json:"confidentialComputeResult,omitempty"`
 	V                         *hexutil.Big      `json:"v"`
 	R                         *hexutil.Big      `json:"r"`
@@ -1439,15 +1440,10 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 		result.ExecutionNode = &inner.ExecutionNode
 
-		// TODO: should be rpc marshaled
-		wrappedBytes, err := inner.Wrapped.MarshalJSON()
-		if err != nil {
-			log.Error("could not marshal rpc transaction", "err", err)
-			return nil
+		// if a legacy transaction has an EIP-155 chain id, include it explicitly
+		if id := tx.ChainId(); id.Sign() != 0 {
+			result.ChainID = (*hexutil.Big)(id)
 		}
-
-		result.Wrapped = (*json.RawMessage)(&wrappedBytes)
-		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.SuaveTxType:
 		inner, ok := types.CastTxInner[*types.SuaveTransaction](tx)
 		if !ok {
@@ -1458,13 +1454,13 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		result.ExecutionNode = &inner.ExecutionNode
 
 		// TODO: should be rpc marshaled
-		wrappedBytes, err := inner.ConfidentialComputeRequest.MarshalJSON()
+		rrBytes, err := inner.ConfidentialComputeRequest.MarshalJSON()
 		if err != nil {
 			log.Error("could not marshal rpc transaction", "err", err)
 			return nil
 		}
 
-		result.Wrapped = (*json.RawMessage)(&wrappedBytes)
+		result.RequestRecord = (*json.RawMessage)(&rrBytes)
 		result.ConfidentialComputeResult = (*hexutil.Bytes)(&inner.ConfidentialComputeResult)
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	}
@@ -2009,7 +2005,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: *tx, ConfidentialComputeResult: computeResult}
 
-	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), confidentialRequestTx.ChainID)
+	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {
 		return nil, nil, nil, err
 	}

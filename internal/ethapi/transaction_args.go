@@ -35,18 +35,19 @@ import (
 // TransactionArgs represents the arguments to construct a new transaction
 // or a message call.
 type TransactionArgs struct {
-	From                 *common.Address `json:"from"`
-	To                   *common.Address `json:"to"`
-	Gas                  *hexutil.Uint64 `json:"gas"`
-	GasPrice             *hexutil.Big    `json:"gasPrice"`
-	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
-	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	Value                *hexutil.Big    `json:"value"`
-	ExecutionNode        *common.Address `json:"executionNode"`
-	IsConfidential       bool            `json:"IsConfidential"`
-	ConfidentialInputs   *hexutil.Bytes  `json:"confidentialInputs"` // TODO: testme
-	ConfidentialResult   *hexutil.Bytes  `json:"ConfidentialResult"` // TODO: testme
-	Nonce                *hexutil.Uint64 `json:"nonce"`
+	From                   *common.Address `json:"from"`
+	To                     *common.Address `json:"to"`
+	Gas                    *hexutil.Uint64 `json:"gas"`
+	GasPrice               *hexutil.Big    `json:"gasPrice"`
+	MaxFeePerGas           *hexutil.Big    `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas   *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	Value                  *hexutil.Big    `json:"value"`
+	IsConfidential         bool            `json:"IsConfidential"`
+	ExecutionNode          *common.Address `json:"executionNode"`
+	ConfidentialInputsHash *common.Hash    `json:"confidentialInputsHash"` // TODO: testme
+	ConfidentialInputs     *hexutil.Bytes  `json:"confidentialInputs"`     // TODO: testme
+	ConfidentialResult     *hexutil.Bytes  `json:"ConfidentialResult"`     // TODO: testme
+	Nonce                  *hexutil.Uint64 `json:"nonce"`
 
 	// We accept "data" and "input" for backwards-compatibility reasons.
 	// "input" is the newer name and should be preferred by clients.
@@ -286,6 +287,11 @@ func (args *TransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int) (*
 // toTransaction converts the arguments to a transaction.
 // This assumes that setDefaults has been called.
 func (args *TransactionArgs) toTransaction() *types.Transaction {
+	var executionNode common.Address
+	if args.IsConfidential && args.ExecutionNode != nil {
+		executionNode = *args.ExecutionNode
+	}
+
 	var data types.TxData
 	switch {
 	case args.MaxFeePerGas != nil:
@@ -325,20 +331,23 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 		}
 
 		data = &types.SuaveTransaction{
-			ExecutionNode:              *args.ExecutionNode,
+			ExecutionNode:              executionNode,
 			ChainID:                    (*big.Int)(args.ChainID),
 			ConfidentialComputeRequest: *requestArgs.toTransaction(),
 			ConfidentialComputeResult:  confResult,
 		}
 	case args.ExecutionNode != nil:
-		wrappedArgs := *args
-		wrappedArgs.ExecutionNode = nil
-
-		data = &types.ConfidentialComputeRequest{
-			ExecutionNode: *args.ExecutionNode,
-			Wrapped:       *wrappedArgs.toTransaction(),
-			ChainID:       (*big.Int)(args.ChainID),
+		ccrData := &types.ConfidentialComputeRequest{
+			ExecutionNode: executionNode,
+			To:            args.To,
+			Nonce:         uint64(*args.Nonce),
+			Gas:           uint64(*args.Gas),
+			GasPrice:      (*big.Int)(args.GasPrice),
+			Value:         (*big.Int)(args.Value),
+			Data:          args.data(),
 		}
+
+		data = ccrData
 	default:
 		data = &types.LegacyTx{
 			To:       args.To,
@@ -348,14 +357,6 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			Value:    (*big.Int)(args.Value),
 			Data:     args.data(),
 		}
-	}
-
-	if args.IsConfidential {
-		var executionNode common.Address
-		if args.ExecutionNode != nil {
-			executionNode = *args.ExecutionNode
-		}
-		data = &types.ConfidentialComputeRequest{ExecutionNode: executionNode, Wrapped: *types.NewTx(data), ChainID: (*big.Int)(args.ChainID)}
 	}
 
 	return types.NewTx(data)

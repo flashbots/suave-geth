@@ -64,18 +64,14 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
-	wrappedTxData := &types.LegacyTx{
-		Nonce:    nonce,
-		To:       &c.addr,
-		Value:    nil,
-		GasPrice: gasPrice,
-		Gas:      1000000,
-		Data:     calldata,
-	}
-
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: c.client.execNode,
-		Wrapped:       *types.NewTx(wrappedTxData),
+		Nonce:         nonce,
+		To:            &c.addr,
+		Value:         nil,
+		GasPrice:      gasPrice,
+		Gas:           1000000,
+		Data:          calldata,
 	}), signer, c.client.key)
 	if err != nil {
 		return nil, err

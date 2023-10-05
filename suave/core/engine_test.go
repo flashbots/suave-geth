@@ -69,7 +69,6 @@ func TestOwnMessageDropping(t *testing.T) {
 	// testKeyAddress := crypto.PubkeyToAddress(testKey.PublicKey)
 	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ExecutionNode: common.Address{0x42},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	}), types.NewSuaveSigner(new(big.Int)), testKey)
 	require.NoError(t, err)
 
