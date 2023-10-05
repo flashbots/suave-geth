@@ -1,9 +1,9 @@
 pragma solidity ^0.8.8;
 
 import "../libraries/Suave.sol";
-import "../libraries/SuaveAbi.sol";
 
 contract AnyBidContract {
+
 	event BidEvent(
 		Suave.BidId bidId,
 		uint64 decryptionCondition,
@@ -11,8 +11,7 @@ contract AnyBidContract {
 	);
 
 	function fetchBidConfidentialBundleData() public returns (bytes memory) {
-		SuaveAbi suave = SuaveAbi(0x0000000000000000000000000000000042100003);
-		require(suave.isConfidential());
+		require(Suave.isConfidential());
 		
 		bytes memory confidentialInputs = Suave.confidentialInputs();
 		return abi.decode(confidentialInputs, (bytes));
