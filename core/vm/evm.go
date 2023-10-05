@@ -17,6 +17,8 @@
 package vm
 
 import (
+	"encoding/hex"
+	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -40,9 +42,37 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+var runtimeAddr = common.HexToAddress("0x0000000000000000000000000000000042100003")
+
+type suaveRuntime2 struct {
+	ctx *SuaveContext
+}
+
+func (s *suaveRuntime2) RequiredGas(input []byte) uint64 {
+	return 0
+}
+
+func (s *suaveRuntime2) Run(input []byte) ([]byte, error) {
+	sig := hex.EncodeToString(input[4:])
+
+	if sig == "0e38f337" {
+		// is confidential
+		return (&isConfidentialPrecompile{}).RunConfidential(s.ctx, input[4:])
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
+		if addr == runtimeAddr {
+			ss := &suaveRuntime2{
+				ctx: NewRuntimeSuaveContext(evm, addr),
+			}
+			return ss, true
+		}
+
 		if p, ok := PrecompiledContractsSuave[addr]; ok {
 			if evm.Config.IsConfidential {
 				suaveContext := NewRuntimeSuaveContext(evm, addr)
