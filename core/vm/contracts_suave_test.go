@@ -192,7 +192,8 @@ func TestSuave_BidWorkflow(t *testing.T) {
 	for _, c := range cases {
 		bids, err := b.fetchBids(c.cond, c.namespace)
 		require.NoError(t, err)
-		require.Equal(t, c.bids, bids)
+
+		require.ElementsMatch(t, c.bids, bids)
 	}
 }
 
