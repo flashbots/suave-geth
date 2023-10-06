@@ -165,3 +165,12 @@ func (method Method) IsConstant() bool {
 func (method Method) IsPayable() bool {
 	return method.StateMutability == "payable" || method.Payable
 }
+
+func (method Method) Pack(args ...interface{}) ([]byte, error) {
+	arguments, err := method.Inputs.Pack(args...)
+	if err != nil {
+		return nil, err
+	}
+	// Pack up the method ID too if not a constructor and return
+	return append(method.ID, arguments...), nil
+}
