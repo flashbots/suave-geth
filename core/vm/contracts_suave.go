@@ -51,7 +51,11 @@ func (y *yyyyyy) RequiredGas(input []byte) uint64 {
 }
 
 func (y *yyyyyy) Run(input []byte) ([]byte, error) {
-	return rrr.Handle(y.suaveContext, input)
+	res, err := rrr.Handle(y.suaveContext, input)
+
+	fmt.Println(res, err)
+
+	return res, err
 
 	/*
 		method, ok := rrr.methods[sig]
@@ -81,12 +85,13 @@ var rrr *runtime
 
 func init() {
 	rrr = &runtime{}
-	if err := rrr.Register(&isConfidentialPrecompile2{}); err != nil {
-		panic(err)
-	}
-	if err := rrr.Register(&confidentialInputsPrecompile2{}); err != nil {
-		panic(err)
-	}
+	rrr.MustRegister(&isConfidentialPrecompile2{})
+	rrr.MustRegister(&confidentialInputsPrecompile2{})
+	rrr.MustRegister(&confStoreRetrieve{})
+	rrr.MustRegister(&confStoreStore{})
+	rrr.MustRegister(&extractHint{})
+	rrr.MustRegister(&simulateBundle{})
+	rrr.MustRegister(&newBid{})
 }
 
 var (
@@ -227,6 +232,10 @@ func (c *confStoreStore) RequiredGas(input []byte) uint64 {
 	return uint64(100 * len(input))
 }
 
+func (c *confStoreStore) Name() string {
+	return "confidentialStoreStore"
+}
+
 func (c *confStoreStore) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this suaveContext")
 }
@@ -249,6 +258,10 @@ func (c *confStoreStore) RunConfidential(suaveContext *SuaveContext, input []byt
 		return []byte(err.Error()), err
 	}
 	return nil, nil
+}
+
+func (c *confStoreStore) Do(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
+	return c.runImpl(suaveContext, bidId, key, data)
 }
 
 func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
@@ -296,6 +309,10 @@ func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this suaveContext")
 }
 
+func (c *confStoreRetrieve) Name() string {
+	return "confidentialStoreRetrieve"
+}
+
 func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
 	if len(suaveContext.CallerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
@@ -309,6 +326,10 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 	bidId := unpacked[0].(suave.BidId)
 	key := unpacked[1].(string)
 
+	return c.runImpl(suaveContext, bidId, key)
+}
+
+func (c *confStoreRetrieve) Do(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
 	return c.runImpl(suaveContext, bidId, key)
 }
 
@@ -377,6 +398,11 @@ func (c *newBid) RunConfidential(suaveContext *SuaveContext, input []byte) ([]by
 	}
 
 	return c.inoutAbi.Outputs.Pack(bid)
+}
+
+// TODO: The order of this one is changed.
+func (c *newBid) Do(suaveContext *SuaveContext, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, version string) (*types.Bid, error) {
+	return c.runImpl(suaveContext, version, decryptionCondition, allowedPeekers, allowedStores)
 }
 
 func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address) (*types.Bid, error) {
@@ -546,8 +572,11 @@ func (r *runtime) Handle(suaveContext *SuaveContext, input []byte) ([]byte, erro
 
 	method, ok := r.methods[sig]
 	if !ok {
-		panic("xxxx")
+		log.Info("runtime.Handle", "sig", sig, "input", input)
+		panic("failed to load method")
 	}
+
+	log.Info("runtime.Handle", "sig", sig, "name", method.name, "input", input)
 
 	inNum := len(method.reqT)
 
@@ -596,6 +625,12 @@ func (r *runtime) getByName(name string) runtimeMethod {
 		}
 	}
 	panic("not found")
+}
+
+func (r *runtime) MustRegister(fn SuavePrecompiledContract) {
+	if err := r.Register(fn); err != nil {
+		panic(err)
+	}
 }
 
 func (r *runtime) Register(fn SuavePrecompiledContract) error {
@@ -759,6 +794,18 @@ func convertStructToABITypes(typ reflect.Type) []arguments {
 				basicType = "bool"
 			case reflect.Slice: // []byte
 				basicType = "bytes"
+			case reflect.Array: // [n]byte
+				if subType.Len() == 20 {
+					// TODO: we could improve this by checking if the type
+					// is common.Address{}
+					basicType = "address"
+				} else {
+					basicType = fmt.Sprintf("bytes%d", subType.Len())
+				}
+			case reflect.String:
+				basicType = "string"
+			case reflect.Uint64:
+				basicType = "uint64"
 			default:
 				panic(fmt.Errorf("unknown type: %s", subType.Kind()))
 			}

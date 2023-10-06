@@ -17,8 +17,6 @@
 package vm
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -188,9 +186,9 @@ func (in *EVMInterpreter) Run(suaveContext *SuaveContext, contract *Contract, in
 		operation := in.table[op]
 		cost = operation.constantGas // For tracing
 
-		fmt.Println("----")
+		//fmt.Println("----")
 		//fmt.Println(stack)
-		fmt.Printf("Op: %d %s %d\n", pc, op, contract.Gas)
+		//fmt.Printf("Op: %d %s %d\n", pc, op, contract.Gas)
 
 		// Validate stack
 		if sLen := stack.len(); sLen < operation.minStack {

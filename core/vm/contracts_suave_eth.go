@@ -57,6 +57,14 @@ func (c *simulateBundle) RunConfidential(suaveContext *SuaveContext, input []byt
 	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
 }
 
+func (c *simulateBundle) Do(suaveContext *SuaveContext, input []byte) (uint64, error) {
+	res, err := c.runImpl(suaveContext, input)
+	if err != nil {
+		return 0, fmt.Errorf("could not simulate bundle: %w", err)
+	}
+	return res.Uint64(), nil
+}
+
 func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big.Int, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
@@ -101,6 +109,10 @@ func (c *extractHint) RunConfidential(suaveContext *SuaveContext, input []byte) 
 
 	bundleBytes := unpacked[0].([]byte)
 
+	return c.runImpl(suaveContext, bundleBytes)
+}
+
+func (c *extractHint) Do(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
 	return c.runImpl(suaveContext, bundleBytes)
 }
 

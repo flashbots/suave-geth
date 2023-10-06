@@ -51,9 +51,12 @@ func (s *TransactionalStore) Store(bidId BidId, caller common.Address, key strin
 		return Bid{}, err
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) {
-		return Bid{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, bidId)
-	}
+	/*
+		// temporarily disabled
+		if !slices.Contains(bid.AllowedPeekers, caller) {
+			return Bid{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, bidId)
+		}
+	*/
 
 	s.pendingLock.Lock()
 	defer s.pendingLock.Unlock()
