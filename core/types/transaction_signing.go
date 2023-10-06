@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -113,7 +112,6 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 	}
 
 	h := s.Hash(tx)
-	log.Info("xx", "hash", h)
 	sig, err := crypto.Sign(h[:], prv)
 	if err != nil {
 		return nil, err
