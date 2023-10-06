@@ -71,13 +71,15 @@ func TestIsConfidential(t *testing.T) {
 	{
 		// Verify sending computation requests and onchain transactions to isConfidentialAddress
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Nonce:         0,
-			To:            &isConfidentialAddress,
-			Value:         nil,
-			Gas:           1000000,
-			GasPrice:      big.NewInt(10),
-			Data:          []byte{},
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+				Nonce:         0,
+				To:            &isConfidentialAddress,
+				Value:         nil,
+				Gas:           1000000,
+				GasPrice:      big.NewInt(10),
+				Data:          []byte{},
+			},
 		}), signer, testKey)
 		require.NoError(t, err)
 
@@ -132,7 +134,11 @@ func TestMempool(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
-		creationTx := types.NewTx(&types.ConfidentialComputeRequest{ExecutionNode: fr.ExecutionNode()})
+		creationTx := types.NewTx(&types.ConfidentialComputeRequest{
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+			},
+		})
 
 		bid1, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			Salt:                suave.RandomBidId(),
@@ -188,13 +194,15 @@ func TestMempool(t *testing.T) {
 
 		// Verify via transaction
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Nonce:         0,
-			To:            &fetchBidsAddress,
-			Value:         nil,
-			Gas:           1000000,
-			GasPrice:      big.NewInt(10),
-			Data:          calldata,
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+				Nonce:         0,
+				To:            &fetchBidsAddress,
+				Value:         nil,
+				Gas:           1000000,
+				GasPrice:      big.NewInt(10),
+				Data:          calldata,
+			},
 		}), signer, testKey)
 		require.NoError(t, err)
 
@@ -500,7 +508,9 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
 		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+			},
 		})
 		require.NoError(t, err)
 
