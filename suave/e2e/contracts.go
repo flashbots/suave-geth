@@ -17,6 +17,7 @@ var (
 	buildEthBlockContract     = newArtifact("bids.sol/EthBlockBidContract.json")
 	ethBlockBidSenderContract = newArtifact("bids.sol/EthBlockBidSenderContract.json")
 	suaveLibContract          = newArtifact("SuaveAbi.sol/SuaveAbi.json")
+	exampleContract           = newArtifact("bids.sol/Example.json")
 )
 
 func newArtifact(name string) *Artifact {

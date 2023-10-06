@@ -2,7 +2,10 @@ package vm
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -222,4 +225,154 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+func TestXXXX(t *testing.T) {
+	r := &runtime{}
+
+	typr, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{{Name: "param1", Type: "bool"}})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(typr)
+
+	require.NoError(t, r.Register(&isConfidentialPrecompile2{}))
+}
+
+type runtime struct {
+}
+
+func (r *runtime) Register(fn interface{}) error {
+	// reflect and generate the type of the 'Do' function
+	typ := reflect.TypeOf(fn)
+
+	methodName := "Do"
+	method, found := typ.MethodByName(methodName)
+	if !found {
+		return fmt.Errorf("Method %s not found on the interface\n", methodName)
+	}
+
+	// It needs at least one output parameter (the internal error) and must
+	// be the last parameter
+	numOuts := method.Type.NumOut()
+	if numOuts == 0 {
+		return fmt.Errorf("Method %s must have at least one output parameter\n", methodName)
+	}
+	if !isErrorType(method.Type.Out(numOuts - 1)) {
+		return fmt.Errorf("Last output parameter of method %s must be an error\n", methodName)
+	}
+
+	// convert the function input/outputs to ABI format
+	xx := convertStructToABITypes(methodInputStructType(method))
+	yy, _ := json.Marshal(xx)
+	fmt.Println(string(yy))
+
+	/*
+		fmt.Println("-- comps --")
+		fmt.Println(xx.Components)
+
+		typr, err := abi.NewType("tuple", "", xx.Components)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(typr)
+
+		abi.NewMethod("", "", abi.Function, "", false, false, nil, nil)
+	*/
+
+	return nil
+}
+
+var errt = reflect.TypeOf((*error)(nil)).Elem()
+
+func isErrorType(t reflect.Type) bool {
+	return t.Implements(errt)
+}
+
+type abiField struct {
+	Type    string      `json:"type"`
+	Name    string      `json:"name"`
+	Inputs  []arguments `json:"inputs,omitempty"`
+	Outputs []arguments `json:"outputs,omitempty"`
+}
+
+type arguments struct {
+	Name         string      `json:"name"`
+	Type         string      `json:"type"`
+	InternalType string      `json:"internalType,omitempty"`
+	Components   []arguments `json:"components,omitempty"`
+	Indexed      bool        `json:"indexed,omitempty"`
+}
+
+func convertStructToABITypes(typ reflect.Type) []arguments {
+	if typ.Kind() != reflect.Struct {
+		panic("not a struct")
+	}
+
+	numFields := typ.NumField()
+	fields := make([]arguments, numFields)
+
+	for i := 0; i < numFields; i++ {
+		field := typ.Field(i)
+
+		fields[i] = arguments{
+			Name: field.Name,
+		}
+
+		var typeSuffix string
+		subType := field.Type
+
+	INFER:
+		for {
+			switch subType.Kind() {
+			case reflect.Slice:
+				typeSuffix += "[]"
+			case reflect.Array:
+				typeSuffix += fmt.Sprintf("[%d]", subType.Len())
+			case reflect.Ptr:
+			default:
+				break INFER
+			}
+
+			subType = subType.Elem()
+		}
+
+		if subType.Kind() == reflect.Struct {
+			fields[i].Components = convertStructToABITypes(subType)
+			fields[i].Type = "tuple" + typeSuffix
+		} else {
+			// parse basic type
+			var basicType string
+			switch subType.Kind() {
+			case reflect.Bool:
+				basicType = "bool"
+			default:
+				panic(fmt.Errorf("unknown type: %s", subType.Kind()))
+			}
+			fields[i].Type = basicType + typeSuffix
+		}
+	}
+
+	return fields
+}
+
+func methodInputStructType(method reflect.Method) reflect.Type {
+	numArgs := method.Func.Type().NumOut() - 1 // Subtract 1 for the receiver
+	argTypes := make([]reflect.Type, numArgs)
+
+	// Get the argument types
+	for i := 0; i <= numArgs-1; i++ {
+		argTypes[i] = method.Func.Type().Out(i)
+	}
+
+	// Create a struct type with the argument types as fields
+	structFields := make([]reflect.StructField, numArgs)
+	for i, argType := range argTypes {
+		structFields[i] = reflect.StructField{
+			Name: fmt.Sprintf("Param%d", i+1),
+			Type: argType,
+		}
+	}
+
+	return reflect.StructOf(structFields)
 }

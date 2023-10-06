@@ -40,9 +40,18 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+var runtimeAddr = common.HexToAddress("0x1100000000000000000000000000000042100002")
+
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
+		if addr == runtimeAddr {
+			return &yyyyyy{
+				suaveContext:   NewRuntimeSuaveContext(evm, addr),
+				isConfidential: evm.Config.IsConfidential,
+			}, true
+		}
+
 		if p, ok := PrecompiledContractsSuave[addr]; ok {
 			if evm.Config.IsConfidential {
 				suaveContext := NewRuntimeSuaveContext(evm, addr)

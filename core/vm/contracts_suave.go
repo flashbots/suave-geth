@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -32,6 +33,122 @@ var (
 )
 
 /* General utility precompiles */
+
+var ccc = map[string]SuavePrecompiledContract{
+	"36cb97fd": &confidentialInputsPrecompile2{},
+	"0e38f337": &isConfidentialPrecompile2{},
+}
+
+type yyyyyy struct {
+	isConfidential bool
+	suaveContext   *SuaveContext
+}
+
+func (y *yyyyyy) RequiredGas(input []byte) uint64 {
+	return 0 // incurs only the call cost (100)
+}
+
+func (y *yyyyyy) Run(input []byte) ([]byte, error) {
+	sig := hex.EncodeToString(input[:4])
+	input = input[4:]
+
+	c, ok := ccc[sig]
+	if !ok {
+		panic(fmt.Errorf("unknown precompile: %s", sig))
+	}
+	if y.isConfidential {
+		return c.RunConfidential(y.suaveContext, input)
+	} else {
+		return c.Run(input)
+	}
+}
+
+func init() {
+	inoutAbi := mustParseMethodAbi(`[{"outputs":[{"type":"bool"}],"name":"store","inputs":[],"stateMutability":"nonpayable","type":"function"}]`, "store")
+
+	fmt.Println(inoutAbi.Outputs)
+	var err error
+
+	trueB, err = inoutAbi.Outputs.Pack(true)
+	if err != nil {
+		panic(err)
+	}
+	falseB, err = inoutAbi.Outputs.Pack(false)
+	if err != nil {
+		panic(err)
+	}
+}
+
+var (
+	trueB  = []byte{}
+	falseB = []byte{}
+)
+
+type isConfidentialPrecompile2 struct{}
+
+type XX struct {
+	Field1 bool
+}
+
+func (c *isConfidentialPrecompile2) Do() ([][2]*XX, error) {
+	return nil, nil
+}
+
+func (c *isConfidentialPrecompile2) RequiredGas(input []byte) uint64 {
+	return 0 // incurs only the call cost (100)
+}
+
+func (c *isConfidentialPrecompile2) Run(input []byte) ([]byte, error) {
+	fmt.Println("ddd", input)
+
+	if len(input) == 1 {
+		// The precompile was called *directly* confidentially, and the result was cached - return 1
+		if input[0] == 0x01 {
+			return trueB, nil
+		} else {
+			return nil, errors.New("incorrect value passed in")
+		}
+	}
+
+	if len(input) > 1 {
+		return nil, errIsConfidentialInvalidInputLength
+	}
+
+	return falseB, nil
+}
+
+func (c *isConfidentialPrecompile2) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	fmt.Println("ddd1", input)
+
+	if len(input) != 0 {
+		return nil, errIsConfidentialInvalidInputLength
+	}
+	return trueB, nil
+}
+
+type confidentialInputsPrecompile2 struct{}
+
+func (c *confidentialInputsPrecompile2) RequiredGas(input []byte) uint64 {
+	return 0 // incurs only the call cost (100)
+}
+
+func (c *confidentialInputsPrecompile2) Run(input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this suaveContext")
+}
+
+func (c *confidentialInputsPrecompile2) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	inoutAbi := mustParseMethodAbi(`[{"outputs":[{"type":"bytes"}],"name":"store","inputs":[],"stateMutability":"nonpayable","type":"function"}]`, "store")
+
+	res, err := inoutAbi.Outputs.Pack(suaveContext.ConfidentialInputs)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("-- return byes in confidential ")
+	fmt.Println(res, len(res), suaveContext.ConfidentialInputs)
+
+	return res, nil
+}
 
 type isConfidentialPrecompile struct{}
 

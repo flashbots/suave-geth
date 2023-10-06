@@ -1,6 +1,25 @@
 pragma solidity ^0.8.8;
 
 import "../libraries/Suave.sol";
+import "../libraries/SuaveAbi.sol";
+
+contract Example1 {
+	function xxx() public returns (bytes memory) {
+        bytes memory emptyBytes;
+        return emptyBytes;
+	}
+}
+
+contract Example {
+	function example() public {
+		SuaveAbi ss = SuaveAbi(0x1100000000000000000000000000000042100002);
+		// Suave.confidentialInputs();
+		require(ss.isConfidential());
+
+		bytes memory confidentialInputs = ss.confidentialInputs();
+		require(confidentialInputs.length == 1);
+	}
+}
 
 contract AnyBidContract {
 
