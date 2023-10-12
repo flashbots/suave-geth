@@ -3,25 +3,9 @@ pragma solidity ^0.8.8;
 import "../libraries/Suave.sol";
 import "../libraries/SuaveAbi.sol";
 
-contract Example1 {
-	function xxx() public returns (bytes memory) {
-        bytes memory emptyBytes;
-        return emptyBytes;
-	}
-}
-
-contract Example {
-	function example() public {
-		SuaveAbi ss = SuaveAbi(0x1100000000000000000000000000000042100002);
-		// Suave.confidentialInputs();
-		require(ss.isConfidential());
-
-		bytes memory confidentialInputs = ss.confidentialInputs();
-		require(confidentialInputs.length == 1);
-	}
-}
-
 contract AnyBidContract {
+	SuaveAbi constant ss = SuaveAbi(0x1100000000000000000000000000000042100002);
+
 	event BidEvent(
 		Suave.BidId bidId,
 		uint64 decryptionCondition,
@@ -29,15 +13,25 @@ contract AnyBidContract {
 	);
 
 	function fetchBidConfidentialBundleData() public returns (bytes memory) {
-		require(Suave.isConfidential());
+		require(ss.isConfidential());
 		
-		bytes memory confidentialInputs = Suave.confidentialInputs();
+		bytes memory confidentialInputs = ss.confidentialInputs();
 		return abi.decode(confidentialInputs, (bytes));
 	}
 
 	// Bids to this contract should not be trusted!
 	function emitBid(Suave.Bid calldata bid) public {
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
+	}
+}
+
+contract Example is AnyBidContract {
+	function example() public {
+		// Suave.confidentialInputs();
+		require(ss.isConfidential());
+
+		bytes memory confidentialInputs = ss.confidentialInputs();
+		require(confidentialInputs.length == 1);
 	}
 }
 
@@ -74,10 +68,8 @@ contract MevShareBidContract is AnyBidContract {
 	);
 
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers, address[] memory bidAllowedStores) external payable returns (bytes memory) {
-		SuaveAbi ss = SuaveAbi(0x1100000000000000000000000000000042100002);
-
 		// 0. check confidential execution
-		require(Suave.isConfidential());
+		require(ss.isConfidential());
 
 		// 1. fetch bundle data
 		bytes memory bundleData = this.fetchBidConfidentialBundleData();
@@ -105,8 +97,6 @@ contract MevShareBidContract is AnyBidContract {
 	}
 
 	function newMatch(uint64 decryptionCondition, address[] memory bidAllowedPeekers, address[] memory bidAllowedStores, Suave.BidId shareBidId) external payable returns (bytes memory) {
-		SuaveAbi ss = SuaveAbi(0x1100000000000000000000000000000042100002);
-
 		// WARNING : this function will copy the original mev share bid
 		// into a new key with potentially different permsissions
 		
@@ -269,7 +259,7 @@ contract EthBlockBidContract is AnyBidContract {
 		Suave.Bid memory blockBid = Suave.newBid(blockHeight, allowedPeekers, allowedPeekers, "default:v0:mergedBids");
 		Suave.confidentialStoreStore(blockBid.id, "default:v0:mergedBids", abi.encode(bids));
 		 
-		(bytes memory builderBid, bytes memory payload) = Suave.buildEthBlock(blockArgs, blockBid.id, namespace);
+		(bytes memory builderBid, bytes memory payload) = ss.buildEthBlock(blockArgs, blockBid.id, namespace);
 		Suave.confidentialStoreStore(blockBid.id, "default:v0:builderPayload", payload); // only through this.unlock
 
 		return (blockBid, builderBid);

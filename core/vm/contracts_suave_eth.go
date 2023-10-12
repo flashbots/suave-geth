@@ -211,6 +211,10 @@ func (c *buildEthBlock) RunConfidential(suaveContext *SuaveContext, input []byte
 	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
 }
 
+func (c *buildEthBlock) Do(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
+	return c.runImpl(suaveContext, blockArgs, bidId, namespace)
+}
+
 func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
 	bidIds := [][16]byte{}
 	// first check for merged bid, else assume regular bid

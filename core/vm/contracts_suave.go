@@ -92,6 +92,8 @@ func init() {
 	rrr.MustRegister(&extractHint{})
 	rrr.MustRegister(&simulateBundle{})
 	rrr.MustRegister(&newBid{})
+	rrr.MustRegister(&fetchBids{})
+	rrr.MustRegister(&buildEthBlock{})
 }
 
 var (
@@ -440,6 +442,10 @@ func (c *fetchBids) RequiredGas(input []byte) uint64 {
 
 func (c *fetchBids) Run(input []byte) ([]byte, error) {
 	return input, nil
+}
+
+func (c *fetchBids) Do(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
+	return c.runImpl(suaveContext, targetBlock, namespace)
 }
 
 func (c *fetchBids) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
