@@ -226,17 +226,27 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 }
 
 func TestXXXX(t *testing.T) {
-	r := &runtime{}
+	mm := rrr.getByName("buildEthBlock")
 
-	require.NoError(t, r.Register(&isConfidentialPrecompile2{}))
-	require.NoError(t, r.Register(&confidentialInputsPrecompile2{}))
-
-	mm := r.getByName("confidentialInputs")
-
-	input, err := mm.method.Pack()
+	input, err := mm.method.Pack(&types.BuildBlockArgs{}, types.BidId{}, "")
 	require.NoError(t, err)
 
-	output, err := r.Handle(&SuaveContext{ConfidentialInputs: make([]byte, 20)}, input)
+	mockSuaveBackend := &mockSuaveBackend{}
+	stubEngine := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
+
+	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+		ExecutionNode: common.Address{},
+	})
+
+	suaveContext := &SuaveContext{
+		Backend: &SuaveExecutionBackend{
+			ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
+			ConfidentialEthBackend: mockSuaveBackend,
+		},
+		ConfidentialComputeRequestTx: reqTx,
+	}
+
+	output, err := rrr.Handle(suaveContext, input)
 	require.NoError(t, err)
 
 	vals, err := mm.method.Outputs.Unpack(output)

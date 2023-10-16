@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/mitchellh/mapstructure"
 )
 
 var (
@@ -547,8 +548,7 @@ func (r *runtime) Handle(suaveContext *SuaveContext, input []byte) ([]byte, erro
 
 	method, ok := r.methods[sig]
 	if !ok {
-		log.Info("runtime.Handle", "sig", sig, "input", input)
-		panic("failed to load method")
+		return nil, fmt.Errorf("runtime method %s not found", sig)
 	}
 
 	log.Info("runtime.Handle", "sig", sig, "name", method.name, "input", input)
@@ -565,8 +565,17 @@ func (r *runtime) Handle(suaveContext *SuaveContext, input []byte) ([]byte, erro
 		if err != nil {
 			return nil, err
 		}
+
 		for i := 0; i < inNum-2; i++ {
-			inArgs[i+2] = reflect.ValueOf(inputs[i])
+			if typ := method.reqT[i+2]; typ.Kind() == reflect.Struct {
+				val := reflect.New(typ)
+				if err = mapstructure.Decode(inputs[i], val.Interface()); err != nil {
+					return nil, err
+				}
+				inArgs[i+2] = val.Elem()
+			} else {
+				inArgs[i+2] = reflect.ValueOf(inputs[i])
+			}
 		}
 	}
 
