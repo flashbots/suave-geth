@@ -401,6 +401,10 @@ func (c *submitEthBlockBidToRelay) RunConfidential(suaveContext *SuaveContext, i
 	return c.runImpl(suaveContext, relayUrl, builderBidJson)
 }
 
+func (c *submitEthBlockBidToRelay) Do(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
+	return c.runImpl(suaveContext, relayUrl, builderBidJson)
+}
+
 func (c *submitEthBlockBidToRelay) runImpl(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()

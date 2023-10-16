@@ -64,6 +64,7 @@ func init() {
 	rrr.MustRegister(&newBid{})
 	rrr.MustRegister(&fetchBids{})
 	rrr.MustRegister(&buildEthBlock{})
+	rrr.MustRegister(&submitEthBlockBidToRelay{})
 }
 
 var (
@@ -245,7 +246,7 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	var caller common.Address
 	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
 		// Most recent non-nil non-this caller
-		if _c := suaveContext.CallerStack[i]; _c != nil && *_c != confStoreStoreAddress {
+		if _c := suaveContext.CallerStack[i]; _c != nil && (*_c != confStoreStoreAddress && *_c != runtimeAddr) {
 			caller = *_c
 			break
 		}
@@ -316,7 +317,7 @@ func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidI
 	var caller common.Address
 	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
 		// Most recent non-nil non-this caller
-		if _c := suaveContext.CallerStack[i]; _c != nil && *_c != confStoreRetrieveAddress {
+		if _c := suaveContext.CallerStack[i]; _c != nil && (*_c != confStoreRetrieveAddress && *_c != runtimeAddr) {
 			caller = *_c
 			break
 		}
@@ -548,6 +549,7 @@ func (r *runtime) Handle(suaveContext *SuaveContext, input []byte) ([]byte, erro
 
 	method, ok := r.methods[sig]
 	if !ok {
+		panic("xxxx" + sig)
 		return nil, fmt.Errorf("runtime method %s not found", sig)
 	}
 

@@ -120,22 +120,6 @@ func TestIsConfidential(t *testing.T) {
 	}
 }
 
-func TestXXXX(t *testing.T) {
-	fr := newFramework(t)
-	defer fr.Close()
-
-	clt := fr.NewSDKClient()
-
-	// We reuse the same address for both the source and target contract
-	contractAddr := common.Address{0x3}
-	sourceContract := sdk.GetContract(contractAddr, exampleContract.Abi, clt)
-
-	confidentialBytes := []byte{0x1}
-
-	_, err := sourceContract.SendTransaction("example", []interface{}{}, confidentialBytes)
-	require.NoError(t, err)
-}
-
 func TestMempool(t *testing.T) {
 	// t.Fatal("not implemented")
 	fr := newFramework(t)
