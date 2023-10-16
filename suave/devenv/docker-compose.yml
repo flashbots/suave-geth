@@ -7,7 +7,7 @@ services:
       - bootnode
       - --nodekey=/tmp/boot.key
       - --addr=:30301
-      - --verbosity=9
+      - --verbosity=3
     volumes:
       - ./boot.key:/tmp/boot.key
     networks:
@@ -85,12 +85,42 @@ services:
     volumes:
       - ./suave-ex-node:/keystore
       - ./genesis.json:/genesis.json
+    networks:
+      suave:
+    depends_on:
+      - bootnode
+
+  mevm2:
+    build: ../..
+    command:
+      - --chain=/genesis.json
+      - --http
+      - --http.port=8545
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.corsdomain=*
+      - --keystore=/keystore/keystore
+      - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
+      - --password=/keystore/password.txt
+    volumes:
+      - ./suave-ex-node:/keystore
+      - ./genesis.json:/genesis.json
+    networks:
+      suave:
+    depends_on:
+      - bootnode
+
+  mevm:
+    image: ethereumoptimism/proxyd
+    volumes:
+      - ./proxyd.toml:/etc/proxyd/proxyd.toml
     ports:
       - 8545:8545
     networks:
       suave:
     depends_on:
-      - bootnode
+      - mevm1
+      - mevm2
 
 networks:
   suave:

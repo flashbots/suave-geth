@@ -1,0 +1,26 @@
+[server]
+rpc_host = "0.0.0.0"
+rpc_port = 8545
+
+[backends]
+[backends.mevm1]
+rpc_url = "http://mevm1:8545"
+ws_url = "http://mevm1:8546"
+
+[backends.mevm2]
+rpc_url = "http://mevm2:8545"
+ws_url = "http://mevm2:8546"
+
+[backend_groups]
+[backend_groups.main]
+backends = ["mevm1", "mevm2"]
+
+[rpc_method_mappings]
+eth_call = "main"
+eth_chainId = "main"
+eth_getTransactionCount = "main"
+eth_gasPrice = "main"
+eth_estimateGas = "main"
+eth_sendRawTransaction = "main"
+eth_getTransactionReceipt = "main"
+eth_getBalance = "main"
