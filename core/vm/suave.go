@@ -63,8 +63,6 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 }
 
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
-	fmt.Println("_ RUN OLD PRECOMPILE _")
-
 	stub := &SuaveRuntimeAdapter{
 		impl: &suaveRuntime{
 			suaveContext: p.suaveContext,

@@ -695,12 +695,6 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byt
 	}
 
 	ret, returnGas, err := interpreter.evm.Call(scope.Contract, toAddr, args, gas, bigVal)
-
-	fmt.Println("Call response:")
-	fmt.Println("- ret", ret)
-	fmt.Println("- retGas", returnGas)
-	fmt.Println("- err", err)
-
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -736,12 +730,6 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 	}
 
 	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, bigVal)
-
-	fmt.Println("Call code response:")
-	fmt.Println("- ret", ret)
-	fmt.Println("- retGas", returnGas)
-	fmt.Println("- err", err)
-
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -797,19 +785,7 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
-	fmt.Println("Static call:")
-	fmt.Println("- gas", gas)
-	fmt.Println("- addr", toAddr)
-	fmt.Println("- args", args)
-	fmt.Println(retOffset.Uint64(), retSize.Uint64())
-
 	ret, returnGas, err := interpreter.evm.StaticCall(scope.Contract, toAddr, args, gas)
-
-	fmt.Println("Static call response:")
-	fmt.Println("- ret", ret)
-	fmt.Println("- retGas", returnGas)
-	fmt.Println("- err", err)
-
 	if err != nil {
 		temp.Clear()
 	} else {

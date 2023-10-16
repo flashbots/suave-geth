@@ -36,11 +36,6 @@ var (
 
 /* General utility precompiles */
 
-var ccc = map[string]SuavePrecompiledContract{
-	"36cb97fd": &confidentialInputsPrecompile2{},
-	"0e38f337": &isConfidentialPrecompile2{},
-}
-
 type yyyyyy struct {
 	isConfidential bool
 	suaveContext   *SuaveContext
@@ -52,33 +47,7 @@ func (y *yyyyyy) RequiredGas(input []byte) uint64 {
 
 func (y *yyyyyy) Run(input []byte) ([]byte, error) {
 	res, err := rrr.Handle(y.suaveContext, input)
-
-	fmt.Println(res, err)
-
 	return res, err
-
-	/*
-		method, ok := rrr.methods[sig]
-		if !ok {
-			panic("xxxx")
-		}
-	*/
-
-	// decode input
-
-	/*
-		c, ok := ccc[sig]
-		if !ok {
-			panic(fmt.Errorf("unknown precompile: %s", sig))
-		}
-		if y.isConfidential {
-			return c.RunConfidential(y.suaveContext, input)
-		} else {
-			return c.Run(input)
-		}
-	*/
-
-	panic("TODO")
 }
 
 var rrr *runtime
