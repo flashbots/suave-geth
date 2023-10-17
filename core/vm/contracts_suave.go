@@ -47,7 +47,11 @@ func (y *yyyyyy) RequiredGas(input []byte) uint64 {
 }
 
 func (y *yyyyyy) Run(input []byte) ([]byte, error) {
-	res, err := rrr.Handle(y.suaveContext, input)
+	res, err := rrr.Handle(y.suaveContext, y.isConfidential, input)
+	if err != nil {
+		fmt.Println(hex.EncodeToString(input))
+		panic(err)
+	}
 	return res, err
 }
 
@@ -242,15 +246,7 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 		return errors.New("not allowed in this suaveContext")
 	}
 
-	// Can be zeroes in some fringe cases!
-	var caller common.Address
-	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
-		// Most recent non-nil non-this caller
-		if _c := suaveContext.CallerStack[i]; _c != nil && (*_c != confStoreStoreAddress && *_c != runtimeAddr) {
-			caller = *_c
-			break
-		}
-	}
+	caller := suaveContext.getCaller()
 
 	if metrics.Enabled {
 		confStorePrecompileStoreMeter.Mark(int64(len(data)))
@@ -313,15 +309,7 @@ func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidI
 
 	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
 
-	// Can be zeroes in some fringe cases!
-	var caller common.Address
-	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
-		// Most recent non-nil non-this caller
-		if _c := suaveContext.CallerStack[i]; _c != nil && (*_c != confStoreRetrieveAddress && *_c != runtimeAddr) {
-			caller = *_c
-			break
-		}
-	}
+	caller := suaveContext.getCaller()
 
 	data, err := suaveContext.Backend.ConfidentialStore.Retrieve(bidId, caller, key)
 	if err != nil {
@@ -543,17 +531,26 @@ type runtime struct {
 	methods map[string]runtimeMethod
 }
 
-func (r *runtime) Handle(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+func (r *runtime) Handle(suaveContext *SuaveContext, isConfidential bool, input []byte) ([]byte, error) {
 	sig := hex.EncodeToString(input[:4])
 	input = input[4:]
 
+	if !isConfidential {
+		// ???
+		return input, nil
+	}
+
 	method, ok := r.methods[sig]
 	if !ok {
-		panic("xxxx" + sig)
+		panic("xxxx" + hex.EncodeToString(input))
 		return nil, fmt.Errorf("runtime method %s not found", sig)
 	}
 
-	log.Info("runtime.Handle", "sig", sig, "name", method.name, "input", input)
+	log.Info("runtime.Handle", "sig", sig, "confidential", isConfidential, "name", method.name, "input", input)
+
+	if !isConfidential {
+		return method.logic.Run(input)
+	}
 
 	inNum := len(method.reqT)
 

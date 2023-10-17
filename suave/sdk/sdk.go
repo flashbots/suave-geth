@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -13,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -40,6 +42,67 @@ func GetContract(addr common.Address, abi *abi.ABI, client *Client) *Contract {
 
 func (c *Contract) Address() common.Address {
 	return c.addr
+}
+
+func (c *Contract) Call(method string, args []interface{}) ([]interface{}, error) {
+	calldata, err := c.abi.Pack(method, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	chainId, err := c.client.rpc.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	gas := hexutil.Uint64(1000000)
+
+	chainIdHex := hexutil.Big(*chainId)
+
+	txnArgs := setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &c.addr,
+		Gas:            &gas,
+		IsConfidential: true,
+		ChainID:        &chainIdHex,
+		Data:           (*hexutil.Bytes)(&calldata),
+	})
+
+	var simResult hexutil.Bytes
+	if err = c.client.rpc.Client().Call(&simResult, "eth_call", txnArgs, "latest"); err != nil {
+		return nil, err
+	}
+
+	out, err := c.abi.Unpack(method, simResult)
+	if err != nil {
+		fmt.Println("err", err)
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func setTxArgsDefaults(args ethapi.TransactionArgs) ethapi.TransactionArgs {
+	if args.Gas == nil {
+		gas := hexutil.Uint64(1000000)
+		args.Gas = &gas
+	}
+
+	if args.Nonce == nil {
+		nonce := hexutil.Uint64(0)
+		args.Nonce = &nonce
+	}
+
+	if args.GasPrice == nil {
+		value := big.NewInt(0)
+		args.GasPrice = (*hexutil.Big)(value)
+	}
+
+	if args.Value == nil {
+		value := big.NewInt(0)
+		args.Value = (*hexutil.Big)(value)
+	}
+
+	return args
 }
 
 func (c *Contract) SendTransaction(method string, args []interface{}, confidentialDataBytes []byte) (*TransactionResult, error) {

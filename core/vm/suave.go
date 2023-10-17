@@ -29,6 +29,19 @@ type SuaveContext struct {
 	CallerStack                  []*common.Address
 }
 
+func (s *SuaveContext) getCaller() common.Address {
+	// Can be zeroes in some fringe cases!
+	var caller common.Address
+	for i := len(s.CallerStack) - 1; i >= 0; i-- {
+		// Most recent non-nil non-this caller
+		if _c := s.CallerStack[i]; _c != nil && *_c != runtimeAddr {
+			caller = *_c
+			break
+		}
+	}
+	return caller
+}
+
 type SuaveExecutionBackend struct {
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend

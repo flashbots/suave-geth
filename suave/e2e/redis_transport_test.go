@@ -52,7 +52,7 @@ func TestRedisBackends(t *testing.T) {
 	targetBlock := uint64(1)
 
 	{ // Send a bundle bid
-		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
+		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress}
 
 		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)

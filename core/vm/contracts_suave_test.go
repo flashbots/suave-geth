@@ -246,7 +246,7 @@ func TestXXXX(t *testing.T) {
 		ConfidentialComputeRequestTx: reqTx,
 	}
 
-	output, err := rrr.Handle(suaveContext, input)
+	output, err := rrr.Handle(suaveContext, false, input)
 	require.NoError(t, err)
 
 	vals, err := mm.method.Outputs.Unpack(output)

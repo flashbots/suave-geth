@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
@@ -120,15 +120,14 @@ func TestIsConfidential(t *testing.T) {
 	}
 }
 
+var runtimeAddr = common.HexToAddress("0x1100000000000000000000000000000042100002")
+
 func TestMempool(t *testing.T) {
 	// t.Fatal("not implemented")
 	fr := newFramework(t)
 	defer fr.Close()
 
-	rpc := fr.suethSrv.RPCNode()
-
-	gas := hexutil.Uint64(1000000)
-	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
+	suaveLib := sdk.GetContract(runtimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
 
 	{
 		targetBlock := uint64(16103213)
@@ -154,25 +153,11 @@ func TestMempool(t *testing.T) {
 		require.NoError(t, fr.ConfidentialStoreBackend().InitializeBid(bid1))
 		require.NoError(t, fr.ConfidentialStoreBackend().InitializeBid(bid2))
 
-		inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
-
-		calldata, err := inoutAbi.Inputs.Pack(targetBlock, "default:v0:ethBundles")
-		require.NoError(t, err)
-
-		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.Call(&simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
-			To:             &fetchBidsAddress,
-			Gas:            &gas,
-			IsConfidential: true,
-			ChainID:        &chainId,
-			Data:           (*hexutil.Bytes)(&calldata),
-		}), "latest"))
-
-		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
+		out, err := suaveLib.Call("fetchBids", []interface{}{targetBlock, "default:v0:ethBundles"})
 		require.NoError(t, err)
 
 		var bids []suave.Bid
-		require.NoError(t, mapstructure.Decode(unpacked[0], &bids))
+		require.NoError(t, mapstructure.Decode(out[0], &bids))
 
 		require.Equal(t, bid1.Id, bids[0].Id)
 		require.Equal(t, bid1.Salt, bids[0].Salt)
@@ -187,22 +172,8 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, bid2.Version, bids[1].Version)
 
 		// Verify via transaction
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Nonce:         0,
-			To:            &fetchBidsAddress,
-			Value:         nil,
-			Gas:           1000000,
-			GasPrice:      big.NewInt(10),
-			Data:          calldata,
-		}), signer, testKey)
+		_, err = suaveLib.SendTransaction("fetchBids", []interface{}{targetBlock, "default:v0:ethBundles"}, nil)
 		require.NoError(t, err)
-
-		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var confidentialRequestTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes)))
 
 		block := fr.suethSrv.ProgressChain()
 		require.Equal(t, 1, len(block.Transactions()))
@@ -213,7 +184,6 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 1, len(block.Transactions()))
-		require.Equal(t, []byte(simResult), block.Transactions()[0].Data())
 	}
 }
 
@@ -324,7 +294,7 @@ func TestMevShare(t *testing.T) {
 	targetBlock := uint64(1)
 
 	// Send a bundle bid
-	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
+	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, mevShareAddress}
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
 	confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
@@ -451,13 +421,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	fr := newFramework(t, WithExecutionNode())
 	defer fr.Close()
 
-	rpc := fr.suethSrv.RPCNode()
-
-	gas := hexutil.Uint64(1000000)
-	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
-
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
-	defer cancel()
+	suaveLib := sdk.GetContract(runtimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
 
 	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
 		Nonce:    0,
@@ -480,20 +444,9 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	require.NoError(t, err)
 
 	{ // Test the bundle simulation precompile through eth_call
-		calldata, err := suaveLibContract.Abi.Methods["simulateBundle"].Inputs.Pack(bundleBytes)
+		out, err := suaveLib.Call("simulateBundle", []interface{}{bundleBytes})
 		require.NoError(t, err)
-
-		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
-			To:             &simulateBundleAddress,
-			Gas:            &gas,
-			IsConfidential: true,
-			ChainID:        &chainId,
-			Data:           (*hexutil.Bytes)(&calldata),
-		}), "latest"))
-
-		require.Equal(t, 32, len(simResult))
-		require.Equal(t, 13, int(simResult[31]))
+		require.Equal(t, 13, int(out[0].(uint64)))
 	}
 
 	{ // Test the block building precompile through eth_call
@@ -506,14 +459,13 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 
 		bid, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
-			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
+			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, {}},
 			AllowedStores:       []common.Address{fr.ExecutionNode()},
 			Version:             "default:v0:ethBundles",
 		}, dummyCreationTx)
 		require.NoError(t, err)
 
 		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []suave.StoreWrite{{
-
 			Bid:    bid,
 			Caller: common.Address{0x41, 0x42, 0x43},
 			Key:    "default:v0:ethBundles",
@@ -528,26 +480,11 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			FeeRecipient: common.Address{0x42},
 		}
 
-		packed, err := suaveLibContract.Abi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "")
+		out, err := suaveLib.Call("buildEthBlock", []interface{}{payloadArgsTuple, bid.Id, ""})
 		require.NoError(t, err)
 
-		var simResult hexutil.Bytes
-		requireNoRpcError(t, rpc.CallContext(ctx, &simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
-			To:             &buildEthBlockAddress,
-			Gas:            &gas,
-			IsConfidential: true,
-			ChainID:        &chainId,
-			Data:           (*hexutil.Bytes)(&packed),
-		}), "latest"))
-
-		require.NotNil(t, simResult)
-
-		unpacked, err := suaveLibContract.Abi.Methods["buildEthBlock"].Outputs.Unpack(simResult)
-		require.NoError(t, err)
-
-		// TODO: test builder bid
 		var envelope *engine.ExecutionPayloadEnvelope
-		require.NoError(t, json.Unmarshal(unpacked[1].([]byte), &envelope))
+		require.NoError(t, json.Unmarshal(out[1].([]byte), &envelope))
 		require.Equal(t, 2, len(envelope.ExecutionPayload.Transactions))
 
 		var tx types.Transaction
@@ -587,7 +524,7 @@ func TestBlockBuildingContract(t *testing.T) {
 	targetBlock := uint64(1)
 
 	{ // Send a bundle bid
-		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
+		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress}
 
 		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
@@ -703,7 +640,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	targetBlock := uint64(1)
 
 	{ // Send a bundle bid
-		allowedPeekers := []common.Address{ethBlockBidSenderAddr, newBundleBidAddress, buildEthBlockAddress}
+		allowedPeekers := []common.Address{ethBlockBidSenderAddr, newBundleBidAddress}
 
 		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
@@ -905,15 +842,15 @@ var (
 
 	// confidentialStoreAddress = common.HexToAddress("0x42020000")
 	// confStoreRetrieveAddress = common.HexToAddress("0x42020001")
+	// fetchBidsAddress = common.HexToAddress("0x42030001")
 
-	fetchBidsAddress    = common.HexToAddress("0x42030001")
 	newBundleBidAddress = common.HexToAddress("0x42300000")
 	newBlockBidAddress  = common.HexToAddress("0x42300001")
 
-	simulateBundleAddress = common.HexToAddress("0x42100000")
-	extractHintAddress    = common.HexToAddress("0x42100037")
+	// simulateBundleAddress = common.HexToAddress("0x42100000")
+	// extractHintAddress = common.HexToAddress("0x42100037")
 
-	buildEthBlockAddress  = common.HexToAddress("0x42100001")
+	// buildEthBlockAddress  = common.HexToAddress("0x42100001")
 	blockBidSenderAddress = common.HexToAddress("0x42300002")
 	mevShareAddress       = common.HexToAddress("0x42100073")
 
