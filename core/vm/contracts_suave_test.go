@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	"github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,11 +30,11 @@ func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) error {
 	return nil
 }
 
-func (m *mockSuaveBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	return suave.Bid{}, nil
+func (m *mockSuaveBackend) Store(bid cstore.Bid, caller common.Address, key string, value []byte) (cstore.Bid, error) {
+	return cstore.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
+func (m *mockSuaveBackend) Retrieve(bid cstore.Bid, caller common.Address, key string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -41,15 +42,15 @@ func (m *mockSuaveBackend) SubmitBid(types.Bid) error {
 	return nil
 }
 
-func (m *mockSuaveBackend) FetchEngineBidById(suave.BidId) (suave.Bid, error) {
-	return suave.Bid{}, nil
+func (m *mockSuaveBackend) FetchEngineBidById(cstore.BidId) (cstore.Bid, error) {
+	return cstore.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidById(suave.BidId) (suave.Bid, error) {
-	return suave.Bid{}, nil
+func (m *mockSuaveBackend) FetchBidById(cstore.BidId) (cstore.Bid, error) {
+	return cstore.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []cstore.Bid {
 	return nil
 }
 
@@ -77,7 +78,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
+	stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{

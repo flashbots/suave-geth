@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"errors"
@@ -10,20 +10,20 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
-var _ suave.ConfidentialStoreBackend = &LocalConfidentialStore{}
+var _ ConfidentialStoreBackend = &LocalConfidentialStore{}
 
 type LocalConfidentialStore struct {
 	lock    sync.Mutex
-	bids    map[suave.BidId]suave.Bid
+	bids    map[suave.BidId]Bid
 	dataMap map[string][]byte
-	index   map[string][]suave.BidId
+	index   map[string][]BidId
 }
 
 func NewLocalConfidentialStore() *LocalConfidentialStore {
 	return &LocalConfidentialStore{
-		bids:    make(map[suave.BidId]suave.Bid),
+		bids:    make(map[suave.BidId]Bid),
 		dataMap: make(map[string][]byte),
-		index:   make(map[string][]suave.BidId),
+		index:   make(map[string][]BidId),
 	}
 }
 
@@ -35,7 +35,7 @@ func (l *LocalConfidentialStore) Stop() error {
 	return nil
 }
 
-func (l *LocalConfidentialStore) InitializeBid(bid suave.Bid) error {
+func (l *LocalConfidentialStore) InitializeBid(bid Bid) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -55,7 +55,7 @@ func (l *LocalConfidentialStore) InitializeBid(bid suave.Bid) error {
 	return nil
 }
 
-func (l *LocalConfidentialStore) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
+func (l *LocalConfidentialStore) Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -65,7 +65,7 @@ func (l *LocalConfidentialStore) Store(bid suave.Bid, caller common.Address, key
 	return bid, nil
 }
 
-func (l *LocalConfidentialStore) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
+func (l *LocalConfidentialStore) Retrieve(bid Bid, caller common.Address, key string) ([]byte, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -78,19 +78,19 @@ func (l *LocalConfidentialStore) Retrieve(bid suave.Bid, caller common.Address, 
 	return append(make([]byte, 0, len(data)), data...), nil
 }
 
-func (l *LocalConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+func (l *LocalConfidentialStore) FetchBidById(bidId BidId) (Bid, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	bid, found := l.bids[bidId]
 	if !found {
-		return suave.Bid{}, errors.New("bid not found")
+		return Bid{}, errors.New("bid not found")
 	}
 
 	return bid, nil
 }
 
-func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -100,7 +100,7 @@ func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64,
 		return nil
 	}
 
-	res := []suave.Bid{}
+	res := []Bid{}
 	for _, id := range bidIDs {
 		bid, found := l.bids[id]
 		if found {

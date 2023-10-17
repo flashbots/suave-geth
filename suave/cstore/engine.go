@@ -1,4 +1,4 @@
-package suave
+package cstore
 
 import (
 	"context"
@@ -25,6 +25,13 @@ type ConfidentialStoreEngine struct {
 
 	storeUUID      uuid.UUID
 	localAddresses map[common.Address]struct{}
+}
+
+type Config struct {
+}
+
+func NewConfidentialStoreEngineWithConfig(config *Config) {
+	// TODO, config pattern?
 }
 
 func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) *ConfidentialStoreEngine {

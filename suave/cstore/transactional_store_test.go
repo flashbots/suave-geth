@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"math/big"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestTransactionalStore(t *testing.T) {
-	engine := suave.NewConfidentialStoreEngine(NewLocalConfidentialStore(), suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
+	engine := NewConfidentialStoreEngine(NewLocalConfidentialStore(), MockTransport{}, MockSigner{}, MockChainSigner{})
 
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{

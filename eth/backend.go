@@ -58,6 +58,7 @@ import (
 	"github.com/ethereum/go-ethereum/suave/backends"
 	suave_backends "github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -230,18 +231,18 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	var confidentialStoreBackend suave.ConfidentialStoreBackend
+	var confidentialStoreBackend cstore.ConfidentialStoreBackend
 	if config.Suave.RedisStoreUri != "" {
-		confidentialStoreBackend = suave_backends.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+		confidentialStoreBackend = cstore.NewRedisStoreBackend(config.Suave.RedisStoreUri)
 	} else {
-		confidentialStoreBackend = suave_backends.NewLocalConfidentialStore()
+		confidentialStoreBackend = cstore.NewLocalConfidentialStore()
 	}
 
-	var confidentialStoreTransport suave.StoreTransportTopic
+	var confidentialStoreTransport cstore.StoreTransportTopic
 	if config.Suave.RedisStorePubsubUri != "" {
-		confidentialStoreTransport = suave_backends.NewRedisPubSubTransport(config.Suave.RedisStorePubsubUri)
+		confidentialStoreTransport = cstore.NewRedisPubSubTransport(config.Suave.RedisStorePubsubUri)
 	} else {
-		confidentialStoreTransport = suave.MockTransport{}
+		confidentialStoreTransport = cstore.MockTransport{}
 	}
 
 	var suaveEthBackend suave.ConfidentialEthBackend
@@ -251,9 +252,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	suaveDaSigner := &suave_backends.AccountManagerDASigner{Manager: eth.AccountManager()}
+	suaveDaSigner := &cstore.AccountManagerDASigner{Manager: eth.AccountManager()}
 
-	confidentialStoreEngine := suave.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
+	confidentialStoreEngine := cstore.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, confidentialStoreEngine, suaveEthBackend}
 	if eth.APIBackend.allowUnprotectedTxs {

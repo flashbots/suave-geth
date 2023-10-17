@@ -34,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
@@ -522,8 +523,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		}, dummyCreationTx)
 		require.NoError(t, err)
 
-		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []suave.StoreWrite{{
-
+		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[cstore.BidId]cstore.Bid{bid.Id: bid}, []cstore.StoreWrite{{
 			Bid:    bid,
 			Caller: common.Address{0x41, 0x42, 0x43},
 			Key:    "default:v0:ethBundles",
@@ -876,11 +876,11 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) ConfidentialStoreBackend() suave.ConfidentialStoreBackend {
+func (f *framework) ConfidentialStoreBackend() cstore.ConfidentialStoreBackend {
 	return f.suethSrv.service.APIBackend.SuaveEngine().Backend()
 }
 
-func (f *framework) ConfidentialEngine() *suave.ConfidentialStoreEngine {
+func (f *framework) ConfidentialEngine() *cstore.ConfidentialStoreEngine {
 	return f.suethSrv.service.APIBackend.SuaveEngine()
 }
 

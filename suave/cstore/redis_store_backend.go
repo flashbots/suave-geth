@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"context"
@@ -15,14 +15,14 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-var _ suave.ConfidentialStoreBackend = &RedisStoreBackend{}
+var _ ConfidentialStoreBackend = &RedisStoreBackend{}
 
 var (
-	formatRedisBidKey = func(bidId suave.BidId) string {
+	formatRedisBidKey = func(bidId BidId) string {
 		return fmt.Sprintf("bid-%x", bidId)
 	}
 
-	formatRedisBidValueKey = func(bidId suave.BidId, key string) string {
+	formatRedisBidValueKey = func(bidId BidId, key string) string {
 		return fmt.Sprintf("bid-data-%x-%s", bidId, key)
 	}
 
@@ -92,7 +92,7 @@ func (r *RedisStoreBackend) Stop() error {
 	return nil
 }
 
-func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
+func (r *RedisStoreBackend) InitializeBid(bid Bid) error {
 	key := formatRedisBidKey(bid.Id)
 
 	err := r.client.Get(r.ctx, key).Err()
@@ -118,34 +118,34 @@ func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+func (r *RedisStoreBackend) FetchBidById(bidId BidId) (Bid, error) {
 	key := formatRedisBidKey(bidId)
 
 	data, err := r.client.Get(r.ctx, key).Bytes()
 	if err != nil {
-		return suave.Bid{}, err
+		return Bid{}, err
 	}
 
-	var bid suave.Bid
+	var bid Bid
 	err = json.Unmarshal(data, &bid)
 	if err != nil {
-		return suave.Bid{}, err
+		return Bid{}, err
 	}
 
 	return bid, nil
 }
 
-func (r *RedisStoreBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
+func (r *RedisStoreBackend) Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error) {
 	storeKey := formatRedisBidValueKey(bid.Id, key)
 	err := r.client.Set(r.ctx, storeKey, string(value), ffStoreTTL).Err()
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("unexpected redis error: %w", err)
+		return Bid{}, fmt.Errorf("unexpected redis error: %w", err)
 	}
 
 	return bid, nil
 }
 
-func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
+func (r *RedisStoreBackend) Retrieve(bid Bid, caller common.Address, key string) ([]byte, error) {
 	storeKey := formatRedisBidValueKey(bid.Id, key)
 	data, err := r.client.Get(r.ctx, storeKey).Bytes()
 	if err != nil {
@@ -158,10 +158,10 @@ func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key s
 var (
 	mempoolConfStoreId          = types.BidId{0x39}
 	mempoolConfStoreAddr        = common.HexToAddress("0x39")
-	mempoolConfidentialStoreBid = suave.Bid{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
+	mempoolConfidentialStoreBid = Bid{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
 )
 
-func (r *RedisStoreBackend) indexBid(bid suave.Bid) error {
+func (r *RedisStoreBackend) indexBid(bid Bid) error {
 	defer log.Info("bid submitted", "bid", bid, "store", r.Store)
 
 	var bidsByBlockAndProtocol []suave.BidId
@@ -177,15 +177,15 @@ func (r *RedisStoreBackend) indexBid(bid suave.Bid) error {
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
 	bidsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
 	if err != nil {
 		return nil
 	}
 
-	res := []suave.Bid{}
+	res := []Bid{}
 
-	bidIDs := suave.MustDecode[[]suave.BidId](bidsByProtocolBytes)
+	bidIDs := MustDecode[[]BidId](bidsByProtocolBytes)
 	for _, id := range bidIDs {
 		bid, err := r.FetchBidById(id)
 		if err != nil {

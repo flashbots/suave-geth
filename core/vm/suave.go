@@ -8,17 +8,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 )
 
 // ConfidentialStore represents the API for the confidential store
 // required by Suave runtime.
 type ConfidentialStore interface {
 	InitializeBid(bid types.Bid) (types.Bid, error)
-	Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error)
+	Store(bidId cstore.BidId, caller common.Address, key string, value []byte) (cstore.Bid, error)
 	Retrieve(bid types.BidId, caller common.Address, key string) ([]byte, error)
-	FetchBidById(suave.BidId) (suave.Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid
+	FetchBidById(cstore.BidId) (cstore.Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []cstore.Bid
 }
 
 type SuaveContext struct {
@@ -31,7 +31,7 @@ type SuaveContext struct {
 
 type SuaveExecutionBackend struct {
 	ConfidentialStore      ConfidentialStore
-	ConfidentialEthBackend suave.ConfidentialEthBackend
+	ConfidentialEthBackend cstore.ConfidentialEthBackend
 }
 
 func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {

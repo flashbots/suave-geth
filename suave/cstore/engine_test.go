@@ -1,4 +1,4 @@
-package suave
+package cstore
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testBackendStore(t *testing.T, store suave.ConfidentialStoreBackend) {
-	bid := suave.Bid{
+func testBackendStore(t *testing.T, store ConfidentialStoreBackend) {
+	bid := Bid{
 		Id:                  suave.RandomBidId(),
 		DecryptionCondition: 10,
 		AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
