@@ -1,10 +1,9 @@
 pragma solidity ^0.8.8;
 
 import "../libraries/Suave.sol";
-import "../libraries/SuaveAbi.sol";
 
 contract AnyBidContract {
-	SuaveAbi constant ss = SuaveAbi(0x1100000000000000000000000000000042100002);
+	Suave constant ss = Suave(0x1100000000000000000000000000000042100002);
 
 	event BidEvent(
 		Suave.BidId bidId,
@@ -244,7 +243,6 @@ contract EthBlockBidContract is AnyBidContract {
 	function doBuild(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.BidId[] memory bids, string memory namespace) public view returns (Suave.Bid memory, bytes memory) {
 		address[] memory allowedPeekers = new address[](2);
 		allowedPeekers[0] = address(this);
-		allowedPeekers[1] = Suave.BUILD_ETH_BLOCK;
 
 		Suave.Bid memory blockBid = ss.newBid(blockHeight, allowedPeekers, allowedPeekers, "default:v0:mergedBids");
 		ss.confidentialStoreStore(blockBid.id, "default:v0:mergedBids", abi.encode(bids));
