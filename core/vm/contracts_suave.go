@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -550,6 +551,15 @@ func (r *runtime) Handle(suaveContext *SuaveContext, isConfidential bool, input 
 
 	if !isConfidential {
 		return method.logic.Run(input)
+	}
+
+	if metrics.EnabledExpensive {
+		metrics.GetOrRegisterMeter("suave/runtime/"+method.name, nil).Mark(1)
+
+		now := time.Now()
+		defer func() {
+			metrics.GetOrRegisterTimer("suave/runtime/"+method.name+"/duration", nil).Update(time.Since(now))
+		}()
 	}
 
 	inNum := len(method.reqT)

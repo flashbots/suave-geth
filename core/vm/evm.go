@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -45,23 +44,12 @@ var runtimeAddr = common.HexToAddress("0x110000000000000000000000000000004210000
 
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
-	fmt.Println("-- is precompile", addr, evm.chainRules.IsSuave)
-
 	if evm.chainRules.IsSuave {
 		if addr == runtimeAddr {
-			fmt.Println("_IN_")
 			return &yyyyyy{
 				suaveContext:   NewRuntimeSuaveContext(evm, addr),
 				isConfidential: evm.Config.IsConfidential,
 			}, true
-		}
-
-		if p, ok := PrecompiledContractsSuave[addr]; ok {
-			if evm.Config.IsConfidential {
-				suaveContext := NewRuntimeSuaveContext(evm, addr)
-				return NewSuavePrecompiledContractWrapper(addr, suaveContext, p), true
-			}
-			return p, ok
 		}
 	}
 	var precompiles map[common.Address]PrecompiledContract
