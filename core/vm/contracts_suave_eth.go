@@ -14,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
-	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/holiman/uint256"
@@ -29,13 +27,6 @@ import (
 	boostUtils "github.com/flashbots/go-boost-utils/utils"
 )
 
-var (
-	simulateBundleAddress           = common.HexToAddress("0x42100000")
-	extractHintAddress              = common.HexToAddress("0x42100037")
-	buildEthBlockAddress            = common.HexToAddress("0x42100001")
-	submitEthBlockBidToRelayAddress = common.HexToAddress("0x42100002")
-)
-
 type simulateBundle struct {
 }
 
@@ -46,15 +37,6 @@ func (c *simulateBundle) RequiredGas(input []byte) uint64 {
 
 func (c *simulateBundle) Run(input []byte) ([]byte, error) {
 	return input, nil
-}
-
-func (c *simulateBundle) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	egp, err := c.runImpl(suaveContext, input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
 }
 
 func (c *simulateBundle) Do(suaveContext *SuaveContext, input []byte) (uint64, error) {
@@ -101,17 +83,6 @@ func (c *extractHint) Run(input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func (c *extractHint) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := artifacts.SuaveAbi.Methods["extractHint"].Inputs.Unpack(input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	bundleBytes := unpacked[0].([]byte)
-
-	return c.runImpl(suaveContext, bundleBytes)
-}
-
 func (c *extractHint) Do(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
 	return c.runImpl(suaveContext, bundleBytes)
 }
@@ -155,60 +126,6 @@ func (c *buildEthBlock) RequiredGas(input []byte) uint64 {
 
 func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
 	return input, nil
-}
-
-func (c *buildEthBlock) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
-	if err != nil {
-		return formatPeekerError("could not unpack inputs: %w", err)
-	}
-
-	// blockArgs := unpacked[0].(types.BuildBlockArgs)
-	blockArgsRaw := unpacked[0].(struct {
-		Slot           uint64         "json:\"slot\""
-		ProposerPubkey []uint8        "json:\"proposerPubkey\""
-		Parent         common.Hash    "json:\"parent\""
-		Timestamp      uint64         "json:\"timestamp\""
-		FeeRecipient   common.Address "json:\"feeRecipient\""
-		GasLimit       uint64         "json:\"gasLimit\""
-		Random         common.Hash    "json:\"random\""
-		Withdrawals    []struct {
-			Index     uint64         "json:\"index\""
-			Validator uint64         "json:\"validator\""
-			Address   common.Address "json:\"Address\""
-			Amount    uint64         "json:\"amount\""
-		} "json:\"withdrawals\""
-	})
-
-	blockArgs := types.BuildBlockArgs{
-		Slot:           blockArgsRaw.Slot,
-		Parent:         blockArgsRaw.Parent,
-		Timestamp:      blockArgsRaw.Timestamp,
-		FeeRecipient:   blockArgsRaw.FeeRecipient,
-		GasLimit:       blockArgsRaw.GasLimit,
-		Random:         blockArgsRaw.Random,
-		ProposerPubkey: blockArgsRaw.ProposerPubkey,
-		Withdrawals:    types.Withdrawals{},
-	}
-
-	for _, w := range blockArgsRaw.Withdrawals {
-		blockArgs.Withdrawals = append(blockArgs.Withdrawals, &types.Withdrawal{
-			Index:     w.Index,
-			Validator: w.Validator,
-			Address:   w.Address,
-			Amount:    w.Amount,
-		})
-	}
-
-	bidId := unpacked[1].(suave.BidId)
-	namespace := unpacked[2].(string)
-
-	bidBytes, envelopeBytes, err := c.runImpl(suaveContext, blockArgs, bidId, namespace)
-	if err != nil {
-		return formatPeekerError("could not unpack merged bid ids: %w", err)
-	}
-
-	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
 }
 
 func (c *buildEthBlock) Do(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
@@ -389,18 +306,6 @@ func (c *submitEthBlockBidToRelay) RequiredGas(input []byte) uint64 {
 
 func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
 	return input, nil
-}
-
-func (c *submitEthBlockBidToRelay) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := artifacts.SuaveAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
-	if err != nil {
-		return formatPeekerError("could not unpack inputs: %w", err)
-	}
-
-	relayUrl := unpacked[0].(string)
-	builderBidJson := unpacked[1].([]byte)
-
-	return c.runImpl(suaveContext, relayUrl, builderBidJson)
 }
 
 func (c *submitEthBlockBidToRelay) Do(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {

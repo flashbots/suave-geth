@@ -40,13 +40,6 @@ type PrecompiledContract interface {
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
 
-// SuavePrecompiledContract is an optional interface for precompiled Suave contracts.
-// During confidential execution the contract will be called with their RunConfidential method.
-type SuavePrecompiledContract interface {
-	PrecompiledContract
-	RunConfidential(context *SuaveContext, input []byte) ([]byte, error)
-}
-
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
 // contracts used in the Frontier and Homestead releases.
 var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
@@ -81,26 +74,6 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMulIstanbul{},
 	common.BytesToAddress([]byte{8}): &bn256PairingIstanbul{},
 	common.BytesToAddress([]byte{9}): &blake2F{},
-}
-
-// PrecompiledContractsSuave contains the default set of pre-compiled SUAVE VM
-// contracts used in the suave testnet. It's a superset of Berlin precompiles.
-// Confidential contracts (implementing SuavePrecompiledContract)
-// are ran with their respective RunConfidential in confidential setting
-var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
-	isConfidentialAddress:     &isConfidentialPrecompile{},
-	confidentialInputsAddress: &confidentialInputsPrecompile{},
-
-	confStoreStoreAddress:    newConfStoreStore(),
-	confStoreRetrieveAddress: newConfStoreRetrieve(),
-
-	newBidAddress:      newNewBid(),
-	fetchBidsAddress:   newFetchBids(),
-	extractHintAddress: &extractHint{},
-
-	simulateBundleAddress:           &simulateBundle{},
-	buildEthBlockAddress:            &buildEthBlock{},
-	submitEthBlockBidToRelayAddress: &submitEthBlockBidToRelay{},
 }
 
 // PrecompiledContractsBerlin contains the default set of pre-compiled Ethereum
@@ -151,9 +124,6 @@ func init() {
 	}
 	for k := range PrecompiledContractsBerlin {
 		PrecompiledAddressesBerlin = append(PrecompiledAddressesBerlin, k)
-	}
-	for k := range PrecompiledContractsSuave {
-		PrecompiledAddressesSuave = append(PrecompiledAddressesSuave, k)
 	}
 }
 
