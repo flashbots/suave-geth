@@ -119,27 +119,46 @@ func main() {
 	}
 }
 
+func renderType(param interface{}, inFunc bool) string {
+	typ, ok := param.(abi.Type)
+	if !ok {
+		typP, ok := param.(*abi.Type)
+		if !ok {
+			panic(errors.New("typ: invalid type"))
+		}
+		typ = *typP
+	}
+
+	isMemory := false
+
+	suffix := ""
+	if typ.T == abi.SliceTy {
+		typ = *typ.Elem
+		suffix += "[]"
+		isMemory = true
+	}
+	if typ.T == abi.StringTy || typ.T == abi.BytesTy || typ.T == abi.TupleTy {
+		isMemory = true
+	}
+
+	if isMemory && inFunc {
+		suffix += " memory"
+	}
+
+	if typ.InternalType != "" {
+		return typ.InternalType + suffix
+	}
+
+	return typ.String() + suffix
+}
+
 func applyTemplate(templateText string, input interface{}, out string) error {
 	funcMap := template.FuncMap{
+		"typS": func(param interface{}) string {
+			return renderType(param, false)
+		},
 		"typ": func(param interface{}) string {
-			typ, ok := param.(abi.Type)
-			if !ok {
-				typP, ok := param.(*abi.Type)
-				if !ok {
-					panic(errors.New("typ: invalid type"))
-				}
-				typ = *typP
-			}
-
-			suffix := ""
-			if typ.T == abi.SliceTy {
-				typ = *typ.Elem
-				suffix += "[]"
-			}
-			if typ.InternalType != "" {
-				return typ.InternalType + suffix
-			}
-			return typ.String() + suffix
+			return renderType(param, true)
 		},
 		"toLower": func(param interface{}) string {
 			str := param.(string)
@@ -182,20 +201,22 @@ var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
 contract Suave {
+	error PeekerReverted(address, bytes);
+
 	{{range .Structs}}
 	{{ if .Type }}
-	type {{ .Name }} is {{ typ .Type }};
+	type {{ .Name }} is {{ typS .Type }};
 	{{ else }}
 	struct {{.Name}} {
 	{{ range .Types }}
-	{{ typ .Type }} {{ toLower .Name }};
+	{{ typS .Type }} {{ toLower .Name }};
 	{{ end }}
 	}
 	{{ end }}
 	{{end}}
 
 	{{ range .Methods }}
-	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {}
+	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) external view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {}
 	{{ end }}
 }
 `

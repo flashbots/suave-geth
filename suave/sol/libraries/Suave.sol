@@ -2,6 +2,8 @@
 pragma solidity ^0.8.8;
 
 contract Suave {
+    error PeekerReverted(address, bytes);
+
     struct Bid {
         BidId id;
         BidId salt;
@@ -31,23 +33,31 @@ contract Suave {
         uint64 amount;
     }
 
-    function buildEthBlock(BuildBlockArgs param1, BidId param2, string param3) returns (bytes, bytes) {}
+    function buildEthBlock(BuildBlockArgs memory param1, BidId param2, string memory param3)
+        external
+        view
+        returns (bytes memory, bytes memory)
+    {}
 
-    function confidentialInputs() returns (bytes) {}
+    function confidentialInputs() external view returns (bytes memory) {}
 
-    function confidentialStoreRetrieve(BidId param1, string param2) returns (bytes) {}
+    function confidentialStoreRetrieve(BidId param1, string memory param2) external view returns (bytes memory) {}
 
-    function confidentialStoreStore(BidId param1, string param2, bytes param3) {}
+    function confidentialStoreStore(BidId param1, string memory param2, bytes memory param3) external view {}
 
-    function extractHint(bytes param1) returns (bytes) {}
+    function extractHint(bytes memory param1) external view returns (bytes memory) {}
 
-    function fetchBids(uint64 param1, string param2) returns (Bid[]) {}
+    function fetchBids(uint64 param1, string memory param2) external view returns (Bid[] memory) {}
 
-    function isConfidential() returns (bool) {}
+    function isConfidential() external view returns (bool) {}
 
-    function newBid(uint64 param1, address[] param2, address[] param3, string param4) returns (Bid) {}
+    function newBid(uint64 param1, address[] memory param2, address[] memory param3, string memory param4)
+        external
+        view
+        returns (Bid memory)
+    {}
 
-    function simulateBundle(bytes param1) returns (uint64) {}
+    function simulateBundle(bytes memory param1) external view returns (uint64) {}
 
-    function submitEthBlockBidToRelay(string param1, bytes param2) returns (bytes) {}
+    function submitEthBlockBidToRelay(string memory param1, bytes memory param2) external view returns (bytes memory) {}
 }

@@ -999,7 +999,7 @@ func requireNoRpcError(t *testing.T, rpcErr error) {
 			require.NoError(t, rpcErr, decodedError)
 		}
 
-		unpacked, err := suaveLibContract.Abi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
+		unpacked, err := artifacts.SuaveAbi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
 		if err != nil {
 			require.NoError(t, err, rpcErr.Error())
 		} else {
