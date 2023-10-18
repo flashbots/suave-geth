@@ -27,8 +27,6 @@ var (
 	errIsConfidentialInvalidInputLength = errors.New("invalid input length")
 )
 
-/* General utility precompiles */
-
 type yyyyyy struct {
 	isConfidential bool
 	suaveContext   *SuaveContext

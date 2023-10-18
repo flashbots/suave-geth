@@ -185,7 +185,6 @@ func (in *EVMInterpreter) Run(suaveContext *SuaveContext, contract *Contract, in
 		op = contract.GetOp(pc)
 		operation := in.table[op]
 		cost = operation.constantGas // For tracing
-
 		// Validate stack
 		if sLen := stack.len(); sLen < operation.minStack {
 			return nil, &ErrStackUnderflow{stackLen: sLen, required: operation.minStack}
