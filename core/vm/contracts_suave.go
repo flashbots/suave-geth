@@ -47,10 +47,14 @@ func (y *yyyyyy) Run(input []byte) ([]byte, error) {
 	return res, err
 }
 
-var rrr *runtime
+var rrr *Runtime
+
+func GetRuntime() *Runtime {
+	return rrr
+}
 
 func init() {
-	rrr = &runtime{}
+	rrr = &Runtime{}
 	rrr.MustRegister(&isConfidentialPrecompile2{})
 	rrr.MustRegister(&confidentialInputsPrecompile2{})
 	rrr.MustRegister(&confStoreRetrieve{})
@@ -395,11 +399,19 @@ type runtimeMethod struct {
 	reqT []reflect.Type
 }
 
-type runtime struct {
+type Runtime struct {
 	methods map[string]runtimeMethod
 }
 
-func (r *runtime) Handle(suaveContext *SuaveContext, isConfidential bool, input []byte) ([]byte, error) {
+func (r *Runtime) GetMethods() []*abi.Method {
+	res := make([]*abi.Method, 0, len(r.methods))
+	for _, method := range r.methods {
+		res = append(res, method.method)
+	}
+	return res
+}
+
+func (r *Runtime) Handle(suaveContext *SuaveContext, isConfidential bool, input []byte) ([]byte, error) {
 	sig := hex.EncodeToString(input[:4])
 	input = input[4:]
 
@@ -474,7 +486,7 @@ type PrecompileWithName interface {
 	Name() string
 }
 
-func (r *runtime) getByName(name string) runtimeMethod {
+func (r *Runtime) getByName(name string) runtimeMethod {
 	for _, method := range r.methods {
 		if method.name == name {
 			return method
@@ -483,7 +495,7 @@ func (r *runtime) getByName(name string) runtimeMethod {
 	panic("not found")
 }
 
-func (r *runtime) MustRegister(fn SuavePrecompiledContract) {
+func (r *Runtime) MustRegister(fn SuavePrecompiledContract) {
 	if err := r.Register(fn); err != nil {
 		panic(err)
 	}
@@ -495,7 +507,7 @@ type SuavePrecompiledContract interface {
 	RequiredGas(input []byte) uint64
 }
 
-func (r *runtime) Register(fn SuavePrecompiledContract) error {
+func (r *Runtime) Register(fn SuavePrecompiledContract) error {
 	// reflect and generate the type of the 'Do' function
 	typ := reflect.TypeOf(fn)
 
