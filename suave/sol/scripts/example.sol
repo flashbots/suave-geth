@@ -5,9 +5,12 @@ import "forge-std/Script.sol";
 import "../libraries/Suave.sol";
 import "../libraries/SuaveForge.sol";
 
-contract PurchaseEdition is Script {
+contract Example is Script {
     function run() public {
-        Suave suave = SuaveForge(0x1100000000000000000000000000000042100002);
-        suave.confidentialInputs();
+        SuaveForge suave = new SuaveForge();
+        bytes memory confidentialInputs = suave.confidentialInputs();
+
+        console.logBytes(confidentialInputs);
+        console.log(1);
     }
 }

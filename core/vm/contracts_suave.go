@@ -565,7 +565,7 @@ func (r *Runtime) Register(fn SuavePrecompiledContract) error {
 		return fmt.Errorf("Method %s not found on the abi", funcName)
 	}
 
-	log.Info("runtime registered", "name", funcName, "sig", method.Sig, "id", hex.EncodeToString(method.ID))
+	log.Debug("runtime registered", "name", funcName, "sig", method.Sig, "id", hex.EncodeToString(method.ID))
 
 	if r.methods == nil {
 		r.methods = make(map[string]runtimeMethod)

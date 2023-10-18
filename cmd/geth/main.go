@@ -231,6 +231,8 @@ func init() {
 		snapshotCommand,
 		// See verkle.go
 		verkleCommand,
+		// See forgecmd.go (Suave specific)
+		forgeCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

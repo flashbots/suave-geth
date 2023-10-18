@@ -12,8 +12,6 @@ import (
 var suaveAbisol []byte
 
 func loadSuaveLib() *abi.ABI {
-	fmt.Println(string(suaveAbisol))
-
 	var suaveAbi struct {
 		Abi *abi.ABI `json:"abi"`
 	}

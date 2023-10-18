@@ -44,6 +44,32 @@ func (c *Contract) Address() common.Address {
 	return c.addr
 }
 
+func (c *Contract) CallRaw(method string, calldata []byte) ([]byte, error) {
+	chainId, err := c.client.rpc.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	gas := hexutil.Uint64(1000000)
+
+	chainIdHex := hexutil.Big(*chainId)
+
+	txnArgs := setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &c.addr,
+		Gas:            &gas,
+		IsConfidential: true,
+		ChainID:        &chainIdHex,
+		Data:           (*hexutil.Bytes)(&calldata),
+	})
+
+	var simResult hexutil.Bytes
+	if err = c.client.rpc.Client().Call(&simResult, "eth_call", txnArgs, "latest"); err != nil {
+		return nil, err
+	}
+
+	return simResult, nil
+}
+
 func (c *Contract) Call(method string, args []interface{}) ([]interface{}, error) {
 	calldata, err := c.abi.Pack(method, args...)
 	if err != nil {

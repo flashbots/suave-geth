@@ -3,43 +3,61 @@ pragma solidity ^0.8.8;
 
 import "./Suave.sol";
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 
-contract SuaveForge is Suave, Test {
-    function buildEthBlock(BuildBlockArgs memory param1, BidId param2, string memory param3)
-        external
+contract SuaveForge is Test {
+    function doForge(bytes4 sig, bytes memory input) public returns (bytes memory) {
+        bytes memory data = bytes.concat(sig, input);
+
+        console.logBytes(data);
+        
+        string[] memory inputs = new string[](3);
+        inputs[0] = "suave";
+        inputs[1] = "forge";
+        inputs[2] = string(data);
+
+        bytes memory res = vm.ffi(inputs);
+        return res;
+    }
+
+    function buildEthBlock(Suave.BuildBlockArgs memory param1, Suave.BidId param2, string memory param3)
+        public
         view
         returns (bytes memory, bytes memory)
     {}
 
-    function confidentialInputs() external view returns (bytes memory) {
-        string[] memory inputs = new string[](3);
-        inputs[0] = "echo";
-        inputs[1] = "-n";
-        // ABI encoded "gm", as a hex string
-        inputs[2] = "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002676d000000000000000000000000000000000000000000000000000000000000";
+    function confidentialInputs() public returns (bytes memory) {
+        bytes memory result = doForge(this.confidentialInputs.selector, abi.encode());
 
-        bytes memory res = vm.ffi(inputs);
-        console.log(res);
+        console.logBytes(result);
+        
+        return new bytes(0);
     }
 
-    function confidentialStoreRetrieve(BidId param1, string memory param2) external view returns (bytes memory) {}
-
-    function confidentialStoreStore(BidId param1, string memory param2, bytes memory param3) external view {}
-
-    function extractHint(bytes memory param1) external view returns (bytes memory) {}
-
-    function fetchBids(uint64 param1, string memory param2) external view returns (Bid[] memory) {}
-
-    function isConfidential() external view returns (bool) {}
-
-    function newBid(uint64 param1, address[] memory param2, address[] memory param3, string memory param4)
-        external
+    function confidentialStoreRetrieve(Suave.BidId param1, string memory param2)
+        public
         view
-        returns (Bid memory)
+        returns (bytes memory)
     {}
 
-    function simulateBundle(bytes memory param1) external view returns (uint64) {}
+    function confidentialStoreStore(Suave.BidId param1, string memory param2, bytes memory param3) public view {}
 
-    function submitEthBlockBidToRelay(string memory param1, bytes memory param2) external view returns (bytes memory) {}
+    function extractHint(bytes memory param1) public view returns (bytes memory) {}
+
+    function fetchBids(uint64 param1, string memory param2) public view returns (Suave.Bid[] memory) {}
+
+    function isConfidential() public view returns (bool) {}
+
+    function newBid(uint64 param1, address[] memory param2, address[] memory param3, string memory param4)
+        public
+        view
+        returns (Suave.Bid memory)
+    {}
+
+    function simulateBundle(bytes memory param1) public view returns (uint64) {}
+
+    function submitEthBlockBidToRelay(string memory param1, bytes memory param2)
+        public
+        view
+        returns (bytes memory)
+    {}
 }

@@ -203,11 +203,11 @@ func applyTemplate(templateText string, input interface{}, out string) error {
 var suaveForgeTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
-import "./libraries/Suave.sol";
+import "./Suave.sol";
 
 contract SuaveForge is Suave {
 	{{ range .Methods }}
-	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) external view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {
+	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) public override view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {
 
 	}
 	{{ end }}
@@ -233,7 +233,7 @@ contract Suave {
 	{{end}}
 
 	{{ range .Methods }}
-	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) external view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {}
+	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) public virtual view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {}
 	{{ end }}
 }
 `
