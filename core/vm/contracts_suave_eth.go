@@ -35,26 +35,14 @@ func (c *simulateBundle) RequiredGas(input []byte) uint64 {
 	return 10000
 }
 
-func (c *simulateBundle) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
 func (c *simulateBundle) Do(suaveContext *SuaveContext, input []byte) (uint64, error) {
-	res, err := c.runImpl(suaveContext, input)
-	if err != nil {
-		return 0, fmt.Errorf("could not simulate bundle: %w", err)
-	}
-	return res.Uint64(), nil
-}
-
-func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big.Int, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
 	}{}
 	err := json.Unmarshal(input, &bundle)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
@@ -62,15 +50,15 @@ func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big
 
 	envelope, err := suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	if envelope.ExecutionPayload.GasUsed == 0 {
-		return nil, err
+		return 0, err
 	}
 
 	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
-	return egp, nil
+	return egp.Uint64(), nil
 }
 
 type extractHint struct{}
@@ -79,15 +67,7 @@ func (c *extractHint) RequiredGas(input []byte) uint64 {
 	return 10000
 }
 
-func (c *extractHint) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
 func (c *extractHint) Do(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
-	return c.runImpl(suaveContext, bundleBytes)
-}
-
-func (c *extractHint) runImpl(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
@@ -124,15 +104,7 @@ func (c *buildEthBlock) RequiredGas(input []byte) uint64 {
 	return 10000
 }
 
-func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
 func (c *buildEthBlock) Do(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
-	return c.runImpl(suaveContext, blockArgs, bidId, namespace)
-}
-
-func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
 	caller := suaveContext.getCaller()
 
 	bidIds := [][16]byte{}
@@ -304,15 +276,7 @@ func (c *submitEthBlockBidToRelay) RequiredGas(input []byte) uint64 {
 	return 1000
 }
 
-func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
 func (c *submitEthBlockBidToRelay) Do(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
-	return c.runImpl(suaveContext, relayUrl, builderBidJson)
-}
-
-func (c *submitEthBlockBidToRelay) runImpl(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
 
