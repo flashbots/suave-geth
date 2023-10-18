@@ -117,6 +117,9 @@ func main() {
 	if err := applyTemplate(suaveLibTemplate, input, "./suave/sol/libraries/Suave.sol"); err != nil {
 		panic(err)
 	}
+	if err := applyTemplate(suaveForgeTemplate, input, "./suave/sol/libraries/SuaveForge.sol"); err != nil {
+		panic(err)
+	}
 }
 
 func renderType(param interface{}, inFunc bool) string {
@@ -196,6 +199,20 @@ func applyTemplate(templateText string, input interface{}, out string) error {
 	}
 	return nil
 }
+
+var suaveForgeTemplate = `// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.8;
+
+import "./libraries/Suave.sol";
+
+contract SuaveForge is Suave {
+	{{ range .Methods }}
+	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) external view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {
+
+	}
+	{{ end }}
+}
+`
 
 var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
