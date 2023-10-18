@@ -41,85 +41,20 @@ import (
 )
 
 func TestIsConfidential(t *testing.T) {
-	t.Skip()
-
-	// t.Fatal("not implemented")
-
 	fr := newFramework(t)
 	defer fr.Close()
 
-	rpc := fr.suethSrv.RPCNode()
+	suaveLib := sdk.GetContract(runtimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
 
-	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
+	res, err := suaveLib.Call("isConfidential", nil)
+	require.NoError(t, err)
+	require.True(t, res[0].(bool))
 
-	{
-		// Verify eth_call of isConfidentialAddress returns 1/0 depending on confidential compute setting
-		var result string
-		requireNoRpcError(t, rpc.Call(&result, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
-			To:             &isConfidentialAddress,
-			IsConfidential: true,
-			ChainID:        &chainId,
-		}), "latest"))
-		require.Equal(t, []byte{1}, hexutil.MustDecode(result))
+	_, err = suaveLib.SendTransaction("isConfidential", nil, nil)
+	require.NoError(t, err)
 
-		requireNoRpcError(t, rpc.Call(&result, "eth_call", ethapi.TransactionArgs{
-			To:             &isConfidentialAddress,
-			IsConfidential: false,
-			ChainID:        &chainId,
-		}, "latest"))
-		require.Equal(t, []byte{0}, hexutil.MustDecode(result))
-	}
-
-	{
-		// Verify sending computation requests and onchain transactions to isConfidentialAddress
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Nonce:         0,
-			To:            &isConfidentialAddress,
-			Value:         nil,
-			Gas:           1000000,
-			GasPrice:      big.NewInt(10),
-			Data:          []byte{},
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var confidentialRequestTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&confidentialRequestTxHash, "eth_sendRawTransaction", hexutil.Encode(confidentialRequestTxBytes)))
-
-		onchainTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
-			Nonce:    1,
-			To:       &isConfidentialAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     []byte{},
-		}), signer, testKey)
-		require.NoError(t, err)
-
-		onchainTxBytes, err := onchainTx.MarshalBinary()
-		require.NoError(t, err)
-
-		var onchainTxHash common.Hash
-		requireNoRpcError(t, rpc.Call(&onchainTxHash, "eth_sendRawTransaction", hexutil.Encode(onchainTxBytes)))
-		require.Equal(t, common.HexToHash("0x031415a9010d25f2a882758cf7b8dbb3750678828e9973f32f0c73ef49a038b4"), onchainTxHash)
-
-		block := fr.suethSrv.ProgressChain()
-		require.Equal(t, 2, len(block.Transactions()))
-
-		receipts := block.Receipts
-		require.Equal(t, 2, len(receipts))
-		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
-		require.Equal(t, uint64(1), receipts[0].Status)
-		require.Equal(t, uint8(types.LegacyTxType), receipts[1].Type)
-		require.Equal(t, uint64(1), receipts[1].Status)
-
-		require.Equal(t, 2, len(block.Transactions()))
-		require.Equal(t, []byte{1}, block.Transactions()[0].Data())
-		require.Equal(t, []byte{}, block.Transactions()[1].Data())
-	}
+	block := fr.suethSrv.ProgressChain()
+	require.Equal(t, 1, len(block.Transactions()))
 }
 
 var runtimeAddr = common.HexToAddress("0x1100000000000000000000000000000042100002")
@@ -842,17 +777,8 @@ var (
 
 	isConfidentialAddress = common.HexToAddress("0x42010000")
 
-	// confidentialStoreAddress = common.HexToAddress("0x42020000")
-	// confStoreRetrieveAddress = common.HexToAddress("0x42020001")
-	// fetchBidsAddress = common.HexToAddress("0x42030001")
-
-	newBundleBidAddress = common.HexToAddress("0x42300000")
-	newBlockBidAddress  = common.HexToAddress("0x42300001")
-
-	// simulateBundleAddress = common.HexToAddress("0x42100000")
-	// extractHintAddress = common.HexToAddress("0x42100037")
-
-	// buildEthBlockAddress  = common.HexToAddress("0x42100001")
+	newBundleBidAddress   = common.HexToAddress("0x42300000")
+	newBlockBidAddress    = common.HexToAddress("0x42300001")
 	blockBidSenderAddress = common.HexToAddress("0x42300002")
 	mevShareAddress       = common.HexToAddress("0x42100073")
 
@@ -869,7 +795,6 @@ var (
 			newBlockBidAddress:    {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			blockBidSenderAddress: {Balance: big.NewInt(0), Code: ethBlockBidSenderContract.DeployedCode},
 			mevShareAddress:       {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
-			common.Address{0x3}:   {Balance: big.NewInt(0), Code: exampleContract.DeployedCode},
 		},
 	}
 

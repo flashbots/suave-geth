@@ -14,7 +14,6 @@ import (
 )
 
 func TestRedisBackends(t *testing.T) {
-	t.Skip()
 	withMiniredisTransportOpt := WithRedisTransportOpt(t)
 
 	fr1 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(), withMiniredisTransportOpt)

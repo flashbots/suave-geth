@@ -16,7 +16,6 @@ var (
 	BundleBidContract         = newArtifact("bids.sol/BundleBidContract.json")
 	buildEthBlockContract     = newArtifact("bids.sol/EthBlockBidContract.json")
 	ethBlockBidSenderContract = newArtifact("bids.sol/EthBlockBidSenderContract.json")
-	exampleContract           = newArtifact("bids.sol/Example.json")
 )
 
 func newArtifact(name string) *Artifact {
