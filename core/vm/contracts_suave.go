@@ -685,6 +685,15 @@ func convertStructToABITypes(typ reflect.Type) []arguments {
 			}
 			fields[i].Type = basicType + typeSuffix
 		}
+
+		nameTyp := subType.Name()
+		if nameTyp != "" && subType.Name() != subType.Kind().String() {
+			// skip basic types for Address and Hash since those are native
+			if nameTyp != "Address" && nameTyp != "Hash" {
+				fields[i].InternalType = nameTyp
+			}
+		}
+
 	}
 
 	return fields

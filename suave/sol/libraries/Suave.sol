@@ -2,10 +2,6 @@
 pragma solidity ^0.8.8;
 
 contract Suave {
-    error PeekerReverted(address, bytes);
-
-    type BidId is bytes16;
-
     struct Bid {
         BidId id;
         BidId salt;
@@ -14,6 +10,8 @@ contract Suave {
         address[] allowedStores;
         string version;
     }
+
+    type BidId is bytes16;
 
     struct BuildBlockArgs {
         uint64 slot;
@@ -33,14 +31,23 @@ contract Suave {
         uint64 amount;
     }
 
-    function newBid(uint64 decryptionCondition, address[] memory allowedPeekers, address[] memory allowedStores, string memory BidType) external view returns (Suave.Bid memory) {}
-	function fetchBids(uint64 cond, string memory namespace) external view returns (Suave.Bid[] memory) {}
-    function isConfidential() external view returns (bool) {}
-    function confidentialInputs() external view returns (bytes memory) {}
-    function confidentialStoreStore(Suave.BidId bidId, string memory key, bytes memory data) external view {}
-    function confidentialStoreRetrieve(Suave.BidId bidId, string memory key) external view returns (bytes memory) {}
-    function simulateBundle(bytes memory bundleData) external view returns (uint64) {}
-    function extractHint(bytes memory bundleData) external view returns (bytes memory) {}
-	function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.BidId bid, string memory namespace) external view returns (bytes memory, bytes memory) {}
-    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid) external view returns (bytes memory) {}
+    function buildEthBlock(BuildBlockArgs param1, BidId param2, string param3) returns (bytes, bytes) {}
+
+    function confidentialInputs() returns (bytes) {}
+
+    function confidentialStoreRetrieve(BidId param1, string param2) returns (bytes) {}
+
+    function confidentialStoreStore(BidId param1, string param2, bytes param3) {}
+
+    function extractHint(bytes param1) returns (bytes) {}
+
+    function fetchBids(uint64 param1, string param2) returns (Bid[]) {}
+
+    function isConfidential() returns (bool) {}
+
+    function newBid(uint64 param1, address[] param2, address[] param3, string param4) returns (Bid) {}
+
+    function simulateBundle(bytes param1) returns (uint64) {}
+
+    function submitEthBlockBidToRelay(string param1, bytes param2) returns (bytes) {}
 }

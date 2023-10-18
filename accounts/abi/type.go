@@ -59,6 +59,8 @@ type Type struct {
 	TupleElems    []*Type      // Type information of all tuple fields
 	TupleRawNames []string     // Raw field name of all tuple fields
 	TupleType     reflect.Type // Underlying struct of the tuple
+
+	InternalType string
 }
 
 var (
@@ -223,6 +225,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 		return Type{}, fmt.Errorf("unsupported arg type: %s", t)
 	}
 
+	typ.InternalType = internalType
 	return
 }
 
