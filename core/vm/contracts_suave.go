@@ -277,13 +277,6 @@ func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionC
 }
 
 type fetchBids struct {
-	inoutAbi abi.Method
-}
-
-func newFetchBids() *fetchBids {
-	inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
-
-	return &fetchBids{inoutAbi}
 }
 
 func (c *fetchBids) RequiredGas(input []byte) uint64 {
@@ -316,11 +309,6 @@ func mustParseAbi(data string) abi.ABI {
 	}
 
 	return inoutAbi
-}
-
-func mustParseMethodAbi(data string, method string) abi.Method {
-	inoutAbi := mustParseAbi(data)
-	return inoutAbi.Methods[method]
 }
 
 func formatPeekerError(format string, args ...any) ([]byte, error) {

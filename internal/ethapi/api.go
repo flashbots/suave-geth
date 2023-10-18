@@ -1023,9 +1023,6 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 	}
 
 	if args.IsConfidential {
-		fmt.Println("-- chain id --")
-		fmt.Println(args.ChainID)
-
 		if args.ExecutionNode == nil {
 			acc := b.AccountManager().Accounts()[0]
 			args.ExecutionNode = &acc
@@ -1919,9 +1916,6 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 		if err != nil {
 			return common.Hash{}, err
 		}
-
-		fmt.Println("-xxxx")
-		fmt.Println(msg.Data)
 
 		var confidentialInputs []byte
 		if confidential != nil {
