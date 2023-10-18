@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
-import "./libraries/Suave.sol";
+import "./Suave.sol";
+import "forge-std/Test.sol";
+import "forge-std/console.sol";
 
-contract SuaveForge is Suave {
+contract SuaveForge is Suave, Test {
     function buildEthBlock(BuildBlockArgs memory param1, BidId param2, string memory param3)
         external
         view
