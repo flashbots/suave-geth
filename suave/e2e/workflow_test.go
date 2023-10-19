@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	builderCapella "github.com/attestantio/go-builder-client/api/capella"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -779,8 +776,6 @@ var (
 
 	testBalance = big.NewInt(2e18)
 
-	isConfidentialAddress = common.HexToAddress("0x42010000")
-
 	newBundleBidAddress   = common.HexToAddress("0x42300000")
 	newBlockBidAddress    = common.HexToAddress("0x42300001")
 	blockBidSenderAddress = common.HexToAddress("0x42300002")
@@ -944,37 +939,4 @@ type fakeRelayHandler struct {
 
 func (h *fakeRelayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.serveHttp(h.t, w, r)
-}
-
-func mustParseMethodAbi(data string, method string) abi.Method {
-	inoutAbi, err := abi.JSON(strings.NewReader(data))
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return inoutAbi.Methods[method]
-}
-
-func setTxArgsDefaults(args ethapi.TransactionArgs) ethapi.TransactionArgs {
-	if args.Gas == nil {
-		gas := hexutil.Uint64(1000000)
-		args.Gas = &gas
-	}
-
-	if args.Nonce == nil {
-		nonce := hexutil.Uint64(0)
-		args.Nonce = &nonce
-	}
-
-	if args.GasPrice == nil {
-		value := big.NewInt(0)
-		args.GasPrice = (*hexutil.Big)(value)
-	}
-
-	if args.Value == nil {
-		value := big.NewInt(0)
-		args.Value = (*hexutil.Big)(value)
-	}
-
-	return args
 }
