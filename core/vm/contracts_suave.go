@@ -259,7 +259,7 @@ func (r *Runtime) Run(suaveContext *SuaveContext, input []byte) ([]byte, error) 
 		return nil, fmt.Errorf("runtime method %s not found", sig)
 	}
 
-	log.Info("runtime.Handle", "sig", sig, "name", method.name, "input", input)
+	log.Info("runtime.Handle", "sig", sig, "name", method.name)
 
 	if metrics.EnabledExpensive {
 		metrics.GetOrRegisterMeter("suave/runtime/"+method.name, nil).Mark(1)
