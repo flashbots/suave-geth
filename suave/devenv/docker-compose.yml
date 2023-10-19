@@ -60,6 +60,7 @@ services:
       DATABASE_URL: "postgresql://blockscout:ceWb1MeLBEeOIfk65gU8EjF8@blockscout-db:5432/blockscout"
       ETHEREUM_JSONRPC_HTTP_URL: "http://host.docker.internal:8545"
       ETHEREUM_JSONRPC_TRACE_URL: "http://host.docker.internal:8545"
+      ETHEREUM_JSONRPC_WS_URL: "ws://host.docker.internal:8546"
       CHAIN_TYPE: "suave"
       ECTO_USE_SSL: "false"
       POOL_SIZE: "30"
