@@ -92,3 +92,5 @@ type StoreWrite struct {
 	Key    string         `json:"key"`
 	Value  Bytes          `json:"value"`
 }
+
+var RuntimeAddr = common.HexToAddress("0x1100000000000000000000000000000042100002")

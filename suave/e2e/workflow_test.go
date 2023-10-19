@@ -44,7 +44,7 @@ func TestIsConfidential(t *testing.T) {
 	fr := newFramework(t)
 	defer fr.Close()
 
-	suaveLib := sdk.GetContract(runtimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
+	suaveLib := sdk.GetContract(suave.RuntimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
 
 	res, err := suaveLib.Call("isConfidential", nil)
 	require.NoError(t, err)
@@ -57,14 +57,12 @@ func TestIsConfidential(t *testing.T) {
 	require.Equal(t, 1, len(block.Transactions()))
 }
 
-var runtimeAddr = common.HexToAddress("0x1100000000000000000000000000000042100002")
-
 func TestMempool(t *testing.T) {
 	// t.Fatal("not implemented")
 	fr := newFramework(t)
 	defer fr.Close()
 
-	suaveLib := sdk.GetContract(runtimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
+	suaveLib := sdk.GetContract(suave.RuntimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
 
 	{
 		targetBlock := uint64(16103213)
@@ -358,7 +356,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	fr := newFramework(t, WithExecutionNode())
 	defer fr.Close()
 
-	suaveLib := sdk.GetContract(runtimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
+	suaveLib := sdk.GetContract(suave.RuntimeAddr, artifacts.SuaveAbi, fr.NewSDKClient())
 
 	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
 		Nonce:    0,

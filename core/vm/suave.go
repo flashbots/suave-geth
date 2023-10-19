@@ -29,7 +29,7 @@ func (s *SuaveContext) getCaller() common.Address {
 	var caller common.Address
 	for i := len(s.CallerStack) - 1; i >= 0; i-- {
 		// Most recent non-nil non-this caller
-		if _c := s.CallerStack[i]; _c != nil && *_c != runtimeAddr {
+		if _c := s.CallerStack[i]; _c != nil && *_c != suave.RuntimeAddr {
 			caller = *_c
 			break
 		}

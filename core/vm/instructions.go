@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/holiman/uint256"
 )
 
@@ -344,7 +345,7 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
 
-	if bytes.Equal(slot.Bytes(), runtimeAddr.Bytes()) {
+	if bytes.Equal(slot.Bytes(), suave.RuntimeAddr.Bytes()) {
 		// runtime address, it has code
 		slot.SetUint64(1)
 		return nil, nil

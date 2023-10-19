@@ -23,43 +23,36 @@ var (
 	confStorePrecompileRetrieveMeter = metrics.NewRegisteredMeter("suave/confstore/retrieve", nil)
 )
 
-type yyyyyy struct {
-	isConfidential bool
-	suaveContext   *SuaveContext
+type suaveRuntimePrecompile struct {
+	suaveContext *SuaveContext
 }
 
-func (y *yyyyyy) RequiredGas(input []byte) uint64 {
-	// TODO????? Address difference??
-	return 0 // incurs only the call cost (100)
+func (y *suaveRuntimePrecompile) RequiredGas(input []byte) uint64 {
+	return suaveRuntime.RequiredGas(input)
 }
 
-func (y *yyyyyy) Run(input []byte) ([]byte, error) {
-	res, err := rrr.Handle(y.suaveContext, y.isConfidential, input)
-	if err != nil {
-		fmt.Println(hex.EncodeToString(input))
-		panic(err)
-	}
-	return res, err
+func (y *suaveRuntimePrecompile) Run(input []byte) ([]byte, error) {
+	return suaveRuntime.Run(y.suaveContext, input)
 }
 
-var rrr *Runtime
+var suaveRuntime *Runtime
 
 func GetRuntime() *Runtime {
-	return rrr
+	return suaveRuntime
 }
 
 func init() {
-	rrr = &Runtime{}
-	rrr.MustRegister(&isConfidentialPrecompile2{})
-	rrr.MustRegister(&confidentialInputsPrecompile{})
-	rrr.MustRegister(&confStoreRetrieve{})
-	rrr.MustRegister(&confStoreStore{})
-	rrr.MustRegister(&extractHint{})
-	rrr.MustRegister(&simulateBundle{})
-	rrr.MustRegister(&newBid{})
-	rrr.MustRegister(&fetchBids{})
-	rrr.MustRegister(&buildEthBlock{})
-	rrr.MustRegister(&submitEthBlockBidToRelay{})
+	suaveRuntime = &Runtime{}
+	suaveRuntime.MustRegister(&isConfidentialPrecompile2{})
+	suaveRuntime.MustRegister(&confidentialInputsPrecompile{})
+	suaveRuntime.MustRegister(&confStoreRetrieve{})
+	suaveRuntime.MustRegister(&confStoreStore{})
+	suaveRuntime.MustRegister(&extractHint{})
+	suaveRuntime.MustRegister(&simulateBundle{})
+	suaveRuntime.MustRegister(&newBid{})
+	suaveRuntime.MustRegister(&fetchBids{})
+	suaveRuntime.MustRegister(&buildEthBlock{})
+	suaveRuntime.MustRegister(&submitEthBlockBidToRelay{})
 }
 
 type isConfidentialPrecompile2 struct{}
@@ -257,20 +250,16 @@ func (r *Runtime) RequiredGas(input []byte) uint64 {
 	return method.logic.RequiredGas(input)
 }
 
-func (r *Runtime) Handle(suaveContext *SuaveContext, isConfidential bool, input []byte) ([]byte, error) {
+func (r *Runtime) Run(suaveContext *SuaveContext, input []byte) ([]byte, error) {
 	sig := hex.EncodeToString(input[:4])
 	input = input[4:]
-
-	if !isConfidential {
-		return input, nil
-	}
 
 	method, ok := r.methods[sig]
 	if !ok {
 		return nil, fmt.Errorf("runtime method %s not found", sig)
 	}
 
-	log.Info("runtime.Handle", "sig", sig, "confidential", isConfidential, "name", method.name, "input", input)
+	log.Info("runtime.Handle", "sig", sig, "name", method.name, "input", input)
 
 	if metrics.EnabledExpensive {
 		metrics.GetOrRegisterMeter("suave/runtime/"+method.name, nil).Mark(1)
@@ -412,7 +401,7 @@ func (r *Runtime) Register(fn SuavePrecompiledContract) error {
 		return fmt.Errorf("Method %s not found on the abi", funcName)
 	}
 
-	log.Info("runtime registered", "name", funcName, "sig", method.Sig, "id", hex.EncodeToString(method.ID))
+	log.Debug("runtime registered", "name", funcName, "sig", method.Sig, "id", hex.EncodeToString(method.ID))
 
 	if r.methods == nil {
 		r.methods = make(map[string]runtimeMethod)

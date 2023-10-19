@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/holiman/uint256"
 )
 
@@ -40,15 +41,12 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
-var runtimeAddr = common.HexToAddress("0x1100000000000000000000000000000042100002")
-
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
-		if addr == runtimeAddr {
-			return &yyyyyy{
-				suaveContext:   NewRuntimeSuaveContext(evm, addr),
-				isConfidential: evm.Config.IsConfidential,
+		if addr == suave.RuntimeAddr && evm.Config.IsConfidential {
+			return &suaveRuntimePrecompile{
+				suaveContext: NewRuntimeSuaveContext(evm, addr),
 			}, true
 		}
 	}
