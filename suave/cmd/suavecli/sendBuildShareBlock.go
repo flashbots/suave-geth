@@ -175,13 +175,15 @@ func sendBuildShareBlockTx(
 	RequireNoErrorf(err, "could not pack buildMevShare args: %v", err)
 
 	wrappedTxData := &types.ConfidentialComputeRequest{
-		ExecutionNode: executionNodeAddress,
-		Nonce:         suaveAccNonce,
-		To:            &blockSenderAddr,
-		Value:         nil,
-		Gas:           1000000,
-		GasPrice:      big.NewInt(33000000000),
-		Data:          calldata,
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: executionNodeAddress,
+			Nonce:         suaveAccNonce,
+			To:            &blockSenderAddr,
+			Value:         nil,
+			Gas:           1000000,
+			GasPrice:      big.NewInt(33000000000),
+			Data:          calldata,
+		},
 	}
 
 	confidentialRequestTx, err := types.SignTx(types.NewTx(wrappedTxData), suaveSigner, privKey)

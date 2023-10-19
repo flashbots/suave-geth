@@ -124,12 +124,14 @@ func cmdSendBundle() {
 	RequireNoErrorf(err, "could not call eth_gasPrice on suave: %v", err)
 
 	confidentialInnerTxTemplate := &types.ConfidentialComputeRequest{
-		Nonce:    suaveAccNonce, // will be incremented later on
-		To:       &newBundleBidAddress,
-		Value:    nil,
-		Gas:      1000000,
-		GasPrice: (*big.Int)(&suaveGp),
-		Data:     nil, // FillMe!
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			Nonce:    suaveAccNonce, // will be incremented later on
+			To:       &newBundleBidAddress,
+			Value:    nil,
+			Gas:      1000000,
+			GasPrice: (*big.Int)(&suaveGp),
+			Data:     nil, // FillMe!
+		},
 	}
 
 	suaveTxHashes := []common.Hash{}
@@ -238,13 +240,15 @@ func cmdSendBundle() {
 		suaveAccNonce = uint64(suaveAccNonceBytes)
 
 		wrappedTxData := &types.ConfidentialComputeRequest{
-			ExecutionNode: executionNodeAddress,
-			Nonce:         suaveAccNonce,
-			To:            &newBlockBidAddress,
-			Value:         nil,
-			Gas:           1000000,
-			GasPrice:      (*big.Int)(&suaveGp),
-			Data:          calldata,
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: executionNodeAddress,
+				Nonce:         suaveAccNonce,
+				To:            &newBlockBidAddress,
+				Value:         nil,
+				Gas:           1000000,
+				GasPrice:      (*big.Int)(&suaveGp),
+				Data:          calldata,
+			},
 		}
 
 		confidentialRequestTx, err := types.SignTx(types.NewTx(wrappedTxData), suaveSigner, privKey)

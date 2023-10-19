@@ -68,7 +68,9 @@ func newTextContext(t *testing.T) *SuaveContext {
 	t.Cleanup(func() { confEngine.Stop() })
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: common.Address{},
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{},
+		},
 	})
 
 	return &SuaveContext{
@@ -110,7 +112,8 @@ func TestSuave_BidWorkflow(t *testing.T) {
 	for _, c := range cases {
 		bids, err := fetchBids.Do(suaveContext, c.cond, c.namespace)
 		require.NoError(t, err)
-		require.Equal(t, c.bids, bids)
+
+		require.ElementsMatch(t, c.bids, bids)
 	}
 }
 

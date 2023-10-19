@@ -66,7 +66,11 @@ func TestMempool(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
-		creationTx := types.NewTx(&types.ConfidentialComputeRequest{ExecutionNode: fr.ExecutionNode()})
+		creationTx := types.NewTx(&types.ConfidentialComputeRequest{
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+			},
+		})
 
 		bid1, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			Salt:                suave.RandomBidId(),
@@ -388,7 +392,9 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
 		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+			},
 		})
 		require.NoError(t, err)
 

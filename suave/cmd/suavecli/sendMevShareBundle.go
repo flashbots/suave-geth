@@ -175,13 +175,15 @@ func prepareEthBundle(
 
 func prepareMevShareBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, executionNodeAddr common.Address, suaveAccNonce uint64, calldata []byte, mevShareAddr common.Address) (*types.Transaction, hexutil.Bytes, error) {
 	wrappedTxData := &types.ConfidentialComputeRequest{
-		ExecutionNode: executionNodeAddr,
-		Nonce:         suaveAccNonce,
-		To:            &mevShareAddr,
-		Value:         nil,
-		Gas:           10000000,
-		GasPrice:      big.NewInt(33000000000),
-		Data:          calldata,
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: executionNodeAddr,
+			Nonce:         suaveAccNonce,
+			To:            &mevShareAddr,
+			Value:         nil,
+			Gas:           10000000,
+			GasPrice:      big.NewInt(33000000000),
+			Data:          calldata,
+		},
 	}
 
 	confidentialRequestTx, err := types.SignTx(types.NewTx(wrappedTxData), suaveSigner, privKey)

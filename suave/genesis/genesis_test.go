@@ -7,7 +7,7 @@ import (
 )
 
 func TestGenesis(t *testing.T) {
-	_, err := Load("rigil")
+	_, err := Load("test")
 	require.NoError(t, err)
 
 	_, err = Load("./fixtures/genesis-test.json")

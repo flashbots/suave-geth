@@ -52,11 +52,12 @@ Let’s take a look at how you can request confidential computation through an e
 
 1. Pick your favorite execution node. You’ll need its URL and wallet address. Note that the execution node is fully trusted to provide the result of your confidential computation.
 
-2. Craft your confidential computation request. This is a regular Ethereum transaction, where you specify the desired contract address and its (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
+2. Craft your confidential computation record. This is a regular Ethereum transaction (fields are similar to `LegacyTx`), where you specify the desired contract address and its (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
 
     ```go
     allowedPeekers := []common.Address{newBlockBidPeeker, newBundleBidPeeker, buildEthBlockPeeker} // express which contracts should have access to your data (by their addresses)
-    confidentialComputeRequestInner := &types.LegacyTx{
+    confidentialComputeRecord := &types.ConfidentialComputeRecord{
+        ExecutionNode: "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B",
         Nonce:    suaveAccNonce,
         To:       &newBundleBidAddress,
         Value:    nil,
@@ -66,20 +67,20 @@ Let’s take a look at how you can request confidential computation through an e
     }
     ```
 
-3. Wrap your regular transaction into the new `ConfidentialComputeRequest` transaction type, and specify the execution node’s wallet address as the `ExecutionNode` field. Sign the transaction with your wallet.
-
-    ```go
-    confidentialComputeRequest := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-        ExecutionNode: "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B",
-        Wrapped:       *types.NewTx(&confidentialComputeRequestInner),
-    }), suaveSigner, privKey)
-    ```
-
-4. Request confidential computation by submitting your transaction along with your confidential data to the execution node you chose via `eth_sendRawTransaction`.
+3. Wrap your compute record into a `ConfidentialComputeRequest` transaction type, and specify the confidential data.
 
     ```go
     confidentialDataBytes := hexutil.Encode(ethBundle)
-    suaveClient.Call("eth_sendRawTransaction", confidentialComputeRequest, confidentialDataBytes)
+    confidentialComputeRequest := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
+        ConfidentialComputeRecord: confidentialComputeRecord,
+        ConfidentialInputs: confidentialDataBytes,
+    }), suaveSigner, privKey)
+    ```
+
+4. Request confidential computation by submitting your transaction to the execution node you chose via `eth_sendRawTransaction`.
+
+    ```go
+    suaveClient.Call("eth_sendRawTransaction", confidentialComputeRequest)
     ```
 
 5. All done! Once the execution node processes your computation request, the execution node will submit it as `SuaveTransaction` to the mempool.
@@ -180,44 +181,69 @@ Other than ability to access new precompiles, the contracts aiming to be execute
 
 ### Confidential compute requests
 
-We introduce two new transaction types: `ConfidentialComputeRequest`, serving as a request of confidential computation, and `SuaveTransaction` which is the result of a confidential computation. The new confidential computation transactions track the usage of gas during confidential computation, and contain (or reference) the result of the computation in a chain-friendly manner.
+We introduce a few new transaction types.
+
+* `ConfidentialComputeRecord`
+
+    This type serves as an onchain record of computation. It's a part of both the [Confidential Compute Request](#confidential-compute-request) and [Suave Transaction](#suave-transaction).
+
+    ```go
+    type ConfidentialComputeRecord struct {
+        ExecutionNode          common.Address
+        ConfidentialInputsHash common.Hash
+
+        // LegacyTx fields
+        Nonce    uint64
+        GasPrice *big.Int
+        Gas      uint64
+        To       *common.Address `rlp:"nil"`
+        Value    *big.Int
+        Data     []byte
+
+        // Signature fields
+    }
+    ```
+
+* `ConfidentialComputeRequest`
+
+    This type facilitates users in interacting with the MEVM through the `eth_sendRawTransaction` method. After processing, the request's `ConfidentialComputeRecord` is embedded into `SuaveTransaction.ConfidentialComputeRequest` and serves as an onchain record of computation.  
+
+    ```go
+    type ConfidentialComputeRequest struct {
+        ConfidentialComputeRecord
+        ConfidentialInputs []byte
+    }
+    ```
+
+* `SuaveTransaction`
+
+    A specialized transaction type that encapsulates the result of a confidential computation request. It includes the `ConfidentialComputeRequest`, signed by the user, which ensures that the result comes from the expected computor, as the `SuaveTransaction`'s signer must match the `ExecutionNode`.  
+
+    ```go
+    type SuaveTransaction struct {
+        ExecutionNode              common.Address
+        ConfidentialComputeRequest ConfidentialComputeRecord
+        ConfidentialComputeResult  []byte
+        /* Execution node's signature fields */
+    }
+    ```
 
 ![image](suave/docs/conf_comp_request_flow.png)
 
-confidential compute requests (`ConfidentialComputeRequest`) are only intermediary messages between the user requesting confidential computation and the execution node, and are not currently propagated through the mempool or included in blocks. The results of those computations (`SuaveTransaction`) are treated as regular transactions.
-
-```go
-type ConfidentialComputeRequest struct {
-    ExecutionNode common.Address
-    Wrapped  Transaction
-}
-```
-
-`SuaveTransaction` transactions are propagated through the mempool and inserted into blocks as expected, unifying confidential computation with regular on-chain execution.
-
-```go
-type SuaveTransaction struct {
-    ExecutionNode              common.Address
-    ConfidentialComputeRequest Transaction
-    ConfidentialComputeResult  []byte
-    /* Execution node's signature fields */
-}
-```
-
-The confidential computation result is placed in the `ConfidentialComputeResult` field, which is further used instead of the original transaction's calldata for on-chain execution.
 
 The basic flow is as follows:
 
-1. User crafts a usual legacy/dynamic transaction, which calls the contract of their liking
-2. User crafts the confidential computation request (`ConfidentialComputeRequest`):
-    1. User choses an execution node of their liking, that is an address whose signature over the confidential computation result will be trusted
-    2. User embeds the transaction from (1.) into an `ConfidentialComputeRequest` together with the desired execution node's address
-    3. User signs and sends the confidential computation request to an execution node via `eth_sendRawTransaction` (possibly passing in additional confidential data)
-3. The execution node executes the transaction in the confidential mode, providing access to the usual confidential APIs
-4. The execution node creates a `SuaveTransaction` using the confidential computation request and the result of its execution, the node then signs and submits the transaction into the mempool
-5. The transaction makes its way into a block, by executing the `ConfidentialComputeResult` as calldata, as long as the execution node's signature matches the requested executor node in (2.1.)
+1. User crafts a confidential computation request (`ConfidentialComputeRequest`):
+    1. Sets their GasPrice, GasLimit, To address and calldata as they would for a `LegacyTx`
+    2. Choses an execution node of their liking, that is an address whose signature over the confidential computation result will be trusted
+    3. The above becomes the `ConfidentialComputeRecord` that will eventually make its way onto the chain
+    4. Sets the `ConfidentialInputs` of the request (if any)
+    5. Signs and sends the confidential computation request (consisting of (3 and 4) to an execution node via `eth_sendRawTransaction`
+2. The execution node executes the transaction in the confidential mode, providing access to the usual confidential APIs
+3. The execution node creates a `SuaveTransaction` using the confidential computation request and the result of its execution, the node then signs and submits the transaction into the mempool
+4. The transaction makes its way into a block, by executing the `ConfidentialComputeResult` as calldata, as long as the execution node's signature matches the requested executor node in (1.2.)
 
-The user passes in any confidential data through the new `confidential_data` parameter of the `eth_sendRawTransaction` RPC method. The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.
+The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.  
 
 Architecture reference
 ![image](suave/docs/execution_node_architecture.png)
