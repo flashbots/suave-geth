@@ -24,8 +24,8 @@ func TestRedisTransport(t *testing.T) {
 	msgSub, cancel := redisPubSub.Subscribe()
 	t.Cleanup(cancel)
 
-	daMsg := suave.DAMessage{
-		StoreWrites: []suave.StoreWrite{{
+	daMsg := DAMessage{
+		StoreWrites: []StoreWrite{{
 			Bid: suave.Bid{
 				Id:                  suave.BidId{0x42},
 				DecryptionCondition: uint64(13),
@@ -71,14 +71,14 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
 
-	engine1 := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
+	engine1 := NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
 
-	engine2 := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
+	engine2 := NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine2.Start())
 	t.Cleanup(func() { engine2.Stop() })
 
@@ -108,7 +108,7 @@ func TestEngineOnRedis(t *testing.T) {
 	t.Cleanup(cancel)
 
 	// Trigger propagation
-	err = engine1.Finalize(dummyCreationTx, nil, []suave.StoreWrite{{
+	err = engine1.Finalize(dummyCreationTx, nil, []StoreWrite{{
 		Bid:    bid,
 		Caller: bid.AllowedPeekers[0],
 		Key:    "xx",

@@ -9,26 +9,57 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/node"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )
+
+type StoreTransportTopic interface {
+	node.Lifecycle
+	Subscribe() (<-chan DAMessage, context.CancelFunc)
+	Publish(DAMessage)
+}
+
+type DAMessage struct {
+	SourceTx    *types.Transaction `json:"sourceTx"`
+	StoreWrites []StoreWrite       `json:"storeWrites"`
+	StoreUUID   uuid.UUID          `json:"storeUUID"`
+	Signature   suave.Bytes        `json:"signature"`
+}
+
+type StoreWrite struct {
+	Bid    suave.Bid      `json:"bid"`
+	Caller common.Address `json:"caller"`
+	Key    string         `json:"key"`
+	Value  suave.Bytes    `json:"value"`
+}
+
+type DASigner interface {
+	Sign(account common.Address, data []byte) ([]byte, error)
+	Sender(data []byte, signature []byte) (common.Address, error)
+	LocalAddresses() []common.Address
+}
+
+type ChainSigner interface {
+	Sender(tx *types.Transaction) (common.Address, error)
+}
 
 type ConfidentialStoreEngine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
 	backend        suave.ConfidentialStoreBackend
-	transportTopic suave.StoreTransportTopic
+	transportTopic StoreTransportTopic
 
-	daSigner    suave.DASigner
-	chainSigner suave.ChainSigner
+	daSigner    DASigner
+	chainSigner ChainSigner
 
 	storeUUID      uuid.UUID
 	localAddresses map[common.Address]struct{}
 }
 
-func NewConfidentialStoreEngine(backend suave.ConfidentialStoreBackend, transportTopic suave.StoreTransportTopic, daSigner suave.DASigner, chainSigner suave.ChainSigner) *ConfidentialStoreEngine {
+func NewConfidentialStoreEngine(backend suave.ConfidentialStoreBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) *ConfidentialStoreEngine {
 	localAddresses := make(map[common.Address]struct{})
 	for _, addr := range daSigner.LocalAddresses() {
 		localAddresses[addr] = struct{}{}
@@ -177,7 +208,7 @@ func (e *ConfidentialStoreEngine) Retrieve(bidId suave.BidId, caller common.Addr
 	return e.backend.Retrieve(bid, caller, key)
 }
 
-func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[suave.BidId]suave.Bid, stores []suave.StoreWrite) error {
+func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[suave.BidId]suave.Bid, stores []StoreWrite) error {
 	//
 	for _, bid := range newBids {
 		err := e.backend.InitializeBid(bid)
@@ -195,7 +226,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[su
 	}
 
 	// Sign and propagate the message
-	pwMsg := suave.DAMessage{
+	pwMsg := DAMessage{
 		SourceTx:    tx,
 		StoreWrites: stores,
 		StoreUUID:   e.storeUUID,
@@ -227,7 +258,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[su
 	return nil
 }
 
-func (e *ConfidentialStoreEngine) NewMessage(message suave.DAMessage) error {
+func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	// Note the validation is a work in progress and not guaranteed to be correct!
 
 	// Message-level validation
@@ -348,8 +379,8 @@ func SerializeBidForSigning(bid *suave.Bid) ([]byte, error) {
 	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(bidBytes), string(bidBytes))), nil
 }
 
-func SerializeMessageForSigning(message *suave.DAMessage) ([]byte, error) {
-	msgBytes, err := json.Marshal(suave.DAMessage{
+func SerializeMessageForSigning(message *DAMessage) ([]byte, error) {
+	msgBytes, err := json.Marshal(DAMessage{
 		SourceTx:    message.SourceTx,
 		StoreWrites: message.StoreWrites,
 		StoreUUID:   message.StoreUUID,
@@ -367,10 +398,10 @@ type MockTransport struct{}
 func (MockTransport) Start() error { return nil }
 func (MockTransport) Stop() error  { return nil }
 
-func (MockTransport) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+func (MockTransport) Subscribe() (<-chan DAMessage, context.CancelFunc) {
 	return nil, func() {}
 }
-func (MockTransport) Publish(suave.DAMessage) {}
+func (MockTransport) Publish(DAMessage) {}
 
 type MockSigner struct{}
 
@@ -426,4 +457,8 @@ func calculateBidId(bid types.Bid) (types.BidId, error) {
 	copy(bid.Id[:], uuidv5[:])
 
 	return bid.Id, nil
+}
+
+func RandomBidId() types.BidId {
+	return types.BidId(uuid.New())
 }

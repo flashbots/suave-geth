@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
-	"github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,11 +61,11 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+func (m *mockSuaveBackend) Subscribe() (<-chan cstore.DAMessage, context.CancelFunc) {
 	return nil, func() {}
 }
 
-func (m *mockSuaveBackend) Publish(suave.DAMessage) {}
+func (m *mockSuaveBackend) Publish(cstore.DAMessage) {}
 
 var dummyBlockContext = BlockContext{
 	CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
@@ -77,7 +77,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
+	stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
@@ -142,8 +142,8 @@ func TestSuavePrecompileStub(t *testing.T) {
 }
 
 func newTestBackend(t *testing.T) *suaveRuntime {
-	confStore := backends.NewLocalConfidentialStore()
-	confEngine := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
+	confStore := cstore.NewLocalConfidentialStore()
+	confEngine := cstore.NewConfidentialStoreEngine(confStore, &cstore.MockTransport{}, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })

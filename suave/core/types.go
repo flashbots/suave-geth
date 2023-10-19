@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/node"
-	"github.com/google/uuid"
 )
 
 type Bytes = hexutil.Bytes
@@ -48,16 +47,6 @@ var (
 	ErrUnsignedFinalize  = errors.New("finalize called with unsigned transaction, refusing to propagate")
 )
 
-type DASigner interface {
-	Sign(account common.Address, data []byte) ([]byte, error)
-	Sender(data []byte, signature []byte) (common.Address, error)
-	LocalAddresses() []common.Address
-}
-
-type ChainSigner interface {
-	Sender(tx *types.Transaction) (common.Address, error)
-}
-
 type ConfidentialStoreBackend interface {
 	node.Lifecycle
 
@@ -71,24 +60,4 @@ type ConfidentialStoreBackend interface {
 type ConfidentialEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
-}
-
-type StoreTransportTopic interface {
-	node.Lifecycle
-	Subscribe() (<-chan DAMessage, context.CancelFunc)
-	Publish(DAMessage)
-}
-
-type DAMessage struct {
-	SourceTx    *types.Transaction `json:"sourceTx"`
-	StoreWrites []StoreWrite       `json:"storeWrites"`
-	StoreUUID   uuid.UUID          `json:"storeUUID"`
-	Signature   Bytes              `json:"signature"`
-}
-
-type StoreWrite struct {
-	Bid    Bid            `json:"bid"`
-	Caller common.Address `json:"caller"`
-	Key    string         `json:"key"`
-	Value  Bytes          `json:"value"`
 }

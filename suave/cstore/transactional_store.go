@@ -17,7 +17,7 @@ type TransactionalStore struct {
 
 	pendingLock   sync.Mutex
 	pendingBids   map[suave.BidId]suave.Bid
-	pendingWrites []suave.StoreWrite
+	pendingWrites []StoreWrite
 }
 
 func (s *TransactionalStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
@@ -58,7 +58,7 @@ func (s *TransactionalStore) Store(bidId suave.BidId, caller common.Address, key
 
 	s.pendingLock.Lock()
 	defer s.pendingLock.Unlock()
-	s.pendingWrites = append(s.pendingWrites, suave.StoreWrite{
+	s.pendingWrites = append(s.pendingWrites, StoreWrite{
 		Bid:    bid,
 		Caller: caller,
 		Key:    key,

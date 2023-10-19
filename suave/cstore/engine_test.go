@@ -95,10 +95,10 @@ func TestOwnMessageDropping(t *testing.T) {
 
 	*wasCalled = false
 
-	daMessage := suave.DAMessage{
+	daMessage := DAMessage{
 		SourceTx:    dummyCreationTx,
 		StoreUUID:   engine.storeUUID,
-		StoreWrites: []suave.StoreWrite{{Bid: testBid}},
+		StoreWrites: []StoreWrite{{Bid: testBid}},
 	}
 
 	daMessageBytes, err := SerializeMessageForSigning(&daMessage)
