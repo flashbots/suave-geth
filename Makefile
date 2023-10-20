@@ -50,6 +50,11 @@ suavedevtools:
 	./suave/scripts/contracts.sh build
 	go run ./suave/gen/main.go -write
 
+wasm:
+	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/store_retrieve.wasm core/vm/suave_wasm/store_retrieve/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/extract_hint.wasm core/vm/suave_wasm/extract_hint/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/suavexec.wasm core/vm/suave_wasm/suavexec/main.go
+
 devnet-up:
 	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
 

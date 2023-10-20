@@ -91,12 +91,15 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	isConfidentialAddress:     &isConfidentialPrecompile{},
 	confidentialInputsAddress: &confidentialInputsPrecompile{},
 
-	confStoreStoreAddress:    newConfStoreStore(),
-	confStoreRetrieveAddress: newConfStoreRetrieve(),
+	confStoreStoreAddress: newConfStoreStore(),
 
-	newBidAddress:      newNewBid(),
-	fetchBidsAddress:   newFetchBids(),
-	extractHintAddress: &extractHint{},
+	// confStoreRetrieveAddress: newConfStoreRetrieve(),
+	confStoreRetrieveAddress: &WasiPrecompileWrapper{bytecode: wasmRetrieveBytecode},
+
+	newBidAddress:    newNewBid(),
+	fetchBidsAddress: newFetchBids(),
+	//extractHintAddress: &extractHint{},
+	extractHintAddress: &WasiPrecompileWrapper{bytecode: helloworld},
 
 	signEthTransactionAddress:       &signEthTransaction{},
 	simulateBundleAddress:           &simulateBundle{},

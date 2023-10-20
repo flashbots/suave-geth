@@ -16,29 +16,7 @@ var AllowedPeekerAny = common.HexToAddress("0xC8df3686b4Afb2BB53e60EAe97EF043FE0
 type Bytes = hexutil.Bytes
 type BidId = types.BidId
 
-type Bid struct {
-	Id                  types.BidId
-	Salt                types.BidId
-	DecryptionCondition uint64
-	AllowedPeekers      []common.Address
-	AllowedStores       []common.Address
-	Version             string
-	CreationTx          *types.Transaction
-	Signature           []byte
-}
-
-func (b *Bid) ToInnerBid() types.Bid {
-	return types.Bid{
-		Id:                  b.Id,
-		Salt:                b.Salt,
-		DecryptionCondition: b.DecryptionCondition,
-		AllowedPeekers:      b.AllowedPeekers,
-		AllowedStores:       b.AllowedStores,
-		Version:             b.Version,
-	}
-}
-
-type MEVMBid = types.Bid
+type Bid = types.EngineBid
 
 type BuildBlockArgs = types.BuildBlockArgs
 
