@@ -877,7 +877,7 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) ConfidentialStoreBackend() suave.ConfidentialStoreBackend {
+func (f *framework) ConfidentialStoreBackend() cstore.ConfidentialStorageBackend {
 	return f.suethSrv.service.APIBackend.SuaveEngine().Backend()
 }
 

@@ -231,9 +231,12 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, eth.blockchain.Config(), eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	var confidentialStoreBackend suave.ConfidentialStoreBackend
+	var confidentialStoreBackend cstore.ConfidentialStorageBackend
 	if config.Suave.RedisStoreUri != "" {
-		confidentialStoreBackend = cstore.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+		confidentialStoreBackend, err = cstore.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		confidentialStoreBackend = cstore.NewLocalConfidentialStore()
 	}

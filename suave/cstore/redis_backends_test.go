@@ -69,14 +69,14 @@ func TestEngineOnRedis(t *testing.T) {
 	mrPubSub := mrStore1
 
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
-	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
+	redisStoreBackend1, _ := NewRedisStoreBackend(mrStore1.Addr())
 
 	engine1 := NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
-	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
+	redisStoreBackend2, _ := NewRedisStoreBackend(mrStore2.Addr())
 
 	engine2 := NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine2.Start())
@@ -94,7 +94,7 @@ func TestEngineOnRedis(t *testing.T) {
 	bid, err := engine1.InitializeBid(types.Bid{
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
-		AllowedStores:       []common.Address{common.Address{}},
+		AllowedStores:       []common.Address{{}},
 		Version:             string("vv"),
 	}, dummyCreationTx)
 	require.NoError(t, err)

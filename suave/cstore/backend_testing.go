@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testBackendStore(t *testing.T, store suave.ConfidentialStoreBackend) {
+func testBackendStore(t *testing.T, store ConfidentialStorageBackend) {
 	bid := suave.Bid{
 		Id:                  suave.RandomBidId(),
 		DecryptionCondition: 10,
