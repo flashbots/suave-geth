@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   blockscout-backend:
-    image: blockscout/blockscout-suave:${DOCKER_TAG:-latest}
+    image: blockscout/blockscout-suave:${DOCKER_TAG:-5.2.3-postrelease-08cf6668}
     pull_policy: always
     restart: always
     stop_grace_period: 5m

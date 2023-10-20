@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   blockscout-stats:
-    image: ghcr.io/blockscout/stats:${STATS_DOCKER_TAG:-latest}
+    image: ghcr.io/blockscout/stats:${STATS_DOCKER_TAG:-v1.4.1}
     pull_policy: always
     platform: linux/amd64
     restart: always
