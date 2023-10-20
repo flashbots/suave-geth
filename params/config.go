@@ -131,7 +131,7 @@ var (
 	}
 	// SuaveChainConfig contains the chain parameters to run a node on the Suave test network.
 	SuaveChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(424242),
+		ChainID:             big.NewInt(16813125),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      false,
@@ -155,7 +155,7 @@ var (
 
 	// SuaveChainConfig for development with 0 period to avoid mining empty blocks
 	DeveloperSuaveChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(424242),
+		ChainID:             big.NewInt(16813125),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      false,

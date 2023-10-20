@@ -6,71 +6,135 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type ConfidentialComputeRequest struct {
-	ExecutionNode common.Address `json:"executionNode" gencodec:"required"`
-	Wrapped       Transaction    `json:"wrapped" gencodec:"required"`
-	ChainID       *big.Int       // Overwrite the wrapped chain id, since different txs handle it differently. Also probably should overwrite V,R,S
+type ConfidentialComputeRecord struct {
+	Nonce    uint64
+	GasPrice *big.Int
+	Gas      uint64
+	To       *common.Address `rlp:"nil"`
+	Value    *big.Int
+	Data     []byte
+
+	ExecutionNode          common.Address
+	ConfidentialInputsHash common.Hash
+
+	ChainID *big.Int
+	V, R, S *big.Int
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *ConfidentialComputeRequest) copy() TxData {
-	cpy := &ConfidentialComputeRequest{
-		ExecutionNode: tx.ExecutionNode,
-		Wrapped:       *NewTx(tx.Wrapped.inner),
-		ChainID:       new(big.Int),
+func (tx *ConfidentialComputeRecord) copy() TxData {
+	cpy := &ConfidentialComputeRecord{
+		Nonce:                  tx.Nonce,
+		To:                     copyAddressPtr(tx.To),
+		Data:                   common.CopyBytes(tx.Data),
+		Gas:                    tx.Gas,
+		ExecutionNode:          tx.ExecutionNode,
+		ConfidentialInputsHash: tx.ConfidentialInputsHash,
+
+		Value:    new(big.Int),
+		GasPrice: new(big.Int),
+
+		ChainID: new(big.Int),
+		V:       new(big.Int),
+		R:       new(big.Int),
+		S:       new(big.Int),
 	}
 
+	if tx.Value != nil {
+		cpy.Value.Set(tx.Value)
+	}
+	if tx.GasPrice != nil {
+		cpy.GasPrice.Set(tx.GasPrice)
+	}
 	if tx.ChainID != nil {
 		cpy.ChainID.Set(tx.ChainID)
+	}
+	if tx.V != nil {
+		cpy.V.Set(tx.V)
+	}
+	if tx.R != nil {
+		cpy.R.Set(tx.R)
+	}
+	if tx.S != nil {
+		cpy.S.Set(tx.S)
 	}
 
 	return cpy
 }
 
-// accessors for innerTx.
-func (tx *ConfidentialComputeRequest) txType() byte {
-	return ConfidentialComputeRequestTxType
+func (tx *ConfidentialComputeRecord) txType() byte              { return ConfidentialComputeRecordTxType }
+func (tx *ConfidentialComputeRecord) chainID() *big.Int         { return tx.ChainID }
+func (tx *ConfidentialComputeRecord) accessList() AccessList    { return nil }
+func (tx *ConfidentialComputeRecord) data() []byte              { return tx.Data }
+func (tx *ConfidentialComputeRecord) gas() uint64               { return tx.Gas }
+func (tx *ConfidentialComputeRecord) gasPrice() *big.Int        { return tx.GasPrice }
+func (tx *ConfidentialComputeRecord) gasTipCap() *big.Int       { return tx.GasPrice }
+func (tx *ConfidentialComputeRecord) gasFeeCap() *big.Int       { return tx.GasPrice }
+func (tx *ConfidentialComputeRecord) value() *big.Int           { return tx.Value }
+func (tx *ConfidentialComputeRecord) nonce() uint64             { return tx.Nonce }
+func (tx *ConfidentialComputeRecord) to() *common.Address       { return tx.To }
+func (tx *ConfidentialComputeRecord) blobGas() uint64           { return 0 }
+func (tx *ConfidentialComputeRecord) blobGasFeeCap() *big.Int   { return nil }
+func (tx *ConfidentialComputeRecord) blobHashes() []common.Hash { return nil }
+
+func (tx *ConfidentialComputeRecord) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
+	return dst.Set(tx.GasPrice)
 }
 
-func (tx *ConfidentialComputeRequest) data() []byte {
-	return tx.Wrapped.Data()
+func (tx *ConfidentialComputeRecord) rawSignatureValues() (v, r, s *big.Int) {
+	return tx.V, tx.R, tx.S
 }
 
-// Rest is carried over from wrapped tx
-func (tx *ConfidentialComputeRequest) chainID() *big.Int      { return tx.ChainID }
-func (tx *ConfidentialComputeRequest) accessList() AccessList { return tx.Wrapped.inner.accessList() }
-func (tx *ConfidentialComputeRequest) gas() uint64            { return tx.Wrapped.inner.gas() }
-func (tx *ConfidentialComputeRequest) gasFeeCap() *big.Int    { return tx.Wrapped.inner.gasFeeCap() }
-func (tx *ConfidentialComputeRequest) gasTipCap() *big.Int    { return tx.Wrapped.inner.gasTipCap() }
-func (tx *ConfidentialComputeRequest) gasPrice() *big.Int     { return tx.Wrapped.inner.gasFeeCap() }
-func (tx *ConfidentialComputeRequest) value() *big.Int        { return tx.Wrapped.inner.value() }
-func (tx *ConfidentialComputeRequest) nonce() uint64          { return tx.Wrapped.inner.nonce() }
-func (tx *ConfidentialComputeRequest) to() *common.Address    { return tx.Wrapped.inner.to() }
-func (tx *ConfidentialComputeRequest) blobGas() uint64        { return tx.Wrapped.inner.blobGas() }
-func (tx *ConfidentialComputeRequest) blobGasFeeCap() *big.Int {
-	return tx.Wrapped.inner.blobGasFeeCap()
+func (tx *ConfidentialComputeRecord) setSignatureValues(chainID, v, r, s *big.Int) {
+	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
-func (tx *ConfidentialComputeRequest) blobHashes() []common.Hash {
-	return tx.Wrapped.inner.blobHashes()
+
+type ConfidentialComputeRequest struct {
+	ConfidentialComputeRecord
+	ConfidentialInputs []byte
 }
+
+// copy creates a deep copy of the transaction data and initializes all fields.
+func (tx *ConfidentialComputeRequest) copy() TxData {
+	cpy := &ConfidentialComputeRequest{
+		ConfidentialComputeRecord: *(tx.ConfidentialComputeRecord.copy().(*ConfidentialComputeRecord)),
+		ConfidentialInputs:        tx.ConfidentialInputs,
+	}
+
+	return cpy
+}
+
+func (tx *ConfidentialComputeRequest) txType() byte              { return ConfidentialComputeRequestTxType }
+func (tx *ConfidentialComputeRequest) chainID() *big.Int         { return tx.ChainID }
+func (tx *ConfidentialComputeRequest) accessList() AccessList    { return nil }
+func (tx *ConfidentialComputeRequest) data() []byte              { return tx.Data }
+func (tx *ConfidentialComputeRequest) gas() uint64               { return tx.Gas }
+func (tx *ConfidentialComputeRequest) gasPrice() *big.Int        { return tx.GasPrice }
+func (tx *ConfidentialComputeRequest) gasTipCap() *big.Int       { return tx.GasPrice }
+func (tx *ConfidentialComputeRequest) gasFeeCap() *big.Int       { return tx.GasPrice }
+func (tx *ConfidentialComputeRequest) value() *big.Int           { return tx.Value }
+func (tx *ConfidentialComputeRequest) nonce() uint64             { return tx.Nonce }
+func (tx *ConfidentialComputeRequest) to() *common.Address       { return tx.To }
+func (tx *ConfidentialComputeRequest) blobGas() uint64           { return 0 }
+func (tx *ConfidentialComputeRequest) blobGasFeeCap() *big.Int   { return nil }
+func (tx *ConfidentialComputeRequest) blobHashes() []common.Hash { return nil }
 
 func (tx *ConfidentialComputeRequest) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
-	return tx.Wrapped.inner.effectiveGasPrice(dst, baseFee)
+	return dst.Set(tx.GasPrice)
 }
 
 func (tx *ConfidentialComputeRequest) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.Wrapped.inner.rawSignatureValues()
+	return tx.V, tx.R, tx.S
 }
 
 func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.Int) {
-	tx.ChainID = new(big.Int).Set(chainID)
-	tx.Wrapped.inner.setSignatureValues(chainID, v, r, s)
+	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
 
 type SuaveTransaction struct {
-	ExecutionNode              common.Address `json:"executionNode" gencodec:"required"`
-	ConfidentialComputeRequest Transaction    `json:"confidentialComputeRequest" gencodec:"required"`
-	ConfidentialComputeResult  []byte         `json:"confidentialComputeResult" gencodec:"required"`
+	ExecutionNode              common.Address            `json:"executionNode" gencodec:"required"`
+	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`
+	ConfidentialComputeResult  []byte                    `json:"confidentialComputeResult" gencodec:"required"`
 
 	// ExecutionNode's signature
 	ChainID *big.Int
@@ -83,7 +147,7 @@ type SuaveTransaction struct {
 func (tx *SuaveTransaction) copy() TxData {
 	cpy := &SuaveTransaction{
 		ExecutionNode:              tx.ExecutionNode,
-		ConfidentialComputeRequest: *NewTx(tx.ConfidentialComputeRequest.inner),
+		ConfidentialComputeRequest: tx.ConfidentialComputeRequest,
 		ConfidentialComputeResult:  common.CopyBytes(tx.ConfidentialComputeResult),
 		ChainID:                    new(big.Int),
 		V:                          new(big.Int),
@@ -120,31 +184,31 @@ func (tx *SuaveTransaction) data() []byte {
 // Rest is carried over from wrapped tx
 func (tx *SuaveTransaction) chainID() *big.Int { return tx.ChainID }
 func (tx *SuaveTransaction) accessList() AccessList {
-	return tx.ConfidentialComputeRequest.inner.accessList()
+	return tx.ConfidentialComputeRequest.accessList()
 }
-func (tx *SuaveTransaction) gas() uint64 { return tx.ConfidentialComputeRequest.inner.gas() }
+func (tx *SuaveTransaction) gas() uint64 { return tx.ConfidentialComputeRequest.gas() }
 func (tx *SuaveTransaction) gasFeeCap() *big.Int {
-	return tx.ConfidentialComputeRequest.inner.gasFeeCap()
+	return tx.ConfidentialComputeRequest.gasFeeCap()
 }
 func (tx *SuaveTransaction) gasTipCap() *big.Int {
-	return tx.ConfidentialComputeRequest.inner.gasTipCap()
+	return tx.ConfidentialComputeRequest.gasTipCap()
 }
 func (tx *SuaveTransaction) gasPrice() *big.Int {
-	return tx.ConfidentialComputeRequest.inner.gasFeeCap()
+	return tx.ConfidentialComputeRequest.gasFeeCap()
 }
-func (tx *SuaveTransaction) value() *big.Int     { return tx.ConfidentialComputeRequest.inner.value() }
-func (tx *SuaveTransaction) nonce() uint64       { return tx.ConfidentialComputeRequest.inner.nonce() }
-func (tx *SuaveTransaction) to() *common.Address { return tx.ConfidentialComputeRequest.inner.to() }
-func (tx *SuaveTransaction) blobGas() uint64     { return tx.ConfidentialComputeRequest.inner.blobGas() }
+func (tx *SuaveTransaction) value() *big.Int     { return tx.ConfidentialComputeRequest.value() }
+func (tx *SuaveTransaction) nonce() uint64       { return tx.ConfidentialComputeRequest.nonce() }
+func (tx *SuaveTransaction) to() *common.Address { return tx.ConfidentialComputeRequest.to() }
+func (tx *SuaveTransaction) blobGas() uint64     { return tx.ConfidentialComputeRequest.blobGas() }
 func (tx *SuaveTransaction) blobGasFeeCap() *big.Int {
-	return tx.ConfidentialComputeRequest.inner.blobGasFeeCap()
+	return tx.ConfidentialComputeRequest.blobGasFeeCap()
 }
 func (tx *SuaveTransaction) blobHashes() []common.Hash {
-	return tx.ConfidentialComputeRequest.inner.blobHashes()
+	return tx.ConfidentialComputeRequest.blobHashes()
 }
 
 func (tx *SuaveTransaction) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
-	return tx.ConfidentialComputeRequest.inner.effectiveGasPrice(dst, baseFee)
+	return tx.ConfidentialComputeRequest.effectiveGasPrice(dst, baseFee)
 }
 
 func (tx *SuaveTransaction) rawSignatureValues() (v, r, s *big.Int) {

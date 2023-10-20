@@ -43,6 +43,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -51,12 +52,12 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
-	suaveEngine         *suave.ConfidentialStoreEngine
+	suaveEngine         *cstore.ConfidentialStoreEngine
 	suaveEthBackend     suave.ConfidentialEthBackend
 }
 
 // For testing purposes
-func (b *EthAPIBackend) SuaveEngine() *suave.ConfidentialStoreEngine {
+func (b *EthAPIBackend) SuaveEngine() *cstore.ConfidentialStoreEngine {
 	return b.suaveEngine
 }
 

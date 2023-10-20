@@ -114,8 +114,8 @@ func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
 	cfg.Version = params.VersionWithCommit(git.Commit, git.Date)
-	cfg.HTTPModules = append(cfg.HTTPModules, "eth")
-	cfg.WSModules = append(cfg.WSModules, "eth")
+	cfg.HTTPModules = append(cfg.HTTPModules, "eth", "suavex")
+	cfg.WSModules = append(cfg.WSModules, "eth", "suavex")
 	cfg.IPCPath = "geth.ipc"
 	cfg.InsecureUnlockAllowed = true
 	return cfg

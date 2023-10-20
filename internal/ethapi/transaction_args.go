@@ -42,8 +42,8 @@ type TransactionArgs struct {
 	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
 	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
 	Value                *hexutil.Big    `json:"value"`
-	ExecutionNode        *common.Address `json:"executionNode"`
 	IsConfidential       bool            `json:"IsConfidential"`
+	ExecutionNode        *common.Address `json:"executionNode"`
 	ConfidentialInputs   *hexutil.Bytes  `json:"confidentialInputs"` // TODO: testme
 	ConfidentialResult   *hexutil.Bytes  `json:"ConfidentialResult"` // TODO: testme
 	Nonce                *hexutil.Uint64 `json:"nonce"`
@@ -286,6 +286,11 @@ func (args *TransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int) (*
 // toTransaction converts the arguments to a transaction.
 // This assumes that setDefaults has been called.
 func (args *TransactionArgs) toTransaction() *types.Transaction {
+	var executionNode common.Address
+	if args.IsConfidential && args.ExecutionNode != nil {
+		executionNode = *args.ExecutionNode
+	}
+
 	var data types.TxData
 	switch {
 	case args.MaxFeePerGas != nil:
@@ -324,20 +329,38 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			confResult = []byte(*args.ConfidentialResult)
 		}
 
+		var ccr types.ConfidentialComputeRecord
+		confidentialComputeRequest, ok := types.CastTxInner[*types.ConfidentialComputeRecord](requestArgs.toTransaction())
+		if ok {
+			ccr = *confidentialComputeRequest
+		} else {
+			log.Debug("could not cast compute record!")
+		}
+
 		data = &types.SuaveTransaction{
-			ExecutionNode:              *args.ExecutionNode,
+			ExecutionNode:              executionNode,
 			ChainID:                    (*big.Int)(args.ChainID),
-			ConfidentialComputeRequest: *requestArgs.toTransaction(),
+			ConfidentialComputeRequest: ccr,
 			ConfidentialComputeResult:  confResult,
 		}
 	case args.ExecutionNode != nil:
-		wrappedArgs := *args
-		wrappedArgs.ExecutionNode = nil
+		var confidentialInputs []byte
+		if args.ConfidentialInputs != nil {
+			confidentialInputs = *args.ConfidentialInputs
+		}
 
 		data = &types.ConfidentialComputeRequest{
-			ExecutionNode: *args.ExecutionNode,
-			Wrapped:       *wrappedArgs.toTransaction(),
-			ChainID:       (*big.Int)(args.ChainID),
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: executionNode,
+				// TODO: hashme
+				To:       args.To,
+				Nonce:    uint64(*args.Nonce),
+				Gas:      uint64(*args.Gas),
+				GasPrice: (*big.Int)(args.GasPrice),
+				Value:    (*big.Int)(args.Value),
+				Data:     args.data(),
+			},
+			ConfidentialInputs: confidentialInputs,
 		}
 	default:
 		data = &types.LegacyTx{
@@ -348,14 +371,6 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			Value:    (*big.Int)(args.Value),
 			Data:     args.data(),
 		}
-	}
-
-	if args.IsConfidential {
-		var executionNode common.Address
-		if args.ExecutionNode != nil {
-			executionNode = *args.ExecutionNode
-		}
-		data = &types.ConfidentialComputeRequest{ExecutionNode: executionNode, Wrapped: *types.NewTx(data), ChainID: (*big.Int)(args.ChainID)}
 	}
 
 	return types.NewTx(data)

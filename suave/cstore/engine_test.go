@@ -1,4 +1,4 @@
-package suave
+package cstore
 
 import (
 	"errors"
@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -25,29 +26,29 @@ func (FakeDASigner) Sender(data []byte, signature []byte) (common.Address, error
 func (f FakeDASigner) LocalAddresses() []common.Address { return f.localAddresses }
 
 type FakeStoreBackend struct {
-	OnStore func(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
+	OnStore func(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error)
 }
 
 func (*FakeStoreBackend) Start() error { return nil }
 func (*FakeStoreBackend) Stop() error  { return nil }
 
-func (*FakeStoreBackend) InitializeBid(bid Bid) error { return nil }
-func (*FakeStoreBackend) FetchEngineBidById(bidId BidId) (Bid, error) {
-	return Bid{}, errors.New("not implemented")
+func (*FakeStoreBackend) InitializeBid(bid suave.Bid) error { return nil }
+func (*FakeStoreBackend) FetchEngineBidById(bidId suave.BidId) (suave.Bid, error) {
+	return suave.Bid{}, errors.New("not implemented")
 }
 
-func (b *FakeStoreBackend) Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error) {
+func (b *FakeStoreBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	return b.OnStore(bid, caller, key, value)
 }
-func (*FakeStoreBackend) Retrieve(bid Bid, caller common.Address, key string) ([]byte, error) {
+func (*FakeStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (*FakeStoreBackend) FetchBidById(BidId) (Bid, error) {
-	return Bid{}, nil
+func (*FakeStoreBackend) FetchBidById(suave.BidId) (suave.Bid, error) {
+	return suave.Bid{}, nil
 }
 
-func (*FakeStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
+func (*FakeStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
 	return nil
 }
 
@@ -57,7 +58,7 @@ func (*FakeStoreBackend) SubmitBid(types.Bid) error {
 
 func TestOwnMessageDropping(t *testing.T) {
 	var wasCalled *bool = new(bool)
-	fakeStore := FakeStoreBackend{OnStore: func(bid Bid, caller common.Address, key string, value []byte) (Bid, error) {
+	fakeStore := FakeStoreBackend{OnStore: func(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 		*wasCalled = true
 		return bid, nil
 	}}
@@ -68,8 +69,9 @@ func TestOwnMessageDropping(t *testing.T) {
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	// testKeyAddress := crypto.PubkeyToAddress(testKey.PublicKey)
 	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: common.Address{0x42},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{0x42},
+		},
 	}), types.NewSuaveSigner(new(big.Int)), testKey)
 	require.NoError(t, err)
 
@@ -78,7 +80,7 @@ func TestOwnMessageDropping(t *testing.T) {
 		AllowedPeekers: []common.Address{{}},
 	})
 	require.NoError(t, err)
-	testBid := Bid{
+	testBid := suave.Bid{
 		Id:             bidId,
 		CreationTx:     dummyCreationTx,
 		AllowedStores:  []common.Address{{0x42}},

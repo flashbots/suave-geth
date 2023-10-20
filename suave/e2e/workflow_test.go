@@ -34,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
@@ -70,18 +71,16 @@ func TestIsConfidential(t *testing.T) {
 
 	{
 		// Verify sending computation requests and onchain transactions to isConfidentialAddress
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &isConfidentialAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     []byte{},
-		}
-
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+				Nonce:         0,
+				To:            &isConfidentialAddress,
+				Value:         nil,
+				Gas:           1000000,
+				GasPrice:      big.NewInt(10),
+				Data:          []byte{},
+			},
 		}), signer, testKey)
 		require.NoError(t, err)
 
@@ -136,7 +135,11 @@ func TestMempool(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
-		creationTx := types.NewTx(&types.ConfidentialComputeRequest{ExecutionNode: fr.ExecutionNode(), Wrapped: *types.NewTx(&types.LegacyTx{})})
+		creationTx := types.NewTx(&types.ConfidentialComputeRequest{
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+			},
+		})
 
 		bid1, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			Salt:                suave.RandomBidId(),
@@ -191,18 +194,16 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, bid2.Version, bids[1].Version)
 
 		// Verify via transaction
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    0,
-			To:       &fetchBidsAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: big.NewInt(10),
-			Data:     calldata,
-		}
-
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(wrappedTxData),
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+				Nonce:         0,
+				To:            &fetchBidsAddress,
+				Value:         nil,
+				Gas:           1000000,
+				GasPrice:      big.NewInt(10),
+				Data:          calldata,
+			},
 		}), signer, testKey)
 		require.NoError(t, err)
 
@@ -508,8 +509,9 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
 		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
-			ExecutionNode: fr.ExecutionNode(),
-			Wrapped:       *types.NewTx(&types.LegacyTx{}),
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: fr.ExecutionNode(),
+			},
 		})
 		require.NoError(t, err)
 
@@ -521,7 +523,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		}, dummyCreationTx)
 		require.NoError(t, err)
 
-		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []suave.StoreWrite{{
+		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []cstore.StoreWrite{{
 
 			Bid:    bid,
 			Caller: common.Address{0x41, 0x42, 0x43},
@@ -895,11 +897,11 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) ConfidentialStoreBackend() suave.ConfidentialStoreBackend {
+func (f *framework) ConfidentialStoreBackend() cstore.ConfidentialStorageBackend {
 	return f.suethSrv.service.APIBackend.SuaveEngine().Backend()
 }
 
-func (f *framework) ConfidentialEngine() *suave.ConfidentialStoreEngine {
+func (f *framework) ConfidentialEngine() *cstore.ConfidentialStoreEngine {
 	return f.suethSrv.service.APIBackend.SuaveEngine()
 }
 

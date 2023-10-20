@@ -18,7 +18,7 @@ func TestEthBackend_Compatibility(t *testing.T) {
 	// This test ensures that the client is able to call to the server.
 	// It does not cover the internal logic implemention of the endpoints.
 	srv := rpc.NewServer()
-	require.NoError(t, srv.RegisterName("eth", NewEthBackendServer(&mockBackend{})))
+	require.NoError(t, srv.RegisterName("suavex", NewEthBackendServer(&mockBackend{})))
 
 	clt := &RemoteEthBackend{client: rpc.DialInProc(srv)}
 

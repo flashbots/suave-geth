@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
-	"github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,11 +65,11 @@ func (m *mockSuaveBackend) Callx(ctx context.Context, contractAddr common.Addres
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+func (m *mockSuaveBackend) Subscribe() (<-chan cstore.DAMessage, context.CancelFunc) {
 	return nil, func() {}
 }
 
-func (m *mockSuaveBackend) Publish(suave.DAMessage) {}
+func (m *mockSuaveBackend) Publish(cstore.DAMessage) {}
 
 var dummyBlockContext = BlockContext{
 	CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
@@ -81,11 +81,12 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine := suave.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, suave.MockSigner{}, suave.MockChainSigner{})
+	stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: common.Address{},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{},
+		},
 	})
 
 	suaveContext := SuaveContext{
@@ -145,15 +146,16 @@ func TestSuavePrecompileStub(t *testing.T) {
 }
 
 func newTestBackend(t *testing.T) *suaveRuntime {
-	confStore := backends.NewLocalConfidentialStore()
-	confEngine := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
+	confStore := cstore.NewLocalConfidentialStore()
+	confEngine := cstore.NewConfidentialStoreEngine(confStore, &cstore.MockTransport{}, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: common.Address{},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{},
+		},
 	})
 
 	b := &suaveRuntime{
@@ -194,7 +196,8 @@ func TestSuave_BidWorkflow(t *testing.T) {
 	for _, c := range cases {
 		bids, err := b.fetchBids(c.cond, c.namespace)
 		require.NoError(t, err)
-		require.Equal(t, c.bids, bids)
+
+		require.ElementsMatch(t, c.bids, bids)
 	}
 }
 

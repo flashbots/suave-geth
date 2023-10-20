@@ -173,20 +173,19 @@ func prepareEthBackrunBundle(
 }
 
 func prepareMevBackrunBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, executionNodeAddr common.Address, suaveAccNonce uint64, calldata []byte, mevShareAddr common.Address) (*types.Transaction, hexutil.Bytes, error) {
-	wrappedTxData := &types.DynamicFeeTx{
-		Nonce:     suaveAccNonce,
-		To:        &mevShareAddr,
-		Value:     nil,
-		Gas:       10000000,
-		GasTipCap: big.NewInt(10),
-		GasFeeCap: big.NewInt(33000000000),
-		Data:      calldata,
+	wrappedTxData := &types.ConfidentialComputeRequest{
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: executionNodeAddr,
+			Nonce:         suaveAccNonce,
+			To:            &mevShareAddr,
+			Value:         nil,
+			Gas:           10000000,
+			GasPrice:      big.NewInt(33000000000),
+			Data:          calldata,
+		},
 	}
 
-	confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: executionNodeAddr,
-		Wrapped:       *types.NewTx(wrappedTxData),
-	}), suaveSigner, privKey)
+	confidentialRequestTx, err := types.SignTx(types.NewTx(wrappedTxData), suaveSigner, privKey)
 	if err != nil {
 		return nil, nil, err
 	}

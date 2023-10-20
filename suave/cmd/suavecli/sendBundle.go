@@ -123,13 +123,15 @@ func cmdSendBundle() {
 	err = suaveClient.Call(&suaveGp, "eth_gasPrice")
 	RequireNoErrorf(err, "could not call eth_gasPrice on suave: %v", err)
 
-	confidentialInnerTxTemplate := &types.LegacyTx{
-		Nonce:    suaveAccNonce, // will be incremented later on
-		To:       &newBundleBidAddress,
-		Value:    nil,
-		Gas:      1000000,
-		GasPrice: (*big.Int)(&suaveGp),
-		Data:     nil, // FillMe!
+	confidentialInnerTxTemplate := &types.ConfidentialComputeRequest{
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			Nonce:    suaveAccNonce, // will be incremented later on
+			To:       &newBundleBidAddress,
+			Value:    nil,
+			Gas:      1000000,
+			GasPrice: (*big.Int)(&suaveGp),
+			Data:     nil, // FillMe!
+		},
 	}
 
 	suaveTxHashes := []common.Hash{}
@@ -146,14 +148,12 @@ func cmdSendBundle() {
 		calldata, err := bundleBidAbi.Pack("newBid", cTargetBlock, allowedPeekers)
 		RequireNoErrorf(err, "could not pack newBid args: %v", err)
 
-		confidentialRequestInnerTx := *confidentialInnerTxTemplate
-		confidentialRequestInnerTx.Data = calldata
+		confidentialRequestInner := *confidentialInnerTxTemplate
 		confidentialInnerTxTemplate.Nonce += 1
+		confidentialRequestInner.Data = calldata
+		confidentialRequestInner.ExecutionNode = executionNodeAddress
 
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: executionNodeAddress,
-			Wrapped:       *types.NewTx(&confidentialRequestInnerTx),
-		}), suaveSigner, privKey)
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&confidentialRequestInner), suaveSigner, privKey)
 		RequireNoErrorf(err, "could not sign confidentialRequestTx: %v", err)
 
 		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
@@ -239,19 +239,19 @@ func cmdSendBundle() {
 		RequireNoErrorf(err, "could not call eth_getTransactionCount on suave: %v", err)
 		suaveAccNonce = uint64(suaveAccNonceBytes)
 
-		wrappedTxData := &types.LegacyTx{
-			Nonce:    suaveAccNonce,
-			To:       &newBlockBidAddress,
-			Value:    nil,
-			Gas:      1000000,
-			GasPrice: (*big.Int)(&suaveGp),
-			Data:     calldata,
+		wrappedTxData := &types.ConfidentialComputeRequest{
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				ExecutionNode: executionNodeAddress,
+				Nonce:         suaveAccNonce,
+				To:            &newBlockBidAddress,
+				Value:         nil,
+				Gas:           1000000,
+				GasPrice:      (*big.Int)(&suaveGp),
+				Data:          calldata,
+			},
 		}
 
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ExecutionNode: executionNodeAddress,
-			Wrapped:       *types.NewTx(wrappedTxData),
-		}), suaveSigner, privKey)
+		confidentialRequestTx, err := types.SignTx(types.NewTx(wrappedTxData), suaveSigner, privKey)
 		RequireNoErrorf(err, "could not sign block build request: %v", err)
 
 		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()

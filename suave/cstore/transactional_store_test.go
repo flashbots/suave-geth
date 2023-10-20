@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"math/big"
@@ -12,19 +12,20 @@ import (
 )
 
 func TestTransactionalStore(t *testing.T) {
-	engine := suave.NewConfidentialStoreEngine(NewLocalConfidentialStore(), suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
+	engine := NewConfidentialStoreEngine(NewLocalConfidentialStore(), MockTransport{}, MockSigner{}, MockChainSigner{})
 
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: common.Address{0x42},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{0x42},
+		},
 	}), types.NewSuaveSigner(new(big.Int)), testKey)
 	require.NoError(t, err)
 
 	tstore := engine.NewTransactionalStore(dummyCreationTx)
 
 	testBid, err := tstore.InitializeBid(types.Bid{
-		Salt:                suave.RandomBidId(),
+		Salt:                RandomBidId(),
 		DecryptionCondition: 46,
 		AllowedStores:       []common.Address{{0x42}},
 		AllowedPeekers:      []common.Address{{0x43}},

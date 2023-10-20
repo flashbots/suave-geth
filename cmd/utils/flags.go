@@ -77,6 +77,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/genesis"
 	"github.com/ethereum/go-ethereum/trie"
 	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
@@ -1861,7 +1862,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
 	case ctx.Bool(SuaveFlag.Name):
 		if !ctx.IsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 424242
+			cfg.NetworkId = 16813125
 		}
 		cfg.Genesis = core.DefaultSuaveGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.SuaveGenesisHash)
@@ -2309,7 +2310,7 @@ type jsonGenesis struct {
 }
 
 func readJSONGenesis(genesisPath string) (*jsonGenesis, error) {
-	genesisRaw, err := os.ReadFile(genesisPath)
+	genesisRaw, err := genesis.Load(genesisPath)
 	if err != nil {
 		return nil, err
 	}

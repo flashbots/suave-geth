@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"encoding/json"
@@ -24,8 +24,8 @@ func TestRedisTransport(t *testing.T) {
 	msgSub, cancel := redisPubSub.Subscribe()
 	t.Cleanup(cancel)
 
-	daMsg := suave.DAMessage{
-		StoreWrites: []suave.StoreWrite{{
+	daMsg := DAMessage{
+		StoreWrites: []StoreWrite{{
 			Bid: suave.Bid{
 				Id:                  suave.BidId{0x42},
 				DecryptionCondition: uint64(13),
@@ -69,23 +69,24 @@ func TestEngineOnRedis(t *testing.T) {
 	mrPubSub := mrStore1
 
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
-	redisStoreBackend1 := NewRedisStoreBackend(mrStore1.Addr())
+	redisStoreBackend1, _ := NewRedisStoreBackend(mrStore1.Addr())
 
-	engine1 := suave.NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, suave.MockSigner{}, suave.MockChainSigner{})
+	engine1 := NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
-	redisStoreBackend2 := NewRedisStoreBackend(mrStore2.Addr())
+	redisStoreBackend2, _ := NewRedisStoreBackend(mrStore2.Addr())
 
-	engine2 := suave.NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, suave.MockSigner{}, suave.MockChainSigner{})
+	engine2 := NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine2.Start())
 	t.Cleanup(func() { engine2.Stop() })
 
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: common.Address{},
-		Wrapped:       *types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{},
+		},
 	}), types.NewSuaveSigner(new(big.Int)), testKey)
 	require.NoError(t, err)
 
@@ -93,7 +94,7 @@ func TestEngineOnRedis(t *testing.T) {
 	bid, err := engine1.InitializeBid(types.Bid{
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
-		AllowedStores:       []common.Address{common.Address{}},
+		AllowedStores:       []common.Address{{}},
 		Version:             string("vv"),
 	}, dummyCreationTx)
 	require.NoError(t, err)
@@ -107,7 +108,7 @@ func TestEngineOnRedis(t *testing.T) {
 	t.Cleanup(cancel)
 
 	// Trigger propagation
-	err = engine1.Finalize(dummyCreationTx, nil, []suave.StoreWrite{{
+	err = engine1.Finalize(dummyCreationTx, nil, []StoreWrite{{
 		Bid:    bid,
 		Caller: bid.AllowedPeekers[0],
 		Key:    "xx",

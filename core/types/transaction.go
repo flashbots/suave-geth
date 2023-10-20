@@ -46,8 +46,9 @@ const (
 	AccessListTxType                 = 0x01
 	DynamicFeeTxType                 = 0x02
 	BlobTxType                       = 0x03
-	ConfidentialComputeRequestTxType = 0x42
-	SuaveTxType                      = 0x43
+	ConfidentialComputeRecordTxType  = 0x42
+	ConfidentialComputeRequestTxType = 0x43
+	SuaveTxType                      = 0x50
 )
 
 // Transaction is an Ethereum transaction.
