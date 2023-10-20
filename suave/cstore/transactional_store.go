@@ -1,4 +1,4 @@
-package suave
+package cstore
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"golang.org/x/exp/slices"
 )
 
@@ -15,11 +16,11 @@ type TransactionalStore struct {
 	engine   *ConfidentialStoreEngine
 
 	pendingLock   sync.Mutex
-	pendingBids   map[BidId]Bid
+	pendingBids   map[suave.BidId]suave.Bid
 	pendingWrites []StoreWrite
 }
 
-func (s *TransactionalStore) FetchBidById(bidId BidId) (Bid, error) {
+func (s *TransactionalStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
 	s.pendingLock.Lock()
 	bid, ok := s.pendingBids[bidId]
 	s.pendingLock.Unlock()
@@ -31,7 +32,7 @@ func (s *TransactionalStore) FetchBidById(bidId BidId) (Bid, error) {
 	return s.engine.FetchBidById(bidId)
 }
 
-func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
+func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
 	bids := s.engine.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 
 	s.pendingLock.Lock()
@@ -45,14 +46,14 @@ func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, nam
 	return bids
 }
 
-func (s *TransactionalStore) Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error) {
+func (s *TransactionalStore) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	bid, err := s.FetchBidById(bidId)
 	if err != nil {
-		return Bid{}, err
+		return suave.Bid{}, err
 	}
 
 	if !slices.Contains(bid.AllowedPeekers, caller) {
-		return Bid{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, bidId)
+		return suave.Bid{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, bidId)
 	}
 
 	s.pendingLock.Lock()
@@ -67,7 +68,7 @@ func (s *TransactionalStore) Store(bidId BidId, caller common.Address, key strin
 	return bid, nil
 }
 
-func (s *TransactionalStore) Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error) {
+func (s *TransactionalStore) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
 	bid, err := s.FetchBidById(bidId)
 	if err != nil {
 		return nil, err

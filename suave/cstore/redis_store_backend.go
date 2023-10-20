@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-var _ suave.ConfidentialStoreBackend = &RedisStoreBackend{}
+var _ ConfidentialStorageBackend = &RedisStoreBackend{}
 
 var (
 	formatRedisBidKey = func(bidId suave.BidId) string {
@@ -37,15 +37,19 @@ type RedisStoreBackend struct {
 	local    *miniredis.Miniredis
 }
 
-func NewRedisStoreBackend(redisUri string) *RedisStoreBackend {
+func NewRedisStoreBackend(redisUri string) (*RedisStoreBackend, error) {
 	r := &RedisStoreBackend{
 		cancel:   nil,
 		redisUri: redisUri,
 	}
-	return r
+
+	if err := r.start(); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
-func (r *RedisStoreBackend) Start() error {
+func (r *RedisStoreBackend) start() error {
 	if r.redisUri == "" {
 		// create a mini-redis instance
 		localRedis, err := miniredis.Run()
