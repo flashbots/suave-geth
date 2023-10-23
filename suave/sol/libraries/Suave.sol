@@ -43,6 +43,8 @@ library Suave {
 
     address public constant CONFIDENTIAL_STORE_STORE = 0x0000000000000000000000000000000042020000;
 
+    address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
+
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
 
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
@@ -103,6 +105,15 @@ library Suave {
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_STORE_STORE, data);
         }
+    }
+
+    function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = ETHCALL.staticcall(abi.encode(contractAddr, input1));
+        if (!success) {
+            revert PeekerReverted(ETHCALL, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {

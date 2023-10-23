@@ -62,6 +62,10 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 	return p.contract.RequiredGas(input)
 }
 
+var (
+	ethcallAddr = common.HexToAddress("0x0000000000000000000000000000000042100003")
+)
+
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	stub := &SuaveRuntimeAdapter{
 		impl: &suaveRuntime{
@@ -109,6 +113,9 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 
 	case submitEthBlockBidToRelayAddress:
 		return stub.submitEthBlockBidToRelay(input)
+
+	case ethcallAddr:
+		return stub.ethcall(input)
 	}
 
 	return nil, fmt.Errorf("precompile %s not found", p.addr)

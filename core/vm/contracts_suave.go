@@ -335,6 +335,10 @@ type suaveRuntime struct {
 
 var _ SuaveRuntime = &suaveRuntime{}
 
+func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byte, error) {
+	return (&ethCallPrecompile{}).runImpl(b.suaveContext, contractAddr, input)
+}
+
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.BidId, namespace string) ([]byte, []byte, error) {
 	return (&buildEthBlock{}).runImpl(b.suaveContext, blockArgs, bid, namespace)
 }

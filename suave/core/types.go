@@ -60,4 +60,5 @@ type ConfidentialStoreBackend interface {
 type ConfidentialEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
+	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }

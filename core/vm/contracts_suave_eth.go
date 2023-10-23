@@ -133,6 +133,25 @@ func (c *extractHint) runImpl(suaveContext *SuaveContext, bundleBytes []byte) ([
 	return hintBytes, nil
 }
 
+type ethCallPrecompile struct{}
+
+func (e *ethCallPrecompile) RequiredGas(input []byte) uint64 {
+	// Should be proportional to bundle gas limit
+	return 10000
+}
+
+func (e *ethCallPrecompile) Run(input []byte) ([]byte, error) {
+	return input, nil
+}
+
+func (e *ethCallPrecompile) runImpl(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
+	return suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
+}
+
+func (e *ethCallPrecompile) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	return nil, nil
+}
+
 type buildEthBlock struct {
 }
 
