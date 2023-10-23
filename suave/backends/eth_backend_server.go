@@ -14,7 +14,7 @@ import (
 type EthBackend interface {
 	BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
-	Callx(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
+	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
 
 var _ EthBackend = &EthBackendServer{}
@@ -78,6 +78,6 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 	return engine.BlockToExecutableData(block, profit), nil
 }
 
-func (e *EthBackendServer) Callx(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+func (e *EthBackendServer) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
 	return e.b.Call(ctx, contractAddr, input)
 }

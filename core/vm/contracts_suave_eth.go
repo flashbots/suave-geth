@@ -145,7 +145,7 @@ func (e *ethCallPrecompile) Run(input []byte) ([]byte, error) {
 }
 
 func (e *ethCallPrecompile) runImpl(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
-	return suaveContext.Backend.ConfidentialEthBackend.Callx(context.Background(), contractAddr, input)
+	return suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
 }
 
 func (e *ethCallPrecompile) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
