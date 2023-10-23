@@ -42,10 +42,10 @@ type TransactionArgs struct {
 	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
 	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
 	Value                *hexutil.Big    `json:"value"`
-	IsConfidential       bool            `json:"IsConfidential"`
+	IsConfidential       bool            `json:"isConfidential"`
 	ExecutionNode        *common.Address `json:"executionNode"`
 	ConfidentialInputs   *hexutil.Bytes  `json:"confidentialInputs"` // TODO: testme
-	ConfidentialResult   *hexutil.Bytes  `json:"ConfidentialResult"` // TODO: testme
+	ConfidentialResult   *hexutil.Bytes  `json:"confidentialResult"` // TODO: testme
 	Nonce                *hexutil.Uint64 `json:"nonce"`
 
 	// We accept "data" and "input" for backwards-compatibility reasons.
