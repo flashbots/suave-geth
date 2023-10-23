@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,15 +54,19 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
+func (m *mockSuaveBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockSuaveBackend) Subscribe() (<-chan cstore.DAMessage, context.CancelFunc) {
 	return nil, func() {}
 }
 
-func (m *mockSuaveBackend) Publish(suave.DAMessage) {}
+func (m *mockSuaveBackend) Publish(cstore.DAMessage) {}
 
 func newTextContext(t *testing.T) *SuaveContext {
-	confStore := backends.NewLocalConfidentialStore()
-	confEngine := suave.NewConfidentialStoreEngine(confStore, &suave.MockTransport{}, suave.MockSigner{}, suave.MockChainSigner{})
+	confStore := cstore.NewLocalConfidentialStore()
+	confEngine := cstore.NewConfidentialStoreEngine(confStore, &cstore.MockTransport{}, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })

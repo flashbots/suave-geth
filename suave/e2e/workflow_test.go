@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
@@ -403,7 +404,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		}, dummyCreationTx)
 		require.NoError(t, err)
 
-		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []suave.StoreWrite{{
+		err = fr.ConfidentialEngine().Finalize(dummyCreationTx, map[suave.BidId]suave.Bid{bid.Id: bid}, []cstore.StoreWrite{{
 			Bid:    bid,
 			Caller: common.Address{0x41, 0x42, 0x43},
 			Key:    "default:v0:ethBundles",
@@ -625,6 +626,26 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	require.True(t, ok)
 }
 
+func TestE2EPrecompile_Call(t *testing.T) {
+	// This end-to-end tests that the callx precompile gets called from a confidential request
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// We reuse the same address for both the source and target contract
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	expectedNum := big.NewInt(101)
+	_, err := sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, expectedNum}, nil)
+	require.NoError(t, err)
+
+	incorrectNum := big.NewInt(102)
+	_, err = sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, incorrectNum}, nil)
+	require.Error(t, err)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
@@ -741,11 +762,11 @@ func (f *framework) NewSDKClient() *sdk.Client {
 	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
 }
 
-func (f *framework) ConfidentialStoreBackend() suave.ConfidentialStoreBackend {
+func (f *framework) ConfidentialStoreBackend() cstore.ConfidentialStorageBackend {
 	return f.suethSrv.service.APIBackend.SuaveEngine().Backend()
 }
 
-func (f *framework) ConfidentialEngine() *suave.ConfidentialStoreEngine {
+func (f *framework) ConfidentialEngine() *cstore.ConfidentialStoreEngine {
 	return f.suethSrv.service.APIBackend.SuaveEngine()
 }
 
@@ -774,6 +795,8 @@ var (
 	// testAddr is the Ethereum address of the tester account.
 	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
+	testAddr3 = common.Address{0x3}
+
 	testBalance = big.NewInt(2e18)
 
 	newBundleBidAddress   = common.HexToAddress("0x42300000")
@@ -794,6 +817,7 @@ var (
 			newBlockBidAddress:    {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			blockBidSenderAddress: {Balance: big.NewInt(0), Code: ethBlockBidSenderContract.DeployedCode},
 			mevShareAddress:       {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
+			testAddr3:             {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
 		},
 	}
 
@@ -806,6 +830,7 @@ var (
 		Alloc: core.GenesisAlloc{
 			testAddr:  {Balance: testBalance},
 			testAddr2: {Balance: testBalance},
+			testAddr3: {Balance: big.NewInt(0), Code: exampleCallTargetContract.DeployedCode},
 		},
 	}
 

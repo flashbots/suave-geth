@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
-var _ suave.ConfidentialStoreBackend = &LocalConfidentialStore{}
+var _ ConfidentialStorageBackend = &LocalConfidentialStore{}
 
 type LocalConfidentialStore struct {
 	lock    sync.Mutex
@@ -25,10 +25,6 @@ func NewLocalConfidentialStore() *LocalConfidentialStore {
 		dataMap: make(map[string][]byte),
 		index:   make(map[string][]suave.BidId),
 	}
-}
-
-func (l *LocalConfidentialStore) Start() error {
-	return nil
 }
 
 func (l *LocalConfidentialStore) Stop() error {

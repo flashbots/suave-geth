@@ -1,4 +1,4 @@
-package suave
+package cstore
 
 import (
 	"context"
@@ -9,15 +9,60 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/node"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )
+
+// ConfidentialStorageBackend is the interface that must be implemented by a
+// storage backend for the confidential storage engine.
+type ConfidentialStorageBackend interface {
+	InitializeBid(bid suave.Bid) error
+	Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error)
+	Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error)
+	FetchBidById(suave.BidId) (suave.Bid, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid
+	Stop() error
+}
+
+// StoreTransportTopic is the interface that must be implemented by a
+// transport engine for the confidential storage engine.
+type StoreTransportTopic interface {
+	node.Lifecycle
+	Subscribe() (<-chan DAMessage, context.CancelFunc)
+	Publish(DAMessage)
+}
+
+type DAMessage struct {
+	SourceTx    *types.Transaction `json:"sourceTx"`
+	StoreWrites []StoreWrite       `json:"storeWrites"`
+	StoreUUID   uuid.UUID          `json:"storeUUID"`
+	Signature   suave.Bytes        `json:"signature"`
+}
+
+type StoreWrite struct {
+	Bid    suave.Bid      `json:"bid"`
+	Caller common.Address `json:"caller"`
+	Key    string         `json:"key"`
+	Value  suave.Bytes    `json:"value"`
+}
+
+type DASigner interface {
+	Sign(account common.Address, data []byte) ([]byte, error)
+	Sender(data []byte, signature []byte) (common.Address, error)
+	LocalAddresses() []common.Address
+}
+
+type ChainSigner interface {
+	Sender(tx *types.Transaction) (common.Address, error)
+}
 
 type ConfidentialStoreEngine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	backend        ConfidentialStoreBackend
+	storage        ConfidentialStorageBackend
 	transportTopic StoreTransportTopic
 
 	daSigner    DASigner
@@ -27,14 +72,14 @@ type ConfidentialStoreEngine struct {
 	localAddresses map[common.Address]struct{}
 }
 
-func NewConfidentialStoreEngine(backend ConfidentialStoreBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) *ConfidentialStoreEngine {
+func NewConfidentialStoreEngine(backend ConfidentialStorageBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) *ConfidentialStoreEngine {
 	localAddresses := make(map[common.Address]struct{})
 	for _, addr := range daSigner.LocalAddresses() {
 		localAddresses[addr] = struct{}{}
 	}
 
 	return &ConfidentialStoreEngine{
-		backend:        backend,
+		storage:        backend,
 		transportTopic: transportTopic,
 		daSigner:       daSigner,
 		chainSigner:    chainSigner,
@@ -47,15 +92,11 @@ func (e *ConfidentialStoreEngine) NewTransactionalStore(sourceTx *types.Transact
 	return &TransactionalStore{
 		sourceTx:    sourceTx,
 		engine:      e,
-		pendingBids: make(map[BidId]Bid),
+		pendingBids: make(map[suave.BidId]suave.Bid),
 	}
 }
 
 func (e *ConfidentialStoreEngine) Start() error {
-	if err := e.backend.Start(); err != nil {
-		return err
-	}
-
 	if err := e.transportTopic.Start(); err != nil {
 		return err
 	}
@@ -83,7 +124,7 @@ func (e *ConfidentialStoreEngine) Stop() error {
 		log.Warn("Confidential engine: error while stopping transport", "err", err)
 	}
 
-	if err := e.backend.Stop(); err != nil {
+	if err := e.storage.Stop(); err != nil {
 		log.Warn("Confidential engine: error while stopping transport", "err", err)
 	}
 
@@ -91,8 +132,8 @@ func (e *ConfidentialStoreEngine) Stop() error {
 }
 
 // For testing purposes!
-func (e *ConfidentialStoreEngine) Backend() ConfidentialStoreBackend {
-	return e.backend
+func (e *ConfidentialStoreEngine) Backend() ConfidentialStorageBackend {
+	return e.storage
 }
 
 func (e *ConfidentialStoreEngine) ProcessMessages() {
@@ -114,20 +155,20 @@ func (e *ConfidentialStoreEngine) ProcessMessages() {
 	}
 }
 
-func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types.Transaction) (Bid, error) {
+func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types.Transaction) (suave.Bid, error) {
 	expectedId, err := calculateBidId(bid)
 	if err != nil {
-		return Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)
+		return suave.Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)
 	}
 
 	if bid.Id == emptyId {
 		bid.Id = expectedId
 	} else if bid.Id != expectedId {
 		// True in some tests, might be time to rewrite them
-		return Bid{}, errors.New("confidential engine:incorrect bid id passed")
+		return suave.Bid{}, errors.New("confidential engine:incorrect bid id passed")
 	}
 
-	initializedBid := Bid{
+	initializedBid := suave.Bid{
 		Id:                  bid.Id,
 		Salt:                bid.Salt,
 		DecryptionCondition: bid.DecryptionCondition,
@@ -139,32 +180,32 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 
 	bidBytes, err := SerializeBidForSigning(&initializedBid)
 	if err != nil {
-		return Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
+		return suave.Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
 	}
 
 	signingAccount, err := ExecutionNodeFromTransaction(creationTx)
 	if err != nil {
-		return Bid{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
+		return suave.Bid{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
 	}
 
 	initializedBid.Signature, err = e.daSigner.Sign(signingAccount, bidBytes)
 	if err != nil {
-		return Bid{}, fmt.Errorf("confidential engine: could not sign initialized bid: %w", err)
+		return suave.Bid{}, fmt.Errorf("confidential engine: could not sign initialized bid: %w", err)
 	}
 
 	return initializedBid, nil
 }
 
-func (e *ConfidentialStoreEngine) FetchBidById(bidId BidId) (Bid, error) {
-	return e.backend.FetchBidById(bidId)
+func (e *ConfidentialStoreEngine) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+	return e.storage.FetchBidById(bidId)
 }
 
-func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid {
-	return e.backend.FetchBidsByProtocolAndBlock(blockNumber, namespace)
+func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+	return e.storage.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 }
 
-func (e *ConfidentialStoreEngine) Retrieve(bidId BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := e.backend.FetchBidById(bidId)
+func (e *ConfidentialStoreEngine) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
+	bid, err := e.storage.FetchBidById(bidId)
 	if err != nil {
 		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", bidId, err)
 	}
@@ -173,13 +214,13 @@ func (e *ConfidentialStoreEngine) Retrieve(bidId BidId, caller common.Address, k
 		return []byte{}, fmt.Errorf("confidential engine: %x not allowed to retrieve %s on %x", caller, key, bidId)
 	}
 
-	return e.backend.Retrieve(bid, caller, key)
+	return e.storage.Retrieve(bid, caller, key)
 }
 
-func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[BidId]Bid, stores []StoreWrite) error {
+func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[suave.BidId]suave.Bid, stores []StoreWrite) error {
 	//
 	for _, bid := range newBids {
-		err := e.backend.InitializeBid(bid)
+		err := e.storage.InitializeBid(bid)
 		if err != nil {
 			// TODO: deinitialize!
 			return fmt.Errorf("confidential engine: store backend failed to initialize bid: %w", err)
@@ -187,7 +228,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[Bi
 	}
 
 	for _, sw := range stores {
-		if _, err := e.backend.Store(sw.Bid, sw.Caller, sw.Key, sw.Value); err != nil {
+		if _, err := e.storage.Store(sw.Bid, sw.Caller, sw.Key, sw.Value); err != nil {
 			// TODO: deinitialize and deStore!
 			return fmt.Errorf("failed to store data: %w", err)
 		}
@@ -202,7 +243,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[Bi
 
 	if _, sigErr := e.chainSigner.Sender(tx); sigErr != nil {
 		log.Info("confidential engine: refusing to send writes based on unsigned transaction", "hash", tx.Hash().Hex(), "err", sigErr)
-		return ErrUnsignedFinalize
+		return suave.ErrUnsignedFinalize
 	}
 
 	msgBytes, err := SerializeMessageForSigning(&pwMsg)
@@ -312,15 +353,15 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	}
 
 	for _, sw := range message.StoreWrites {
-		err = e.backend.InitializeBid(sw.Bid)
+		err = e.storage.InitializeBid(sw.Bid)
 		if err != nil {
-			if !errors.Is(err, ErrBidAlreadyPresent) {
+			if !errors.Is(err, suave.ErrBidAlreadyPresent) {
 				log.Error("confidential engine: unexpected error while initializing bid from transport: %w", err)
 				continue // Don't abandon!
 			}
 		}
 
-		_, err = e.backend.Store(sw.Bid, sw.Caller, sw.Key, sw.Value)
+		_, err = e.storage.Store(sw.Bid, sw.Caller, sw.Key, sw.Value)
 		if err != nil {
 			log.Error("confidential engine: unexpected error while storing: %w", err)
 			continue // Don't abandon!
@@ -330,8 +371,8 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	return nil
 }
 
-func SerializeBidForSigning(bid *Bid) ([]byte, error) {
-	bidBytes, err := json.Marshal(Bid{
+func SerializeBidForSigning(bid *suave.Bid) ([]byte, error) {
+	bidBytes, err := json.Marshal(suave.Bid{
 		Id:                  bid.Id,
 		Salt:                bid.Salt,
 		DecryptionCondition: bid.DecryptionCondition,
@@ -407,4 +448,26 @@ func ExecutionNodeFromTransaction(tx *types.Transaction) (common.Address, error)
 	}
 
 	return common.Address{}, fmt.Errorf("transaction is not of confidential type")
+}
+
+var emptyId [16]byte
+
+var bidUuidSpace = uuid.UUID{0x42}
+
+func calculateBidId(bid types.Bid) (types.BidId, error) {
+	copy(bid.Id[:], emptyId[:])
+
+	body, err := json.Marshal(bid)
+	if err != nil {
+		return types.BidId{}, fmt.Errorf("could not marshal bid to calculate its id: %w", err)
+	}
+
+	uuidv5 := uuid.NewSHA1(bidUuidSpace, body)
+	copy(bid.Id[:], uuidv5[:])
+
+	return bid.Id, nil
+}
+
+func RandomBidId() types.BidId {
+	return types.BidId(uuid.New())
 }

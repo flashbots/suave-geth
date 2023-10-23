@@ -45,6 +45,8 @@ contract Suave {
 
     function confidentialStoreStore(BidId param1, string memory param2, bytes memory param3) external view {}
 
+    function ethcall(address param1, bytes memory param2) external view returns (bytes memory) {}
+
     function extractHint(bytes memory param1) external view returns (bytes memory) {}
 
     function fetchBids(uint64 param1, string memory param2) external view returns (Bid[] memory) {}

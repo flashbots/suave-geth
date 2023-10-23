@@ -53,6 +53,7 @@ func init() {
 	suaveRuntime.MustRegister(&fetchBids{})
 	suaveRuntime.MustRegister(&buildEthBlock{})
 	suaveRuntime.MustRegister(&submitEthBlockBidToRelay{})
+	suaveRuntime.MustRegister(&ethCallPrecompile{})
 }
 
 type isConfidentialPrecompile2 struct{}

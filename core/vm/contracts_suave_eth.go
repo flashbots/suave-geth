@@ -96,6 +96,24 @@ func (c *extractHint) Do(suaveContext *SuaveContext, bundleBytes []byte) ([]byte
 	return hintBytes, nil
 }
 
+type ethCallPrecompile struct{}
+
+func (e *ethCallPrecompile) RequiredGas(input []byte) uint64 {
+	return 10000
+}
+
+func (e *ethCallPrecompile) Run(input []byte) ([]byte, error) {
+	return input, nil
+}
+
+func (e *ethCallPrecompile) Name() string {
+	return "ethcall"
+}
+
+func (e *ethCallPrecompile) Do(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
+	return suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
+}
+
 type buildEthBlock struct {
 }
 

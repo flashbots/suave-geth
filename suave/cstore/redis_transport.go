@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
 var (
@@ -67,8 +66,8 @@ func (r *RedisPubSubTransport) Stop() error {
 	return nil
 }
 
-func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.CancelFunc) {
-	ch := make(chan suave.DAMessage, 16)
+func (r *RedisPubSubTransport) Subscribe() (<-chan DAMessage, context.CancelFunc) {
+	ch := make(chan DAMessage, 16)
 	ctx, cancel := context.WithCancel(r.ctx)
 
 	// Each subscriber has its own PubSub as it blocks on receive!
@@ -92,7 +91,7 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 				continue
 			}
 
-			var msg suave.DAMessage
+			var msg DAMessage
 			msgBytes := common.Hex2Bytes(rmsg.Payload)
 			if err != nil {
 				log.Trace("Redis pubsub: could not decode message from subscription", "err", err, "msg", rmsg.Payload)
@@ -137,7 +136,7 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan suave.DAMessage, context.Canc
 	return ch, cancel
 }
 
-func (r *RedisPubSubTransport) Publish(message suave.DAMessage) {
+func (r *RedisPubSubTransport) Publish(message DAMessage) {
 	log.Trace("Redis pubsub: publishing", "message", message)
 	data, err := json.Marshal(message)
 	if err != nil {

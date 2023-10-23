@@ -1,4 +1,4 @@
-package backends
+package cstore
 
 import (
 	"github.com/ethereum/go-ethereum/accounts"
