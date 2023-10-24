@@ -37,10 +37,10 @@ contract BundleBidContract is AnyBidContract {
 		Suave.confidentialStoreStore(bid.id, "default:v0:ethBundles", bundleData);
 		Suave.confidentialStoreStore(bid.id, "default:v0:ethBundleSimResults", abi.encode(egp));
 
-		return emitAndReturn(bid, bundleData);
+		return emitAndReturn(bid);
 	}
 
-	function emitAndReturn(Suave.Bid memory bid, bytes memory bundle) internal virtual returns (bytes memory) {
+	function emitAndReturn(Suave.Bid memory bid) internal virtual returns (bytes memory) {
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
 		return bytes.concat(this.emitBid.selector, abi.encode(bid));
 	}
@@ -53,12 +53,12 @@ contract EthBundleSenderContract is BundleBidContract {
 		builderUrls = builderUrls_;
 	}
 
-	function emitAndReturn(Suave.Bid memory bid, bytes memory bundle) internal virtual override returns (bytes memory) {
+	function emitAndReturn(Suave.Bid memory bid) internal virtual override returns (bytes memory) {
 		for (uint i = 0; i < builderUrls.length; i++) {
-			Suave.submitEthBundleToBuilder(builderUrls[i], bundle);
+			Suave.submitEthBundleToBuilder(builderUrls[i], bid.id);
 		}
 
-		return BundleBidContract.emitAndReturn(bid, bundle);
+		return BundleBidContract.emitAndReturn(bid);
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -144,14 +145,10 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	return nil
 }
 
-type confStoreRetrieve struct {
-	inoutAbi abi.Method
-}
+type confStoreRetrieve struct{}
 
 func newConfStoreRetrieve() *confStoreRetrieve {
-	inoutAbi := mustParseMethodAbi(`[{"inputs":[{"type":"bytes16"}, {"type":"bytes16"}, {"type":"string"}],"name":"retrieve","outputs":[{"type":"bytes"}],"stateMutability":"nonpayable","type":"function"}]`, "retrieve")
-
-	return &confStoreRetrieve{inoutAbi}
+	return &confStoreRetrieve{}
 }
 
 func (c *confStoreRetrieve) RequiredGas(input []byte) uint64 {
@@ -167,7 +164,7 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
 	}
 
-	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
+	unpacked, err := artifacts.SuaveAbi.Methods["retrieve"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -187,7 +184,7 @@ func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidI
 
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
-	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
+	for i := len(suaveContext.CallerStack) - 2; i >= 0; i-- { // -2 to ignore the immediate caller (this or another precompile)
 		// Most recent non-nil non-this caller
 		if _c := suaveContext.CallerStack[i]; _c != nil && *_c != confStoreRetrieveAddress {
 			caller = *_c
@@ -387,6 +384,6 @@ func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []by
 	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
 }
 
-func (b *suaveRuntime) submitEthBundleToBuilder(builderUrl string, bundle []byte) ([]byte, error) {
-	return (&submitEthBundleToBuilder{}).runImpl(b.suaveContext, builderUrl, bundle)
+func (b *suaveRuntime) submitEthBundleToBuilder(builderUrl string, bidId types.BidId) ([]byte, error) {
+	return (&submitEthBundleToBuilder{}).runImpl(b.suaveContext, builderUrl, bidId)
 }

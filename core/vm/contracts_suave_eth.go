@@ -501,38 +501,68 @@ func (c *submitEthBundleToBuilder) RunConfidential(suaveContext *SuaveContext, i
 }
 
 type RPCEthBundle struct {
-	Txs []string `json:"txs"`
-	BlockNumber hexutil.Big `json:"blockNumber"`
+	Txs               []string      `json:"txs"`
+	BlockNumber       hexutil.Big   `json:"blockNumber"`
 	RevertingTxHashes []common.Hash `json:"revertingTxHashes"`
 }
 
-func (c *submitEthBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl string, bundleData []byte) ([]byte, error) {
+func (c *submitEthBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl string, bidId types.BidId) ([]byte, error) {
+	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+	if err != nil {
+		return nil, err
+	}
+
+	isAllowed := false
+	for _, ap := range bid.AllowedPeekers {
+		if ap == submitEthBundleToBuilderAddress {
+			isAllowed = true
+			break
+		}
+	}
+
+	if !isAllowed {
+		return nil, fmt.Errorf("submitEthBundleToBuilder (%x) not allowed on %x", submitEthBundleToBuilderAddress, bid.Id)
+	}
+
+	var params interface{}
+	switch bid.Version {
+	case "default:v0:ethBundles":
+		bundleData, err := (&confStoreRetrieve{}).runImpl(suaveContext, bidId, "default:v0:ethBundles")
+		if err != nil {
+			return nil, err
+		}
+
+		var bundle types.SBundle
+		if err := json.Unmarshal(bundleData, &bundle); err != nil {
+			return nil, fmt.Errorf("could not unmarshal bundle data: %w", err)
+		}
+
+		var encodedTxs []string
+		for _, tx := range bundle.Txs {
+			txBytes, err := tx.MarshalBinary()
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal transaction: %w", err)
+			}
+			encodedTxs = append(encodedTxs, hexutil.Encode(txBytes))
+		}
+
+		params = &RPCEthBundle{
+			Txs:               encodedTxs,
+			BlockNumber:       hexutil.Big(*big.NewInt(int64(bundle.BlockNumber))), // TODO: take from decryption cond
+			RevertingTxHashes: bundle.RevertingHashes,
+		}
+	default:
+		return nil, errors.New("bid version not supported")
+	}
+
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
-
-	var bundle types.SBundle
-	if err := json.Unmarshal(bundleData, &bundle); err != nil {
-		return nil, fmt.Errorf("could not unmarshal bundle data: %w", err)
-	}
-
-	var encodedTxs []string
-	for _, tx := range bundle.Txs {
-		txBytes, err := tx.MarshalBinary()
-		if err != nil {
-			return nil, fmt.Errorf("could not marshal transaction: %w", err) 
-		}
-		encodedTxs = append(encodedTxs, hexutil.Encode(txBytes))
-	}
 
 	request := map[string]interface{}{
 		"id":      1,
 		"jsonrpc": "2.0",
 		"method":  "eth_sendBundle",
-		"params": RPCEthBundle{
-			Txs:               encodedTxs,
-			BlockNumber:       hexutil.Big(*big.NewInt(int64(bundle.BlockNumber))), // TODO: take from decryption cond
-			RevertingTxHashes: bundle.RevertingHashes,
-		},
+		"params":  params,
 	}
 
 	body, err := json.Marshal(request)

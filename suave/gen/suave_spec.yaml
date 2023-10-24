@@ -164,8 +164,8 @@ functions:
     input:
       - name: builderUrl
         type: string
-      - name: bundle
-        type: bytes
+      - name: bid
+        type: BidId
     output:
       packed: true
       fields:

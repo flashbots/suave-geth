@@ -295,8 +295,8 @@ func TestBundleBid(t *testing.T) {
 }
 
 type RPCEthBundle struct {
-	Txs []string `json:"txs"`
-	BlockNumber hexutil.Big `json:"blockNumber"`
+	Txs               []string      `json:"txs"`
+	BlockNumber       hexutil.Big   `json:"blockNumber"`
 	RevertingTxHashes []common.Hash `json:"revertingTxHashes"`
 }
 
@@ -306,7 +306,7 @@ func TestBundleSenderContract(t *testing.T) {
 
 	clt := fr.NewSDKClient()
 
-	bundleSentToBuilder := &struct{
+	bundleSentToBuilder := &struct {
 		Params RPCEthBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
@@ -337,7 +337,7 @@ func TestBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 
 		bundle := struct {
-			BlockNumber     int       `json:"blockNumber"`
+			BlockNumber     int                `json:"blockNumber"`
 			Txs             types.Transactions `json:"txs"`
 			RevertingHashes []common.Hash      `json:"revertingHashes"`
 		}{
@@ -364,7 +364,7 @@ func TestBundleSenderContract(t *testing.T) {
 		receipt, err := txRes.Wait()
 		bundleSenderContract := sdk.GetContract(receipt.ContractAddress, EthBundleSenderContract.Abi, clt)
 
-		allowedPeekers := []common.Address{bundleSenderContract.Address()}
+		allowedPeekers := []common.Address{bundleSenderContract.Address(), newBundleSenderAddress}
 
 		_, err = bundleSenderContract.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
@@ -378,7 +378,7 @@ func TestBundleSenderContract(t *testing.T) {
 		require.Equal(t, uint64(1), receipts[0].Status)
 
 		require.Equal(t, 1, len(bundleSentToBuilder.Params.Txs))
-		
+
 		var recoveredTx types.Transaction
 		require.NoError(t, recoveredTx.UnmarshalBinary(hexutil.MustDecode(bundleSentToBuilder.Params.Txs[0])))
 		expectedTxJson, err := signedTx.MarshalJSON()
@@ -1038,8 +1038,8 @@ var (
 
 	fetchBidsAddress       = common.HexToAddress("0x42030001")
 	newBundleBidAddress    = common.HexToAddress("0x42300000")
-	newBundleSenderAddress = common.HexToAddress("0x42300001")
 	newBlockBidAddress     = common.HexToAddress("0x42310000")
+	newBundleSenderAddress = common.HexToAddress("0x42100004")
 
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	extractHintAddress    = common.HexToAddress("0x42100037")

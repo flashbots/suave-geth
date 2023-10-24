@@ -175,13 +175,9 @@ library Suave {
         return data;
     }
 
-    function submitEthBundleToBuilder(string memory builderUrl, bytes memory bundle)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function submitEthBundleToBuilder(string memory builderUrl, BidId bid) internal view returns (bytes memory) {
         require(isConfidential());
-        (bool success, bytes memory data) = SUBMIT_ETH_BUNDLE_TO_BUILDER.staticcall(abi.encode(builderUrl, bundle));
+        (bool success, bytes memory data) = SUBMIT_ETH_BUNDLE_TO_BUILDER.staticcall(abi.encode(builderUrl, bid));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BUNDLE_TO_BUILDER, data);
         }
