@@ -363,6 +363,7 @@ func TestBundleSenderContract(t *testing.T) {
 		fr.suethSrv.ProgressChain()
 
 		receipt, err := txRes.Wait()
+		require.NoError(t, err)
 		bundleSenderContract := sdk.GetContract(receipt.ContractAddress, EthBundleSenderContract.Abi, clt)
 
 		allowedPeekers := []common.Address{bundleSenderContract.Address(), bundleSenderAddress}
@@ -596,6 +597,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 	fr.suethSrv.ProgressChain()
 
 	receipt, err := txRes.Wait()
+	require.NoError(t, err)
 	bundleSenderContract := sdk.GetContract(receipt.ContractAddress, MevShareBundleSenderContract.Abi, clt)
 
 	{

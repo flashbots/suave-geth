@@ -604,15 +604,6 @@ func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl s
 			return nil, fmt.Errorf("could not unmarshal match bundle data for bidId %v: %w", matchBidIds[1], err)
 		}
 
-		var encodedTxs []string
-		for _, tx := range userBundle.Txs {
-			txBytes, err := tx.MarshalBinary()
-			if err != nil {
-				return nil, fmt.Errorf("could not marshal transaction: %w", err)
-			}
-			encodedTxs = append(encodedTxs, hexutil.Encode(txBytes))
-		}
-
 		method = "mev_sendBundle"
 		shareBundle := &RPCMevShareBundle{
 			Version: "v0.1",
@@ -667,7 +658,7 @@ func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl s
 		return nil, err
 	}
 
-	hashedBody := crypto.Keccak256Hash([]byte(body)).Hex()
+	hashedBody := crypto.Keccak256Hash(body).Hex()
 	sig, err := crypto.Sign(accounts.TextHash([]byte(hashedBody)), privKey)
 	if err != nil {
 		return nil, err
