@@ -101,7 +101,7 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	simulateBundleAddress:           &simulateBundle{},
 	buildEthBlockAddress:            &buildEthBlock{},
 	submitEthBlockBidToRelayAddress: &submitEthBlockBidToRelay{},
-	submitEthBundleToBuilderAddress: &submitEthBundleToBuilder{},
+	submitEthBundleToBuilderAddress: &submitBundleToBuilder{},
 
 	ethcallAddr: &ethCallPrecompile{},
 }

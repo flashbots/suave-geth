@@ -380,10 +380,10 @@ func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 	return num.Uint64(), nil
 }
 
-func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
-	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
+func (b *suaveRuntime) submitBundleToBuilder(builderUrl string, bidId types.BidId) ([]byte, error) {
+	return (&submitBundleToBuilder{}).runImpl(b.suaveContext, builderUrl, bidId)
 }
 
-func (b *suaveRuntime) submitEthBundleToBuilder(builderUrl string, bidId types.BidId) ([]byte, error) {
-	return (&submitEthBundleToBuilder{}).runImpl(b.suaveContext, builderUrl, bidId)
+func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
+	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
 }

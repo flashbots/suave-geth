@@ -485,18 +485,18 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 	}, nil
 }
 
-type submitEthBundleToBuilder struct {
+type submitBundleToBuilder struct {
 }
 
-func (c *submitEthBundleToBuilder) RequiredGas(input []byte) uint64 {
+func (c *submitBundleToBuilder) RequiredGas(input []byte) uint64 {
 	return 1000
 }
 
-func (c *submitEthBundleToBuilder) Run(input []byte) ([]byte, error) {
+func (c *submitBundleToBuilder) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
-func (c *submitEthBundleToBuilder) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+func (c *submitBundleToBuilder) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this context")
 }
 
@@ -506,7 +506,7 @@ type RPCEthBundle struct {
 	RevertingTxHashes []common.Hash `json:"revertingTxHashes"`
 }
 
-func (c *submitEthBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl string, bidId types.BidId) ([]byte, error) {
+func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl string, bidId types.BidId) ([]byte, error) {
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return nil, err

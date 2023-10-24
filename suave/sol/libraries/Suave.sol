@@ -53,9 +53,9 @@ library Suave {
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
 
-    address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
+    address public constant SUBMIT_BUNDLE_TO_BUILDER = 0x0000000000000000000000000000000042100004;
 
-    address public constant SUBMIT_ETH_BUNDLE_TO_BUILDER = 0x0000000000000000000000000000000042100004;
+    address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {
@@ -161,6 +161,16 @@ library Suave {
         return abi.decode(data, (uint64));
     }
 
+    function submitBundleToBuilder(string memory builderUrl, BidId bid) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = SUBMIT_BUNDLE_TO_BUILDER.staticcall(abi.encode(builderUrl, bid));
+        if (!success) {
+            revert PeekerReverted(SUBMIT_BUNDLE_TO_BUILDER, data);
+        }
+
+        return data;
+    }
+
     function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)
         internal
         view
@@ -170,16 +180,6 @@ library Suave {
         (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_BID_TO_RELAY.staticcall(abi.encode(relayUrl, builderBid));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BLOCK_BID_TO_RELAY, data);
-        }
-
-        return data;
-    }
-
-    function submitEthBundleToBuilder(string memory builderUrl, BidId bid) internal view returns (bytes memory) {
-        require(isConfidential());
-        (bool success, bytes memory data) = SUBMIT_ETH_BUNDLE_TO_BUILDER.staticcall(abi.encode(builderUrl, bid));
-        if (!success) {
-            revert PeekerReverted(SUBMIT_ETH_BUNDLE_TO_BUILDER, data);
         }
 
         return data;

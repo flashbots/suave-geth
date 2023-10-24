@@ -55,7 +55,7 @@ contract EthBundleSenderContract is BundleBidContract {
 
 	function emitAndReturn(Suave.Bid memory bid) internal virtual override returns (bytes memory) {
 		for (uint i = 0; i < builderUrls.length; i++) {
-			Suave.submitEthBundleToBuilder(builderUrls[i], bid.id);
+			Suave.submitBundleToBuilder(builderUrls[i], bid.id);
 		}
 
 		return BundleBidContract.emitAndReturn(bid);

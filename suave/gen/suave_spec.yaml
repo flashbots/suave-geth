@@ -158,7 +158,7 @@ functions:
       fields:
         - name: output1
           type: bytes
-  - name: submitEthBundleToBuilder
+  - name: submitBundleToBuilder
     address: "0x0000000000000000000000000000000042100004"
     isConfidential: true
     input:
