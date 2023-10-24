@@ -1134,22 +1134,18 @@ var (
 
 	testBalance = big.NewInt(2e18)
 
+	/* precompiles */
 	isConfidentialAddress = common.HexToAddress("0x42010000")
-
-	// confidentialStoreAddress = common.HexToAddress("0x42020000")
-	// confStoreRetrieveAddress = common.HexToAddress("0x42020001")
-
-	fetchBidsAddress    = common.HexToAddress("0x42030001")
-	newBundleBidAddress = common.HexToAddress("0x42300000")
-	newBlockBidAddress  = common.HexToAddress("0x42310000")
-	bundleSenderAddress = common.HexToAddress("0x42100004")
-
+	fetchBidsAddress      = common.HexToAddress("0x42030001")
+	bundleSenderAddress   = common.HexToAddress("0x42100004")
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	extractHintAddress    = common.HexToAddress("0x42100037")
-
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
-	blockBidSenderAddress = common.HexToAddress("0x42300002")
-	mevShareAddress       = common.HexToAddress("0x42100073")
+
+	/* contracts */
+	newBundleBidAddress = common.HexToAddress("0x642300000")
+	newBlockBidAddress  = common.HexToAddress("0x642310000")
+	mevShareAddress     = common.HexToAddress("0x642100073")
 
 	testSuaveGenesis *core.Genesis = &core.Genesis{
 		Timestamp:  1680000000,
@@ -1158,13 +1154,12 @@ var (
 		BaseFee:    big.NewInt(0),
 		Difficulty: big.NewInt(0),
 		Alloc: core.GenesisAlloc{
-			testAddr:              {Balance: testBalance},
-			testAddr2:             {Balance: testBalance},
-			newBundleBidAddress:   {Balance: big.NewInt(0), Code: BundleBidContract.DeployedCode},
-			newBlockBidAddress:    {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
-			blockBidSenderAddress: {Balance: big.NewInt(0), Code: ethBlockBidSenderContract.DeployedCode},
-			mevShareAddress:       {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
-			testAddr3:             {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
+			testAddr:            {Balance: testBalance},
+			testAddr2:           {Balance: testBalance},
+			newBundleBidAddress: {Balance: big.NewInt(0), Code: BundleBidContract.DeployedCode},
+			newBlockBidAddress:  {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
+			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
+			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
 		},
 	}
 
