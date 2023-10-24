@@ -537,6 +537,12 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveDevModeFlag = &cli.BoolFlag{
+		Name:     "suave.dev",
+		Usage:    "Dev mode for suave",
+		Category: flags.SuaveCategory,
+	}
+
 	// Account settings
 	UnlockedAccountFlag = &cli.StringFlag{
 		Name:     "unlock",
