@@ -504,6 +504,24 @@ type RPCEthBundle struct {
 	Txs               []string      `json:"txs"`
 	BlockNumber       hexutil.Big   `json:"blockNumber"`
 	RevertingTxHashes []common.Hash `json:"revertingTxHashes"`
+	RefundPercent     *int          `json:"percent,omitempty"`
+}
+
+type RPCMevShareBundle struct {
+	Version   string `json:"version"`
+	Inclusion struct {
+		Block string `json:"block"`
+	} `json:"inclusion"`
+	Body []struct {
+		Tx        string `json:"tx"`
+		CanRevert bool   `json:"canRevert"`
+	} `json:"body"`
+	Validity struct {
+		Refund []struct {
+			BodyIdx int `json:"bodyIdx"`
+			Percent int `json:"percent"`
+		} `json:"refund"`
+	} `json:"validity"`
 }
 
 func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl string, bidId types.BidId) ([]byte, error) {
@@ -525,6 +543,8 @@ func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl s
 	}
 
 	var params interface{}
+	var method string = "eth_sendBundle"
+
 	switch bid.Version {
 	case "default:v0:ethBundles":
 		bundleData, err := (&confStoreRetrieve{}).runImpl(suaveContext, bidId, "default:v0:ethBundles")
@@ -548,8 +568,79 @@ func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl s
 
 		params = &RPCEthBundle{
 			Txs:               encodedTxs,
-			BlockNumber:       hexutil.Big(*big.NewInt(int64(bundle.BlockNumber))), // TODO: take from decryption cond
+			BlockNumber:       hexutil.Big(*big.NewInt(int64(bid.DecryptionCondition))), // TODO: take from decryption cond
 			RevertingTxHashes: bundle.RevertingHashes,
+		}
+	case "mevshare:v0:matchBids":
+		matchedBundleIdsBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, bidId, "mevshare:v0:mergedBids")
+		if err != nil {
+			return nil, err
+		}
+
+		unpackedBidIds, err := bidIdsAbi.Inputs.Unpack(matchedBundleIdsBytes)
+		if err != nil {
+			return nil, fmt.Errorf("could not unpack bid ids data for bid %v, from cdas: %w", bid, err)
+		}
+
+		matchBidIds := unpackedBidIds[0].([][16]byte)
+
+		userBundleBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, matchBidIds[0], "mevshare:v0:ethBundles")
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
+		}
+
+		var userBundle types.SBundle
+		if err := json.Unmarshal(userBundleBytes, &userBundle); err != nil {
+			return nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
+		}
+
+		matchBundleBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, matchBidIds[1], "mevshare:v0:ethBundles")
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
+		}
+
+		var matchBundle types.SBundle
+		if err := json.Unmarshal(matchBundleBytes, &matchBundle); err != nil {
+			return nil, fmt.Errorf("could not unmarshal match bundle data for bidId %v: %w", matchBidIds[1], err)
+		}
+
+		var encodedTxs []string
+		for _, tx := range userBundle.Txs {
+			txBytes, err := tx.MarshalBinary()
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal transaction: %w", err)
+			}
+			encodedTxs = append(encodedTxs, hexutil.Encode(txBytes))
+		}
+
+		method = "mev_sendBundle"
+		shareBundle := &RPCMevShareBundle{
+			Version: "v0.1",
+		}
+		params = shareBundle
+
+		shareBundle.Inclusion.Block = hexutil.EncodeUint64(bid.DecryptionCondition)
+
+		for _, tx := range append(userBundle.Txs, matchBundle.Txs...) {
+			txBytes, err := tx.MarshalBinary()
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal transaction: %w", err)
+			}
+
+			shareBundle.Body = append(shareBundle.Body, struct {
+				Tx        string `json:"tx"`
+				CanRevert bool   `json:"canRevert"`
+			}{Tx: hexutil.Encode(txBytes)})
+		}
+
+		for i := range userBundle.Txs {
+			shareBundle.Validity.Refund = append(shareBundle.Validity.Refund, struct {
+				BodyIdx int `json:"bodyIdx"`
+				Percent int `json:"percent"`
+			}{
+				BodyIdx: i,
+				Percent: userBundle.RefundPercent,
+			})
 		}
 	default:
 		return nil, errors.New("bid version not supported")
@@ -561,7 +652,7 @@ func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl s
 	request := map[string]interface{}{
 		"id":      1,
 		"jsonrpc": "2.0",
-		"method":  "eth_sendBundle",
+		"method":  method,
 		"params":  params,
 	}
 

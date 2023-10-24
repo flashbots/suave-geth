@@ -422,6 +422,7 @@ func (b *SuaveRuntimeAdapter) submitBundleToBuilder(input []byte) (res []byte, e
 	)
 
 	if output1, err = b.impl.submitBundleToBuilder(builderUrl, bid); err != nil {
+		res = []byte(err.Error())
 		return
 	}
 

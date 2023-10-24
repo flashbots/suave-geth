@@ -117,6 +117,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
+		"submitEthBundleToBuilder (0000000000000000000000000000000042100004) not allowed on 00000000000000000000000000000000",
 	}
 
 	for name, addr := range artifacts.SuaveMethods {
@@ -220,6 +221,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 
 	// now, the caller is allowed to store the bid
 	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &callerAddr)
+	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &confStoreStoreAddress)
 	err = b.confidentialStoreStore(bid.Id, "key", data)
 	require.NoError(t, err)
 
@@ -228,7 +230,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Equal(t, data, val)
 
 	// cannot retrieve the value if the caller is not allowed to
-	b.suaveContext.CallerStack = []*common.Address{}
+	b.suaveContext.CallerStack = []*common.Address{&confStoreRetrieveAddress}
 	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
 	require.Error(t, err)
 }
