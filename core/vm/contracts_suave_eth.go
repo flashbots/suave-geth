@@ -4,15 +4,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -34,6 +38,7 @@ var (
 	extractHintAddress              = common.HexToAddress("0x42100037")
 	buildEthBlockAddress            = common.HexToAddress("0x42100001")
 	submitEthBlockBidToRelayAddress = common.HexToAddress("0x42100002")
+	submitEthBundleToBuilderAddress = common.HexToAddress("0x42100004")
 )
 
 type simulateBundle struct {
@@ -478,4 +483,101 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 		Transactions:  transactionData,
 		Withdrawals:   withdrawalData,
 	}, nil
+}
+
+type submitEthBundleToBuilder struct {
+}
+
+func (c *submitEthBundleToBuilder) RequiredGas(input []byte) uint64 {
+	return 1000
+}
+
+func (c *submitEthBundleToBuilder) Run(input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this context")
+}
+
+func (c *submitEthBundleToBuilder) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this context")
+}
+
+type RPCEthBundle struct {
+	Txs []string `json:"txs"`
+	BlockNumber hexutil.Big `json:"blockNumber"`
+	RevertingTxHashes []common.Hash `json:"revertingTxHashes"`
+}
+
+func (c *submitEthBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl string, bundleData []byte) ([]byte, error) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
+	defer cancel()
+
+	var bundle types.SBundle
+	if err := json.Unmarshal(bundleData, &bundle); err != nil {
+		return nil, fmt.Errorf("could not unmarshal bundle data: %w", err)
+	}
+
+	var encodedTxs []string
+	for _, tx := range bundle.Txs {
+		txBytes, err := tx.MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("could not marshal transaction: %w", err) 
+		}
+		encodedTxs = append(encodedTxs, hexutil.Encode(txBytes))
+	}
+
+	request := map[string]interface{}{
+		"id":      1,
+		"jsonrpc": "2.0",
+		"method":  "eth_sendBundle",
+		"params": RPCEthBundle{
+			Txs:               encodedTxs,
+			BlockNumber:       hexutil.Big(*big.NewInt(int64(bundle.BlockNumber))), // TODO: take from decryption cond
+			RevertingTxHashes: bundle.RevertingHashes,
+		},
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	/* TODO: allow setting in env vars */
+	privKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	hashedBody := crypto.Keccak256Hash([]byte(body)).Hex()
+	sig, err := crypto.Sign(accounts.TextHash([]byte(hashedBody)), privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	signature := crypto.PubkeyToAddress(privKey.PublicKey).Hex() + ":" + hexutil.Encode(sig)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, builderUrl, bytes.NewBuffer(body))
+	if err != nil {
+		return formatPeekerError("could not prepare request to relay: %w", err)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("X-Flashbots-Signature", signature)
+
+	// Execute request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return formatPeekerError("could not send request to relay: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return formatPeekerError("request failed with code %d", resp.StatusCode)
+		}
+
+		return formatPeekerError("request failed with code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil, nil
 }

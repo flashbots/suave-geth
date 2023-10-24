@@ -111,6 +111,9 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	case buildEthBlockAddress:
 		return stub.buildEthBlock(input)
 
+	case submitEthBundleToBuilderAddress:
+		return stub.submitEthBundleToBuilder(input)
+
 	case submitEthBlockBidToRelayAddress:
 		return stub.submitEthBlockBidToRelay(input)
 

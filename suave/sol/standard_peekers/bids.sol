@@ -37,8 +37,28 @@ contract BundleBidContract is AnyBidContract {
 		Suave.confidentialStoreStore(bid.id, "default:v0:ethBundles", bundleData);
 		Suave.confidentialStoreStore(bid.id, "default:v0:ethBundleSimResults", abi.encode(egp));
 
+		return emitAndReturn(bid, bundleData);
+	}
+
+	function emitAndReturn(Suave.Bid memory bid, bytes memory bundle) internal virtual returns (bytes memory) {
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
 		return bytes.concat(this.emitBid.selector, abi.encode(bid));
+	}
+}
+
+contract EthBundleSenderContract is BundleBidContract {
+	string[] public builderUrls;
+
+	constructor(string[] memory builderUrls_) {
+		builderUrls = builderUrls_;
+	}
+
+	function emitAndReturn(Suave.Bid memory bid, bytes memory bundle) internal virtual override returns (bytes memory) {
+		for (uint i = 0; i < builderUrls.length; i++) {
+			Suave.submitEthBundleToBuilder(builderUrls[i], bundle);
+		}
+
+		return BundleBidContract.emitAndReturn(bid, bundle);
 	}
 }
 
@@ -51,7 +71,6 @@ contract MevShareBidContract is AnyBidContract {
 
 	event MatchEvent(
 		Suave.BidId matchBidId,
-		bytes bidhint,
 		bytes matchHint
 	);
 
@@ -108,12 +127,14 @@ contract MevShareBidContract is AnyBidContract {
 		bids[1] = bid.id;
 		Suave.confidentialStoreStore(bid.id, "mevshare:v0:mergedBids", abi.encode(bids));
 
-		return bytes.concat(this.emitBid.selector, abi.encode(bid));
+		return emitMatchBidAndHint(bid, matchHint, matchBundleData);
 	}
 
-	function emitMatchBidAndHint(Suave.Bid calldata bid, bytes memory bidHint, bytes memory matchHint) public {
+	function emitMatchBidAndHint(Suave.Bid memory bid, bytes memory matchHint, bytes memory matchBundle) public virtual returns (bytes memory) {
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
-		emit MatchEvent(bid.id, bidHint, matchHint);
+		emit MatchEvent(bid.id, matchHint);
+
+		return bytes.concat(this.emitBid.selector, abi.encode(bid));
 	}
 }
 

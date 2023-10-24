@@ -386,3 +386,7 @@ func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
 	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
 }
+
+func (b *suaveRuntime) submitEthBundleToBuilder(builderUrl string, bundle []byte) ([]byte, error) {
+	return (&submitEthBundleToBuilder{}).runImpl(b.suaveContext, builderUrl, bundle)
+}

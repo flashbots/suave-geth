@@ -14,6 +14,7 @@ import (
 var (
 	MevShareBidContract       = newArtifact("bids.sol/MevShareBidContract.json")
 	BundleBidContract         = newArtifact("bids.sol/BundleBidContract.json")
+	EthBundleSenderContract   = newArtifact("bids.sol/EthBundleSenderContract.json")
 	buildEthBlockContract     = newArtifact("bids.sol/EthBlockBidContract.json")
 	ethBlockBidSenderContract = newArtifact("bids.sol/EthBlockBidSenderContract.json")
 	suaveLibContract          = newArtifact("SuaveAbi.sol/SuaveAbi.json")
