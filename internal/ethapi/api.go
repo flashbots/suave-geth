@@ -1049,6 +1049,9 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 		}
 
 		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg)
+		if err != nil {
+			return nil, err
+		}
 		if err := finalize(); err != suave.ErrUnsignedFinalize {
 			return nil, err
 		}
