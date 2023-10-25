@@ -95,10 +95,7 @@ func cmdSendBundle() {
 	}), goerliSigner, privKey)
 	RequireNoErrorf(err, "could not sign eth tx: %v", err)
 
-	ethBundle := struct {
-		Txs             types.Transactions `json:"txs"`
-		RevertingHashes []common.Hash      `json:"revertingHashes"`
-	}{
+	ethBundle := &types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
 	}

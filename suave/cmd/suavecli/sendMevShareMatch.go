@@ -158,7 +158,7 @@ func prepareEthBackrunBundle(
 		return types.SBundle{}, nil, err
 	}
 
-	bundle := types.SBundle{
+	bundle := &types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
 	}
@@ -167,7 +167,7 @@ func prepareEthBackrunBundle(
 		return types.SBundle{}, nil, err
 	}
 
-	return bundle, bundleBytes, nil
+	return *bundle, bundleBytes, nil
 }
 
 func prepareMevBackrunBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, executionNodeAddr common.Address, suaveAccNonce uint64, calldata []byte, mevShareAddr common.Address) (*types.Transaction, hexutil.Bytes, error) {
