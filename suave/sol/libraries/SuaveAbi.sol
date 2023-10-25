@@ -13,5 +13,6 @@ contract SuaveAbi {
     function extractHint(bytes memory bundleData) external view returns (bytes memory) {}
 	function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.BidId bid, string memory namespace) external view returns (bytes memory, bytes memory) {}
     function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid) external view returns (bytes memory) {}
-    function submitBundleToBuilder(string memory builderUrl, Suave.BidId bid) internal view returns (bytes memory) {}
+    function fillMevShareBundle(Suave.BidId bidId) external view returns (bytes memory) {}
+    function submitBundleJsonRPC(string memory url, string memory method, bytes memory params) external view returns (bytes memory) {}
 }

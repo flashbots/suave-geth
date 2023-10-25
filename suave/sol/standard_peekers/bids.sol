@@ -37,10 +37,10 @@ contract BundleBidContract is AnyBidContract {
 		Suave.confidentialStoreStore(bid.id, "default:v0:ethBundles", bundleData);
 		Suave.confidentialStoreStore(bid.id, "default:v0:ethBundleSimResults", abi.encode(egp));
 
-		return emitAndReturn(bid);
+		return emitAndReturn(bid, bundleData);
 	}
 
-	function emitAndReturn(Suave.Bid memory bid) internal virtual returns (bytes memory) {
+	function emitAndReturn(Suave.Bid memory bid, bytes memory) internal virtual returns (bytes memory) {
 		emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
 		return bytes.concat(this.emitBid.selector, abi.encode(bid));
 	}
@@ -53,12 +53,12 @@ contract EthBundleSenderContract is BundleBidContract {
 		builderUrls = builderUrls_;
 	}
 
-	function emitAndReturn(Suave.Bid memory bid) internal virtual override returns (bytes memory) {
+	function emitAndReturn(Suave.Bid memory bid, bytes memory bundleData) internal virtual override returns (bytes memory) {
 		for (uint i = 0; i < builderUrls.length; i++) {
-			Suave.submitBundleToBuilder(builderUrls[i], bid.id);
+			Suave.submitBundleJsonRPC(builderUrls[i], "eth_sendBundle", bundleData);
 		}
 
-		return BundleBidContract.emitAndReturn(bid);
+		return BundleBidContract.emitAndReturn(bid, bundleData);
 	}
 }
 
@@ -146,8 +146,9 @@ contract MevShareBundleSenderContract is MevShareBidContract {
 	}
 
 	function emitMatchBidAndHint(Suave.Bid memory bid, bytes memory matchHint) internal virtual override returns (bytes memory) {
+		bytes memory bundleData = Suave.fillMevShareBundle(bid.id);
 		for (uint i = 0; i < builderUrls.length; i++) {
-			Suave.submitBundleToBuilder(builderUrls[i], bid.id);
+			Suave.submitBundleJsonRPC(builderUrls[i], "mev_sendBundle", bundleData);
 		}
 
 		return MevShareBidContract.emitMatchBidAndHint(bid, matchHint);

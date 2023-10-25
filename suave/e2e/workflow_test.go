@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -241,12 +240,8 @@ func TestBundleBid(t *testing.T) {
 		targetBlock := uint64(16103213)
 		allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBundleBidAddress}
 
-		bundle := struct {
-			Txs             types.Transactions `json:"txs"`
-			RevertingHashes []common.Hash      `json:"revertingHashes"`
-		}{
-			Txs:             types.Transactions{types.NewTx(&types.LegacyTx{})},
-			RevertingHashes: []common.Hash{},
+		bundle := &types.SBundle{
+			Txs: types.Transactions{types.NewTx(&types.LegacyTx{})},
 		}
 		bundleBytes, err := json.Marshal(bundle)
 		require.NoError(t, err)
@@ -295,13 +290,6 @@ func TestBundleBid(t *testing.T) {
 	}
 }
 
-type RPCEthBundle struct {
-	Txs               []string      `json:"txs"`
-	BlockNumber       hexutil.Big   `json:"blockNumber"`
-	RevertingTxHashes []common.Hash `json:"revertingTxHashes"`
-	RefundPercent     *int          `json:"percent,omitempty"`
-}
-
 func TestBundleSenderContract(t *testing.T) {
 	fr := newFramework(t)
 	defer fr.Close()
@@ -309,7 +297,7 @@ func TestBundleSenderContract(t *testing.T) {
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params RPCEthBundle
+		Params types.RpcSBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -317,6 +305,7 @@ func TestBundleSenderContract(t *testing.T) {
 
 		err = json.Unmarshal(bodyBytes, bundleSentToBuilder)
 		if err != nil {
+			require.NoError(t, err, string(bodyBytes))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -337,14 +326,9 @@ func TestBundleSenderContract(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		bundle := struct {
-			BlockNumber     int                `json:"blockNumber"`
-			Txs             types.Transactions `json:"txs"`
-			RevertingHashes []common.Hash      `json:"revertingHashes"`
-		}{
-			BlockNumber:     int(targetBlock),
-			Txs:             types.Transactions{signedTx},
-			RevertingHashes: []common.Hash{},
+		bundle := &types.SBundle{
+			BlockNumber: big.NewInt(int64(targetBlock)),
+			Txs:         types.Transactions{signedTx},
 		}
 		bundleBytes, err := json.Marshal(bundle)
 		require.NoError(t, err)
@@ -366,7 +350,7 @@ func TestBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 		bundleSenderContract := sdk.GetContract(receipt.ContractAddress, EthBundleSenderContract.Abi, clt)
 
-		allowedPeekers := []common.Address{bundleSenderContract.Address(), bundleSenderAddress}
+		allowedPeekers := []common.Address{bundleSenderContract.Address()}
 
 		_, err = bundleSenderContract.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
@@ -382,7 +366,7 @@ func TestBundleSenderContract(t *testing.T) {
 		require.Equal(t, 1, len(bundleSentToBuilder.Params.Txs))
 
 		var recoveredTx types.Transaction
-		require.NoError(t, recoveredTx.UnmarshalBinary(hexutil.MustDecode(bundleSentToBuilder.Params.Txs[0])))
+		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params.Txs[0]))
 		expectedTxJson, err := signedTx.MarshalJSON()
 		require.NoError(t, err)
 		recoveredTxJson, err := recoveredTx.MarshalJSON()
@@ -404,10 +388,11 @@ func prepareMevShareBundle(t *testing.T) (*types.Transaction, types.SBundle, []b
 	}), signer, testKey)
 	require.NoError(t, err)
 
-	bundle := types.SBundle{
+	refundPercent := 10
+	bundle := &types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
-		RefundPercent:   10,
+		RefundPercent:   &refundPercent,
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	require.NoError(t, err)
@@ -415,7 +400,7 @@ func prepareMevShareBundle(t *testing.T) (*types.Transaction, types.SBundle, []b
 	confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 	require.NoError(t, err)
 
-	return ethTx, bundle, confidentialDataBytes
+	return ethTx, *bundle, confidentialDataBytes
 }
 
 func prepareMevShareBackrun(t *testing.T, shareBidId types.BidId) (*types.Transaction, types.SBundle, []byte) {
@@ -429,10 +414,9 @@ func prepareMevShareBackrun(t *testing.T, shareBidId types.BidId) (*types.Transa
 	}), signer, testKey2)
 	require.NoError(t, err)
 
-	backRunBundle := types.SBundle{
+	backRunBundle := &types.SBundle{
 		Txs:             types.Transactions{backrunTx},
 		RevertingHashes: []common.Hash{},
-		MatchId:         shareBidId,
 	}
 	backRunBundleBytes, err := json.Marshal(backRunBundle)
 	require.NoError(t, err)
@@ -440,7 +424,7 @@ func prepareMevShareBackrun(t *testing.T, shareBidId types.BidId) (*types.Transa
 	confidentialDataMatchBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 	require.NoError(t, err)
 
-	return backrunTx, backRunBundle, confidentialDataMatchBytes
+	return backrunTx, *backRunBundle, confidentialDataMatchBytes
 }
 
 func TestMevShare(t *testing.T) {
@@ -463,7 +447,7 @@ func TestMevShare(t *testing.T) {
 	targetBlock := uint64(1)
 
 	// Send a bundle bid
-	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, extractHintAddress, buildEthBlockAddress, mevShareAddress}
+	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, buildEthBlockAddress, mevShareAddress}
 
 	bundleBidContractI := sdk.GetContract(mevShareAddress, BundleBidContract.Abi, clt)
 	_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}}, confidentialDataBytes)
@@ -568,7 +552,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params vm.RPCMevShareBundle
+		Params types.RPCMevShareBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -607,7 +591,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		targetBlock := uint64(1)
 
 		// Send a bundle bid
-		allowedPeekers := []common.Address{extractHintAddress, bundleSenderAddress, bundleSenderContract.Address()}
+		allowedPeekers := []common.Address{fillMevShareBundleAddress, bundleSenderContract.Address()}
 
 		txRes, err := bundleSenderContract.SendTransaction("newBid", []interface{}{targetBlock, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
@@ -680,12 +664,8 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	}), signer, testKey)
 	require.NoError(t, err)
 
-	bundle := struct {
-		Txs             types.Transactions `json:"txs"`
-		RevertingHashes []common.Hash      `json:"revertingHashes"`
-	}{
-		Txs:             types.Transactions{ethTx},
-		RevertingHashes: []common.Hash{},
+	bundle := &types.SBundle{
+		Txs: types.Transactions{ethTx},
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	require.NoError(t, err)
@@ -787,10 +767,7 @@ func TestBlockBuildingContract(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	bundle := struct {
-		Txs             types.Transactions `json:"txs"`
-		RevertingHashes []common.Hash      `json:"revertingHashes"`
-	}{
+	bundle := &types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
 	}
@@ -903,10 +880,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	bundle := struct {
-		Txs             types.Transactions `json:"txs"`
-		RevertingHashes []common.Hash      `json:"revertingHashes"`
-	}{
+	bundle := &types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
 	}
@@ -1137,12 +1111,11 @@ var (
 	testBalance = big.NewInt(2e18)
 
 	/* precompiles */
-	isConfidentialAddress = common.HexToAddress("0x42010000")
-	fetchBidsAddress      = common.HexToAddress("0x42030001")
-	bundleSenderAddress   = common.HexToAddress("0x42100004")
-	simulateBundleAddress = common.HexToAddress("0x42100000")
-	extractHintAddress    = common.HexToAddress("0x42100037")
-	buildEthBlockAddress  = common.HexToAddress("0x42100001")
+	isConfidentialAddress     = common.HexToAddress("0x42010000")
+	fetchBidsAddress          = common.HexToAddress("0x42030001")
+	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
+	simulateBundleAddress     = common.HexToAddress("0x42100000")
+	buildEthBlockAddress      = common.HexToAddress("0x42100001")
 
 	/* contracts */
 	newBundleBidAddress = common.HexToAddress("0x642300000")

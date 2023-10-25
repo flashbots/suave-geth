@@ -160,10 +160,11 @@ func prepareEthBundle(
 		return types.SBundle{}, nil, err
 	}
 
+	refundPercent := 10
 	bundle := types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
-		RefundPercent:   10,
+		RefundPercent:   &refundPercent,
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	if err != nil {

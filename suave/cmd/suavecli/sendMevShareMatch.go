@@ -102,7 +102,7 @@ func sendMevShareMatchTx(
 	// account specific
 	privKey *ecdsa.PrivateKey,
 ) (*common.Hash, error) {
-	_, backrunBundleBytes, err := prepareEthBackrunBundle(goerliClient, goerliSigner, privKey, matchBidId)
+	_, backrunBundleBytes, err := prepareEthBackrunBundle(goerliClient, goerliSigner, privKey)
 	RequireNoErrorf(err, "could not prepare backrun bundle: %v", err)
 
 	// Send a bundle bid
@@ -139,7 +139,6 @@ func prepareEthBackrunBundle(
 	goerliClient *rpc.Client,
 	goerliSigner types.Signer,
 	privKey *ecdsa.PrivateKey,
-	matchBidId types.BidId,
 ) (types.SBundle, []byte, error) {
 	var goerliAccNonce hexutil.Uint64
 	err := goerliClient.Call(&goerliAccNonce, "eth_getTransactionCount", crypto.PubkeyToAddress(privKey.PublicKey), "latest")
@@ -162,7 +161,6 @@ func prepareEthBackrunBundle(
 	bundle := types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
-		MatchId:         matchBidId,
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	if err != nil {

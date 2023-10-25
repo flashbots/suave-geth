@@ -111,8 +111,11 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	case buildEthBlockAddress:
 		return stub.buildEthBlock(input)
 
-	case submitEthBundleToBuilderAddress:
-		return stub.submitBundleToBuilder(input)
+	case fillMevShareBundleAddress:
+		return stub.fillMevShareBundle(input)
+
+	case submitBundleJsonRPCAddress:
+		return stub.submitBundleJsonRPC(input)
 
 	case submitEthBlockBidToRelayAddress:
 		return stub.submitEthBlockBidToRelay(input)
@@ -122,4 +125,11 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("precompile %s not found", p.addr)
+}
+
+func formatDebugReturn(data []byte, err error) ([]byte, error) {
+	if err != nil && data == nil {
+		return []byte(err.Error()), err
+	}
+	return data, err
 }
