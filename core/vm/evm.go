@@ -40,9 +40,33 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+var dd *DispatchTable
+
+func init() {
+	dd = NewDispatchTable()
+	dd.MustRegister(&confStoreStore{})
+	dd.MustRegister(&confStoreRetrieve{})
+	dd.MustRegister(&ethCallPrecompile{})
+	dd.MustRegister(&newBid{})
+	dd.MustRegister(&fetchBids{})
+	dd.MustRegister(&submitEthBlockBidToRelay{})
+	dd.MustRegister(&buildEthBlock{})
+	dd.MustRegister(&ethCallPrecompile{})
+	dd.MustRegister(&extractHint{})
+	dd.MustRegister(&simulateBundle{})
+	dd.MustRegister(&confidentialInputsPrecompile{})
+}
+
+func GetRuntime() *DispatchTable {
+	return dd
+}
+
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
+		if dd.IsPrecompile(addr) {
+			return dd.Wrap(evm.SuaveContext, addr), true
+		}
 		if p, ok := PrecompiledContractsSuave[addr]; ok {
 			if evm.Config.IsConfidential {
 				suaveContext := NewRuntimeSuaveContext(evm, addr)

@@ -73,6 +73,18 @@ func (c *confidentialInputsPrecompile) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this suaveContext")
 }
 
+func (c *confidentialInputsPrecompile) Address() common.Address {
+	return confidentialInputsAddress
+}
+
+func (c *confidentialInputsPrecompile) Name() string {
+	return "confidentialInputs"
+}
+
+func (c *confidentialInputsPrecompile) Do(suaveContext *SuaveContext) ([]byte, error) {
+	return suaveContext.ConfidentialInputs, nil
+}
+
 func (c *confidentialInputsPrecompile) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
 	return suaveContext.ConfidentialInputs, nil
 }
@@ -95,6 +107,18 @@ func (c *confStoreStore) RequiredGas(input []byte) uint64 {
 
 func (c *confStoreStore) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this suaveContext")
+}
+
+func (c *confStoreStore) Name() string {
+	return "confidentialStoreStore"
+}
+
+func (c *confStoreStore) Address() common.Address {
+	return confStoreStoreAddress
+}
+
+func (c *confStoreStore) Do(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
+	return c.runImpl(suaveContext, bidId, key, data)
 }
 
 func (c *confStoreStore) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
@@ -178,6 +202,18 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 	return c.runImpl(suaveContext, bidId, key)
 }
 
+func (c *confStoreRetrieve) Address() common.Address {
+	return confStoreRetrieveAddress
+}
+
+func (c *confStoreRetrieve) Do(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
+	return c.runImpl(suaveContext, bidId, key)
+}
+
+func (c *confStoreRetrieve) Name() string {
+	return "confidentialStoreRetrieve"
+}
+
 func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
 	if len(suaveContext.CallerStack) == 0 {
 		return nil, errors.New("not allowed in this suaveContext")
@@ -245,6 +281,14 @@ func (c *newBid) RunConfidential(suaveContext *SuaveContext, input []byte) ([]by
 	return c.inoutAbi.Outputs.Pack(bid)
 }
 
+func (c *newBid) Address() common.Address {
+	return newBidAddress
+}
+
+func (c *newBid) Do(suaveContext *SuaveContext, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, version string) (*types.Bid, error) {
+	return c.runImpl(suaveContext, version, decryptionCondition, allowedPeekers, allowedStores)
+}
+
 func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address) (*types.Bid, error) {
 	if suaveContext.ConfidentialComputeRequestTx == nil {
 		panic("newBid: source transaction not present")
@@ -299,8 +343,18 @@ func (c *fetchBids) RunConfidential(suaveContext *SuaveContext, input []byte) ([
 	return c.inoutAbi.Outputs.Pack(bids)
 }
 
+func (c *fetchBids) Address() common.Address {
+	return fetchBidsAddress
+}
+
+func (c *fetchBids) Do(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
+	return c.runImpl(suaveContext, targetBlock, namespace)
+}
+
 func (c *fetchBids) runImpl(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
 	bids1 := suaveContext.Backend.ConfidentialStore.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+
+	fmt.Println("-- bids --", targetBlock, namespace, bids1)
 
 	bids := make([]types.Bid, 0, len(bids1))
 	for _, bid := range bids1 {
@@ -380,7 +434,7 @@ func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return num.Uint64(), nil
+	return num, nil
 }
 
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {

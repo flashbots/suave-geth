@@ -1,6 +1,6 @@
 pragma solidity ^0.8.8;
 
-import "../libraries/Suave.sol";
+import "../libraries/Suave2.sol";
 
 contract ExampleEthCallSource {
     function callTarget(address target, uint256 expected) public {

@@ -54,17 +54,25 @@ func (c *simulateBundle) RunConfidential(suaveContext *SuaveContext, input []byt
 		return []byte(err.Error()), err
 	}
 
-	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
+	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp)
 }
 
-func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big.Int, error) {
+func (c *simulateBundle) Address() common.Address {
+	return simulateBundleAddress
+}
+
+func (c *simulateBundle) Do(suaveContext *SuaveContext, input []byte) (uint64, error) {
+	return c.runImpl(suaveContext, input)
+}
+
+func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (uint64, error) {
 	bundle := struct {
 		Txs             types.Transactions `json:"txs"`
 		RevertingHashes []common.Hash      `json:"revertingHashes"`
 	}{}
 	err := json.Unmarshal(input, &bundle)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
@@ -72,15 +80,15 @@ func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big
 
 	envelope, err := suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	if envelope.ExecutionPayload.GasUsed == 0 {
-		return nil, err
+		return 0, err
 	}
 
 	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
-	return egp, nil
+	return egp.Uint64(), nil
 }
 
 type extractHint struct{}
@@ -101,6 +109,14 @@ func (c *extractHint) RunConfidential(suaveContext *SuaveContext, input []byte) 
 
 	bundleBytes := unpacked[0].([]byte)
 
+	return c.runImpl(suaveContext, bundleBytes)
+}
+
+func (c *extractHint) Address() common.Address {
+	return extractHintAddress
+}
+
+func (c *extractHint) Do(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
 	return c.runImpl(suaveContext, bundleBytes)
 }
 
@@ -142,6 +158,18 @@ func (e *ethCallPrecompile) RequiredGas(input []byte) uint64 {
 
 func (e *ethCallPrecompile) Run(input []byte) ([]byte, error) {
 	return input, nil
+}
+
+func (e *ethCallPrecompile) Name() string {
+	return "ethcall"
+}
+
+func (e *ethCallPrecompile) Address() common.Address {
+	return ethcallAddr
+}
+
+func (e *ethCallPrecompile) Do(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
+	return e.runImpl(suaveContext, contractAddr, input)
 }
 
 func (e *ethCallPrecompile) runImpl(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
@@ -216,6 +244,14 @@ func (c *buildEthBlock) RunConfidential(suaveContext *SuaveContext, input []byte
 	}
 
 	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
+}
+
+func (c *buildEthBlock) Address() common.Address {
+	return buildEthBlockAddress
+}
+
+func (c *buildEthBlock) Do(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
+	return c.runImpl(suaveContext, blockArgs, bidId, namespace)
 }
 
 func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
@@ -401,6 +437,14 @@ func (c *submitEthBlockBidToRelay) RunConfidential(suaveContext *SuaveContext, i
 	relayUrl := unpacked[0].(string)
 	builderBidJson := unpacked[1].([]byte)
 
+	return c.runImpl(suaveContext, relayUrl, builderBidJson)
+}
+
+func (c *submitEthBlockBidToRelay) Address() common.Address {
+	return submitEthBlockBidToRelayAddress
+}
+
+func (c *submitEthBlockBidToRelay) Do(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
 	return c.runImpl(suaveContext, relayUrl, builderBidJson)
 }
 
