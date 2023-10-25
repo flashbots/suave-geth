@@ -221,7 +221,6 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 
 	// now, the caller is allowed to store the bid
 	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &callerAddr)
-	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &confStoreStoreAddress)
 	err = b.confidentialStoreStore(bid.Id, "key", data)
 	require.NoError(t, err)
 
@@ -230,7 +229,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Equal(t, data, val)
 
 	// cannot retrieve the value if the caller is not allowed to
-	b.suaveContext.CallerStack = []*common.Address{&confStoreRetrieveAddress}
+	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
 	require.Error(t, err)
 }

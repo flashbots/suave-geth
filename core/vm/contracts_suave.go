@@ -184,7 +184,7 @@ func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidI
 
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
-	for i := len(suaveContext.CallerStack) - 2; i >= 0; i-- { // -2 to ignore the immediate caller (this or another precompile)
+	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
 		// Most recent non-nil non-this caller
 		if _c := suaveContext.CallerStack[i]; _c != nil && *_c != confStoreRetrieveAddress {
 			caller = *_c

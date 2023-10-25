@@ -547,7 +547,7 @@ func (c *submitBundleToBuilder) runImpl(suaveContext *SuaveContext, builderUrl s
 
 	switch bid.Version {
 	case "default:v0:ethBundles":
-		bundleData, err := (&confStoreRetrieve{}).runImpl(suaveContext, bidId, "default:v0:ethBundles")
+		bundleData, err := suaveContext.Backend.ConfidentialStore.Retrieve(bidId, submitEthBundleToBuilderAddress, "default:v0:ethBundles")
 		if err != nil {
 			return nil, err
 		}
