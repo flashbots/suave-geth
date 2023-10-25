@@ -126,10 +126,3 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 
 	return nil, fmt.Errorf("precompile %s not found", p.addr)
 }
-
-func formatDebugReturn(data []byte, err error) ([]byte, error) {
-	if err != nil && data == nil {
-		return []byte(err.Error()), err
-	}
-	return data, err
-}

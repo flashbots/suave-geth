@@ -113,7 +113,7 @@ func main() {
 			name: "Send bid",
 			action: func() error {
 				refundPercent := 10
-				bundle := types.SBundle{
+				bundle := &types.SBundle{
 					Txs:             types.Transactions{ethTxn1},
 					RevertingHashes: []common.Hash{},
 					RefundPercent:   &refundPercent,
@@ -157,7 +157,7 @@ func main() {
 		{
 			name: "Send backrun",
 			action: func() error {
-				backRunBundle := types.SBundle{
+				backRunBundle := &types.SBundle{
 					Txs:             types.Transactions{ethTxnBackrun},
 					RevertingHashes: []common.Hash{},
 				}

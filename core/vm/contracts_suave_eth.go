@@ -9,8 +9,9 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"slices"
 	"time"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/beacon/engine"
