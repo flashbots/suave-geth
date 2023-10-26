@@ -122,6 +122,8 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 		return errors.New("not allowed in this suaveContext")
 	}
 
+	log.Info("confStoreStore", "bidId", bidId, "key", key)
+
 	// Can be zeroes in some fringe cases!
 	var caller common.Address
 	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {

@@ -155,7 +155,7 @@ var (
 
 	// SuaveChainConfig for development with 0 period to avoid mining empty blocks
 	DeveloperSuaveChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(16813125),
+		ChainID:             big.NewInt(222),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      false,
@@ -168,9 +168,9 @@ var (
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
-		LondonBlock:         big.NewInt(0),
-		SuaveBlock:          big.NewInt(0),
-		ArrowGlacierBlock:   nil,
+		//LondonBlock:         big.NewInt(0),
+		SuaveBlock:        big.NewInt(0),
+		ArrowGlacierBlock: nil,
 		Clique: &CliqueConfig{
 			Period: 0,
 			Epoch:  30000,
