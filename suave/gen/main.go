@@ -385,11 +385,15 @@ var suaveForgeLibTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
 import "./Suave.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
 
-contract SuaveForge is Test {
-    function forgeIt(string memory addr, bytes memory data) internal returns (bytes memory) {
+interface Vm {
+    function ffi(string[] calldata commandInput) external view returns (bytes memory result);
+}
+
+library SuaveForge {
+    Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    
+    function forgeIt(string memory addr, bytes memory data) internal view returns (bytes memory) {
         string memory dataHex = iToHex(data);
 
         string[] memory inputs = new string[](4);
@@ -401,7 +405,7 @@ contract SuaveForge is Test {
         bytes memory res = vm.ffi(inputs);
         return res;
     }
-    
+
     function iToHex(bytes memory buffer) public pure returns (string memory) {
         bytes memory converted = new bytes(buffer.length * 2);
 
@@ -416,7 +420,7 @@ contract SuaveForge is Test {
     }
 
 {{range .Functions}}
-function {{.Name}}({{range .Input}}{{styp2 .Typ true}} {{.Name}}, {{end}}) external payable returns ({{range .Output.Fields}}{{styp2 .Typ true}}, {{end}}) {
+function {{.Name}}({{range .Input}}{{styp2 .Typ true}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp2 .Typ true}}, {{end}}) {
 	bytes memory data = forgeIt("{{.Address}}", abi.encode({{range .Input}}{{.Name}}, {{end}}));
 	{{ if eq (len .Output.Fields) 0 }}
 	{{else if .Output.Packed}}

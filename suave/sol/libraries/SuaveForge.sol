@@ -2,11 +2,15 @@
 pragma solidity ^0.8.8;
 
 import "./Suave.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
 
-contract SuaveForge is Test {
-    function forgeIt(string memory addr, bytes memory data) internal returns (bytes memory) {
+interface Vm {
+    function ffi(string[] calldata commandInput) external view returns (bytes memory result);
+}
+
+library SuaveForge {
+    Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
+    function forgeIt(string memory addr, bytes memory data) internal view returns (bytes memory) {
         string memory dataHex = iToHex(data);
 
         string[] memory inputs = new string[](4);
@@ -33,8 +37,8 @@ contract SuaveForge is Test {
     }
 
     function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.BidId bidId, string memory namespace)
-        external
-        payable
+        internal
+        view
         returns (bytes memory, bytes memory)
     {
         bytes memory data =
@@ -43,38 +47,44 @@ contract SuaveForge is Test {
         return abi.decode(data, (bytes, bytes));
     }
 
-    function confidentialInputs() external payable returns (bytes memory) {
+    function confidentialInputs() internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042010001", abi.encode());
 
         return data;
     }
 
-    function confidentialStoreRetrieve(Suave.BidId bidId, string memory key) external payable returns (bytes memory) {
+    function confidentialStoreRetrieve(Suave.BidId bidId, string memory key) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020001", abi.encode(bidId, key));
 
         return data;
     }
 
-    function confidentialStoreStore(Suave.BidId bidId, string memory key, bytes memory data1) external payable {
+    function confidentialStoreStore(Suave.BidId bidId, string memory key, bytes memory data1) internal view {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(bidId, key, data1));
     }
 
-    function ethcall(address contractAddr, bytes memory input1) external payable returns (bytes memory) {
+    function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100003", abi.encode(contractAddr, input1));
 
         return abi.decode(data, (bytes));
     }
 
-    function extractHint(bytes memory bundleData) external payable returns (bytes memory) {
+    function extractHint(bytes memory bundleData) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100037", abi.encode(bundleData));
 
         return data;
     }
 
-    function fetchBids(uint64 cond, string memory namespace) external payable returns (Suave.Bid[] memory) {
+    function fetchBids(uint64 cond, string memory namespace) internal view returns (Suave.Bid[] memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042030001", abi.encode(cond, namespace));
 
         return abi.decode(data, (Suave.Bid[]));
+    }
+
+    function fillMevShareBundle(Suave.BidId bidId) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043200001", abi.encode(bidId));
+
+        return data;
     }
 
     function newBid(
@@ -82,7 +92,7 @@ contract SuaveForge is Test {
         address[] memory allowedPeekers,
         address[] memory allowedStores,
         string memory bidType
-    ) external payable returns (Suave.Bid memory) {
+    ) internal view returns (Suave.Bid memory) {
         bytes memory data = forgeIt(
             "0x0000000000000000000000000000000042030000",
             abi.encode(decryptionCondition, allowedPeekers, allowedStores, bidType)
@@ -91,15 +101,25 @@ contract SuaveForge is Test {
         return abi.decode(data, (Suave.Bid));
     }
 
-    function simulateBundle(bytes memory bundleData) external payable returns (uint64) {
+    function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100000", abi.encode(bundleData));
 
         return abi.decode(data, (uint64));
     }
 
+    function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043000001", abi.encode(url, method, params));
+
+        return data;
+    }
+
     function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)
-        external
-        payable
+        internal
+        view
         returns (bytes memory)
     {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderBid));
