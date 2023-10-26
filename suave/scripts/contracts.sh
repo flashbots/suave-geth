@@ -9,7 +9,7 @@ cd "$SCRIPT_DIR"/..
 # the artifacts into a simplified format that only stores ai, bytecode and deployedBytecode
 build() {
     forge build
-    find artifacts -type f -name "*.json" ! -name "SuaveLib.json" -exec sh -c 'jq "{ \"abi\": .abi, \"deployedBytecode\": .deployedBytecode.object, \"bytecode\": .bytecode.object }" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' sh {} \;
+    find artifacts -type f -name "*.json" ! -name "SuaveLib.json" -exec sh -c 'jq "{ \"abi\": .abi, \"deployedBytecode\":{\"object\": .deployedBytecode.object}, \"bytecode\":{\"object\": .bytecode.object} }" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' sh {} \;
 }
 
 # Function to clean the artifacts

@@ -1,5 +1,9 @@
 {
   "abi": [],
-  "deployedBytecode": "0x",
-  "bytecode": "0x"
+  "deployedBytecode": {
+    "object": "0x"
+  },
+  "bytecode": {
+    "object": "0x"
+  }
 }

@@ -38,8 +38,12 @@ func newArtifact(name string) *Artifact {
 
 	var artifactObj struct {
 		Abi              *abi.ABI `json:"abi"`
-		DeployedBytecode string   `json:"deployedBytecode"`
-		Bytecode         string   `json:"bytecode"`
+		DeployedBytecode struct {
+			Object string
+		} `json:"deployedBytecode"`
+		Bytecode struct {
+			Object string
+		} `json:"bytecode"`
 	}
 	if err := json.Unmarshal(data, &artifactObj); err != nil {
 		panic(fmt.Sprintf("failed to unmarshal artifact %s: %v", name, err))
@@ -47,8 +51,8 @@ func newArtifact(name string) *Artifact {
 
 	return &Artifact{
 		Abi:          artifactObj.Abi,
-		Code:         hexutil.MustDecode(artifactObj.Bytecode),
-		DeployedCode: hexutil.MustDecode(artifactObj.DeployedBytecode),
+		Code:         hexutil.MustDecode(artifactObj.Bytecode.Object),
+		DeployedCode: hexutil.MustDecode(artifactObj.DeployedBytecode.Object),
 	}
 }
 

@@ -6,7 +6,7 @@ import "forge-std/Script.sol";
 
 contract Example is Script {
     address[] public addressList = [0x0000000000000000000000000000000000000000];
-    
+
     function run() public {
         SuaveForge suave = new SuaveForge();
         Suave.Bid memory bid = suave.newBid(0, addressList, addressList, "default:v0:ethBundles");
