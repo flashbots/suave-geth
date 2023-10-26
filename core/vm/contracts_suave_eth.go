@@ -11,8 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -240,6 +238,11 @@ func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.Buil
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not fetch bid id %v: %w", bidId, err)
 		}
+
+		if _, err := checkIsPrecompileCallAllowed(suaveContext, buildEthBlockAddress, bid); err != nil {
+			return nil, nil, err
+		}
+
 		bidsToMerge[i] = bid.ToInnerBid()
 	}
 
@@ -572,7 +575,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 		return nil, err
 	}
 
-	if err := checkIsPrecompileCallAllowed(suaveContext, fillMevShareBundleAddress, bid); err != nil {
+	if _, err := checkIsPrecompileCallAllowed(suaveContext, fillMevShareBundleAddress, bid); err != nil {
 		return nil, err
 	}
 
@@ -641,26 +644,4 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 	}
 
 	return json.Marshal(shareBundle)
-}
-
-func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.Address, bid suave.Bid) error {
-	// Both the precompile *and* at least one caller must be allowed
-
-	isPrecompileAllowed := slices.Contains(bid.AllowedPeekers, precompile)
-	if !isPrecompileAllowed {
-		return fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
-	}
-
-	isCallerAllowed := false
-	for _, caller := range suaveContext.CallerStack {
-		if slices.Contains(bid.AllowedPeekers, *caller) {
-			isCallerAllowed = true
-			break
-		}
-	}
-	if !isCallerAllowed {
-		return fmt.Errorf("no caller of %s (%x) is allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
-	}
-
-	return nil
 }

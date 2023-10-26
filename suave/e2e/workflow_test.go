@@ -699,7 +699,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 
 		bid, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
-			AllowedPeekers:      []common.Address{{0x41, 0x42, 0x43}, buildEthBlockAddress},
+			AllowedPeekers:      []common.Address{suave.AllowedPeekerAny},
 			AllowedStores:       []common.Address{fr.ExecutionNode()},
 			Version:             "default:v0:ethBundles",
 		}, dummyCreationTx)
