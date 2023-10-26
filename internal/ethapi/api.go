@@ -1879,10 +1879,6 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 			return common.Hash{}, err
 		}
 
-		fmt.Println("_ X2 _")
-		fmt.Println(msg.GasFeeCap.BitLen())
-		fmt.Println(msg.GasTipCap.BitLen())
-
 		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, signed, msg, false)
 		if err != nil {
 			return common.Hash{}, err
