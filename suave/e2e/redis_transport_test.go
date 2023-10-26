@@ -38,17 +38,14 @@ func TestRedisBackends(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	bundle := struct {
-		Txs             types.Transactions `json:"txs"`
-		RevertingHashes []common.Hash      `json:"revertingHashes"`
-	}{
+	targetBlock := uint64(1)
+	bundle := &types.SBundle{
+		BlockNumber:     big.NewInt(int64(targetBlock)),
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	require.NoError(t, err)
-
-	targetBlock := uint64(1)
 
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}

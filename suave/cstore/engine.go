@@ -210,7 +210,7 @@ func (e *ConfidentialStoreEngine) Retrieve(bidId suave.BidId, caller common.Addr
 		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", bidId, err)
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) {
+	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
 		return []byte{}, fmt.Errorf("confidential engine: %x not allowed to retrieve %s on %x", caller, key, bidId)
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -118,27 +119,23 @@ func (c *confStoreStore) RunConfidential(suaveContext *SuaveContext, input []byt
 }
 
 func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
-	if len(suaveContext.CallerStack) == 0 {
-		return errors.New("not allowed in this suaveContext")
+	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+	if err != nil {
+		return suave.ErrBidNotFound
 	}
 
 	log.Info("confStoreStore", "bidId", bidId, "key", key)
 
-	// Can be zeroes in some fringe cases!
-	var caller common.Address
-	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
-		// Most recent non-nil non-this caller
-		if _c := suaveContext.CallerStack[i]; _c != nil && *_c != confStoreStoreAddress {
-			caller = *_c
-			break
-		}
+	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreStoreAddress, bid)
+	if err != nil {
+		return err
 	}
 
 	if metrics.Enabled {
 		confStorePrecompileStoreMeter.Mark(int64(len(data)))
 	}
 
-	_, err := suaveContext.Backend.ConfidentialStore.Store(bidId, caller, key, data)
+	_, err = suaveContext.Backend.ConfidentialStore.Store(bidId, caller, key, data)
 	if err != nil {
 		return err
 	}
@@ -146,14 +143,10 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	return nil
 }
 
-type confStoreRetrieve struct {
-	inoutAbi abi.Method
-}
+type confStoreRetrieve struct{}
 
 func newConfStoreRetrieve() *confStoreRetrieve {
-	inoutAbi := mustParseMethodAbi(`[{"inputs":[{"type":"bytes16"}, {"type":"bytes16"}, {"type":"string"}],"name":"retrieve","outputs":[{"type":"bytes"}],"stateMutability":"nonpayable","type":"function"}]`, "retrieve")
-
-	return &confStoreRetrieve{inoutAbi}
+	return &confStoreRetrieve{}
 }
 
 func (c *confStoreRetrieve) RequiredGas(input []byte) uint64 {
@@ -169,7 +162,7 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
 	}
 
-	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
+	unpacked, err := artifacts.SuaveAbi.Methods["retrieve"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -181,20 +174,14 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 }
 
 func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
-	if len(suaveContext.CallerStack) == 0 {
-		return nil, errors.New("not allowed in this suaveContext")
+	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+	if err != nil {
+		return nil, suave.ErrBidNotFound
 	}
 
-	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
-
-	// Can be zeroes in some fringe cases!
-	var caller common.Address
-	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
-		// Most recent non-nil non-this caller
-		if _c := suaveContext.CallerStack[i]; _c != nil && *_c != confStoreRetrieveAddress {
-			caller = *_c
-			break
-		}
+	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreRetrieveAddress, bid)
+	if err != nil {
+		return nil, err
 	}
 
 	data, err := suaveContext.Backend.ConfidentialStore.Retrieve(bidId, caller, key)
@@ -387,4 +374,12 @@ func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
 	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
+}
+
+func (b *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
+	return (&fillMevShareBundle{}).runImpl(b.suaveContext, bidId)
+}
+
+func (b *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
+	return (&submitBundleJsonRPC{}).runImpl(b.suaveContext, url, method, params)
 }
