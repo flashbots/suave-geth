@@ -49,9 +49,13 @@ library Suave {
 
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
 
+    address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
+
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
+
+    address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
@@ -135,6 +139,16 @@ library Suave {
         return abi.decode(data, (Bid[]));
     }
 
+    function fillMevShareBundle(BidId bidId) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.staticcall(abi.encode(bidId));
+        if (!success) {
+            revert PeekerReverted(FILL_MEV_SHARE_BUNDLE, data);
+        }
+
+        return data;
+    }
+
     function newBid(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,
@@ -157,6 +171,20 @@ library Suave {
         }
 
         return abi.decode(data, (uint64));
+    }
+
+    function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)
+        internal
+        view
+        returns (bytes memory)
+    {
+        require(isConfidential());
+        (bool success, bytes memory data) = SUBMIT_BUNDLE_JSON_RPC.staticcall(abi.encode(url, method, params));
+        if (!success) {
+            revert PeekerReverted(SUBMIT_BUNDLE_JSON_RPC, data);
+        }
+
+        return data;
     }
 
     function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)

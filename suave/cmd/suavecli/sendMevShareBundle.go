@@ -160,17 +160,18 @@ func prepareEthBundle(
 		return types.SBundle{}, nil, err
 	}
 
-	bundle := types.SBundle{
+	refundPercent := 10
+	bundle := &types.SBundle{
 		Txs:             types.Transactions{ethTx},
 		RevertingHashes: []common.Hash{},
-		RefundPercent:   10,
+		RefundPercent:   &refundPercent,
 	}
 	bundleBytes, err := json.Marshal(bundle)
 	if err != nil {
 		return types.SBundle{}, nil, err
 	}
 
-	return bundle, bundleBytes, nil
+	return *bundle, bundleBytes, nil
 }
 
 func prepareMevShareBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, executionNodeAddr common.Address, suaveAccNonce uint64, calldata []byte, mevShareAddr common.Address) (*types.Transaction, hexutil.Bytes, error) {

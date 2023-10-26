@@ -117,6 +117,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
+		"precompile fillMevShareBundle (0000000000000000000000000000000043200001) not allowed on 00000000000000000000000000000000",
 	}
 
 	for name, addr := range artifacts.SuaveMethods {

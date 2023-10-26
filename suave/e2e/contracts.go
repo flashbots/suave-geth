@@ -12,13 +12,15 @@ import (
 )
 
 var (
-	MevShareBidContract       = newArtifact("bids.sol/MevShareBidContract.json")
-	BundleBidContract         = newArtifact("bids.sol/BundleBidContract.json")
-	buildEthBlockContract     = newArtifact("bids.sol/EthBlockBidContract.json")
-	ethBlockBidSenderContract = newArtifact("bids.sol/EthBlockBidSenderContract.json")
-	suaveLibContract          = newArtifact("SuaveAbi.sol/SuaveAbi.json")
-	exampleCallSourceContract = newArtifact("example.sol/ExampleEthCallSource.json")
-	exampleCallTargetContract = newArtifact("example.sol/ExampleEthCallTarget.json")
+	MevShareBidContract          = newArtifact("bids.sol/MevShareBidContract.json")
+	BundleBidContract            = newArtifact("bids.sol/BundleBidContract.json")
+	EthBundleSenderContract      = newArtifact("bids.sol/EthBundleSenderContract.json")
+	MevShareBundleSenderContract = newArtifact("bids.sol/MevShareBundleSenderContract.json")
+	buildEthBlockContract        = newArtifact("bids.sol/EthBlockBidContract.json")
+	ethBlockBidSenderContract    = newArtifact("bids.sol/EthBlockBidSenderContract.json")
+	suaveLibContract             = newArtifact("SuaveAbi.sol/SuaveAbi.json")
+	exampleCallSourceContract    = newArtifact("example.sol/ExampleEthCallSource.json")
+	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
 )
 
 func newArtifact(name string) *Artifact {

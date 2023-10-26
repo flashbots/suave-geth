@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -144,14 +145,10 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	return nil
 }
 
-type confStoreRetrieve struct {
-	inoutAbi abi.Method
-}
+type confStoreRetrieve struct{}
 
 func newConfStoreRetrieve() *confStoreRetrieve {
-	inoutAbi := mustParseMethodAbi(`[{"inputs":[{"type":"bytes16"}, {"type":"bytes16"}, {"type":"string"}],"name":"retrieve","outputs":[{"type":"bytes"}],"stateMutability":"nonpayable","type":"function"}]`, "retrieve")
-
-	return &confStoreRetrieve{inoutAbi}
+	return &confStoreRetrieve{}
 }
 
 func (c *confStoreRetrieve) RequiredGas(input []byte) uint64 {
@@ -167,7 +164,7 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
 	}
 
-	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
+	unpacked, err := artifacts.SuaveAbi.Methods["retrieve"].Inputs.Unpack(input)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -385,4 +382,12 @@ func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
 	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
+}
+
+func (b *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
+	return (&fillMevShareBundle{}).runImpl(b.suaveContext, bidId)
+}
+
+func (b *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
+	return (&submitBundleJsonRPC{}).runImpl(b.suaveContext, url, method, params)
 }
