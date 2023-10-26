@@ -521,7 +521,6 @@ func prepareSuaveDev(ctx *cli.Context) error {
 		utils.WSEnabledFlag.Name:         "true",
 		utils.WSAllowedOriginsFlag.Name:  "*",
 		utils.WSListenAddrFlag.Name:      "0.0.0.0",
-		utils.DataDirFlag.Name:           suaveDataTmpPath,
 		utils.KeyStoreDirFlag.Name:       keystorePath,
 		utils.UnlockedAccountFlag.Name:   "0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F",
 		utils.PasswordFileFlag.Name:      passwordPath,

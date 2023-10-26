@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -20,14 +18,10 @@ import (
 var (
 	forgeCommand = &cli.Command{
 		Name:        "forge",
-		Usage:       "Do things with forge",
+		Usage:       "Internal command for MEVM forge commands",
 		ArgsUsage:   "",
-		Description: `Do things with forge.`,
+		Description: `Internal command used by MEVM precompiles in forge to access the MEVM API utilities.`,
 		Action: func(ctx *cli.Context) error {
-			if err := os.WriteFile("/tmp/dddd-"+time.Now().String()+".txt", []byte(strings.Join(os.Args, ",")), 0755); err != nil {
-				return err
-			}
-
 			args := ctx.Args()
 			if args.Len() == 0 {
 				return fmt.Errorf("expected at least 1 argument (address), got %d", args.Len())
@@ -96,7 +90,7 @@ func setTxArgsDefaults(args ethapi.TransactionArgs) ethapi.TransactionArgs {
 	nonce := hexutil.Uint64(0)
 	args.Nonce = &nonce
 
-	gasPrice := big.NewInt(0)
+	gasPrice := big.NewInt(1)
 	args.GasPrice = (*hexutil.Big)(gasPrice)
 
 	value := big.NewInt(0)

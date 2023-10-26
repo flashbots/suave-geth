@@ -166,6 +166,8 @@ func TestMempool(t *testing.T) {
 		calldata, err := inoutAbi.Inputs.Pack(targetBlock, "default:v0:ethBundles")
 		require.NoError(t, err)
 
+		fmt.Println("------------------- CALL -------------------------")
+
 		var simResult hexutil.Bytes
 		requireNoRpcError(t, rpc.Call(&simResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
 			To:             &fetchBidsAddress,
@@ -174,6 +176,8 @@ func TestMempool(t *testing.T) {
 			ChainID:        &chainId,
 			Data:           (*hexutil.Bytes)(&calldata),
 		}), "latest"))
+
+		fmt.Println("---------------- END OF CALL ----------------------")
 
 		unpacked, err := inoutAbi.Outputs.Unpack(simResult)
 		require.NoError(t, err)

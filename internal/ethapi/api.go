@@ -1048,7 +1048,7 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			SkipAccountChecks: true,
 		}
 
-		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg)
+		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg, true)
 		if err != nil {
 			return nil, err
 		}
@@ -1879,7 +1879,11 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 			return common.Hash{}, err
 		}
 
-		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, signed, msg)
+		fmt.Println("_ X2 _")
+		fmt.Println(msg.GasFeeCap.BitLen())
+		fmt.Println(msg.GasTipCap.BitLen())
+
+		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, signed, msg, false)
 		if err != nil {
 			return common.Hash{}, err
 		}
@@ -1929,7 +1933,7 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 			return common.Hash{}, err
 		}
 
-		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg)
+		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
 		if err != nil {
 			return tx.Hash(), err
 		}
@@ -1944,7 +1948,7 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 }
 
 // TODO: should be its own api
-func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message) (*types.Transaction, *core.ExecutionResult, func() error, error) {
+func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
@@ -1969,7 +1973,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		ConfidentialInputs:           confidentialRequestTx.ConfidentialInputs,
 	}
 
-	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx, &suaveCtx)
+	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
