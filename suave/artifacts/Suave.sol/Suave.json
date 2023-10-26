@@ -1,0 +1,169 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "name": "PeekerReverted",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "BUILD_ETH_BLOCK",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONFIDENTIAL_INPUTS",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONFIDENTIAL_STORE_RETRIEVE",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONFIDENTIAL_STORE_STORE",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ETHCALL",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EXTRACT_HINT",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "FETCH_BIDS",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "IS_CONFIDENTIAL_ADDR",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "NEW_BID",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SIMULATE_BUNDLE",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SUBMIT_ETH_BLOCK_BID_TO_RELAY",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "deployedBytecode": {
+    "object": "0x73000000000000000000000000000000000000000030146080604052600436106100b35760003560e01c8063b61b127d1161007b578063b61b127d1461010b578063b7817da014610116578063bc50c00514610121578063c91e11df1461012c578063d91525db14610137578063f6ab3de51461014257600080fd5b8063040e5183146100b857806369094cbc146100df5780637320cb17146100ea578063751afe2c146100f557806394804c6914610100575b600080fd5b6100c3634210000381565b6040516001600160a01b03909116815260200160405180910390f35b6100c3634201000181565b6100c3634203000081565b6100c3634210003781565b6100c3634210000181565b6100c3634210000081565b6100c3634202000081565b6100c3634210000281565b6100c3634203000181565b6100c3634201000081565b6100c363420200018156fea164736f6c6343000813000a"
+  },
+  "bytecode": {
+    "object": "0x61015a61003a600b82828239805160001a60731461002d57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106100b35760003560e01c8063b61b127d1161007b578063b61b127d1461010b578063b7817da014610116578063bc50c00514610121578063c91e11df1461012c578063d91525db14610137578063f6ab3de51461014257600080fd5b8063040e5183146100b857806369094cbc146100df5780637320cb17146100ea578063751afe2c146100f557806394804c6914610100575b600080fd5b6100c3634210000381565b6040516001600160a01b03909116815260200160405180910390f35b6100c3634201000181565b6100c3634203000081565b6100c3634210003781565b6100c3634210000181565b6100c3634210000081565b6100c3634202000081565b6100c3634210000281565b6100c3634203000181565b6100c3634201000081565b6100c363420200018156fea164736f6c6343000813000a"
+  }
+}
