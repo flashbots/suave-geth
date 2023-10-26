@@ -298,6 +298,9 @@ func (b testBackend) GetEVM(ctx context.Context, msg *core.Message, state *state
 	}
 	return vm.NewEVM(context, txContext, state, b.chain.Config(), *vmConfig), vmError
 }
+func (b testBackend) SuaveContext(requestTx *types.Transaction, ccr *types.ConfidentialComputeRequest) vm.SuaveContext {
+	return vm.SuaveContext{}
+}
 func (b testBackend) GetMEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext, suaveCtx *vm.SuaveContext) (*vm.EVM, func() error, func() error) {
 	return nil, nil, nil
 }

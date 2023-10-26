@@ -537,6 +537,20 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveEthBundleSigningKeyFlag = &cli.StringFlag{
+		Name:     "suave.eth.bundle-signing-key",
+		EnvVars:  []string{"SUAVE_ETH_BUNDLE_SIGNING_KEY"},
+		Usage:    "Signing key to be used when signing bundles (ecdsa) [default: random]",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveEthBlockSigningKeyFlag = &cli.StringFlag{
+		Name:     "suave.eth.signing-key",
+		EnvVars:  []string{"SUAVE_ETH_BLOCK_SIGNING_KEY"},
+		Usage:    "Signing key to be used when signing blocks (bls) [default: random]",
+		Category: flags.SuaveCategory,
+	}
+
 	SuaveDevModeFlag = &cli.BoolFlag{
 		Name:     "suave.dev",
 		Usage:    "Dev mode for suave",
@@ -1696,6 +1710,14 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 
 	if ctx.IsSet(SuaveConfidentialStoreRedisEndpointFlag.Name) {
 		cfg.RedisStoreUri = ctx.String(SuaveConfidentialStoreRedisEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveEthBundleSigningKeyFlag.Name) {
+		cfg.EthBundleSigningKeyHex = ctx.String(SuaveEthBundleSigningKeyFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveEthBlockSigningKeyFlag.Name) {
+		cfg.EthBlockSigningKeyHex = ctx.String(SuaveEthBlockSigningKeyFlag.Name)
 	}
 }
 
