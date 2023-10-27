@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -18,8 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
-	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/holiman/uint256"
@@ -44,22 +41,7 @@ var (
 	fillMevShareBundleAddress  = common.HexToAddress("0x43200001")
 )
 
-type signEthTransaction struct{}
-
-func (c *signEthTransaction) RequiredGas(input []byte) uint64 {
-	// Should be proportional to bundle gas limit
-	return 1000
-}
-
-func (c *signEthTransaction) Run(input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this context")
-}
-
-func (c *signEthTransaction) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this context")
-}
-
-func (c *signEthTransaction) runImpl(txn []byte, chainId string, signingKey string) ([]byte, error) {
+func signEthTransactionImpl(txn []byte, chainId string, signingKey string) ([]byte, error) {
 	key, err := crypto.HexToECDSA(signingKey)
 	if err != nil {
 		return nil, fmt.Errorf("key not formatted properly: %w", err)
@@ -91,28 +73,7 @@ func (c *signEthTransaction) runImpl(txn []byte, chainId string, signingKey stri
 	return signedBytes, nil
 }
 
-type simulateBundle struct {
-}
-
-func (c *simulateBundle) RequiredGas(input []byte) uint64 {
-	// Should be proportional to bundle gas limit
-	return 10000
-}
-
-func (c *simulateBundle) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (c *simulateBundle) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	egp, err := c.runImpl(suaveContext, input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	return artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(egp.Uint64())
-}
-
-func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big.Int, error) {
+func simulateBundleImpl(suaveContext *SuaveContext, input []byte) (*big.Int, error) {
 	var bundle types.SBundle
 	err := json.Unmarshal(input, &bundle)
 	if err != nil {
@@ -135,28 +96,7 @@ func (c *simulateBundle) runImpl(suaveContext *SuaveContext, input []byte) (*big
 	return egp, nil
 }
 
-type extractHint struct{}
-
-func (c *extractHint) RequiredGas(input []byte) uint64 {
-	return 10000
-}
-
-func (c *extractHint) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (c *extractHint) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := artifacts.SuaveAbi.Methods["extractHint"].Inputs.Unpack(input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	bundleBytes := unpacked[0].([]byte)
-
-	return c.runImpl(suaveContext, bundleBytes)
-}
-
-func (c *extractHint) runImpl(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
+func extractHintImpl(suaveContext *SuaveContext, bundleBytes []byte) ([]byte, error) {
 	var bundle types.SBundle
 	err := json.Unmarshal(bundleBytes, &bundle)
 	if err != nil {
@@ -179,92 +119,11 @@ func (c *extractHint) runImpl(suaveContext *SuaveContext, bundleBytes []byte) ([
 	return hintBytes, nil
 }
 
-type ethCallPrecompile struct{}
-
-func (e *ethCallPrecompile) RequiredGas(input []byte) uint64 {
-	// Should be proportional to bundle gas limit
-	return 10000
-}
-
-func (e *ethCallPrecompile) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (e *ethCallPrecompile) runImpl(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
+func ethCallPrecompileImpl(suaveContext *SuaveContext, contractAddr common.Address, input []byte) ([]byte, error) {
 	return suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
 }
 
-func (e *ethCallPrecompile) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	return nil, nil
-}
-
-type buildEthBlock struct {
-}
-
-func (c *buildEthBlock) RequiredGas(input []byte) uint64 {
-	// Should be proportional to bundle gas limit
-	return 10000
-}
-
-func (c *buildEthBlock) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (c *buildEthBlock) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
-	if err != nil {
-		return formatPeekerError("could not unpack inputs: %w", err)
-	}
-
-	// blockArgs := unpacked[0].(types.BuildBlockArgs)
-	blockArgsRaw := unpacked[0].(struct {
-		Slot           uint64         "json:\"slot\""
-		ProposerPubkey []uint8        "json:\"proposerPubkey\""
-		Parent         common.Hash    "json:\"parent\""
-		Timestamp      uint64         "json:\"timestamp\""
-		FeeRecipient   common.Address "json:\"feeRecipient\""
-		GasLimit       uint64         "json:\"gasLimit\""
-		Random         common.Hash    "json:\"random\""
-		Withdrawals    []struct {
-			Index     uint64         "json:\"index\""
-			Validator uint64         "json:\"validator\""
-			Address   common.Address "json:\"Address\""
-			Amount    uint64         "json:\"amount\""
-		} "json:\"withdrawals\""
-	})
-
-	blockArgs := types.BuildBlockArgs{
-		Slot:           blockArgsRaw.Slot,
-		Parent:         blockArgsRaw.Parent,
-		Timestamp:      blockArgsRaw.Timestamp,
-		FeeRecipient:   blockArgsRaw.FeeRecipient,
-		GasLimit:       blockArgsRaw.GasLimit,
-		Random:         blockArgsRaw.Random,
-		ProposerPubkey: blockArgsRaw.ProposerPubkey,
-		Withdrawals:    types.Withdrawals{},
-	}
-
-	for _, w := range blockArgsRaw.Withdrawals {
-		blockArgs.Withdrawals = append(blockArgs.Withdrawals, &types.Withdrawal{
-			Index:     w.Index,
-			Validator: w.Validator,
-			Address:   w.Address,
-			Amount:    w.Amount,
-		})
-	}
-
-	bidId := unpacked[1].(suave.BidId)
-	namespace := unpacked[2].(string)
-
-	bidBytes, envelopeBytes, err := c.runImpl(suaveContext, blockArgs, bidId, namespace)
-	if err != nil {
-		return formatPeekerError("could not unpack merged bid ids: %w", err)
-	}
-
-	return artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(bidBytes, envelopeBytes)
-}
-
-func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
+func buildEthBlockImpl(suaveContext *SuaveContext, blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
 	bidIds := [][16]byte{}
 	// first check for merged bid, else assume regular bid
 	if mergedBidsBytes, err := suaveContext.Backend.ConfidentialStore.Retrieve(bidId, buildEthBlockAddress, "default:v0:mergedBids"); err == nil {
@@ -431,29 +290,7 @@ func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.Buil
 	return bidBytes, envelopeBytes, nil
 }
 
-type submitEthBlockBidToRelay struct{}
-
-func (c *submitEthBlockBidToRelay) RequiredGas(input []byte) uint64 {
-	return 1000
-}
-
-func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (c *submitEthBlockBidToRelay) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := artifacts.SuaveAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
-	if err != nil {
-		return formatPeekerError("could not unpack inputs: %w", err)
-	}
-
-	relayUrl := unpacked[0].(string)
-	builderBidJson := unpacked[1].([]byte)
-
-	return c.runImpl(suaveContext, relayUrl, builderBidJson)
-}
-
-func (c *submitEthBlockBidToRelay) runImpl(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
+func submitEthBlockBidToRelayImpl(suaveContext *SuaveContext, relayUrl string, builderBidJson []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
 
@@ -529,22 +366,7 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 	}, nil
 }
 
-type submitBundleJsonRPC struct {
-}
-
-func (c *submitBundleJsonRPC) RequiredGas(input []byte) uint64 {
-	return 1000
-}
-
-func (c *submitBundleJsonRPC) Run(input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this context")
-}
-
-func (c *submitBundleJsonRPC) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this context")
-}
-
-func (c *submitBundleJsonRPC) runImpl(suaveContext *SuaveContext, url string, method string, params []byte) ([]byte, error) {
+func submitBundleJsonRPCImpl(suaveContext *SuaveContext, url string, method string, params []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
 
@@ -596,21 +418,7 @@ func (c *submitBundleJsonRPC) runImpl(suaveContext *SuaveContext, url string, me
 	return nil, nil
 }
 
-type fillMevShareBundle struct{}
-
-func (c *fillMevShareBundle) RequiredGas(input []byte) uint64 {
-	return 1000
-}
-
-func (c *fillMevShareBundle) Run(input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this context")
-}
-
-func (c *fillMevShareBundle) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this context")
-}
-
-func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.BidId) ([]byte, error) {
+func fillMevShareBundleImpl(suaveContext *SuaveContext, bidId types.BidId) ([]byte, error) {
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return nil, err
@@ -620,7 +428,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 		return nil, err
 	}
 
-	matchedBundleIdsBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, bidId, "mevshare:v0:mergedBids")
+	matchedBundleIdsBytes, err := confStoreRetrieveImpl(suaveContext, bidId, "mevshare:v0:mergedBids")
 	if err != nil {
 		return nil, err
 	}
@@ -632,7 +440,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 
 	matchBidIds := unpackedBidIds[0].([][16]byte)
 
-	userBundleBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, matchBidIds[0], "mevshare:v0:ethBundles")
+	userBundleBytes, err := confStoreRetrieveImpl(suaveContext, matchBidIds[0], "mevshare:v0:ethBundles")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
@@ -642,7 +450,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 		return nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
 
-	matchBundleBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, matchBidIds[1], "mevshare:v0:ethBundles")
+	matchBundleBytes, err := confStoreRetrieveImpl(suaveContext, matchBidIds[1], "mevshare:v0:ethBundles")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 	}

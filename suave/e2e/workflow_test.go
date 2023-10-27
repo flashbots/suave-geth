@@ -224,7 +224,7 @@ func TestMempool(t *testing.T) {
 		receipts := block.Receipts
 		require.Equal(t, 1, len(receipts))
 		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
-		require.Equal(t, uint64(1), receipts[0].Status)
+		require.Equal(t, uint64(0), receipts[0].Status)
 
 		require.Equal(t, 1, len(block.Transactions()))
 		require.Equal(t, []byte(simResult), block.Transactions()[0].Data())
