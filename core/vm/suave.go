@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/go-boost-utils/bls"
 )
 
 // ConfidentialStore represents the API for the confidential store
@@ -32,6 +34,8 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
+	EthBundleSigningKey    *ecdsa.PrivateKey
+	EthBlockSigningKey     *bls.SecretKey
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }

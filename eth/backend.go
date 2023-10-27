@@ -18,6 +18,7 @@
 package eth
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -37,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -59,6 +61,7 @@ import (
 	suave_backends "github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
+	"github.com/flashbots/go-boost-utils/bls"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -255,11 +258,31 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
+	var suaveEthBundleSigningKey *ecdsa.PrivateKey
+	if config.Suave.EthBundleSigningKeyHex != "" {
+		suaveEthBundleSigningKey, err = crypto.HexToECDSA(config.Suave.EthBundleSigningKeyHex)
+	} else {
+		suaveEthBundleSigningKey, err = crypto.GenerateKey()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var suaveEthBlockSigningKey *bls.SecretKey
+	if config.Suave.EthBlockSigningKeyHex != "" {
+		suaveEthBlockSigningKey, err = bls.SecretKeyFromBytes(hexutil.MustDecode(config.Suave.EthBlockSigningKeyHex))
+	} else {
+		suaveEthBlockSigningKey, err = bls.GenerateRandomSecretKey()
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	suaveDaSigner := &cstore.AccountManagerDASigner{Manager: eth.AccountManager()}
 
 	confidentialStoreEngine := cstore.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, confidentialStoreEngine, suaveEthBackend}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveEthBundleSigningKey, suaveEthBlockSigningKey, confidentialStoreEngine, suaveEthBackend}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}

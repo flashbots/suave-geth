@@ -1950,25 +1950,20 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	defer cancel()
 
 	// TODO: copy the inner, but only once
-	confidentialRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
+	confidentialRequest, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 	if !ok {
 		return nil, nil, nil, errors.New("invalid transaction passed")
 	}
 
 	// Look up the wallet containing the requested execution node
-	account := accounts.Account{Address: confidentialRequestTx.ExecutionNode}
+	account := accounts.Account{Address: confidentialRequest.ExecutionNode}
 	wallet, err := b.AccountManager().Find(account)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
-
-	suaveCtx := vm.SuaveContext{
-		ConfidentialComputeRequestTx: tx,
-		ConfidentialInputs:           confidentialRequestTx.ConfidentialInputs,
-	}
-
+	suaveCtx := b.SuaveContext(tx, confidentialRequest)
 	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
@@ -2010,7 +2005,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: confidentialRequestTx.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequest.ExecutionNode, ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {
