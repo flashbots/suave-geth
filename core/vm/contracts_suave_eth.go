@@ -502,10 +502,10 @@ func (c *submitBundleJsonRPC) runImpl(suaveContext *SuaveContext, url string, me
 	defer cancel()
 
 	request := map[string]interface{}{
-		"id":      1,
+		"id":      json.RawMessage([]byte("1")),
 		"jsonrpc": "2.0",
 		"method":  method,
-		"params":  json.RawMessage(params),
+		"params":  []interface{}{json.RawMessage(params)},
 	}
 
 	body, err := json.Marshal(request)
