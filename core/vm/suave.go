@@ -114,6 +114,9 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	case extractHintAddress:
 		ret, err = stub.extractHint(input)
 
+	case signEthTransactionAddress:
+		ret, err = stub.signEthTransaction(input)
+
 	case simulateBundleAddress:
 		ret, err = stub.simulateBundle(input)
 

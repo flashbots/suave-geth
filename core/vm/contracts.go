@@ -98,6 +98,7 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	fetchBidsAddress:   newFetchBids(),
 	extractHintAddress: &extractHint{},
 
+	signEthTransactionAddress:       &signEthTransaction{},
 	simulateBundleAddress:           &simulateBundle{},
 	buildEthBlockAddress:            &buildEthBlock{},
 	submitEthBlockBidToRelayAddress: &submitEthBlockBidToRelay{},

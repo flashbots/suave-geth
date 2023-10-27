@@ -34,6 +34,7 @@ import (
 )
 
 var (
+	signEthTransactionAddress       = common.HexToAddress("0x40100001")
 	simulateBundleAddress           = common.HexToAddress("0x42100000")
 	extractHintAddress              = common.HexToAddress("0x42100037")
 	buildEthBlockAddress            = common.HexToAddress("0x42100001")
@@ -42,6 +43,53 @@ var (
 	submitBundleJsonRPCAddress = common.HexToAddress("0x43000001")
 	fillMevShareBundleAddress  = common.HexToAddress("0x43200001")
 )
+
+type signEthTransaction struct{}
+
+func (c *signEthTransaction) RequiredGas(input []byte) uint64 {
+	// Should be proportional to bundle gas limit
+	return 1000
+}
+
+func (c *signEthTransaction) Run(input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this context")
+}
+
+func (c *signEthTransaction) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this context")
+}
+
+func (c *signEthTransaction) runImpl(txn []byte, chainId string, signingKey string) ([]byte, error) {
+	key, err := crypto.HexToECDSA(signingKey)
+	if err != nil {
+		return nil, fmt.Errorf("key not formatted properly: %w", err)
+	}
+
+	chainIdInt, err := hexutil.DecodeBig(chainId)
+	if err != nil {
+		return nil, fmt.Errorf("chainId not formatted properly: %w", err)
+	}
+
+	var tx types.Transaction
+	err = tx.UnmarshalBinary(txn)
+	if err != nil {
+		return nil, fmt.Errorf("txn not formatted properly: %w", err)
+	}
+
+	signer := types.LatestSignerForChainID(chainIdInt)
+
+	signedTx, err := types.SignTx(&tx, signer, key)
+	if err != nil {
+		return nil, fmt.Errorf("could not sign: %w", err)
+	}
+
+	signedBytes, err := signedTx.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("could not encode signed transaction: %w", err)
+	}
+
+	return signedBytes, nil
+}
 
 type simulateBundle struct {
 }
