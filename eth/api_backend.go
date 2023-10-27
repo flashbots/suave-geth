@@ -18,6 +18,7 @@ package eth
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"math/big"
 	"time"
@@ -44,16 +45,19 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
+	"github.com/flashbots/go-boost-utils/bls"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
 type EthAPIBackend struct {
-	extRPCEnabled       bool
-	allowUnprotectedTxs bool
-	eth                 *Ethereum
-	gpo                 *gasprice.Oracle
-	suaveEngine         *cstore.ConfidentialStoreEngine
-	suaveEthBackend     suave.ConfidentialEthBackend
+	extRPCEnabled            bool
+	allowUnprotectedTxs      bool
+	eth                      *Ethereum
+	gpo                      *gasprice.Oracle
+	suaveEthBundleSigningKey *ecdsa.PrivateKey
+	suaveEthBlockSigningKey  *bls.SecretKey
+	suaveEngine              *cstore.ConfidentialStoreEngine
+	suaveEthBackend          suave.ConfidentialEthBackend
 }
 
 // For testing purposes
@@ -287,6 +291,8 @@ func (b *EthAPIBackend) GetMEVM(ctx context.Context, msg *core.Message, state *s
 	suaveCtxCopy := *suaveCtx
 	storeTransaction := b.suaveEngine.NewTransactionalStore(suaveCtx.ConfidentialComputeRequestTx)
 	suaveCtxCopy.Backend = &vm.SuaveExecutionBackend{
+		EthBundleSigningKey:    suaveCtx.Backend.EthBundleSigningKey,
+		EthBlockSigningKey:     suaveCtx.Backend.EthBlockSigningKey,
 		ConfidentialStore:      storeTransaction,
 		ConfidentialEthBackend: b.suaveEthBackend,
 	}
@@ -432,6 +438,21 @@ func (b *EthAPIBackend) Miner() *miner.Miner {
 
 func (b *EthAPIBackend) StartMining() error {
 	return b.eth.StartMining()
+}
+
+func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.ConfidentialComputeRequest) vm.SuaveContext {
+	storeTransaction := b.suaveEngine.NewTransactionalStore(requestTx)
+	return vm.SuaveContext{
+		ConfidentialComputeRequestTx: requestTx,
+		ConfidentialInputs:           ccr.ConfidentialInputs,
+		CallerStack:                  []*common.Address{},
+		Backend: &vm.SuaveExecutionBackend{
+			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
+			EthBlockSigningKey:     b.suaveEthBlockSigningKey,
+			ConfidentialStore:      storeTransaction,
+			ConfidentialEthBackend: b.suaveEthBackend,
+		},
+	}
 }
 
 func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {

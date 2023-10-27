@@ -327,10 +327,9 @@ func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.Buil
 		return nil, nil, fmt.Errorf("could not format execution payload as capella payload: %w", err)
 	}
 
-	// really should not be generated here
-	blsSk, blsPk, err := bls.GenerateNewKeypair()
+	blsPk, err := bls.PublicKeyFromSecretKey(suaveContext.Backend.EthBlockSigningKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not generate new bls key pair: %w", err)
+		return nil, nil, fmt.Errorf("could not get bls pubkey: %w", err)
 	}
 
 	pk, err := boostUtils.BlsPublicKeyToPublicKey(blsPk)
@@ -360,7 +359,7 @@ func (c *buildEthBlock) runImpl(suaveContext *SuaveContext, blockArgs types.Buil
 	// hardcoded for goerli, should be passed in with the inputs
 	genesisForkVersion := phase0.Version{0x00, 0x00, 0x10, 0x20}
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
-	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, blsSk)
+	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, suaveContext.Backend.EthBlockSigningKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not sign builder bid: %w", err)
 	}
@@ -502,10 +501,10 @@ func (c *submitBundleJsonRPC) runImpl(suaveContext *SuaveContext, url string, me
 	defer cancel()
 
 	request := map[string]interface{}{
-		"id":      1,
+		"id":      json.RawMessage([]byte("1")),
 		"jsonrpc": "2.0",
 		"method":  method,
-		"params":  json.RawMessage(params),
+		"params":  []interface{}{json.RawMessage(params)},
 	}
 
 	body, err := json.Marshal(request)
@@ -513,19 +512,13 @@ func (c *submitBundleJsonRPC) runImpl(suaveContext *SuaveContext, url string, me
 		return nil, err
 	}
 
-	/* TODO: allow setting in env vars */
-	privKey, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, err
-	}
-
 	hashedBody := crypto.Keccak256Hash(body).Hex()
-	sig, err := crypto.Sign(accounts.TextHash([]byte(hashedBody)), privKey)
+	sig, err := crypto.Sign(accounts.TextHash([]byte(hashedBody)), suaveContext.Backend.EthBundleSigningKey)
 	if err != nil {
 		return nil, err
 	}
 
-	signature := crypto.PubkeyToAddress(privKey.PublicKey).Hex() + ":" + hexutil.Encode(sig)
+	signature := crypto.PubkeyToAddress(suaveContext.Backend.EthBundleSigningKey.PublicKey).Hex() + ":" + hexutil.Encode(sig)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
 	if err != nil {

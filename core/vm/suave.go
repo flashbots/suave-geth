@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/go-boost-utils/bls"
 )
 
 // ConfidentialStore represents the API for the confidential store
@@ -32,6 +34,8 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
+	EthBundleSigningKey    *ecdsa.PrivateKey
+	EthBlockSigningKey     *bls.SecretKey
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
@@ -117,10 +121,10 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		ret, err = stub.buildEthBlock(input)
 
 	case fillMevShareBundleAddress:
-		return stub.fillMevShareBundle(input)
+		ret, err = stub.fillMevShareBundle(input)
 
 	case submitBundleJsonRPCAddress:
-		return stub.submitBundleJsonRPC(input)
+		ret, err = stub.submitBundleJsonRPC(input)
 
 	case submitEthBlockBidToRelayAddress:
 		ret, err = stub.submitEthBlockBidToRelay(input)

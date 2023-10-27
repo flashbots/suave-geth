@@ -2,6 +2,8 @@ package e2e
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +18,7 @@ import (
 	builderCapella "github.com/attestantio/go-builder-client/api/capella"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -36,6 +39,7 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
+	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
@@ -291,13 +295,15 @@ func TestBundleBid(t *testing.T) {
 }
 
 func TestBundleSenderContract(t *testing.T) {
-	fr := newFramework(t)
+	skOpt, bundleSigningKeyPub := WithBundleSigningKeyOpt(t)
+	fr := newFramework(t, skOpt)
 	defer fr.Close()
 
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params types.RpcSBundle
+		Id     json.RawMessage
+		Params []types.RpcSBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -309,6 +315,17 @@ func TestBundleSenderContract(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
+		splitSig := strings.Split(r.Header.Get("x-flashbots-signature"), ":")
+		require.Equal(t, 2, len(splitSig))
+		require.Equal(t, splitSig[0], crypto.PubkeyToAddress(*bundleSigningKeyPub).Hex())
+
+		signature := hexutil.MustDecode(splitSig[1])
+		hashedBody := accounts.TextHash([]byte(crypto.Keccak256Hash(bodyBytes).Hex()))
+		pk, err := crypto.SigToPub(hashedBody, signature)
+		require.NoError(t, err)
+		require.True(t, pk.Equal(bundleSigningKeyPub))
+		require.True(t, crypto.VerifySignature(crypto.CompressPubkey(bundleSigningKeyPub), hashedBody, signature[:64]))
 
 		w.WriteHeader(http.StatusOK)
 	}
@@ -363,17 +380,18 @@ func TestBundleSenderContract(t *testing.T) {
 		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 
-		require.Equal(t, 1, len(bundleSentToBuilder.Params.Txs))
+		require.Equal(t, 1, len(bundleSentToBuilder.Params))
+		require.Equal(t, 1, len(bundleSentToBuilder.Params[0].Txs))
 
 		var recoveredTx types.Transaction
-		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params.Txs[0]))
+		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params[0].Txs[0]))
 		expectedTxJson, err := signedTx.MarshalJSON()
 		require.NoError(t, err)
 		recoveredTxJson, err := recoveredTx.MarshalJSON()
 		require.NoError(t, err)
 		require.Equal(t, expectedTxJson, recoveredTxJson)
 
-		require.Equal(t, bundleSentToBuilder.Params.BlockNumber.ToInt().Uint64(), targetBlock)
+		require.Equal(t, bundleSentToBuilder.Params[0].BlockNumber.ToInt().Uint64(), targetBlock)
 	}
 }
 
@@ -552,7 +570,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params types.RPCMevShareBundle
+		Params []types.RPCMevShareBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -622,7 +640,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), receipt.Status)
 
-		retrievedBlockNumber, err := hexutil.DecodeUint64(bundleSentToBuilder.Params.Inclusion.Block)
+		retrievedBlockNumber, err := hexutil.DecodeUint64(bundleSentToBuilder.Params[0].Inclusion.Block)
 		require.NoError(t, err)
 		require.Equal(t, targetBlock, retrievedBlockNumber)
 
@@ -633,7 +651,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 
 		retrievedTxs := []string{}
-		for _, be := range bundleSentToBuilder.Params.Body {
+		for _, be := range bundleSentToBuilder.Params[0].Body {
 			retrievedTxs = append(retrievedTxs, be.Tx)
 		}
 
@@ -811,7 +829,8 @@ func TestBlockBuildingContract(t *testing.T) {
 }
 
 func TestRelayBlockSubmissionContract(t *testing.T) {
-	fr := newFramework(t, WithExecutionNode())
+	skOpt, signingPubkey := WithBlockSigningKeyOpt(t)
+	fr := newFramework(t, WithExecutionNode(), skOpt)
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
@@ -833,6 +852,12 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
+		genesisForkVersion := phase0.Version{0x00, 0x00, 0x10, 0x20}
+		builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
+		ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, bls.PublicKeyToBytes(signingPubkey), blockPayloadSentToRelay.Signature[:])
+		require.NoError(t, err)
+		require.True(t, ok)
 
 		w.WriteHeader(http.StatusOK)
 	}
@@ -1034,6 +1059,22 @@ func WithRedisTransportOpt(t *testing.T) frameworkOpt {
 	return func(c *frameworkConfig) {
 		c.suaveConfig.RedisStorePubsubUri = mr.Addr()
 	}
+}
+
+func WithBundleSigningKeyOpt(t *testing.T) (frameworkOpt, *ecdsa.PublicKey) {
+	sk, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	return func(c *frameworkConfig) {
+		c.suaveConfig.EthBundleSigningKeyHex = hex.EncodeToString(crypto.FromECDSA(sk))
+	}, &sk.PublicKey
+}
+
+func WithBlockSigningKeyOpt(t *testing.T) (frameworkOpt, *bls.PublicKey) {
+	sk, pk, err := bls.GenerateNewKeypair()
+	require.NoError(t, err)
+	return func(c *frameworkConfig) {
+		c.suaveConfig.EthBlockSigningKeyHex = hexutil.Encode(bls.SecretKeyToBytes(sk))
+	}, pk
 }
 
 func newFramework(t *testing.T, opts ...frameworkOpt) *framework {

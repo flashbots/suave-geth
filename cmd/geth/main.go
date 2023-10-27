@@ -192,6 +192,8 @@ var (
 		utils.SuaveEthRemoteBackendEndpointFlag,
 		utils.SuaveConfidentialTransportRedisEndpointFlag,
 		utils.SuaveConfidentialStoreRedisEndpointFlag,
+		utils.SuaveEthBundleSigningKeyFlag,
+		utils.SuaveEthBlockSigningKeyFlag,
 		utils.SuaveDevModeFlag,
 	}
 )
