@@ -1319,10 +1319,10 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		}
 		profitPostBundle := work.state.GetBalance(params.coinbase)
 
-		// calc & refund user if bundle has multiple txns
-		if len(bundle.Txs) > 1 {
+		// calc & refund user if bundle has multiple txns and wants refund
+		if len(bundle.Txs) > 1 && bundle.RefundPercent != nil {
 			// Note: PoC logic, this could be gamed by not sending any eth to coinbase
-			refundPrct := bundle.RefundPercent
+			refundPrct := *bundle.RefundPercent
 			if refundPrct == 0 {
 				// default refund
 				refundPrct = 10

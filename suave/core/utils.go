@@ -2,7 +2,14 @@ package suave
 
 import (
 	"encoding/json"
+
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/google/uuid"
 )
+
+func RandomBidId() types.BidId {
+	return types.BidId(uuid.New())
+}
 
 func MustEncode[T any](data T) []byte {
 	res, err := json.Marshal(data)

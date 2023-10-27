@@ -2,28 +2,60 @@ package suave
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/node"
 )
 
-type Bytes = hexutil.Bytes
-type BidId = [16]byte
+var AllowedPeekerAny = common.HexToAddress("0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829") // "*"
 
-type Bid = types.Bid
+type Bytes = hexutil.Bytes
+type BidId = types.BidId
+
+type Bid struct {
+	Id                  types.BidId
+	Salt                types.BidId
+	DecryptionCondition uint64
+	AllowedPeekers      []common.Address
+	AllowedStores       []common.Address
+	Version             string
+	CreationTx          *types.Transaction
+	Signature           []byte
+}
+
+func (b *Bid) ToInnerBid() types.Bid {
+	return types.Bid{
+		Id:                  b.Id,
+		Salt:                b.Salt,
+		DecryptionCondition: b.DecryptionCondition,
+		AllowedPeekers:      b.AllowedPeekers,
+		AllowedStores:       b.AllowedStores,
+		Version:             b.Version,
+	}
+}
+
+type MEVMBid = types.Bid
+
+type BuildBlockArgs = types.BuildBlockArgs
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
-type ConfidentialStoreBackend interface {
-	Initialize(bid Bid, key string, value []byte) (Bid, error)
-	Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
-	Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)
-}
+var (
+	ErrBidAlreadyPresent = errors.New("bid already present")
+	ErrBidNotFound       = errors.New("bid not found")
+	ErrUnsignedFinalize  = errors.New("finalize called with unsigned transaction, refusing to propagate")
+)
 
-type MempoolBackend interface {
-	SubmitBid(Bid) error
+type ConfidentialStoreBackend interface {
+	node.Lifecycle
+
+	InitializeBid(bid Bid) error
+	Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
+	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)
 	FetchBidById(BidId) (Bid, error)
 	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
 }
@@ -31,6 +63,5 @@ type MempoolBackend interface {
 type ConfidentialEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
+	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
-
-type BuildBlockArgs = types.BuildBlockArgs

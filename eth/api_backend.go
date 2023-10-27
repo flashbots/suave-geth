@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
@@ -37,10 +38,12 @@ import (
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -49,12 +52,13 @@ type EthAPIBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
-	suaveBackend        *vm.SuaveExecutionBackend
+	suaveEngine         *cstore.ConfidentialStoreEngine
+	suaveEthBackend     suave.ConfidentialEthBackend
 }
 
-func (b *EthAPIBackend) SuaveBackend() *vm.SuaveExecutionBackend {
-	// For testing purposes
-	return b.suaveBackend
+// For testing purposes
+func (b *EthAPIBackend) SuaveEngine() *cstore.ConfidentialStoreEngine {
+	return b.suaveEngine
 }
 
 // ChainConfig returns the active chain configuration.
@@ -265,11 +269,28 @@ func (b *EthAPIBackend) GetEVM(ctx context.Context, msg *core.Message, state *st
 		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
 	}
 
-	if vmConfig.IsConfidential {
-		return vm.NewConfidentialEVM(b.suaveBackend, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
-	} else {
-		return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+	return vm.NewEVM(context, txContext, state, b.eth.blockchain.Config(), *vmConfig), state.Error
+}
+
+func (b *EthAPIBackend) GetMEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext, suaveCtx *vm.SuaveContext) (*vm.EVM, func() error, func() error) {
+	if vmConfig == nil {
+		vmConfig = b.eth.blockchain.GetVMConfig()
 	}
+	txContext := core.NewEVMTxContext(msg)
+	var context vm.BlockContext
+	if blockCtx != nil {
+		context = *blockCtx
+	} else {
+		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
+	}
+
+	suaveCtxCopy := *suaveCtx
+	storeTransaction := b.suaveEngine.NewTransactionalStore(suaveCtx.ConfidentialComputeRequestTx)
+	suaveCtxCopy.Backend = &vm.SuaveExecutionBackend{
+		ConfidentialStore:      storeTransaction,
+		ConfidentialEthBackend: b.suaveEthBackend,
+	}
+	return vm.NewConfidentialEVM(suaveCtxCopy, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), storeTransaction.Finalize, state.Error
 }
 
 func (b *EthAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
@@ -427,4 +448,21 @@ func (b *EthAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, re
 
 func (b *EthAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (*core.Message, vm.BlockContext, *state.StateDB, tracers.StateReleaseFunc, error) {
 	return b.eth.stateAtTransaction(ctx, block, txIndex, reexec)
+}
+
+func (b *EthAPIBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	// Note: this is pretty close to be a circle dependency.
+	data := hexutil.Bytes(input)
+	txnArgs := ethapi.TransactionArgs{
+		To:   &contractAddr,
+		Data: &data,
+	}
+
+	blockNum := rpc.LatestBlockNumber
+	res, err := ethapi.DoCall(ctx, b, txnArgs, rpc.BlockNumberOrHash{BlockNumber: &blockNum}, nil, nil, 5*time.Second, 100000)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.ReturnData, nil
 }

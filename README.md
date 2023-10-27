@@ -52,11 +52,12 @@ Let’s take a look at how you can request confidential computation through an e
 
 1. Pick your favorite execution node. You’ll need its URL and wallet address. Note that the execution node is fully trusted to provide the result of your confidential computation.
 
-2. Craft your confidential computation request. This is a regular Ethereum transaction, where you specify the desired contract address and its (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
+2. Craft your confidential computation record. This is a regular Ethereum transaction (fields are similar to `LegacyTx`), where you specify the desired contract address and its (public) calldata. I’m assuming you have found or deployed a smart contract which you intend to call. Don’t sign the transaction quite yet!
 
     ```go
     allowedPeekers := []common.Address{newBlockBidPeeker, newBundleBidPeeker, buildEthBlockPeeker} // express which contracts should have access to your data (by their addresses)
-    confidentialComputeRequestInner := &types.LegacyTx{
+    confidentialComputeRecord := &types.ConfidentialComputeRecord{
+        ExecutionNode: "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B",
         Nonce:    suaveAccNonce,
         To:       &newBundleBidAddress,
         Value:    nil,
@@ -66,20 +67,20 @@ Let’s take a look at how you can request confidential computation through an e
     }
     ```
 
-3. Wrap your regular transaction into the new `ConfidentialComputeRequest` transaction type, and specify the execution node’s wallet address as the `ExecutionNode` field. Sign the transaction with your wallet.
-
-    ```go
-    confidentialComputeRequest := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-        ExecutionNode: "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B",
-        Wrapped:       *types.NewTx(&confidentialComputeRequestInner),
-    }), suaveSigner, privKey)
-    ```
-
-4. Request confidential computation by submitting your transaction along with your confidential data to the execution node you chose via `eth_sendRawTransaction`.
+3. Wrap your compute record into a `ConfidentialComputeRequest` transaction type, and specify the confidential data.
 
     ```go
     confidentialDataBytes := hexutil.Encode(ethBundle)
-    suaveClient.Call("eth_sendRawTransaction", confidentialComputeRequest, confidentialDataBytes)
+    confidentialComputeRequest := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
+        ConfidentialComputeRecord: confidentialComputeRecord,
+        ConfidentialInputs: confidentialDataBytes,
+    }), suaveSigner, privKey)
+    ```
+
+4. Request confidential computation by submitting your transaction to the execution node you chose via `eth_sendRawTransaction`.
+
+    ```go
+    suaveClient.Call("eth_sendRawTransaction", confidentialComputeRequest)
     ```
 
 5. All done! Once the execution node processes your computation request, the execution node will submit it as `SuaveTransaction` to the mempool.
@@ -147,21 +148,20 @@ graph TB
     classDef lightgreen fill:#b3c69f,stroke:#444,stroke-width:2px, color:#333;
 ```
 
-The capabilities enabled by this modified runtime are exposed via the APIs `ConfidentialStoreBackend` , `MempoolBackend`, `ConfidentialEthBackend`, as well as access to `confidentialInputs` to confidential compute requests and `callerStack`.
+The capabilities enabled by this modified runtime are exposed to the virtual machine via `SuaveContext` and its components.
 
 ```go
-func NewRuntimeSuaveExecutionBackend(evm *EVM, caller common.Address) *SuaveExecutionBackend {
-	if !evm.Config.IsConfidential {
-		return nil
-	}
+type SuaveContext struct {
+    Backend                      *SuaveExecutionBackend
+    ConfidentialComputeRequestTx *types.Transaction
+    ConfidentialInputs           []byte
+    CallerStack                  []*common.Address
+}
 
-	return &SuaveExecutionBackend{
-		ConfidentialStoreBackend: evm.suaveExecutionBackend.ConfidentialStoreBackend,
-		MempoolBackned:           evm.suaveExecutionBackend.MempoolBackned,
-		ConfidentialEthBackend:   evm.suaveExecutionBackend.ConfidentialEthBackend,
-		confidentialInputs:       evm.suaveExecutionBackend.confidentialInputs,
-		callerStack:              append(evm.suaveExecutionBackend.callerStack, &caller),
-	}
+type SuaveExecutionBackend struct {
+    ConfidentialStoreEngine *suave.ConfidentialStoreEngine
+    MempoolBackend          suave.MempoolBackend
+    ConfidentialEthBackend  suave.ConfidentialEthBackend
 }
 ```
 
@@ -181,44 +181,69 @@ Other than ability to access new precompiles, the contracts aiming to be execute
 
 ### Confidential compute requests
 
-We introduce two new transaction types: `ConfidentialComputeRequest`, serving as a request of confidential computation, and `SuaveTransaction` which is the result of a confidential computation. The new confidential computation transactions track the usage of gas during confidential computation, and contain (or reference) the result of the computation in a chain-friendly manner.
+We introduce a few new transaction types.
+
+* `ConfidentialComputeRecord`
+
+    This type serves as an onchain record of computation. It's a part of both the [Confidential Compute Request](#confidential-compute-request) and [Suave Transaction](#suave-transaction).
+
+    ```go
+    type ConfidentialComputeRecord struct {
+        ExecutionNode          common.Address
+        ConfidentialInputsHash common.Hash
+
+        // LegacyTx fields
+        Nonce    uint64
+        GasPrice *big.Int
+        Gas      uint64
+        To       *common.Address `rlp:"nil"`
+        Value    *big.Int
+        Data     []byte
+
+        // Signature fields
+    }
+    ```
+
+* `ConfidentialComputeRequest`
+
+    This type facilitates users in interacting with the MEVM through the `eth_sendRawTransaction` method. After processing, the request's `ConfidentialComputeRecord` is embedded into `SuaveTransaction.ConfidentialComputeRequest` and serves as an onchain record of computation.  
+
+    ```go
+    type ConfidentialComputeRequest struct {
+        ConfidentialComputeRecord
+        ConfidentialInputs []byte
+    }
+    ```
+
+* `SuaveTransaction`
+
+    A specialized transaction type that encapsulates the result of a confidential computation request. It includes the `ConfidentialComputeRequest`, signed by the user, which ensures that the result comes from the expected computor, as the `SuaveTransaction`'s signer must match the `ExecutionNode`.  
+
+    ```go
+    type SuaveTransaction struct {
+        ExecutionNode              common.Address
+        ConfidentialComputeRequest ConfidentialComputeRecord
+        ConfidentialComputeResult  []byte
+        /* Execution node's signature fields */
+    }
+    ```
 
 ![image](suave/docs/conf_comp_request_flow.png)
 
-confidential compute requests (`ConfidentialComputeRequest`) are only intermediary messages between the user requesting confidential computation and the execution node, and are not currently propagated through the mempool or included in blocks. The results of those computations (`SuaveTransaction`) are treated as regular transactions.
-
-```go
-type ConfidentialComputeRequest struct {
-    ExecutionNode common.Address
-    Wrapped  Transaction
-}
-```
-
-`SuaveTransaction` transactions are propagated through the mempool and inserted into blocks as expected, unifying confidential computation with regular on-chain execution.
-
-```go
-type SuaveTransaction struct {
-    ExecutionNode              common.Address
-    ConfidentialComputeRequest Transaction
-    ConfidentialComputeResult  []byte
-    /* Execution node's signature fields */
-}
-```
-
-The confidential computation result is placed in the `ConfidentialComputeResult` field, which is further used instead of the original transaction's calldata for on-chain execution.
 
 The basic flow is as follows:
 
-1. User crafts a usual legacy/dynamic transaction, which calls the contract of their liking
-2. User crafts the confidential computation request (`ConfidentialComputeRequest`):
-    1. User choses an execution node of their liking, that is an address whose signature over the confidential computation result will be trusted
-    2. User embeds the transaction from (1.) into an `ConfidentialComputeRequest` together with the desired execution node's address
-    3. User signs and sends the confidential computation request to an execution node via `eth_sendRawTransaction` (possibly passing in additional confidential data)
-3. The execution node executes the transaction in the confidential mode, providing access to the usual confidential APIs
-4. The execution node creates a `SuaveTransaction` using the confidential computation request and the result of its execution, the node then signs and submits the transaction into the mempool
-5. The transaction makes its way into a block, by executing the `ConfidentialComputeResult` as calldata, as long as the execution node's signature matches the requested executor node in (2.1.)
+1. User crafts a confidential computation request (`ConfidentialComputeRequest`):
+    1. Sets their GasPrice, GasLimit, To address and calldata as they would for a `LegacyTx`
+    2. Choses an execution node of their liking, that is an address whose signature over the confidential computation result will be trusted
+    3. The above becomes the `ConfidentialComputeRecord` that will eventually make its way onto the chain
+    4. Sets the `ConfidentialInputs` of the request (if any)
+    5. Signs and sends the confidential computation request (consisting of (3 and 4) to an execution node via `eth_sendRawTransaction`
+2. The execution node executes the transaction in the confidential mode, providing access to the usual confidential APIs
+3. The execution node creates a `SuaveTransaction` using the confidential computation request and the result of its execution, the node then signs and submits the transaction into the mempool
+4. The transaction makes its way into a block, by executing the `ConfidentialComputeResult` as calldata, as long as the execution node's signature matches the requested executor node in (1.2.)
 
-The user passes in any confidential data through the new `confidential_data` parameter of the `eth_sendRawTransaction` RPC method. The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.
+The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.  
 
 Architecture reference
 ![image](suave/docs/execution_node_architecture.png)
@@ -234,13 +259,15 @@ A `Bid` is a data structure encapsulating key information about a transaction on
 ```go
 type Bid struct {
 	Id                  BidId            `json:"id"`
+	Salt                BidId            `json:"salt"`
 	DecryptionCondition uint64           `json:"decryptionCondition"`
 	AllowedPeekers      []common.Address `json:"allowedPeekers"`
+	AllowedStores       []common.Address `json:"allowedStores"`
 	Version             string           `json:"version"`
 }
 ```
 
-Each `Bid` has an `Id`, a `DecryptionCondition`, an array of `AllowedPeekers`, and a `Version`. The `DecryptionCondition` signifies the block number at which the bid can be decrypted and is typically derived from the source contract or may even be a contract itself. The `AllowedPeekers` are the addresses that are permitted to access the data associated with the bid, providing an added layer of access control. The `Version` indicates the version of the protocol used for the bid.
+Each `Bid` has a `Id` (uuid v5), a `Salt` (random uuid v4),  a `DecryptionCondition`, an array of `AllowedPeekers` and `AllowedStores`, and a `Version`. The `DecryptionCondition` signifies the block number at which the bid can be decrypted and is typically derived from the source contract or may even be a contract itself. The `AllowedPeekers` are the addresses that are permitted to access the data associated with the bid, providing an added layer of access control. The `AllowedStores` are the confidential stores which should be granted access to the bid's data (currently not enforced). The `Version` indicates the version of the protocol used for the bid.
 
 ### SUAVE library
 
@@ -254,8 +281,11 @@ library Suave {
 
     struct Bid {
         BidId id;
+        BidId salt;
         uint64 decryptionCondition;
         address[] allowedPeekers;
+        address[] allowedStores;
+        string version;
     }
 
     function isConfidential() internal view returns (bool b)
@@ -273,12 +303,13 @@ library Suave {
 
 ### Confidential APIs
 
-Confidential precompiles have access to the following [Confidential APIs](suave/core/types.go) during execution.
+Confidential precompiles have access to the following [Confidential APIs](suave/core/types.go) during execution.  
+This is subject to change!  
 
 ```go
-type ConfidentialStoreBackend interface {
-    Initialize(bid Bid, key string, value []byte) (Bid, error)
-    Store(bidId BidId, caller common.Address, key string, value []byte) (Bid, error)
+type ConfidentialStoreEngine interface {
+    Initialize(bid Bid, creationTx *types.Transaction, key string, value []byte) (Bid, error)
+    Store(bidId BidId, sourceTx *types.Transaction, caller common.Address, key string, value []byte) (Bid, error)
     Retrieve(bid BidId, caller common.Address, key string) ([]byte, error)
 }
 
@@ -298,26 +329,16 @@ type ConfidentialEthBackend interface {
 
 The Confidential Store is an integral part of the SUAVE chain, designed to facilitate secure and privacy-preserving transactions and smart contract interactions. It functions as a key-value store where users can safely store and retrieve confidential data related to their bids. The Confidential Store restricts access (both reading and writing) only to the allowed peekers of each bid, allowing developers to define the entire data model of their application!
 
-The current, and certainly not final, implementation of the Confidential Store is managed by the `LocalConfidentialStore` struct. It provides thread-safe access to the bids' confidential data. The `LocalConfidentialStore` struct is composed of a mutex lock and a map of bid data, `ACData`, indexed by a `BidId`.
+The current, and certainly not final, implementation of the Confidential Store is managed by the `ConfidentialStoreEngine`. The engine consists of a storage backend, which holds the raw data, and a transport topic, which relays synchronization messages between nodes.  
+We provide two storage backends to the confidential store engine: the `LocalConfidentialStore`, storing data in memory in a simple dictionary, and `RedisStoreBackend`, storing data in redis. To enable redis as the storage backed, pass redis endpoint via `--suave.confidential.redis-store-endpoint`.  
+For synchronization of confidential stores via transport we provide an implementation using a shared Redis PubSub in `RedisPubSubTransport`, as well as a *crude* synchronization protocol. To enable redis transport, pass redis endpoint via `--suave.confidential.redis-transport-endpoint`. Note that Redis transport only synchronizes *current* state, there is no initial synchronization - a newly connected node will not have access to old data.  
+Redis as either storage backend or transport is *temporary* and will be removed once we have a well-tested p2p solution.  
 
-```go
-type LocalConfidentialStore struct {
-	lock sync.Mutex
-	bids map[suave.BidId]ACData
-}
-```
-`ACData` is another struct that contains a `bid` and a `dataMap`. The `dataMap` is a key-value store that holds the actual confidential data of the bids.
+![image](suave/docs/confidential_store_engine.png)
 
-```go
-type ACData struct {
-	bid     suave.Bid
-	dataMap map[string][]byte
-}
-```
+The `ConfidentialStoreEngine` provides the following key methods:
 
-The `LocalConfidentialStore` provides the following key methods:
-
-- **Initialize**: This method is used to initialize a bid with a given `bid.Id`. If no `bid.Id` is provided, a new one is created. The method is trusted, meaning it is not directly accessible through precompiles.
+- **Initialize**: This method is used to initialize a bid. The method is trusted, meaning it is not directly accessible through precompiles. The method returns the initialized bid, importantly with the `Id` field set.
 - **Store**: This method stores a given value under a specified key in a bid's `dataMap`. Access is restricted only to addresses listed in the bid's `AllowedPeekers`.
 - **Retrieve**: This method retrieves data associated with a given key from a bid's `dataMap`. Similar to the `Store` method, access is restricted only to addresses listed in the bid's `AllowedPeekers`.
 

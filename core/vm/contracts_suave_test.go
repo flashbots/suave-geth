@@ -14,28 +14,35 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
-	"github.com/ethereum/go-ethereum/suave/backends"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
 )
 
 type mockSuaveBackend struct {
 }
 
-func (m *mockSuaveBackend) Initialize(bid suave.Bid, key string, value []byte) (suave.Bid, error) {
+func (m *mockSuaveBackend) Start() error { return nil }
+func (m *mockSuaveBackend) Stop() error  { return nil }
+
+func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) error {
+	return nil
+}
+
+func (m *mockSuaveBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
 	return suave.Bid{}, nil
 }
 
-func (m *mockSuaveBackend) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	return suave.Bid{}, nil
-}
-
-func (m *mockSuaveBackend) Retrieve(bid suave.BidId, caller common.Address, key string) ([]byte, error) {
+func (m *mockSuaveBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
 	return nil, nil
 }
 
-func (m *mockSuaveBackend) SubmitBid(suave.Bid) error {
+func (m *mockSuaveBackend) SubmitBid(types.Bid) error {
 	return nil
+}
+
+func (m *mockSuaveBackend) FetchEngineBidById(suave.BidId) (suave.Bid, error) {
+	return suave.Bid{}, nil
 }
 
 func (m *mockSuaveBackend) FetchBidById(suave.BidId) (suave.Bid, error) {
@@ -54,6 +61,16 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
+func (m *mockSuaveBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockSuaveBackend) Subscribe() (<-chan cstore.DAMessage, context.CancelFunc) {
+	return nil, func() {}
+}
+
+func (m *mockSuaveBackend) Publish(cstore.DAMessage) {}
+
 var dummyBlockContext = BlockContext{
 	CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
 	Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
@@ -64,14 +81,24 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	suaveBackend := &SuaveExecutionBackend{
-		ConfidentialStoreBackend: mockSuaveBackend,
-		MempoolBackend:           mockSuaveBackend,
-		ConfidentialEthBackend:   mockSuaveBackend,
+	stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
+
+	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{},
+		},
+	})
+
+	suaveContext := SuaveContext{
+		Backend: &SuaveExecutionBackend{
+			ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
+			ConfidentialEthBackend: mockSuaveBackend,
+		},
+		ConfidentialComputeRequestTx: reqTx,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-	vmenv := NewConfidentialEVM(suaveBackend, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsConfidential: true})
+	vmenv := NewConfidentialEVM(suaveContext, dummyBlockContext, TxContext{}, statedb, params.AllEthashProtocolChanges, Config{IsConfidential: true})
 
 	// The objective of the unit test is to make sure that the encoding of the precompile
 	// inputs works as expected from the ABI specification. Thus, we will skip any errors
@@ -82,11 +109,18 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// json error when the precompile expects to decode a json object encoded as []byte
 		// in the precompile input.
 		"invalid character",
+		"not allowed to store",
+		"not allowed to retrieve",
+		"unknown bid version",
 		// error from a precompile that expects to make an http request from an input value.
 		"could not send request to relay",
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
+		"no caller of confidentialStoreRetrieve (0000000000000000000000000000000042020001) is allowed on 00000000000000000000000000000000",
+		"precompile fillMevShareBundle (0000000000000000000000000000000043200001) not allowed on 00000000000000000000000000000000",
+		"no caller of confidentialStoreStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
+		"precompile buildEthBlock (0000000000000000000000000000000042100001) not allowed on 00000000000000000000000000000000",
 	}
 
 	for name, addr := range artifacts.SuaveMethods {
@@ -115,60 +149,73 @@ func TestSuavePrecompileStub(t *testing.T) {
 	}
 }
 
-func newTestBackend() *suaveRuntime {
-	confStore := backends.NewLocalConfidentialStore()
+func newTestBackend(t *testing.T) *suaveRuntime {
+	confStore := cstore.NewLocalConfidentialStore()
+	confEngine := cstore.NewConfidentialStoreEngine(confStore, &cstore.MockTransport{}, cstore.MockSigner{}, cstore.MockChainSigner{})
+
+	require.NoError(t, confEngine.Start())
+	t.Cleanup(func() { confEngine.Stop() })
+
+	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: common.Address{},
+		},
+	})
 
 	b := &suaveRuntime{
-		backend: &SuaveExecutionBackend{
-			ConfidentialStoreBackend: confStore,
-			MempoolBackend:           backends.NewMempoolOnConfidentialStore(confStore),
-			ConfidentialEthBackend:   &mockSuaveBackend{},
+		suaveContext: &SuaveContext{
+			Backend: &SuaveExecutionBackend{
+				ConfidentialStore:      confEngine.NewTransactionalStore(reqTx),
+				ConfidentialEthBackend: &mockSuaveBackend{},
+			},
+			ConfidentialComputeRequestTx: reqTx,
 		},
 	}
 	return b
 }
 
 func TestSuave_BidWorkflow(t *testing.T) {
-	b := newTestBackend()
+	b := newTestBackend(t)
 
-	bid5, err := b.newBid(5, []common.Address{{0x1}}, "a")
+	bid5, err := b.newBid(5, []common.Address{{0x1}}, nil, "a")
 	require.NoError(t, err)
 
-	bid10, err := b.newBid(10, []common.Address{{0x1}}, "a")
+	bid10, err := b.newBid(10, []common.Address{{0x1}}, nil, "a")
 	require.NoError(t, err)
 
-	bid10b, err := b.newBid(10, []common.Address{{0x1}}, "a")
+	bid10b, err := b.newBid(10, []common.Address{{0x1}}, nil, "a")
 	require.NoError(t, err)
 
 	cases := []struct {
 		cond      uint64
 		namespace string
-		bids      []suave.Bid
+		bids      []types.Bid
 	}{
-		{0, "a", nil},
-		{5, "a", []suave.Bid{bid5}},
-		{10, "a", []suave.Bid{bid10, bid10b}},
-		{11, "a", nil},
+		{0, "a", []types.Bid{}},
+		{5, "a", []types.Bid{bid5}},
+		{10, "a", []types.Bid{bid10, bid10b}},
+		{11, "a", []types.Bid{}},
 	}
 
 	for _, c := range cases {
 		bids, err := b.fetchBids(c.cond, c.namespace)
 		require.NoError(t, err)
-		require.Equal(t, c.bids, bids)
+
+		require.ElementsMatch(t, c.bids, bids)
 	}
 }
 
 func TestSuave_ConfStoreWorkflow(t *testing.T) {
-	b := newTestBackend()
+	b := newTestBackend(t)
 
 	callerAddr := common.Address{0x1}
 	data := []byte{0x1}
 
 	// cannot store a value for a bid that does not exist
-	err := b.confidentialStoreStore([16]byte{}, "key", data)
+	err := b.confidentialStoreStore(types.BidId{}, "key", data)
 	require.Error(t, err)
 
-	bid, err := b.newBid(5, []common.Address{callerAddr}, "a")
+	bid, err := b.newBid(5, []common.Address{callerAddr}, nil, "a")
 	require.NoError(t, err)
 
 	// cannot store the bid if the caller is not allowed to
@@ -176,7 +223,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Error(t, err)
 
 	// now, the caller is allowed to store the bid
-	b.backend.callerStack = append(b.backend.callerStack, &callerAddr)
+	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &callerAddr)
 	err = b.confidentialStoreStore(bid.Id, "key", data)
 	require.NoError(t, err)
 
@@ -185,7 +232,7 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Equal(t, data, val)
 
 	// cannot retrieve the value if the caller is not allowed to
-	b.backend.callerStack = []*common.Address{}
+	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
 	require.Error(t, err)
 }

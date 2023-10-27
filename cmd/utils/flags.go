@@ -77,6 +77,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/genesis"
 	"github.com/ethereum/go-ethereum/trie"
 	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
@@ -521,6 +522,24 @@ var (
 	SuaveEthRemoteBackendEndpointFlag = &cli.StringFlag{
 		Name:     "suave.eth.remote_endpoint",
 		Usage:    "Ethereum RPC endpoint to use as eth backend",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveConfidentialTransportRedisEndpointFlag = &cli.StringFlag{
+		Name:     "suave.confidential.redis-transport-endpoint",
+		Usage:    "Redis endpoint to use as confidential store transport (default: no transport)",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveConfidentialStoreRedisEndpointFlag = &cli.StringFlag{
+		Name:     "suave.confidential.redis-store-endpoint",
+		Usage:    "Redis endpoint to use as confidential storage backend (default: local store)",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveDevModeFlag = &cli.BoolFlag{
+		Name:     "suave.dev",
+		Usage:    "Dev mode for suave",
 		Category: flags.SuaveCategory,
 	}
 
@@ -1670,6 +1689,14 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 	if ctx.IsSet(SuaveEthRemoteBackendEndpointFlag.Name) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
 	}
+
+	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {
+		cfg.RedisStorePubsubUri = ctx.String(SuaveConfidentialTransportRedisEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveConfidentialStoreRedisEndpointFlag.Name) {
+		cfg.RedisStoreUri = ctx.String(SuaveConfidentialStoreRedisEndpointFlag.Name)
+	}
 }
 
 // SetEthConfig applies eth-related command line flags to the config.
@@ -1841,7 +1868,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
 	case ctx.Bool(SuaveFlag.Name):
 		if !ctx.IsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 424242
+			cfg.NetworkId = 16813125
 		}
 		cfg.Genesis = core.DefaultSuaveGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.SuaveGenesisHash)
@@ -2289,7 +2316,7 @@ type jsonGenesis struct {
 }
 
 func readJSONGenesis(genesisPath string) (*jsonGenesis, error) {
-	genesisRaw, err := os.ReadFile(genesisPath)
+	genesisRaw, err := genesis.Load(genesisPath)
 	if err != nil {
 		return nil, err
 	}

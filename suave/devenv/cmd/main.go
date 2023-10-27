@@ -112,10 +112,11 @@ func main() {
 		{
 			name: "Send bid",
 			action: func() error {
-				bundle := types.SBundle{
+				refundPercent := 10
+				bundle := &types.SBundle{
 					Txs:             types.Transactions{ethTxn1},
 					RevertingHashes: []common.Hash{},
-					RefundPercent:   10,
+					RefundPercent:   &refundPercent,
 				}
 				bundleBytes, _ := json.Marshal(bundle)
 
@@ -125,7 +126,7 @@ func main() {
 
 				confidentialDataBytes, _ := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
 
-				txnResult, err := mevShareContract.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers}, confidentialDataBytes)
+				txnResult, err := mevShareContract.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 				if err != nil {
 					return err
 				}
@@ -156,10 +157,9 @@ func main() {
 		{
 			name: "Send backrun",
 			action: func() error {
-				backRunBundle := types.SBundle{
+				backRunBundle := &types.SBundle{
 					Txs:             types.Transactions{ethTxnBackrun},
 					RevertingHashes: []common.Hash{},
-					MatchId:         bidId,
 				}
 				backRunBundleBytes, _ := json.Marshal(backRunBundle)
 
@@ -169,7 +169,7 @@ func main() {
 				targetBlock := uint64(1)
 				allowedPeekers := []common.Address{mevShareContract.Address()}
 
-				txnResult, err := mevShareContract.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, bidId}, confidentialDataMatchBytes)
+				txnResult, err := mevShareContract.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}, bidId}, confidentialDataMatchBytes)
 				if err != nil {
 					return err
 				}

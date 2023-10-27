@@ -6,9 +6,13 @@ structs:
     fields:
       - name: id
         type: BidId
+      - name: salt
+        type: BidId
       - name: decryptionCondition
         type: uint64
       - name: allowedPeekers
+        type: address[]
+      - name: allowedStores
         type: address[]
       - name: version
         type: string
@@ -54,6 +58,8 @@ functions:
       - name: decryptionCondition
         type: uint64
       - name: allowedPeekers
+        type: address[]
+      - name: allowedStores
         type: address[]
       - name: bidType
         type: string
@@ -140,4 +146,41 @@ functions:
       packed: true
       fields:
         - name: output1
+          type: bytes
+  - name: ethcall
+    address: "0x0000000000000000000000000000000042100003"
+    input:
+      - name: contractAddr
+        type: address
+      - name: input1
+        type: bytes
+    output:
+      fields:
+        - name: output1
+          type: bytes
+  - name: submitBundleJsonRPC
+    address: "0x0000000000000000000000000000000043000001"
+    isConfidential: true
+    input:
+      - name: url
+        type: string
+      - name: method
+        type: string
+      - name: params
+        type: bytes
+    output:
+      packed: true
+      fields:
+        - name: output1
+          type: bytes
+  - name: fillMevShareBundle
+    address: "0x0000000000000000000000000000000043200001"
+    isConfidential: true
+    input:
+      - name: bidId
+        type: BidId
+    output:
+      packed: true
+      fields:
+        - name: encodedBundle
           type: bytes

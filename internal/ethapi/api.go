@@ -19,6 +19,7 @@ package ethapi
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -30,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/scwallet"
-	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -47,6 +47,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -1021,7 +1022,43 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 		blockOverrides.Apply(&blockCtx)
 	}
 
-	vmConfig := vm.Config{NoBaseFee: true, IsConfidential: args.IsConfidential}
+	if args.IsConfidential {
+		if args.ExecutionNode == nil {
+			acc := b.AccountManager().Accounts()[0]
+			args.ExecutionNode = &acc
+		}
+
+		tx := args.ToTransaction()
+
+		state, header, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+		if state == nil || err != nil {
+			return nil, err
+		}
+
+		msg := &core.Message{
+			Nonce:             tx.Nonce(),
+			GasLimit:          tx.Gas(),
+			GasPrice:          new(big.Int),
+			GasFeeCap:         new(big.Int),
+			GasTipCap:         new(big.Int),
+			To:                tx.To(),
+			Value:             tx.Value(),
+			Data:              tx.Data(),
+			AccessList:        tx.AccessList(),
+			SkipAccountChecks: true,
+		}
+
+		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg)
+		if err != nil {
+			return nil, err
+		}
+		if err := finalize(); err != suave.ErrUnsignedFinalize {
+			return nil, err
+		}
+		return result, err
+	}
+
+	vmConfig := vm.Config{NoBaseFee: true, IsConfidential: false}
 	evm, vmError := b.GetEVM(ctx, msg, state, header, &vmConfig, &blockCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
@@ -1315,48 +1352,6 @@ func (s *BlockChainAPI) rpcMarshalBlock(ctx context.Context, b *types.Block, inc
 	return fields, err
 }
 
-func (s *BlockChainAPI) BuildEth2Block(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
-	if buildArgs == nil {
-		head := s.b.CurrentHeader()
-		buildArgs = &types.BuildBlockArgs{
-			Parent:       head.Hash(),
-			Timestamp:    head.Time + uint64(12),
-			FeeRecipient: common.Address{0x42},
-			GasLimit:     30000000,
-			Random:       head.Root,
-			Withdrawals:  nil,
-		}
-	}
-
-	block, profit, err := s.b.BuildBlockFromTxs(ctx, buildArgs, txs)
-	if err != nil {
-		return nil, err
-	}
-
-	return engine.BlockToExecutableData(block, profit), nil
-}
-
-func (s *BlockChainAPI) BuildEth2BlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
-	if buildArgs == nil {
-		head := s.b.CurrentHeader()
-		buildArgs = &types.BuildBlockArgs{
-			Parent:       head.Hash(),
-			Timestamp:    head.Time + uint64(12),
-			FeeRecipient: common.Address{0x42},
-			GasLimit:     30000000,
-			Random:       head.Root,
-			Withdrawals:  nil,
-		}
-	}
-
-	block, profit, err := s.b.BuildBlockFromBundles(ctx, buildArgs, bundles)
-	if err != nil {
-		return nil, err
-	}
-
-	return engine.BlockToExecutableData(block, profit), nil
-}
-
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 type RPCTransaction struct {
 	BlockHash                 *common.Hash      `json:"blockHash"`
@@ -1376,7 +1371,9 @@ type RPCTransaction struct {
 	Accesses                  *types.AccessList `json:"accessList,omitempty"`
 	ChainID                   *hexutil.Big      `json:"chainId,omitempty"`
 	ExecutionNode             *common.Address   `json:"executionNode,omitempty"`
-	Wrapped                   *hexutil.Bytes    `json:"wrapped,omitempty"`
+	ConfidentialInputsHash    *common.Hash      `json:"confidentialInputsHash,omitempty"`
+	ConfidentialInputs        *hexutil.Bytes    `json:"confidentialInputs,omitempty"`
+	RequestRecord             *json.RawMessage  `json:"requestRecord,omitempty"`
 	ConfidentialComputeResult *hexutil.Bytes    `json:"confidentialComputeResult,omitempty"`
 	V                         *hexutil.Big      `json:"v"`
 	R                         *hexutil.Big      `json:"r"`
@@ -1433,6 +1430,21 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		} else {
 			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
 		}
+	case types.ConfidentialComputeRecordTxType:
+		inner, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
+		if !ok {
+			log.Error("could not marshal rpc transaction: tx did not cast correctly")
+			return nil
+		}
+
+		result.ExecutionNode = &inner.ExecutionNode
+
+		// if a legacy transaction has an EIP-155 chain id, include it explicitly
+		if id := tx.ChainId(); id.Sign() != 0 {
+			result.ChainID = (*hexutil.Big)(id)
+		}
+		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.ConfidentialComputeRequestTxType:
 		inner, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 		if !ok {
@@ -1442,14 +1454,12 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 		result.ExecutionNode = &inner.ExecutionNode
 
-		// TODO: should be rpc marshaled
-		wrappedBytes, err := inner.Wrapped.MarshalJSON()
-		if err != nil {
-			log.Error("could not marshal rpc transaction", "err", err)
-			return nil
+		// if a legacy transaction has an EIP-155 chain id, include it explicitly
+		if id := tx.ChainId(); id.Sign() != 0 {
+			result.ChainID = (*hexutil.Big)(id)
 		}
-
-		result.Wrapped = (*hexutil.Bytes)(&wrappedBytes)
+		result.ConfidentialInputs = (*hexutil.Bytes)(&inner.ConfidentialInputs)
+		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.SuaveTxType:
 		inner, ok := types.CastTxInner[*types.SuaveTransaction](tx)
@@ -1461,13 +1471,13 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		result.ExecutionNode = &inner.ExecutionNode
 
 		// TODO: should be rpc marshaled
-		wrappedBytes, err := inner.ConfidentialComputeRequest.MarshalJSON()
+		rrBytes, err := types.NewTx(&inner.ConfidentialComputeRequest).MarshalJSON()
 		if err != nil {
 			log.Error("could not marshal rpc transaction", "err", err)
 			return nil
 		}
 
-		result.Wrapped = (*hexutil.Bytes)(&wrappedBytes)
+		result.RequestRecord = (*json.RawMessage)(&rrBytes)
 		result.ConfidentialComputeResult = (*hexutil.Bytes)(&inner.ConfidentialComputeResult)
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	}
@@ -1859,12 +1869,26 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 	}
 
 	if tx.Type() == types.ConfidentialComputeRequestTxType {
-		// TODO: this is a huge dos vector!
-		log.Info("received confidential compute request tx", "tx", tx.Hash())
-		tx, err := s.executeConfidentialCall(ctx, tx, confidential)
+		state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+		if state == nil || err != nil {
+			return common.Hash{}, err
+		}
+
+		msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
 		if err != nil {
+			return common.Hash{}, err
+		}
+
+		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, signed, msg)
+		if err != nil {
+			return common.Hash{}, err
+		}
+
+		if err = finalize(); err != nil {
+			log.Error("could not finalize confidential store", "err", err)
 			return tx.Hash(), err
 		}
+		signed = ntx
 	}
 	return SubmitTransaction(ctx, s.b, signed)
 }
@@ -1888,17 +1912,29 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
-func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes, confidential *hexutil.Bytes) (common.Hash, error) {
+func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
 	if err := tx.UnmarshalBinary(input); err != nil {
 		return common.Hash{}, err
 	}
 
-	if tx.Type() == types.ConfidentialComputeRequestTxType {
-		// TODO: only if not yet signed
-		// TODO: this is a huge dos vector!
-		ntx, err := s.executeConfidentialCall(ctx, tx, confidential)
+	if _, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx); ok {
+		state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+		if state == nil || err != nil {
+			return common.Hash{}, err
+		}
+
+		msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
 		if err != nil {
+			return common.Hash{}, err
+		}
+
+		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg)
+		if err != nil {
+			return tx.Hash(), err
+		}
+		if err = finalize(); err != nil {
+			log.Error("could not finalize confidential store", "err", err)
 			return tx.Hash(), err
 		}
 		tx = ntx
@@ -1907,47 +1943,33 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 	return SubmitTransaction(ctx, s.b, tx)
 }
 
-func (s *TransactionAPI) executeConfidentialCall(ctx context.Context, tx *types.Transaction, confidential *hexutil.Bytes) (*types.Transaction, error) {
-	defer func(start time.Time) {
-		log.Info("Executing confidential compute request call finished", "runtime", time.Since(start))
-	}(time.Now())
+// TODO: should be its own api
+func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message) (*types.Transaction, *core.ExecutionResult, func() error, error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
 
 	// TODO: copy the inner, but only once
 	confidentialRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 	if !ok {
-		return nil, errors.New("invalid transaction passed")
+		return nil, nil, nil, errors.New("invalid transaction passed")
 	}
 
 	// Look up the wallet containing the requested execution node
 	account := accounts.Account{Address: confidentialRequestTx.ExecutionNode}
-	wallet, err := s.b.AccountManager().Find(account)
+	wallet, err := b.AccountManager().Find(account)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
-	if state == nil || err != nil {
-		return nil, err
+	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
+
+	suaveCtx := vm.SuaveContext{
+		ConfidentialComputeRequestTx: tx,
+		ConfidentialInputs:           confidentialRequestTx.ConfidentialInputs,
 	}
 
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-
-	// Make sure the context is cancelled when the call has completed
-	// this makes sure resources are cleaned up.
-	defer cancel()
-
-	// Get a new instance of the EVM.
-	msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
-	if err != nil {
-		return nil, err
-	}
-	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, s.b), nil)
-	evm, vmError := s.b.GetEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx)
-
-	if confidential != nil {
-		evm.SetConfidentialInput(*confidential)
-	}
+	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1963,17 +1985,17 @@ func (s *TransactionAPI) executeConfidentialCall(ctx context.Context, tx *types.
 	result, err := core.ApplyMessage(evm, msg, gp)
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
-		return nil, fmt.Errorf("execution aborted")
+		return nil, nil, nil, fmt.Errorf("execution aborted")
 	}
 	if err != nil {
-		return tx, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
+		return nil, nil, nil, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
 	}
 	if err := vmError(); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	if result.Failed() {
-		return nil, fmt.Errorf("%w: %s", result.Err, hexutil.Encode(result.Revert()))
+		return nil, nil, nil, fmt.Errorf("%w: %s", result.Err, hexutil.Encode(result.Revert()))
 	}
 
 	// Check for call in return
@@ -1988,15 +2010,15 @@ func (s *TransactionAPI) executeConfidentialCall(ctx context.Context, tx *types.
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: confidentialRequestTx.Wrapped, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: confidentialRequestTx.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
-	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), s.b.ChainConfig().ChainID)
+	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// will copy the inner tx again!
-	return signed, nil
+	return signed, result, storeFinalize, nil
 }
 
 // Sign calculates an ECDSA signature for:

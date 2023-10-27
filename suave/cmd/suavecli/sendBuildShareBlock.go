@@ -174,20 +174,19 @@ func sendBuildShareBlockTx(
 	calldata, err := ethBlockBidSenderAbi.Pack("buildMevShare", payloadArgsTuple, goerliBlockNum)
 	RequireNoErrorf(err, "could not pack buildMevShare args: %v", err)
 
-	wrappedTxData := &types.DynamicFeeTx{
-		Nonce:     suaveAccNonce,
-		To:        &blockSenderAddr,
-		Value:     nil,
-		Gas:       1000000,
-		GasTipCap: big.NewInt(10),
-		GasFeeCap: big.NewInt(33000000000),
-		Data:      calldata,
+	wrappedTxData := &types.ConfidentialComputeRequest{
+		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+			ExecutionNode: executionNodeAddress,
+			Nonce:         suaveAccNonce,
+			To:            &blockSenderAddr,
+			Value:         nil,
+			Gas:           1000000,
+			GasPrice:      big.NewInt(33000000000),
+			Data:          calldata,
+		},
 	}
 
-	confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ExecutionNode: executionNodeAddress,
-		Wrapped:       *types.NewTx(wrappedTxData),
-	}), suaveSigner, privKey)
+	confidentialRequestTx, err := types.SignTx(types.NewTx(wrappedTxData), suaveSigner, privKey)
 	RequireNoErrorf(err, "could not sign confidentialRequestTx: %v", err)
 
 	confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
