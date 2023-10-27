@@ -53,6 +53,8 @@ library Suave {
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
+    address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
+
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
@@ -162,6 +164,19 @@ library Suave {
         }
 
         return abi.decode(data, (Bid));
+    }
+
+    function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = SIGN_ETH_TRANSACTION.staticcall(abi.encode(txn, chainId, signingKey));
+        if (!success) {
+            revert PeekerReverted(SIGN_ETH_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {

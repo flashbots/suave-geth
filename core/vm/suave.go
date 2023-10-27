@@ -2,6 +2,7 @@ package vm
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"time"
 
@@ -51,6 +52,28 @@ func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 		ConfidentialInputs:           evm.SuaveContext.ConfidentialInputs,
 		CallerStack:                  append(evm.SuaveContext.CallerStack, &caller),
 	}
+}
+
+func staticRequiredGas(amt uint64) func(input []byte) uint64 {
+	return func(input []byte) uint64 {
+		return amt
+	}
+}
+
+type stubPrecompile struct {
+	requiredGas func(input []byte) uint64
+}
+
+func (p *stubPrecompile) RequiredGas(input []byte) uint64 {
+	return p.requiredGas(input)
+}
+
+func (p *stubPrecompile) Run(input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this context")
+}
+
+func (c *stubPrecompile) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	return nil, errors.New("not available in this context")
 }
 
 // Implements PrecompiledContract for confidential smart contracts
@@ -113,6 +136,9 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 
 	case extractHintAddress:
 		ret, err = stub.extractHint(input)
+
+	case signEthTransactionAddress:
+		ret, err = stub.signEthTransaction(input)
 
 	case simulateBundleAddress:
 		ret, err = stub.simulateBundle(input)

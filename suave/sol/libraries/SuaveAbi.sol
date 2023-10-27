@@ -9,6 +9,7 @@ contract SuaveAbi {
 	function fetchBids(uint64 cond, string memory namespace) external view returns (Suave.Bid[] memory) {}
     function confidentialStoreStore(Suave.BidId bidId, string memory key, bytes memory data) external view {}
     function confidentialStoreRetrieve(Suave.BidId bidId, string memory key) external view returns (bytes memory) {}
+    function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey) external view returns (bytes memory) {}
     function simulateBundle(bytes memory bundleData) external view returns (uint64) {}
     function extractHint(bytes memory bundleData) external view returns (bytes memory) {}
 	function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.BidId bid, string memory namespace) external view returns (bytes memory, bytes memory) {}

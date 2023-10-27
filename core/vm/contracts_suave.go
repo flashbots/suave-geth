@@ -3,13 +3,10 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -79,45 +76,7 @@ func (c *confidentialInputsPrecompile) RunConfidential(suaveContext *SuaveContex
 
 /* Confidential store precompiles */
 
-type confStoreStore struct {
-	inoutAbi abi.Method
-}
-
-func newConfStoreStore() *confStoreStore {
-	inoutAbi := mustParseMethodAbi(`[{"inputs":[{"type":"bytes16"}, {"type":"bytes16"}, {"type":"string"}, {"type":"bytes"}],"name":"store","outputs":[],"stateMutability":"nonpayable","type":"function"}]`, "store")
-
-	return &confStoreStore{inoutAbi}
-}
-
-func (c *confStoreStore) RequiredGas(input []byte) uint64 {
-	return uint64(100 * len(input))
-}
-
-func (c *confStoreStore) Run(input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this suaveContext")
-}
-
-func (c *confStoreStore) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	if len(suaveContext.CallerStack) == 0 {
-		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
-	}
-
-	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	bidId := unpacked[0].(types.BidId)
-	key := unpacked[1].(string)
-	data := unpacked[2].([]byte)
-
-	if err := c.runImpl(suaveContext, bidId, key, data); err != nil {
-		return []byte(err.Error()), err
-	}
-	return nil, nil
-}
-
-func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
+func confStoreStoreImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return suave.ErrBidNotFound
@@ -140,37 +99,7 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	return nil
 }
 
-type confStoreRetrieve struct{}
-
-func newConfStoreRetrieve() *confStoreRetrieve {
-	return &confStoreRetrieve{}
-}
-
-func (c *confStoreRetrieve) RequiredGas(input []byte) uint64 {
-	return 100
-}
-
-func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this suaveContext")
-}
-
-func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	if len(suaveContext.CallerStack) == 0 {
-		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
-	}
-
-	unpacked, err := artifacts.SuaveAbi.Methods["retrieve"].Inputs.Unpack(input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	bidId := unpacked[0].(suave.BidId)
-	key := unpacked[1].(string)
-
-	return c.runImpl(suaveContext, bidId, key)
-}
-
-func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
+func confStoreRetrieveImpl(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return nil, suave.ErrBidNotFound
@@ -195,43 +124,7 @@ func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidI
 
 /* Bid precompiles */
 
-type newBid struct {
-	inoutAbi abi.Method
-}
-
-func newNewBid() *newBid {
-	inoutAbi := mustParseMethodAbi(`[{ "inputs": [ { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "string", "name": "BidType", "type": "string" } ], "name": "newBid", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" } ], "internalType": "struct Suave.Bid", "name": "", "type": "tuple" } ], "stateMutability": "view", "type": "function" }]`, "newBid")
-
-	return &newBid{inoutAbi}
-}
-
-func (c *newBid) RequiredGas(input []byte) uint64 {
-	return 1000
-}
-
-func (c *newBid) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (c *newBid) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-	version := unpacked[2].(string)
-
-	decryptionCondition := unpacked[0].(uint64)
-	allowedPeekers := unpacked[1].([]common.Address)
-
-	bid, err := c.runImpl(suaveContext, version, decryptionCondition, allowedPeekers, []common.Address{})
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	return c.inoutAbi.Outputs.Pack(bid)
-}
-
-func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address) (*types.Bid, error) {
+func newBidImpl(suaveContext *SuaveContext, version string, decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address) (*types.Bid, error) {
 	if suaveContext.ConfidentialComputeRequestTx == nil {
 		panic("newBid: source transaction not present")
 	}
@@ -250,42 +143,7 @@ func (c *newBid) runImpl(suaveContext *SuaveContext, version string, decryptionC
 	return &bid, nil
 }
 
-type fetchBids struct {
-	inoutAbi abi.Method
-}
-
-func newFetchBids() *fetchBids {
-	inoutAbi := mustParseMethodAbi(`[ { "inputs": [ { "internalType": "uint64", "name": "cond", "type": "uint64" }, { "internalType": "string", "name": "namespace", "type": "string" } ], "name": "fetchBids", "outputs": [ { "components": [ { "internalType": "Suave.BidId", "name": "id", "type": "bytes16" }, { "internalType": "Suave.BidId", "name": "salt", "type": "bytes16" }, { "internalType": "uint64", "name": "decryptionCondition", "type": "uint64" }, { "internalType": "address[]", "name": "allowedPeekers", "type": "address[]" }, { "internalType": "address[]", "name": "allowedStores", "type": "address[]" }, { "internalType": "string", "name": "version", "type": "string" } ], "internalType": "struct Suave.Bid[]", "name": "", "type": "tuple[]" } ], "stateMutability": "view", "type": "function" } ]`, "fetchBids")
-
-	return &fetchBids{inoutAbi}
-}
-
-func (c *fetchBids) RequiredGas(input []byte) uint64 {
-	return 1000
-}
-
-func (c *fetchBids) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
-func (c *fetchBids) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
-	unpacked, err := c.inoutAbi.Inputs.Unpack(input)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	targetBlock := unpacked[0].(uint64)
-	namespace := unpacked[1].(string)
-
-	bids, err := c.runImpl(suaveContext, targetBlock, namespace)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-
-	return c.inoutAbi.Outputs.Pack(bids)
-}
-
-func (c *fetchBids) runImpl(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
+func fetchBidsImpl(suaveContext *SuaveContext, targetBlock uint64, namespace string) ([]types.Bid, error) {
 	bids1 := suaveContext.Backend.ConfidentialStore.FetchBidsByProtocolAndBlock(targetBlock, namespace)
 
 	bids := make([]types.Bid, 0, len(bids1))
@@ -294,20 +152,6 @@ func (c *fetchBids) runImpl(suaveContext *SuaveContext, targetBlock uint64, name
 	}
 
 	return bids, nil
-}
-
-func mustParseAbi(data string) abi.ABI {
-	inoutAbi, err := abi.JSON(strings.NewReader(data))
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return inoutAbi
-}
-
-func mustParseMethodAbi(data string, method string) abi.Method {
-	inoutAbi := mustParseAbi(data)
-	return inoutAbi.Methods[method]
 }
 
 func formatPeekerError(format string, args ...any) ([]byte, error) {
@@ -322,11 +166,11 @@ type suaveRuntime struct {
 var _ SuaveRuntime = &suaveRuntime{}
 
 func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byte, error) {
-	return (&ethCallPrecompile{}).runImpl(b.suaveContext, contractAddr, input)
+	return ethCallPrecompileImpl(b.suaveContext, contractAddr, input)
 }
 
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.BidId, namespace string) ([]byte, []byte, error) {
-	return (&buildEthBlock{}).runImpl(b.suaveContext, blockArgs, bid, namespace)
+	return buildEthBlockImpl(b.suaveContext, blockArgs, bid, namespace)
 }
 
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
@@ -334,19 +178,19 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 }
 
 func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
-	return (&confStoreRetrieve{}).runImpl(b.suaveContext, bidId, key)
+	return confStoreRetrieveImpl(b.suaveContext, bidId, key)
 }
 
 func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {
-	return (&confStoreStore{}).runImpl(b.suaveContext, bidId, key, data)
+	return confStoreStoreImpl(b.suaveContext, bidId, key, data)
 }
 
 func (b *suaveRuntime) extractHint(bundleData []byte) ([]byte, error) {
-	return (&extractHint{}).runImpl(b.suaveContext, bundleData)
+	return extractHintImpl(b.suaveContext, bundleData)
 }
 
 func (b *suaveRuntime) fetchBids(cond uint64, namespace string) ([]types.Bid, error) {
-	bids, err := (&fetchBids{}).runImpl(b.suaveContext, cond, namespace)
+	bids, err := fetchBidsImpl(b.suaveContext, cond, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -354,15 +198,19 @@ func (b *suaveRuntime) fetchBids(cond uint64, namespace string) ([]types.Bid, er
 }
 
 func (b *suaveRuntime) newBid(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, BidType string) (types.Bid, error) {
-	bid, err := (&newBid{}).runImpl(b.suaveContext, BidType, decryptionCondition, allowedPeekers, allowedStores)
+	bid, err := newBidImpl(b.suaveContext, BidType, decryptionCondition, allowedPeekers, allowedStores)
 	if err != nil {
 		return types.Bid{}, err
 	}
 	return *bid, nil
 }
 
+func (b *suaveRuntime) signEthTransaction(txn []byte, chainId string, signingKey string) ([]byte, error) {
+	return signEthTransactionImpl(txn, chainId, signingKey)
+}
+
 func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
-	num, err := (&simulateBundle{}).runImpl(b.suaveContext, bundleData)
+	num, err := simulateBundleImpl(b.suaveContext, bundleData)
 	if err != nil {
 		return 0, err
 	}
@@ -370,13 +218,13 @@ func (b *suaveRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 }
 
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
-	return (&submitEthBlockBidToRelay{}).runImpl(b.suaveContext, relayUrl, builderBid)
+	return submitEthBlockBidToRelayImpl(b.suaveContext, relayUrl, builderBid)
 }
 
 func (b *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
-	return (&fillMevShareBundle{}).runImpl(b.suaveContext, bidId)
+	return fillMevShareBundleImpl(b.suaveContext, bidId)
 }
 
 func (b *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
-	return (&submitBundleJsonRPC{}).runImpl(b.suaveContext, url, method, params)
+	return submitBundleJsonRPCImpl(b.suaveContext, url, method, params)
 }

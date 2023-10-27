@@ -3,6 +3,7 @@ package vm
 import (
 	"context"
 	"math/big"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -123,6 +124,10 @@ func TestSuavePrecompileStub(t *testing.T) {
 		"precompile buildEthBlock (0000000000000000000000000000000042100001) not allowed on 00000000000000000000000000000000",
 	}
 
+	expectedVariableErrors := []*regexp.Regexp{
+		regexp.MustCompile("key not formatted properly: invalid hex character.*in private key"),
+	}
+
 	for name, addr := range artifacts.SuaveMethods {
 		abiMethod, ok := artifacts.SuaveAbi.Methods[name]
 		if !ok {
@@ -140,6 +145,18 @@ func TestSuavePrecompileStub(t *testing.T) {
 			for _, expectedError := range expectedErrors {
 				if strings.Contains(err.Error(), expectedError) {
 					found = true
+					break
+				}
+			}
+
+			if found {
+				continue
+			}
+
+			for _, expectedErrRe := range expectedVariableErrors {
+				if expectedErrRe.Match([]byte(err.Error())) {
+					found = true
+					break
 				}
 			}
 			if !found {
