@@ -46,7 +46,7 @@ services:
       service: blockscout-db
 
   blockscout-all-in-one:
-    image: blockscout/blockscout-suave-all-in-one:v1.0
+    image: blockscout/blockscout-suave-all-in-one:v2.0
     pull_policy: always
     container_name: blockscout-all-in-one
     environment:
