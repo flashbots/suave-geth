@@ -32,13 +32,10 @@ func cmdSendBundleToBuilder() {
 		executionNodeAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
 		goerliRpc               = flagset.String("goerli_rpc", "http://127.0.0.1:8555", "address of goerli rpc")
 		privKeyHex              = flagset.String("privkey", "", "private key as hex (for testing)")
+		contractAddressFlag     = flagset.String("contract", "", "contract address to use (default: deploy new one)")
 		verbosity               = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
 		privKey                 *ecdsa.PrivateKey
 	)
-
-	var contractAddress *common.Address = nil
-	suaveContractAddress := common.HexToAddress("0x9281aFDb7997A3c01d0e6D985C7D157B8d6d0398")
-	contractAddress = &suaveContractAddress
 
 	flagset.Parse(os.Args[2:])
 
@@ -68,7 +65,11 @@ func cmdSendBundleToBuilder() {
 	// Simply forwards to coinbase
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 
-	if contractAddress == nil {
+	var contractAddress *common.Address
+	if *contractAddressFlag != "" {
+		suaveContractAddress := common.HexToAddress(*contractAddressFlag)
+		contractAddress = &suaveContractAddress
+	} else {
 		constructorArgs, err := e2e.EthBundleSenderContract.Abi.Constructor.Inputs.Pack([]string{goerliBuilderUrl})
 		RequireNoErrorf(err, "could not pack inputs: %v", err)
 
@@ -145,6 +146,7 @@ func cmdSendBundleToBuilder() {
 			// Send a bundle bid
 			ethBundle.BlockNumber = big.NewInt(int64(cTargetBlock))
 			ethBundleBytes, err := json.Marshal(ethBundle)
+			RequireNoErrorf(err, "could not marshal bundle: %v", err)
 			confidentialDataBytes, err := bundleBidAbi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(ethBundleBytes)
 			RequireNoErrorf(err, "could not pack bundle confidential data: %v", err)
 
