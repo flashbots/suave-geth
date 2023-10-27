@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -122,6 +123,8 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	if err != nil {
 		return suave.ErrBidNotFound
 	}
+
+	log.Info("confStoreStore", "bidId", bidId, "key", key)
 
 	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreStoreAddress, bid)
 	if err != nil {
