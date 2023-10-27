@@ -101,6 +101,16 @@ library SuaveForge {
         return abi.decode(data, (Suave.Bid));
     }
 
+    function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000040100001", abi.encode(txn, chainId, signingKey));
+
+        return abi.decode(data, (bytes));
+    }
+
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100000", abi.encode(bundleData));
 

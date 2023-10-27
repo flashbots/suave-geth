@@ -344,6 +344,10 @@ func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, dat
 	return (&confStoreStore{}).runImpl(b.suaveContext, bidId, key, data)
 }
 
+func (b *suaveRuntime) signEthTransaction(txn []byte, chainId string, signingKey string) ([]byte, error) {
+	return (&signEthTransaction{}).runImpl(txn, chainId, signingKey)
+}
+
 func (b *suaveRuntime) extractHint(bundleData []byte) ([]byte, error) {
 	return (&extractHint{}).runImpl(b.suaveContext, bundleData)
 }

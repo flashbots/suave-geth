@@ -99,6 +99,19 @@ functions:
       fields:
         - name: output1
           type: bytes
+  - name: signEthTransaction
+    address: "0x0000000000000000000000000000000040100001"
+    input:
+      - name: txn
+        type: bytes
+      - name: chainId
+        type: string
+      - name: signingKey
+        type: string
+    output:
+      fields:
+        - name: output1
+          type: bytes
   - name: simulateBundle
     address: "0x0000000000000000000000000000000042100000"
     input:

@@ -36,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
@@ -228,6 +229,57 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, 1, len(block.Transactions()))
 		require.Equal(t, []byte(simResult), block.Transactions()[0].Data())
 	}
+}
+
+func TestTxSigningPrecompile(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	tx := types.NewTransaction(15, common.Address{0x14}, big.NewInt(50), 1000000, big.NewInt(42313), []byte{0x42})
+	txBytes, err := tx.MarshalBinary()
+	require.NoError(t, err)
+
+	sk, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	skHex := hex.EncodeToString(crypto.FromECDSA(sk))
+
+	txChainId := big.NewInt(13)
+	chainIdHex := hexutil.EncodeBig(txChainId)
+
+	// function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
+	args, err := artifacts.SuaveAbi.Methods["signEthTransaction"].Inputs.Pack(txBytes, chainIdHex, skHex)
+	require.NoError(t, err)
+
+	gas := hexutil.Uint64(1000000)
+	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
+
+	var callResult hexutil.Bytes
+	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &signEthTransaction,
+		Gas:            &gas,
+		IsConfidential: true,
+		ChainID:        &chainId,
+		Data:           (*hexutil.Bytes)(&args),
+	}), "latest")
+	requireNoRpcError(t, err)
+
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods["signEthTransaction"].Outputs.Unpack(callResult)
+	require.NoError(t, err)
+
+	var signedTx types.Transaction
+	require.NoError(t, signedTx.UnmarshalBinary(unpackedCallResult[0].([]byte)))
+
+	require.Equal(t, tx.Nonce(), signedTx.Nonce())
+	require.Equal(t, *tx.To(), *signedTx.To())
+	require.Equal(t, 0, tx.Value().Cmp(signedTx.Value()))
+	require.Equal(t, tx.Gas(), signedTx.Gas())
+	require.Equal(t, tx.GasPrice(), signedTx.GasPrice())
+	require.Equal(t, tx.Data(), signedTx.Data())
+
+	sender, err := types.Sender(types.LatestSignerForChainID(txChainId), &signedTx)
+	require.NoError(t, err)
+
+	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), sender)
 }
 
 func TestBundleBid(t *testing.T) {
@@ -1155,8 +1207,10 @@ var (
 	isConfidentialAddress     = common.HexToAddress("0x42010000")
 	fetchBidsAddress          = common.HexToAddress("0x42030001")
 	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
-	simulateBundleAddress     = common.HexToAddress("0x42100000")
-	buildEthBlockAddress      = common.HexToAddress("0x42100001")
+
+	signEthTransaction    = common.HexToAddress("0x40100001")
+	simulateBundleAddress = common.HexToAddress("0x42100000")
+	buildEthBlockAddress  = common.HexToAddress("0x42100001")
 
 	/* contracts */
 	newBundleBidAddress = common.HexToAddress("0x642300000")
