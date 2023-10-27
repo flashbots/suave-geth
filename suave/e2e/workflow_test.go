@@ -297,7 +297,8 @@ func TestBundleSenderContract(t *testing.T) {
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params types.RpcSBundle
+		Id     json.RawMessage
+		Params []types.RpcSBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -363,17 +364,18 @@ func TestBundleSenderContract(t *testing.T) {
 		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 
-		require.Equal(t, 1, len(bundleSentToBuilder.Params.Txs))
+		require.Equal(t, 1, len(bundleSentToBuilder.Params))
+		require.Equal(t, 1, len(bundleSentToBuilder.Params[0].Txs))
 
 		var recoveredTx types.Transaction
-		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params.Txs[0]))
+		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params[0].Txs[0]))
 		expectedTxJson, err := signedTx.MarshalJSON()
 		require.NoError(t, err)
 		recoveredTxJson, err := recoveredTx.MarshalJSON()
 		require.NoError(t, err)
 		require.Equal(t, expectedTxJson, recoveredTxJson)
 
-		require.Equal(t, bundleSentToBuilder.Params.BlockNumber.ToInt().Uint64(), targetBlock)
+		require.Equal(t, bundleSentToBuilder.Params[0].BlockNumber.ToInt().Uint64(), targetBlock)
 	}
 }
 
@@ -552,7 +554,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params types.RPCMevShareBundle
+		Params []types.RPCMevShareBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -622,7 +624,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), receipt.Status)
 
-		retrievedBlockNumber, err := hexutil.DecodeUint64(bundleSentToBuilder.Params.Inclusion.Block)
+		retrievedBlockNumber, err := hexutil.DecodeUint64(bundleSentToBuilder.Params[0].Inclusion.Block)
 		require.NoError(t, err)
 		require.Equal(t, targetBlock, retrievedBlockNumber)
 
@@ -633,7 +635,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 
 		retrievedTxs := []string{}
-		for _, be := range bundleSentToBuilder.Params.Body {
+		for _, be := range bundleSentToBuilder.Params[0].Body {
 			retrievedTxs = append(retrievedTxs, be.Tx)
 		}
 

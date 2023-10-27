@@ -25,6 +25,7 @@ var commands = map[string]func(){
 	"deployMevShareContract":    cmdDeployMevShareContract,
 	// send
 	"sendBundle":          cmdSendBundle,
+	"sendBundleToBuilder": cmdSendBundleToBuilder,
 	"sendMevShareBundle":  cmdSendMevShareBundle,
 	"sendMevShareMatch":   cmdSendMevShareMatch,
 	"sendBuildShareBlock": cmdSendBuildShareBlock,
