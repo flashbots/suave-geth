@@ -344,7 +344,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on bid %x", recoveredMessageSigner, sw.Bid.Id)
 		}
 
-		if !slices.Contains(sw.Bid.AllowedPeekers, sw.Caller) {
+		if !slices.Contains(sw.Bid.AllowedPeekers, sw.Caller) && !slices.Contains(sw.Bid.AllowedPeekers, suave.AllowedPeekerAny) {
 			return fmt.Errorf("confidential engine: caller %x not allowed on bid %x", sw.Caller, sw.Bid.Id)
 		}
 
