@@ -403,7 +403,6 @@ var (
 type getBinancePrecompile struct{}
 
 func (b *getBinancePrecompile) runImpl(suaveContext *SuaveContext, ticker string) (price *big.Int, err error) {
-	return big.NewInt(100), nil
 
 	url := "https://api.binance.com/api/v3/ticker/price?symbol=" + ticker
 
@@ -426,6 +425,7 @@ func (b *getBinancePrecompile) runImpl(suaveContext *SuaveContext, ticker string
 		return nil, err
 	}
 
+	price = big.NewInt(0)
 	parts := strings.Split(tickerRes.Price, ".")
 	combined := parts[0] + parts[1]
 	price, ok := price.SetString(combined, 10)
