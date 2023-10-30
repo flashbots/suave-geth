@@ -240,6 +240,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else if config.Suave.PebbleDbPath != "" {
+		confidentialStoreBackend, err = cstore.NewPebbleStoreBackend(config.Suave.PebbleDbPath)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		confidentialStoreBackend = cstore.NewLocalConfidentialStore()
 	}
