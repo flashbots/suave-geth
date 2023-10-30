@@ -87,6 +87,12 @@ library SuaveForge {
         return data;
     }
 
+    function getBinancePrice(string memory ticker) internal view returns (uint256) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042012345", abi.encode(ticker));
+
+        return abi.decode(data, (uint256));
+    }
+
     function newBid(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,

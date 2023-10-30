@@ -197,3 +197,12 @@ functions:
       fields:
         - name: encodedBundle
           type: bytes
+  - name: getBinancePrice
+    address: "0x0000000000000000000000000000000042012345"
+    input:
+      - name: ticker
+        type: string
+    output:
+      fields:
+        - name: price
+          type: uint256

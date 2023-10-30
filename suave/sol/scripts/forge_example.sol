@@ -16,5 +16,9 @@ contract Example is Script {
         SuaveForge.confidentialStoreStore(bid.id, "a", abi.encodePacked("bbbbbb"));
         bytes memory result = SuaveForge.confidentialStoreRetrieve(bid.id, "a");
         console.logBytes(result);
+
+        uint256 EthPriceNow = SuaveForge.getBinancePrice("ETHUSDT");
+        // uint256 EthPriceNow = 0;
+        console.log(EthPriceNow);
     }
 }
