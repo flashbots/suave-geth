@@ -5,7 +5,7 @@ import "../libraries/SuaveForge.sol";
 import "forge-std/Script.sol";
 
 contract Example is Script {
-    address[] public addressList = [0x0000000000000000000000000000000000000000];
+    address[] public addressList = [0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829];
 
     function run() public {
         Suave.Bid memory bid = SuaveForge.newBid(0, addressList, addressList, "default:v0:ethBundles");
