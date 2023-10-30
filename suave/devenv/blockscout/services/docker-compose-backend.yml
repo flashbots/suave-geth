@@ -7,8 +7,6 @@ services:
     restart: always
     container_name: 'blockscout-backend'
     command: sh -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
     env_file:
       -  ../envs/common-blockscout.env
     volumes:

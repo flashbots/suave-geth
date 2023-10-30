@@ -4,8 +4,6 @@ services:
   blockscout-proxy:
     image: nginx
     container_name: 'blockscout-proxy'
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
     volumes:
       - "../proxy:/etc/nginx/templates"
     environment:
