@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
@@ -1012,6 +1013,67 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
 	require.NoError(t, err)
 	require.True(t, ok)
+}
+
+func TestE2E_ForgeIntegration(t *testing.T) {
+	// This end-to-end test ensures that the precompile lifecycle expected in Forge works
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
+
+	rpcClient := fr.suethSrv.RPCNode()
+	ethClient := ethclient.NewClient(rpcClient)
+
+	chainIdRaw, err := ethClient.ChainID(context.Background())
+	require.NoError(t, err)
+
+	doCall := func(methodName string, args ...interface{}) []interface{} {
+		toAddr, ok := artifacts.SuaveMethods[methodName]
+		require.True(t, ok, fmt.Sprintf("suave method %s not found", methodName))
+
+		method := artifacts.SuaveAbi.Methods[methodName]
+
+		input, err := method.Inputs.Pack(args...)
+		require.NoError(t, err)
+
+		chainId := hexutil.Big(*chainIdRaw)
+
+		callArgs := ethapi.TransactionArgs{
+			To:             &toAddr,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&input),
+		}
+		var simResult hexutil.Bytes
+		err = rpcClient.Call(&simResult, "eth_call", setTxArgsDefaults(callArgs), "latest")
+		require.NoError(t, err)
+
+		if methodName == "confidentialStoreRetrieve" {
+			// this method does not abi pack the output
+			return []interface{}{[]byte(simResult)}
+		}
+
+		result, err := method.Outputs.Unpack(simResult)
+		require.NoError(t, err)
+		return result
+	}
+
+	addrList := []common.Address{suave.AllowedPeekerAny}
+	bidRaw := doCall("newBid", uint64(0), addrList, addrList, "default:v0:ethBundles")
+
+	var bid types.Bid
+	require.NoError(t, mapstructure.Decode(bidRaw[0], &bid))
+
+	bidsRaw := doCall("fetchBids", uint64(0), "default:v0:ethBundles")
+	var bids []types.Bid
+	require.NoError(t, mapstructure.Decode(bidsRaw[0], &bids))
+	require.Len(t, bids, 1)
+	require.Equal(t, bids[0].Id, bid.Id)
+
+	val := []byte{0x1, 0x2, 0x3}
+	doCall("confidentialStoreStore", bid.Id, "a", val)
+
+	valRaw := doCall("confidentialStoreRetrieve", bid.Id, "a")
+	require.Equal(t, val, valRaw[0])
 }
 
 func TestE2EPrecompile_Call(t *testing.T) {
