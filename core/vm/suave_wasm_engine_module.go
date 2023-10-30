@@ -2,12 +2,13 @@ package vm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	suave_wasi "github.com/ethereum/go-ethereum/suave/wasi"
 
 	"github.com/stealthrocket/wazergo"
 	"github.com/stealthrocket/wazergo/types"
@@ -23,11 +24,11 @@ func InstantiateHostModule(ctx context.Context, r wazero.Runtime, suaveCtx *Suav
 
 // Declare the host module from a set of exported functions.
 var HostModule wazergo.HostModule[*EngineModule] = functions{
-	"initializeBid":               wazergo.F3((*EngineModule).InitializeBid),
-	"storeRetrieve":               wazergo.F4((*EngineModule).StoreRetrieve),
-	"storePut":                    wazergo.F3((*EngineModule).StorePut),
-	"fetchBidById":                wazergo.F3((*EngineModule).FetchBidById),
-	"FetchBidsByProtocolAndBlock": wazergo.F3((*EngineModule).FetchBidsByProtocolAndBlock),
+	"initializeBid":               wazergo.F3(wrapCall((*EngineModule).InitializeBid)),
+	"storeRetrieve":               wazergo.F3(wrapCall((*EngineModule).StoreRetrieve)),
+	"storePut":                    wazergo.F3(wrapCall((*EngineModule).StorePut)),
+	"fetchBidById":                wazergo.F3(wrapCall((*EngineModule).FetchBidById)),
+	"FetchBidsByProtocolAndBlock": wazergo.F3(wrapCall((*EngineModule).FetchBidsByProtocolAndBlock)),
 }
 
 // The `functions` type impements `HostModule[*Module]`, providing the
@@ -69,62 +70,60 @@ func (EngineModule) Close(context.Context) error {
 	return nil
 }
 
-func (m EngineModule) InitializeBid(ctx context.Context, raw_bidID types.Bytes, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error {
-	return types.Fail(errors.New("not implemented"))
-}
+type hostFnType = func(m *EngineModule, ctx context.Context, inData types.Bytes, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error
 
-func (m EngineModule) StorePut(ctx context.Context, jsonWrite types.String, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error {
-	return types.Fail(errors.New("not implemented"))
-}
-
-func (m EngineModule) FetchBidById(ctx context.Context, raw_bidID types.Bytes, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error {
-	return types.Fail(errors.New("not implemented"))
-}
-
-func (m EngineModule) FetchBidsByProtocolAndBlock(ctx context.Context, jsonSelector types.String, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error {
-	return types.Fail(errors.New("not implemented"))
-}
-
-func (m EngineModule) StoreRetrieve(ctx context.Context, key types.String, raw_bidID types.Bytes, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error {
-	var bidId suave.BidId
-	if copy(bidId[:], raw_bidID) != 16 {
-		return types.Fail(errors.New("invalid size for bidID"))
-	}
-
-	if len(m.SuaveContext.CallerStack) == 0 {
-		n.Store(types.Uint32(copy(buf, []byte("not allowed in this suaveContext"))))
-		return types.Fail(errors.New("not allowed in this suaveContext"))
-	}
-
-	log.Info("confStoreRetrieve", "bidId", bidId, "key", key)
-
-	// Can be zeroes in some fringe cases!
-	var caller common.Address
-	for i := len(m.SuaveContext.CallerStack) - 1; i >= 0; i-- {
-		// Most recent non-nil non-this caller
-		if _c := m.SuaveContext.CallerStack[i]; _c != nil && *_c != confStoreRetrieveAddress {
-			caller = *_c
-			break
+func wrapCall[In any, Out any](handler func(*EngineModule, context.Context, In) (Out, error)) hostFnType {
+	return func(m *EngineModule, ctx context.Context, inData types.Bytes, buf types.Bytes, n types.Pointer[types.Uint32]) types.Error {
+		var inStruct In
+		err := json.Unmarshal(inData, &inStruct)
+		if err != nil {
+			wrappedErr := fmt.Errorf("unable to unmarshal inputs: %w", err)
+			n.Store(types.Uint32(copy(buf, types.Bytes(wrappedErr.Error()))))
+			return types.Fail(wrappedErr)
 		}
+
+		out, err := handler(m, ctx, inStruct)
+		if err != nil {
+			n.Store(types.Uint32(copy(buf, types.Bytes(err.Error()))))
+			return types.Fail(err)
+		}
+
+		data, err := json.Marshal(out)
+		if err != nil {
+			wrappedErr := fmt.Errorf("unable to marshal outputs: %w", err)
+			n.Store(types.Uint32(copy(buf, types.Bytes(wrappedErr.Error()))))
+			return types.Fail(wrappedErr)
+		}
+
+		n.Store(types.Uint32(copy(buf, data)))
+		return types.OK
 	}
+}
 
-	data, err := m.SuaveContext.Backend.ConfidentialStore.Retrieve(bidId, caller, string(key))
-	if err != nil {
-		n.Store(types.Uint32(copy(buf, types.Bytes(err.Error()))))
-		return types.Fail(err)
+func (m EngineModule) InitializeBid(ctx context.Context, bid ethtypes.Bid) (ethtypes.Bid, error) {
+	return m.SuaveContext.Backend.ConfidentialStore.InitializeBid(bid)
+}
+
+func (m EngineModule) StoreRetrieve(ctx context.Context, args suave_wasi.RetrieveHostFnArgs) ([]byte, error) {
+	if len(m.SuaveContext.CallerStack) == 0 {
+		return nil, errors.New("caller stack not initialized, refusing to retrieve")
 	}
+	caller := m.SuaveContext.CallerStack[len(m.SuaveContext.CallerStack)-1]
+	return m.SuaveContext.Backend.ConfidentialStore.Retrieve(args.BidId, *caller, args.Key)
+}
 
-	if metrics.Enabled {
-		confStorePrecompileRetrieveMeter.Mark(int64(len(data)))
+func (m EngineModule) StorePut(ctx context.Context, args suave_wasi.StoreHostFnArgs) (ethtypes.EngineBid, error) {
+	if len(m.SuaveContext.CallerStack) == 0 {
+		return ethtypes.EngineBid{}, errors.New("caller stack not initialized, refusing to retrieve")
 	}
+	caller := m.SuaveContext.CallerStack[len(m.SuaveContext.CallerStack)-1]
+	return m.SuaveContext.Backend.ConfidentialStore.Store(args.BidId, *caller, args.Key, args.Value)
+}
 
-	// Copy data into linear memory.  In the future, we can adopt
-	// a strategy similar to Wetware's, which is to create a zero-
-	// copy stream transport that works out of buffers in the guest's
-	// linear memory.  For now, we assume a static buffer with sufficient
-	// capacity.  We store the number of bytes written into a uint32 pointer
-	// so that the guest knows how much of the buffer to return.
-	n.Store(types.Uint32(copy(buf, data)))
+func (m EngineModule) FetchBidById(ctx context.Context, bidId suave.BidId) (ethtypes.EngineBid, error) {
+	return m.SuaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+}
 
-	return types.OK
+func (m EngineModule) FetchBidsByProtocolAndBlock(ctx context.Context, args suave_wasi.FetchBidByProtocolFnArgs) ([]ethtypes.EngineBid, error) {
+	return m.SuaveContext.Backend.ConfidentialStore.FetchBidsByProtocolAndBlock(args.BlockNumber, args.Namespace), nil
 }

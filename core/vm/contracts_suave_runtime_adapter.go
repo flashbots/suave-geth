@@ -149,7 +149,6 @@ func (b *SuaveRuntimeAdapter) confidentialStoreRetrieve(input []byte) (res []byt
 	)
 
 	if output1, err = b.impl.confidentialStoreRetrieve(bidId, key); err != nil {
-		result = []byte(err.Error())
 		return
 	}
 
@@ -194,6 +193,7 @@ func (b *SuaveRuntimeAdapter) confidentialStoreStore(input []byte) (res []byte, 
 	}
 
 	return nil, nil
+
 }
 
 func (b *SuaveRuntimeAdapter) ethcall(input []byte) (res []byte, err error) {
