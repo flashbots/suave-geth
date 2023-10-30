@@ -47,7 +47,5 @@ profile.cov
 /dashboard/assets/bundle.js.map
 /dashboard/assets/package-lock.json
 
-/suave/devenv/blockscout/services/blockscout-db-data
-
 **/yarn-error.log
 logs/

@@ -76,3 +76,6 @@ services:
     extends:
       file: ./blockscout/services/docker-compose-nginx.yml
       service: blockscout-proxy
+
+volumes:
+  blockscout_db_data:
