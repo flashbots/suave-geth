@@ -2333,3 +2333,8 @@ func toHexSlice(b [][]byte) []string {
 	}
 	return r
 }
+
+// ExecutionAddress returns the execution addresseses available in the Kettle.
+func (s *TransactionAPI) ExecutionAddress(ctx context.Context) ([]common.Address, error) {
+	return s.b.AccountManager().Accounts(), nil
+}
