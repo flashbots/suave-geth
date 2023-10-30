@@ -156,6 +156,9 @@ func (e *ConfidentialStoreEngine) ProcessMessages() {
 }
 
 func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types.Transaction) (suave.Bid, error) {
+	// Share with all stores this node trusts
+	bid.AllowedStores = append(bid.AllowedStores, e.daSigner.LocalAddresses()...)
+
 	expectedId, err := calculateBidId(bid)
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)
