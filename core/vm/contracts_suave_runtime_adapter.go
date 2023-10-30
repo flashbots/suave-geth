@@ -3,17 +3,15 @@
 package vm
 
 import (
-	"strings"
-	"encoding/json"
-	"io"
-	"net/http"
-	"math/big"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	"github.com/mitchellh/mapstructure"
+	"math/big"
 )
+
+var _ = big.Int{}
 
 var (
 	errFailedToUnpackInput = fmt.Errorf("failed to decode input")
@@ -36,45 +34,6 @@ type SuaveRuntime interface {
 	simulateBundle(bundleData []byte) (uint64, error)
 	submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error)
 	submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error)
-}
-
-type TickerResponse struct {
-	Symbol string `json:"symbol"`
-	Price  string `json:"price"`
-}
-
-func (b *suaveRuntime) getBinancePrice(ticker string) (price *big.Int, err error) {
-	return big.NewInt(100), nil
-
-    url := "https://api.binance.com/api/v3/ticker/price?symbol=" + ticker
-
-	// HTTP GET request
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Read the body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal JSON
-	var tickerRes TickerResponse
-	if err := json.Unmarshal(body, &tickerRes); err != nil {
-		return nil, err
-	}
-
-	parts := strings.Split(tickerRes.Price, ".")
-	combined := parts[0] + parts[1]
-	price, ok := price.SetString(combined, 10)
-	if !ok {
-		return nil, err
-	}
-
-	return price, nil
 }
 
 type SuaveRuntimeAdapter struct {
@@ -393,7 +352,6 @@ func (b *SuaveRuntimeAdapter) fillMevShareBundle(input []byte) (res []byte, err 
 }
 
 func (b *SuaveRuntimeAdapter) getBinancePrice(input []byte) (res []byte, err error) {
-
 	var (
 		unpacked []interface{}
 		result   []byte

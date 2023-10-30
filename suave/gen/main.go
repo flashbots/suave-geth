@@ -225,11 +225,14 @@ package vm
 
 import (
 	"fmt"
+	"math/big"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	"github.com/mitchellh/mapstructure"
 )
+
+var _ = big.Int{}
 
 var (
 	errFailedToUnpackInput = fmt.Errorf("failed to decode input")

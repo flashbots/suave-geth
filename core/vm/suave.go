@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -89,6 +90,8 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		}()
 	}
 
+	log.Info("calling precompile", "name", artifacts.PrecompileAddressToName(p.addr))
+
 	var ret []byte
 	var err error
 
@@ -134,6 +137,9 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 
 	case ethcallAddr:
 		ret, err = stub.ethcall(input)
+
+	case getBinancePriceAddr:
+		ret, err = stub.getBinancePrice(input)
 
 	default:
 		err = fmt.Errorf("precompile %s not found", p.addr)

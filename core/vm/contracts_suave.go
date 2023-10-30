@@ -1,8 +1,12 @@
 package vm
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -386,4 +390,65 @@ func (b *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 
 func (b *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
 	return (&submitBundleJsonRPC{}).runImpl(b.suaveContext, url, method, params)
+}
+
+func (b *suaveRuntime) getBinancePrice(ticker string) (price *big.Int, err error) {
+	return (&getBinancePrecompile{}).runImpl(b.suaveContext, ticker)
+}
+
+var (
+	getBinancePriceAddr = common.HexToAddress("0x0000000000000000000000000000000042012345")
+)
+
+type getBinancePrecompile struct{}
+
+func (b *getBinancePrecompile) runImpl(suaveContext *SuaveContext, ticker string) (price *big.Int, err error) {
+	return big.NewInt(100), nil
+
+	url := "https://api.binance.com/api/v3/ticker/price?symbol=" + ticker
+
+	// HTTP GET request
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read the body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal JSON
+	var tickerRes TickerResponse
+	if err := json.Unmarshal(body, &tickerRes); err != nil {
+		return nil, err
+	}
+
+	parts := strings.Split(tickerRes.Price, ".")
+	combined := parts[0] + parts[1]
+	price, ok := price.SetString(combined, 10)
+	if !ok {
+		return nil, err
+	}
+
+	return price, nil
+}
+
+func (b *getBinancePrecompile) Run(input []byte) ([]byte, error) {
+	return input, nil
+}
+
+func (b *getBinancePrecompile) RequiredGas(input []byte) uint64 {
+	return 1000
+}
+
+func (b *getBinancePrecompile) RunConfidential(context *SuaveContext, input []byte) ([]byte, error) {
+	panic("not used")
+}
+
+type TickerResponse struct {
+	Symbol string `json:"symbol"`
+	Price  string `json:"price"`
 }

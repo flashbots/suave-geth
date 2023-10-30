@@ -105,7 +105,8 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	submitBundleJsonRPCAddress:      &submitBundleJsonRPC{},
 	fillMevShareBundleAddress:       &fillMevShareBundle{},
 
-	ethcallAddr: &ethCallPrecompile{},
+	ethcallAddr:         &ethCallPrecompile{},
+	getBinancePriceAddr: &getBinancePrecompile{},
 }
 
 // PrecompiledContractsBerlin contains the default set of pre-compiled Ethereum
