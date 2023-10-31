@@ -1096,6 +1096,17 @@ func TestE2EPrecompile_Call(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestE2EExecutionAddressEndpoint(t *testing.T) {
+	// this end-to-end tests ensures that we can call eth_executionAddress endpoint in a MEVM node
+	// and return the correct execution address list
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
+
+	var addrs []common.Address
+	require.NoError(t, fr.suethSrv.RPCNode().Call(&addrs, "eth_executionAddress"))
+	require.NotEmpty(t, addrs)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
