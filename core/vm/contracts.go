@@ -83,31 +83,6 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{9}): &blake2F{},
 }
 
-// PrecompiledContractsSuave contains the default set of pre-compiled SUAVE VM
-// contracts used in the suave testnet. It's a superset of Berlin precompiles.
-// Confidential contracts (implementing SuavePrecompiledContract)
-// are ran with their respective RunConfidential in confidential setting
-var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
-	isConfidentialAddress:     &isConfidentialPrecompile{},
-	confidentialInputsAddress: &confidentialInputsPrecompile{},
-
-	confStoreStoreAddress:    newConfStoreStore(),
-	confStoreRetrieveAddress: newConfStoreRetrieve(),
-
-	newBidAddress:      newNewBid(),
-	fetchBidsAddress:   newFetchBids(),
-	extractHintAddress: &extractHint{},
-
-	signEthTransactionAddress:       &signEthTransaction{},
-	simulateBundleAddress:           &simulateBundle{},
-	buildEthBlockAddress:            &buildEthBlock{},
-	submitEthBlockBidToRelayAddress: &submitEthBlockBidToRelay{},
-	submitBundleJsonRPCAddress:      &submitBundleJsonRPC{},
-	fillMevShareBundleAddress:       &fillMevShareBundle{},
-
-	ethcallAddr: &ethCallPrecompile{},
-}
-
 // PrecompiledContractsBerlin contains the default set of pre-compiled Ethereum
 // contracts used in the Berlin release.
 var PrecompiledContractsBerlin = map[common.Address]PrecompiledContract{
@@ -137,7 +112,6 @@ var PrecompiledContractsBLS = map[common.Address]PrecompiledContract{
 }
 
 var (
-	PrecompiledAddressesSuave     []common.Address
 	PrecompiledAddressesBerlin    []common.Address
 	PrecompiledAddressesIstanbul  []common.Address
 	PrecompiledAddressesByzantium []common.Address
@@ -157,9 +131,6 @@ func init() {
 	for k := range PrecompiledContractsBerlin {
 		PrecompiledAddressesBerlin = append(PrecompiledAddressesBerlin, k)
 	}
-	for k := range PrecompiledContractsSuave {
-		PrecompiledAddressesSuave = append(PrecompiledAddressesSuave, k)
-	}
 }
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
@@ -178,7 +149,7 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 	}
 
 	if rules.IsSuave {
-		return append(basePrecompiles, PrecompiledAddressesSuave...)
+		return append(basePrecompiles, dd.addrs...)
 	}
 
 	return basePrecompiles

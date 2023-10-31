@@ -26,6 +26,10 @@ func (t *testPrecompile) RequiredGas(input []byte) uint64 {
 	return 0
 }
 
+func (t *testPrecompile) Name() string {
+	return "testPrecompile"
+}
+
 func (t *testPrecompile) Address() common.Address {
 	return common.Address{}
 }

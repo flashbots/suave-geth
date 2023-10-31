@@ -51,6 +51,7 @@ func NewDispatchTable() *DispatchTable {
 type SuavePrecompiledContract2 interface {
 	RequiredGas(input []byte) uint64
 	Address() common.Address
+	Name() string
 }
 
 type SuavePrecompiledContractWrapper2 struct {
@@ -206,6 +207,15 @@ func (d *DispatchTable) Register(fn SuavePrecompiledContract2) error {
 		funcName = fn.Name()
 	} else {
 		funcName = typ.Elem().Name()
+	}
+
+	if metrics.EnabledExpensive {
+		metrics.GetOrRegisterMeter("suave/runtime/"+funcName, nil).Mark(1)
+
+		now := time.Now()
+		defer func() {
+			metrics.GetOrRegisterTimer("suave/runtime/"+funcName+"/duration", nil).Update(time.Since(now))
+		}()
 	}
 
 	methodName := "Do"
