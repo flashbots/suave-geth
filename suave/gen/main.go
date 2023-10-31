@@ -242,8 +242,22 @@ type SuaveRuntime interface {
 	{{.Name}}({{range .Input}}{{.Name}} {{typ2 .Typ}}, {{end}}) ({{range .Output.Fields}}{{typ2 .Typ}}, {{end}}error){{end}}
 }
 
+var ({{range .Functions}}
+	{{.Name}}Addr = common.HexToAddress("{{.Address}}"){{end}}
+)
+
 type SuaveRuntimeAdapter struct {
 	impl SuaveRuntime
+}
+
+func (b *SuaveRuntimeAdapter) run(addr common.Address, input []byte) ([]byte, error) {
+	switch addr { {{range .Functions}}
+	case {{.Name}}Addr:
+		return b.{{.Name}}(input)
+		{{end}}
+	default:
+		return nil, fmt.Errorf("suave precompile not found for " + addr.String())
+	}
 }
 
 {{range .Functions}}

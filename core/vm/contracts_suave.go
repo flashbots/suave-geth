@@ -333,7 +333,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.B
 }
 
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
-	return nil, nil
+	return (&confidentialInputsPrecompile{}).RunConfidential(b.suaveContext, nil)
 }
 
 func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
