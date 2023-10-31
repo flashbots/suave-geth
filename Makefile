@@ -19,6 +19,9 @@ suave:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/suave\" to launch SUAVE."
 
+	# Move a copy of the binary to GOPATH/bin
+	cp $(GOBIN)/suave $(GOPATH)/bin
+
 all:
 	$(GORUN) build/ci.go install
 

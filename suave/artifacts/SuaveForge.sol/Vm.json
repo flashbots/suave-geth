@@ -1,0 +1,29 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "string[]",
+          "name": "commandInput",
+          "type": "string[]"
+        }
+      ],
+      "name": "ffi",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "result",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "deployedBytecode": {
+    "object": "0x"
+  },
+  "bytecode": {
+    "object": "0x"
+  }
+}

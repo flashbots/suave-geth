@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -53,10 +52,12 @@ func init() {
 	dd.MustRegister(&fetchBids{})
 	dd.MustRegister(&submitEthBlockBidToRelay{})
 	dd.MustRegister(&buildEthBlock{})
-	dd.MustRegister(&ethCallPrecompile{})
 	dd.MustRegister(&extractHint{})
 	dd.MustRegister(&simulateBundle{})
 	dd.MustRegister(&confidentialInputsPrecompile{})
+	dd.MustRegister(&submitBundleJsonRPC{})
+	dd.MustRegister(&signEthTransaction{})
+	dd.MustRegister(&fillMevShareBundle{})
 }
 
 func GetRuntime() *DispatchTable {
@@ -66,11 +67,7 @@ func GetRuntime() *DispatchTable {
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
-		fmt.Println("--xx", evm.Config.IsConfidential)
-		fmt.Println(addr)
-
 		if dd.IsPrecompile(addr) && evm.Config.IsConfidential {
-			fmt.Println("YYY")
 			return dd.Wrap(evm.SuaveContext, addr), true
 		}
 	}

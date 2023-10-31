@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 )
 
+var AllowedPeekerAny = common.HexToAddress("0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829") // "*"
+
 type Bytes = hexutil.Bytes
 type BidId = types.BidId
 
@@ -44,6 +46,7 @@ var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
 var (
 	ErrBidAlreadyPresent = errors.New("bid already present")
+	ErrBidNotFound       = errors.New("bid not found")
 	ErrUnsignedFinalize  = errors.New("finalize called with unsigned transaction, refusing to propagate")
 )
 

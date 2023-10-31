@@ -537,6 +537,26 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveConfidentialStorePebbleDbPathFlag = &cli.StringFlag{
+		Name:     "suave.confidential.pebble-store-db-path",
+		Usage:    "Path to pebble db to use for confidential storage backend (default: local store)",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveEthBundleSigningKeyFlag = &cli.StringFlag{
+		Name:     "suave.eth.bundle-signing-key",
+		EnvVars:  []string{"SUAVE_ETH_BUNDLE_SIGNING_KEY"},
+		Usage:    "Signing key to be used when signing bundles (ecdsa) [default: random]",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveEthBlockSigningKeyFlag = &cli.StringFlag{
+		Name:     "suave.eth.signing-key",
+		EnvVars:  []string{"SUAVE_ETH_BLOCK_SIGNING_KEY"},
+		Usage:    "Signing key to be used when signing blocks (bls) [default: random]",
+		Category: flags.SuaveCategory,
+	}
+
 	SuaveDevModeFlag = &cli.BoolFlag{
 		Name:     "suave.dev",
 		Usage:    "Dev mode for suave",
@@ -1686,6 +1706,7 @@ func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 }
 
 func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
+	CheckExclusive(ctx, SuaveConfidentialStoreRedisEndpointFlag, SuaveConfidentialStorePebbleDbPathFlag)
 	if ctx.IsSet(SuaveEthRemoteBackendEndpointFlag.Name) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
 	}
@@ -1696,6 +1717,18 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 
 	if ctx.IsSet(SuaveConfidentialStoreRedisEndpointFlag.Name) {
 		cfg.RedisStoreUri = ctx.String(SuaveConfidentialStoreRedisEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveConfidentialStorePebbleDbPathFlag.Name) {
+		cfg.PebbleDbPath = ctx.String(SuaveConfidentialStorePebbleDbPathFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveEthBundleSigningKeyFlag.Name) {
+		cfg.EthBundleSigningKeyHex = ctx.String(SuaveEthBundleSigningKeyFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveEthBlockSigningKeyFlag.Name) {
+		cfg.EthBlockSigningKeyHex = ctx.String(SuaveEthBlockSigningKeyFlag.Name)
 	}
 }
 

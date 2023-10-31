@@ -3,6 +3,7 @@ package vm
 import (
 	"context"
 	"math/big"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -117,6 +118,14 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
+		"no caller of confidentialStoreRetrieve (0000000000000000000000000000000042020001) is allowed on 00000000000000000000000000000000",
+		"precompile fillMevShareBundle (0000000000000000000000000000000043200001) not allowed on 00000000000000000000000000000000",
+		"no caller of confidentialStoreStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
+		"precompile buildEthBlock (0000000000000000000000000000000042100001) not allowed on 00000000000000000000000000000000",
+	}
+
+	expectedVariableErrors := []*regexp.Regexp{
+		regexp.MustCompile("key not formatted properly: invalid hex character.*in private key"),
 	}
 
 	for name, addr := range artifacts.SuaveMethods {
@@ -136,6 +145,18 @@ func TestSuavePrecompileStub(t *testing.T) {
 			for _, expectedError := range expectedErrors {
 				if strings.Contains(err.Error(), expectedError) {
 					found = true
+					break
+				}
+			}
+
+			if found {
+				continue
+			}
+
+			for _, expectedErrRe := range expectedVariableErrors {
+				if expectedErrRe.Match([]byte(err.Error())) {
+					found = true
+					break
 				}
 			}
 			if !found {

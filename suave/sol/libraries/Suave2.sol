@@ -49,9 +49,17 @@ library Suave {
 
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
 
+    address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
+
+    address public constant IS_CONFIDENTIAL = 0x0000000000000000000000000000000042010000;
+
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
+    address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
+
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
+
+    address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
@@ -129,6 +137,14 @@ library Suave {
         return abi.decode(data, (Bid[]));
     }
 
+    function fillMevShareBundle(BidId param1) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.staticcall(abi.encode(param1));
+        if (!success) {
+            revert PeekerReverted(FILL_MEV_SHARE_BUNDLE, data);
+        }
+        return abi.decode(data, (bytes));
+    }
+
     function newBid(uint64 param1, address[] memory param2, address[] memory param3, string memory param4)
         internal
         view
@@ -141,12 +157,36 @@ library Suave {
         return abi.decode(data, (Bid));
     }
 
+    function signEthTransaction(bytes memory param1, string memory param2, string memory param3)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = SIGN_ETH_TRANSACTION.staticcall(abi.encode(param1, param2, param3));
+        if (!success) {
+            revert PeekerReverted(SIGN_ETH_TRANSACTION, data);
+        }
+        return abi.decode(data, (bytes));
+    }
+
     function simulateBundle(bytes memory param1) internal view returns (uint64) {
         (bool success, bytes memory data) = SIMULATE_BUNDLE.staticcall(abi.encode(param1));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
         }
         return abi.decode(data, (uint64));
+    }
+
+    function submitBundleJsonRPC(string memory param1, string memory param2, bytes memory param3)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = SUBMIT_BUNDLE_JSON_RPC.staticcall(abi.encode(param1, param2, param3));
+        if (!success) {
+            revert PeekerReverted(SUBMIT_BUNDLE_JSON_RPC, data);
+        }
+        return abi.decode(data, (bytes));
     }
 
     function submitEthBlockBidToRelay(string memory param1, bytes memory param2) internal view returns (bytes memory) {

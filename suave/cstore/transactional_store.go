@@ -52,7 +52,7 @@ func (s *TransactionalStore) Store(bidId suave.BidId, caller common.Address, key
 		return suave.Bid{}, err
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) {
+	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
 		return suave.Bid{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, bidId)
 	}
 
@@ -74,7 +74,7 @@ func (s *TransactionalStore) Retrieve(bidId suave.BidId, caller common.Address, 
 		return nil, err
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) {
+	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
 		return nil, fmt.Errorf("confidential store transaction: %x not allowed to retrieve %s on %x", caller, key, bidId)
 	}
 

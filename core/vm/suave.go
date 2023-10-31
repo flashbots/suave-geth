@@ -1,14 +1,18 @@
 package vm
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"time"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/go-boost-utils/bls"
 )
 
 // ConfidentialStore represents the API for the confidential store
@@ -30,6 +34,8 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
+	EthBundleSigningKey    *ecdsa.PrivateKey
+	EthBlockSigningKey     *bls.SecretKey
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
@@ -83,40 +89,96 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		}()
 	}
 
+	var ret []byte
+	var err error
+
 	switch p.addr {
 	case isConfidentialAddress:
-		return (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
+		ret, err = (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confidentialInputsAddress:
-		return (&confidentialInputsPrecompile{}).RunConfidential(p.suaveContext, input)
+		ret, err = (&confidentialInputsPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confStoreStoreAddress:
-		return stub.confidentialStoreStore(input)
+		ret, err = stub.confidentialStoreStore(input)
 
 	case confStoreRetrieveAddress:
-		return stub.confidentialStoreRetrieve(input)
+		ret, err = stub.confidentialStoreRetrieve(input)
 
 	case newBidAddress:
-		return stub.newBid(input)
+		ret, err = stub.newBid(input)
 
 	case fetchBidsAddress:
-		return stub.fetchBids(input)
+		ret, err = stub.fetchBids(input)
 
 	case extractHintAddress:
-		return stub.extractHint(input)
+		ret, err = stub.extractHint(input)
+
+	case signEthTransactionAddress:
+		ret, err = stub.signEthTransaction(input)
 
 	case simulateBundleAddress:
-		return stub.simulateBundle(input)
+		ret, err = stub.simulateBundle(input)
 
 	case buildEthBlockAddress:
-		return stub.buildEthBlock(input)
+		ret, err = stub.buildEthBlock(input)
+
+	case fillMevShareBundleAddress:
+		ret, err = stub.fillMevShareBundle(input)
+
+	case submitBundleJsonRPCAddress:
+		ret, err = stub.submitBundleJsonRPC(input)
 
 	case submitEthBlockBidToRelayAddress:
-		return stub.submitEthBlockBidToRelay(input)
+		ret, err = stub.submitEthBlockBidToRelay(input)
 
 	case ethcallAddr:
-		return stub.ethcall(input)
+		ret, err = stub.ethcall(input)
+
+	default:
+		err = fmt.Errorf("precompile %s not found", p.addr)
 	}
 
-	return nil, fmt.Errorf("precompile %s not found", p.addr)
+	if err != nil && ret == nil {
+		ret = []byte(err.Error())
+	}
+
+	return ret, err
+}
+
+// Returns the caller
+func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.Address, bid suave.Bid) (common.Address, error) {
+	anyPeekerAllowed := slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny)
+	if anyPeekerAllowed {
+		for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
+			caller := suaveContext.CallerStack[i]
+			if caller != nil && *caller != precompile {
+				return *caller, nil
+			}
+		}
+
+		return precompile, nil
+	}
+
+	// In question!
+	// For now both the precompile *and* at least one caller must be allowed to allow access to bid data
+	// Alternative is to simply allow if any of the callers is allowed
+	isPrecompileAllowed := slices.Contains(bid.AllowedPeekers, precompile)
+
+	// Special case for confStore as those are implicitly allowed
+	if !isPrecompileAllowed && precompile != confStoreStoreAddress && precompile != confStoreRetrieveAddress {
+		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
+	}
+
+	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
+		caller := suaveContext.CallerStack[i]
+		if caller == nil || *caller == precompile {
+			continue
+		}
+		if slices.Contains(bid.AllowedPeekers, *caller) {
+			return *caller, nil
+		}
+	}
+
+	return common.Address{}, fmt.Errorf("no caller of %s (%x) is allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
 }

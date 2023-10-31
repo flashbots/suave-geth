@@ -201,12 +201,6 @@ func (d *DispatchTable) Register(fn SuavePrecompiledContract2) error {
 	// reflect and generate the type of the 'Do' function
 	typ := reflect.TypeOf(fn)
 
-	methodName := "Do"
-	methodTyp, found := typ.MethodByName(methodName)
-	if !found {
-		return fmt.Errorf("Method %s not found on the interface\n", methodName)
-	}
-
 	var funcName string
 	if fn, ok := fn.(PrecompileWithName); ok {
 		funcName = fn.Name()
@@ -214,23 +208,29 @@ func (d *DispatchTable) Register(fn SuavePrecompiledContract2) error {
 		funcName = typ.Elem().Name()
 	}
 
+	methodName := "Do"
+	methodTyp, found := typ.MethodByName(methodName)
+	if !found {
+		return fmt.Errorf("Method %s not found on the interface ('%s')", methodName, funcName)
+	}
+
 	// It needs at least one input parameter, the suave context.
 	numIns := methodTyp.Type.NumIn()
 	if numIns == 1 { // 1 parameter is the receiver
-		return fmt.Errorf("Method %s must have at least one input parameter\n", methodName)
+		return fmt.Errorf("Method %s must have at least one input parameter ('%s')", methodName, funcName)
 	}
 	if methodTyp.Type.In(1) != reflect.TypeOf(&SuaveContext{}) {
-		return fmt.Errorf("First input parameter of method %s must be a *SuaveContext\n", methodName)
+		return fmt.Errorf("First input parameter of method %s must be a *SuaveContext ('%s')", methodName, funcName)
 	}
 
 	// It needs at least one output parameter (the internal error) and must
 	// be the last parameter
 	numOuts := methodTyp.Type.NumOut()
 	if numOuts == 0 {
-		return fmt.Errorf("Method %s must have at least one output parameter\n", methodName)
+		return fmt.Errorf("Method %s must have at least one output parameter ('%s')", methodName, funcName)
 	}
 	if !isErrorType(methodTyp.Type.Out(numOuts - 1)) {
-		return fmt.Errorf("Last output parameter of method %s must be an error\n", methodName)
+		return fmt.Errorf("Last output parameter of method %s must be an error ('%s')", methodName, funcName)
 	}
 
 	// Get the input arguments of the function. The first parameter
