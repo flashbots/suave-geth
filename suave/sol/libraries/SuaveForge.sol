@@ -87,6 +87,16 @@ library SuaveForge {
         return data;
     }
 
+    function generatePseudoRandomBytes(uint64 numBytes, bytes memory domainSeparator)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000040100000", abi.encode(numBytes, domainSeparator));
+
+        return data;
+    }
+
     function newBid(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,

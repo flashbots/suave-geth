@@ -51,6 +51,8 @@ library Suave {
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
+    address public constant GENERATE_PSEUDO_RANDOM_BYTES = 0x0000000000000000000000000000000040100000;
+
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
@@ -146,6 +148,20 @@ library Suave {
         (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.staticcall(abi.encode(bidId));
         if (!success) {
             revert PeekerReverted(FILL_MEV_SHARE_BUNDLE, data);
+        }
+
+        return data;
+    }
+
+    function generatePseudoRandomBytes(uint64 numBytes, bytes memory domainSeparator)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) =
+            GENERATE_PSEUDO_RANDOM_BYTES.staticcall(abi.encode(numBytes, domainSeparator));
+        if (!success) {
+            revert PeekerReverted(GENERATE_PSEUDO_RANDOM_BYTES, data);
         }
 
         return data;

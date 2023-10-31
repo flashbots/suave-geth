@@ -118,6 +118,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
+		"key not formatted properly: invalid length, need 256 bits",
 		"no caller of confidentialStoreRetrieve (0000000000000000000000000000000042020001) is allowed on 00000000000000000000000000000000",
 		"precompile fillMevShareBundle (0000000000000000000000000000000043200001) not allowed on 00000000000000000000000000000000",
 		"no caller of confidentialStoreStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
@@ -125,7 +126,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	}
 
 	expectedVariableErrors := []*regexp.Regexp{
-		regexp.MustCompile("key not formatted properly: invalid hex character.*in private key"),
+		regexp.MustCompile("key not formatted properly: invalid hex .* private key"),
 	}
 
 	for name, addr := range artifacts.SuaveMethods {
@@ -252,4 +253,11 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+func TestSuave_PRNG(t *testing.T) {
+	b := newTestBackend(t)
+	randomBytes, err := b.generatePseudoRandomBytes(100, []byte("xxx"))
+	require.NoError(t, err)
+	require.Equal(t, 100, len(randomBytes))
 }

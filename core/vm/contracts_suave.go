@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"crypto"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"strings"
@@ -330,6 +332,32 @@ func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byt
 
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bid types.BidId, namespace string) ([]byte, []byte, error) {
 	return (&buildEthBlock{}).runImpl(b.suaveContext, blockArgs, bid, namespace)
+}
+
+func (b *suaveRuntime) generatePseudoRandomBytes(numBytes uint64, domainSeparator []byte) ([]byte, error) {
+	if numBytes > (2 << 16) { // refuse to generate more than 65kB
+		return nil, errors.New("refusing to generate more than 65kB random bytes")
+	}
+
+	nChunks := (numBytes + 31) / 32 // align with 32-byte blocks
+	buf := make([]byte, nChunks*32)
+	nRead, err := rand.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	if uint64(nRead) != nChunks*32 {
+		return nil, errors.New("too many bytes")
+	}
+
+	for chunk := 0; uint64(chunk) < nChunks; chunk++ {
+		// buf[0:31] = sha256(initial random buf, domainSeparator)
+		// buf[32:64] = sha256(sha256(initial random buf, domainSeparator), domainSeparator)
+		// ...
+		copy(buf[chunk*32:], crypto.SHA256.New().Sum(append(buf, domainSeparator...)))
+	}
+
+	return buf[:numBytes], nil
 }
 
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {

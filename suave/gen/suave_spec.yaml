@@ -52,6 +52,18 @@ functions:
       fields:
         - name: output1
           type: bytes
+  - name: generatePseudoRandomBytes
+    address: "0x0000000000000000000000000000000040100000"
+    input:
+      - name: numBytes
+        type: uint64
+      - name: domainSeparator
+        type: bytes
+    output:
+      packed: true
+      fields:
+        - name: output1
+          type: bytes
   - name: newBid
     address: "0x0000000000000000000000000000000042030000"
     input:
