@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
+	"golang.org/x/exp/slices"
 )
 
 // ConfidentialStore represents the API for the confidential store
@@ -68,10 +67,6 @@ func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
 	return p.contract.RequiredGas(input)
 }
 
-var (
-	ethcallAddr = common.HexToAddress("0x0000000000000000000000000000000042100003")
-)
-
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	stub := &SuaveRuntimeAdapter{
 		impl: &suaveRuntime{
@@ -89,56 +84,12 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		}()
 	}
 
-	var ret []byte
-	var err error
-
-	switch p.addr {
-	case isConfidentialAddress:
-		ret, err = (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
-
-	case confidentialInputsAddress:
-		ret, err = (&confidentialInputsPrecompile{}).RunConfidential(p.suaveContext, input)
-
-	case confStoreStoreAddress:
-		ret, err = stub.confidentialStoreStore(input)
-
-	case confStoreRetrieveAddress:
-		ret, err = stub.confidentialStoreRetrieve(input)
-
-	case newBidAddress:
-		ret, err = stub.newBid(input)
-
-	case fetchBidsAddress:
-		ret, err = stub.fetchBids(input)
-
-	case extractHintAddress:
-		ret, err = stub.extractHint(input)
-
-	case signEthTransactionAddress:
-		ret, err = stub.signEthTransaction(input)
-
-	case simulateBundleAddress:
-		ret, err = stub.simulateBundle(input)
-
-	case buildEthBlockAddress:
-		ret, err = stub.buildEthBlock(input)
-
-	case fillMevShareBundleAddress:
-		ret, err = stub.fillMevShareBundle(input)
-
-	case submitBundleJsonRPCAddress:
-		ret, err = stub.submitBundleJsonRPC(input)
-
-	case submitEthBlockBidToRelayAddress:
-		ret, err = stub.submitEthBlockBidToRelay(input)
-
-	case ethcallAddr:
-		ret, err = stub.ethcall(input)
-
-	default:
-		err = fmt.Errorf("precompile %s not found", p.addr)
+	if p.addr == isConfidentialAddress {
+		// 'isConfidential' is a special precompile
+		return (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
 	}
 
+	ret, err := stub.run(p.addr, input)
 	if err != nil && ret == nil {
 		ret = []byte(err.Error())
 	}
