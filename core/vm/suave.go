@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 )
@@ -72,7 +71,7 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 
 	// Special case for confStore as those are implicitly allowed
 	if !isPrecompileAllowed && precompile != confStoreStoreAddress && precompile != confStoreRetrieveAddress {
-		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
+		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", precompile, precompile, bid.Id)
 	}
 
 	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
@@ -85,5 +84,5 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 		}
 	}
 
-	return common.Address{}, fmt.Errorf("no caller of %s (%x) is allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
+	return common.Address{}, fmt.Errorf("no caller of %s (%x) is allowed on %x", precompile, precompile, bid.Id)
 }

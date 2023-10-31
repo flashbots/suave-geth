@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -49,7 +50,6 @@ import (
 
 func TestIsConfidential(t *testing.T) {
 	// t.Fatal("not implemented")
-	t.Skip("for now")
 
 	fr := newFramework(t)
 	defer fr.Close()
@@ -67,12 +67,10 @@ func TestIsConfidential(t *testing.T) {
 			ChainID:        &chainId,
 		}), "latest"))
 
-		fmt.Println(result)
-
-		// require.Equal(t, []byte{1}, hexutil.MustDecode(result))
+		res, err := artifacts.SuaveAbi.Methods["isConfidential"].Outputs.Unpack(result)
+		require.NoError(t, err)
+		require.Equal(t, []byte{1}, res[0])
 	}
-
-	return
 
 	{
 		// Verify sending computation requests and onchain transactions to isConfidentialAddress
@@ -123,7 +121,10 @@ func TestIsConfidential(t *testing.T) {
 		require.Equal(t, uint64(1), receipts[1].Status)
 
 		require.Equal(t, 2, len(block.Transactions()))
-		require.Equal(t, []byte{1}, block.Transactions()[0].Data())
+
+		res, err := artifacts.SuaveAbi.Methods["isConfidential"].Outputs.Unpack(block.Transactions()[0].Data())
+		require.NoError(t, err)
+		require.Equal(t, []byte{1}, res[0])
 		require.Equal(t, []byte{}, block.Transactions()[1].Data())
 	}
 }
@@ -1026,7 +1027,7 @@ func TestE2E_ForgeIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	doCall := func(methodName string, args ...interface{}) []interface{} {
-		toAddr, ok := artifacts.SuaveMethods[methodName]
+		toAddr, ok := vm.GetRuntime().GetAddrFromName(methodName)
 		require.True(t, ok, fmt.Sprintf("suave method %s not found", methodName))
 
 		method := artifacts.SuaveAbi.Methods[methodName]
@@ -1045,11 +1046,6 @@ func TestE2E_ForgeIntegration(t *testing.T) {
 		var simResult hexutil.Bytes
 		err = rpcClient.Call(&simResult, "eth_call", setTxArgsDefaults(callArgs), "latest")
 		require.NoError(t, err)
-
-		if methodName == "confidentialStoreRetrieve" {
-			// this method does not abi pack the output
-			return []interface{}{[]byte(simResult)}
-		}
 
 		result, err := method.Outputs.Unpack(simResult)
 		require.NoError(t, err)

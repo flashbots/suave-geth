@@ -81,6 +81,15 @@ type PrecompileMethod struct {
 	Addr common.Address
 }
 
+func (d *DispatchTable) GetAddrFromName(name string) (common.Address, bool) {
+	for _, m := range d.methods {
+		if m.name == name {
+			return m.addr, true
+		}
+	}
+	return common.Address{}, false
+}
+
 func (d *DispatchTable) GetMethods() []*PrecompileMethod {
 	res := make([]*PrecompileMethod, 0, len(d.methods))
 	for _, method := range d.methods {

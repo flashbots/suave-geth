@@ -2,22 +2,20 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	goformat "go/format"
-	"html/template"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/crypto"
-	"gopkg.in/yaml.v3"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 var (
@@ -25,39 +23,221 @@ var (
 	writeFlag  bool
 )
 
-func applyTemplate(templateText string, input desc, out string) error {
-	// hash the content of the description
-	raw, err := yaml.Marshal(input)
+var structs []structObj
+
+type structObj struct {
+	Name  string
+	Type  *abi.Type
+	Types []abi.Argument
+}
+
+func tryAddStruct(typ abi.Type) {
+	// de-reference any slice first
+	for {
+		if typ.T == abi.SliceTy {
+			typ = *typ.Elem
+		} else {
+			break
+		}
+	}
+
+	name := typ.InternalType
+	if name == "" {
+		// not a complex type
+		return
+	}
+
+	// check if we already have this struct
+	for _, s := range structs {
+		if s.Name == name {
+			return
+		}
+	}
+
+	if typ.T != abi.TupleTy {
+		// Basic type (i.e. type Bid is uint256). Since we use `InternalType`
+		// to represent the type on the template, we remove it here so that
+		// when the type declaration is generated, it will use the basic type.
+		typ.InternalType = ""
+
+		structs = append(structs, structObj{
+			Name: name,
+			Type: &typ,
+		})
+		return
+	}
+
+	// figure out if any internal element is a struct itself
+	for _, arg := range typ.TupleElems {
+		tryAddStruct(*arg)
+	}
+
+	args := []abi.Argument{}
+	for indx, arg := range typ.TupleElems {
+		args = append(args, abi.Argument{
+			Name: typ.TupleRawNames[indx],
+			Type: *arg,
+		})
+	}
+
+	structs = append(structs, structObj{
+		Name:  name,
+		Types: args,
+	})
+}
+
+func main() {
+	flag.BoolVar(&formatFlag, "format", false, "format the output")
+	flag.BoolVar(&writeFlag, "write", false, "write the output to the file")
+	flag.Parse()
+
+	methods := vm.GetRuntime().GetMethods()
+	for _, method := range methods {
+		for _, input := range method.Inputs {
+			tryAddStruct(input.Type)
+		}
+		for _, output := range method.Outputs {
+			tryAddStruct(output.Type)
+		}
+	}
+
+	// sort the structs by name
+	sort.Slice(structs, func(i, j int) bool {
+		return structs[i].Name < structs[j].Name
+	})
+
+	// sort the methods by name
+	sort.Slice(methods, func(i, j int) bool {
+		return methods[i].Name < methods[j].Name
+	})
+
+	input := map[string]interface{}{
+		"Methods": methods,
+		"Structs": structs,
+	}
+	if err := applyTemplate(suaveLibTemplate, input, "./suave/sol/libraries/Suave.sol"); err != nil {
+		panic(err)
+	}
+	if err := applyTemplate(suaveForgeLibTemplate, input, "./suave/sol/libraries/SuaveForge.sol"); err != nil {
+		panic(err)
+	}
+	if err := generateABI(); err != nil {
+		panic(err)
+	}
+}
+
+func generateABI() error {
+	command := "forge"
+	args := []string{
+		"build",
+		"--contracts", "./suave/sol/libraries/Suave.sol",
+		"--out", "/tmp/forge-artifacts",
+		"--cache-path", "/tmp",
+	}
+
+	cmd := exec.Command(command, args...)
+
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile("/tmp/forge-artifacts/Suave.sol/Suave.json")
 	if err != nil {
 		return err
 	}
-	hash := crypto.Keccak256(raw)
+	var forgeArtifact struct {
+		Abi json.RawMessage
+	}
+	if err := json.Unmarshal(data, &forgeArtifact); err != nil {
+		return err
+	}
 
+	// remove line breaks and spaces from the abi
+	abiStr := strings.Replace(string(forgeArtifact.Abi), "\n", "", -1)
+	abiStr = strings.Replace(abiStr, " ", "", -1)
+
+	if err := outputFile("./suave/artifacts/SuaveLib.json", abiStr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func renderType(param interface{}, inFunc bool, libRef bool) string {
+	typ, ok := param.(abi.Type)
+	if !ok {
+		typP, ok := param.(*abi.Type)
+		if !ok {
+			panic(errors.New("typ: invalid type"))
+		}
+		typ = *typP
+	}
+
+	isMemory := false
+
+	suffix := ""
+	if typ.T == abi.SliceTy {
+		typ = *typ.Elem
+		suffix += "[]"
+		isMemory = true
+	}
+	if typ.T == abi.StringTy || typ.T == abi.BytesTy || typ.T == abi.TupleTy {
+		isMemory = true
+	}
+
+	if isMemory && inFunc {
+		suffix += " memory"
+	}
+
+	if typ.InternalType != "" {
+		prefix := ""
+		if libRef {
+			prefix = "Suave."
+		}
+		return prefix + typ.InternalType + suffix
+	}
+
+	return typ.String() + suffix
+}
+
+func toAddressName(input string) string {
+	var result strings.Builder
+	upperPrev := true
+
+	for _, r := range input {
+		if unicode.IsUpper(r) && !upperPrev {
+			result.WriteString("_")
+		}
+		result.WriteRune(unicode.ToUpper(r))
+		upperPrev = unicode.IsUpper(r)
+	}
+
+	return result.String()
+}
+
+func applyTemplate(templateText string, input interface{}, out string) error {
 	funcMap := template.FuncMap{
-		"hash": func() string {
-			return hex.EncodeToString(hash)
+		"typS": func(param interface{}) string {
+			return renderType(param, false, false)
 		},
-		"typ2": func(param interface{}) string {
-			return encodeTypeToGolang(param.(string), false, false)
+		"typ": func(param interface{}) string {
+			return renderType(param, true, false)
 		},
-		"typ3": func(param interface{}) string {
-			return encodeTypeToGolang(param.(string), true, true)
+		"styp2": func(param interface{}, param2 interface{}, param3 interface{}) string {
+			return renderType(param, param2.(bool), param3.(bool))
 		},
-		"title": func(param interface{}) string {
-			return strings.Title(param.(string))
-		},
-		"isComplex": func(param interface{}) bool {
-			_, err := abi.NewType(param.(string), "", nil)
-			return err != nil
+		"toLower": func(param interface{}) string {
+			str := param.(string)
+			if str == "Address" {
+				return str
+			}
+			return firstLetterToLower(param.(string))
 		},
 		"encodeAddrName": func(param interface{}) string {
 			return toAddressName(param.(string))
-		},
-		"styp2": func(param interface{}, param2 interface{}) string {
-			return encodeTypeName(param.(string), param2.(bool), true)
-		},
-		"styp": func(param interface{}) string {
-			return encodeTypeName(param.(string), true, false)
 		},
 	}
 
@@ -76,19 +256,10 @@ func applyTemplate(templateText string, input desc, out string) error {
 	str = strings.Replace(str, "&#34;", "\"", -1)
 	str = strings.Replace(str, "&amp;", "&", -1)
 	str = strings.Replace(str, ", )", ")", -1)
-	str = strings.Replace(str, "&lt;", "<", -1)
 
 	if formatFlag || writeFlag {
-		// The output is always formatted if it is going to be written
-		ext := filepath.Ext(out)
-		if ext == ".go" {
-			if str, err = formatGo(str); err != nil {
-				return err
-			}
-		} else if ext == ".sol" {
-			if str, err = formatSolidity(str); err != nil {
-				return err
-			}
+		if str, err = formatSolidity(str); err != nil {
+			return err
 		}
 	}
 
@@ -98,290 +269,40 @@ func applyTemplate(templateText string, input desc, out string) error {
 	return nil
 }
 
-func main() {
-	flag.BoolVar(&formatFlag, "format", false, "format the output")
-	flag.BoolVar(&writeFlag, "write", false, "write the output to the file")
-	flag.Parse()
-
-	data, err := os.ReadFile("./suave/gen/suave_spec.yaml")
-	if err != nil {
-		panic(err)
-	}
-	var ff desc
-	if err := yaml.Unmarshal(data, &ff); err != nil {
-		panic(err)
-	}
-
-	// sort the structs by name
-	sort.Slice(ff.Structs, func(i, j int) bool {
-		return ff.Structs[i].Name < ff.Structs[j].Name
-	})
-
-	// sort the methods by name
-	sort.Slice(ff.Functions, func(i, j int) bool {
-		return ff.Functions[i].Name < ff.Functions[j].Name
-	})
-
-	/*
-		if err := applyTemplate(structsTemplate, ff, "./core/types/suave_structs.go"); err != nil {
-			panic(err)
-		}
-	*/
-
-	/*
-		if err := applyTemplate(adapterTemplate, ff, "./core/vm/contracts_suave_runtime_adapter.go"); err != nil {
-			panic(err)
-		}
-	*/
-
-	if err := applyTemplate(suaveMethodsGoTemplate, ff, "./suave/artifacts/addresses.go"); err != nil {
-		panic(err)
-	}
-
-	if err := applyTemplate(suaveLibTemplate, ff, "./suave/sol/libraries/Suave.sol"); err != nil {
-		panic(err)
-	}
-
-	if err := applyTemplate(suaveForgeLibTemplate, ff, "./suave/sol/libraries/SuaveForge.sol"); err != nil {
-		panic(err)
-	}
-
-	if err := generateABI("./suave/artifacts/SuaveLib.json", ff); err != nil {
-		panic(err)
-	}
-}
-
-func encodeTypeToGolang(str string, insideTypes bool, slicePointers bool) string {
-	typ, err := abi.NewType(str, "", nil)
-	if err == nil {
-		// basic type that has an easy match with Go
-		if typ.T == abi.SliceTy {
-			return "[]" + encodeTypeToGolang(typ.Elem.String(), insideTypes, slicePointers)
-		}
-
-		switch str {
-		case "uint256":
-			return "*big.Int"
-		case "address":
-			return "common.Address"
-		case "bytes":
-			return "[]byte"
-		case "bytes32":
-			return "common.Hash"
-		case "bool":
-			return "bool"
-		case "string":
-			return "string"
-		}
-
-		if strings.HasPrefix(str, "uint") {
-			// uint8, uint16, uint32, uint64 are encoded the same way in Go
-			return str
-		}
-		if strings.HasPrefix(str, "bytes") {
-			// fixed bytesX are encoded as [X]byte
-			return fmt.Sprintf("[%s]byte", strings.TrimPrefix(str, "bytes"))
-		}
-	} else {
-		var ref string
-		if !insideTypes {
-			ref = "types."
-		}
-
-		// complex type with a struct. If it a slice (i.e. Struct[])
-		// convert to []*Struct.
-		if strings.HasSuffix(str, "[]") {
-			if slicePointers {
-				// This is a hack to keep compatibility with the old generated code
-				return fmt.Sprintf("[]*%s%s", ref, strings.TrimSuffix(str, "[]"))
-			} else {
-				return fmt.Sprintf("[]%s%s", ref, strings.TrimSuffix(str, "[]"))
-			}
-		}
-		return ref + str
-	}
-
-	panic(fmt.Sprintf("input not done for type: %s", str))
-}
-
-var structsTemplate = `// Code generated by suave/gen. DO NOT EDIT.
-// Hash: {{hash}}
-package types
-
-import "github.com/ethereum/go-ethereum/common"
-
-{{range .Types}}
-type {{.Name}} {{typ3 .Typ}}
-{{end}}
-
-// Structs
-{{range .Structs}}
-type {{.Name}} struct {
-	{{range .Fields}}{{title .Name}} {{typ3 .Typ}}
-	{{end}}
-}
-{{end}}
-`
-
-var adapterTemplate = `// Code generated by suave/gen. DO NOT EDIT.
-// Hash: {{hash}}
-package vm
-
-import (
-	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
-	"github.com/mitchellh/mapstructure"
-)
-
-var (
-	errFailedToUnpackInput = fmt.Errorf("failed to decode input")
-	errFailedToDecodeField = fmt.Errorf("failed to decode field")
-	errFailedToPackOutput = fmt.Errorf("failed to encode output")
-)
-
-type SuaveRuntime interface {
-	{{range .Functions}}
-	{{.Name}}({{range .Input}}{{.Name}} {{typ2 .Typ}}, {{end}}) ({{range .Output.Fields}}{{typ2 .Typ}}, {{end}}error){{end}}
-}
-
-type SuaveRuntimeAdapter struct {
-	impl SuaveRuntime
-}
-
-{{range .Functions}}
-func (b *SuaveRuntimeAdapter) {{.Name}}(input []byte) (res []byte, err error) {
-	var (
-		unpacked []interface{}
-		result []byte
-	)
-
-	_ = unpacked
-	_ = result
-
-	unpacked, err = artifacts.SuaveAbi.Methods["{{.Name}}"].Inputs.Unpack(input)
-	if err != nil {
-		err = errFailedToUnpackInput
-		return
-	}
-
-	var (
-		{{range .Input}}{{.Name}} {{typ2 .Typ}}
-		{{end}})
-	
-	{{range $index, $item := .Input}}{{ if isComplex .Typ }}
-	if err = mapstructure.Decode(unpacked[{{$index}}], &{{.Name}}); err != nil {
-		err = errFailedToDecodeField
-		return
-	}
-	{{else}}{{.Name}} = unpacked[{{$index}}].({{typ2 .Typ}}){{end}}
-	{{end}}
-
-	var (
-		{{range .Output.Fields}}{{.Name}} {{typ2 .Typ}}
-		{{end}})
-	
-	if {{range .Output.Fields}}{{.Name}},{{end}} err = b.impl.{{.Name}}({{range .Input}}{{.Name}}, {{end}}); err != nil {
-		return
-	}
-
-	{{ if eq (len .Output.Fields) 0 }}
-	return nil, nil
-	{{else if .Output.Packed}}
-	result = {{range .Output.Fields}}{{.Name}} {{end}}
-	return result, nil
-	{{else}}
-	result, err = artifacts.SuaveAbi.Methods["{{.Name}}"].Outputs.Pack({{range .Output.Fields}}{{.Name}}, {{end}})
-	if err != nil {
-		err = errFailedToPackOutput
-		return
-	}
-	return result, nil
-	{{end}}
-}
-{{end}}
-`
-
-var suaveMethodsGoTemplate = `// Code generated by suave/gen. DO NOT EDIT.
-// Hash: {{hash}}
-package artifacts
-
-import (
-	"github.com/ethereum/go-ethereum/common"
-)
-
-// List of suave precompile addresses
-var ( {{range .Functions}}{{.Name}}Addr = common.HexToAddress("{{.Address}}")
-{{end}}
-)
-
-var SuaveMethods = map[string]common.Address{
-{{range .Functions}}"{{.Name}}": {{.Name}}Addr,
-{{end}}}
-
-func PrecompileAddressToName(addr common.Address) string {
-	switch addr { {{range .Functions}}
-	case {{.Name}}Addr:
-		return "{{.Name}}"{{end}}
-	}
-	return ""
-}
-`
-
 var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
 library Suave {
-    error PeekerReverted(address, bytes);
+	error PeekerReverted(address, bytes);
 
-{{range .Types}}
-type {{.Name}} is {{.Typ}};
-{{end}}
-
-{{range .Structs}}
-struct {{.Name}} {
-	{{range .Fields}}{{.Typ}} {{.Name}};
-	{{end}} }
-{{end}}
-
-address public constant IS_CONFIDENTIAL_ADDR =
-0x0000000000000000000000000000000042010000;
-{{range .Functions}}
-address public constant {{encodeAddrName .Name}} =
-{{.Address}};
-{{end}}
-
-// Returns whether execution is off- or on-chain
-function isConfidential() internal view returns (bool b) {
-	(bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
-	if (!success) {
-		revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
+	{{range .Structs}}
+	{{ if .Type }}
+	type {{ .Name }} is {{ typS .Type }};
+	{{ else }}
+	struct {{.Name}} {
+	{{ range .Types }}
+	{{ typS .Type }} {{ toLower .Name }};
+	{{ end }}
 	}
-	assembly {
-		// Load the length of data (first 32 bytes)
-		let len := mload(isConfidentialBytes)
-		// Load the data after 32 bytes, so add 0x20
-		b := mload(add(isConfidentialBytes, 0x20))
-	}
-}
-
-{{range .Functions}}
-function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
-	{{if .IsConfidential}}require(isConfidential());{{end}}
-	(bool success, bytes memory data) = {{encodeAddrName .Name}}.staticcall(abi.encode({{range .Input}}{{.Name}}, {{end}}));
-	if (!success) {
-		revert PeekerReverted({{encodeAddrName .Name}}, data);
-	}
-	{{ if eq (len .Output.Fields) 0 }}
-	{{else if .Output.Packed}}
-	return data;
-	{{else}}
-	return abi.decode(data, ({{range .Output.Fields}}{{.Typ}}, {{end}}));
+	{{ end }}
 	{{end}}
-}
-{{end}}
 
+	address public constant IS_CONFIDENTIAL_ADDR =
+	0x0000000000000000000000000000000042010000;
+	{{range .Methods}}
+	address public constant {{encodeAddrName .Name}} =
+	{{.Addr}};
+	{{end}}
+
+	{{ range .Methods }}
+	function {{.Name}} ( {{range .Inputs }} {{typ .Type}} {{toLower .Name}}, {{ end }}) public view returns ( {{range .Outputs }} {{typ .Type}}, {{ end }}) {
+		(bool success, bytes memory data) = {{encodeAddrName .Name}}.staticcall(abi.encode({{range .Inputs}}{{toLower .Name}}, {{end}}));
+		if (!success) {
+			revert PeekerReverted({{encodeAddrName .Name}}, data);
+		}
+		return abi.decode(data, ({{range .Outputs}}{{typS .Type}}, {{end}}));
+	}
+	{{ end }}
 }
 `
 
@@ -423,77 +344,15 @@ library SuaveForge {
         return string(abi.encodePacked("0x", converted));
     }
 
-{{range .Functions}}
-function {{.Name}}({{range .Input}}{{styp2 .Typ true}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp2 .Typ true}}, {{end}}) {
-	bytes memory data = forgeIt("{{.Address}}", abi.encode({{range .Input}}{{.Name}}, {{end}}));
-	{{ if eq (len .Output.Fields) 0 }}
-	{{else if .Output.Packed}}
-	return data;
-	{{else}}
-	return abi.decode(data, ({{range .Output.Fields}}{{styp2 .Typ false}}, {{end}}));
-	{{end}}
+{{ range .Methods }}
+function {{.Name}}({{range .Inputs}}{{styp2 .Type true true}} {{toLower .Name}}, {{end}}) internal view returns ({{range .Outputs}}{{styp2 .Type true true}}, {{end}}) {
+	bytes memory data = forgeIt("{{.Addr}}", abi.encode({{range .Inputs}}{{toLower .Name}}, {{end}}));
+	return abi.decode(data, ({{range .Outputs}}{{styp2 .Type false true}}, {{end}}));
 }
 {{end}}
 
 }
 `
-
-type functionDef struct {
-	Name           string
-	Address        string
-	Input          []field
-	Output         output
-	IsConfidential bool `yaml:"isConfidential"`
-}
-
-type output struct {
-	Packed bool
-	Fields []field
-}
-
-type field struct {
-	Name string
-	Typ  string `yaml:"type"`
-}
-
-type typ struct {
-	Name string
-	Typ  string `yaml:"type"`
-}
-
-type structsDef struct {
-	Name   string
-	Fields []typ
-}
-
-type desc struct {
-	Types     []typ
-	Structs   []structsDef
-	Functions []functionDef
-}
-
-func toAddressName(input string) string {
-	var result strings.Builder
-	upperPrev := true
-
-	for _, r := range input {
-		if unicode.IsUpper(r) && !upperPrev {
-			result.WriteString("_")
-		}
-		result.WriteRune(unicode.ToUpper(r))
-		upperPrev = unicode.IsUpper(r)
-	}
-
-	return result.String()
-}
-
-func formatGo(code string) (string, error) {
-	srcFormatted, err := goformat.Source([]byte(code))
-	if err != nil {
-		return "", err
-	}
-	return string(srcFormatted), nil
-}
 
 func formatSolidity(code string) (string, error) {
 	// Check if "forge" command is available in PATH
@@ -525,107 +384,6 @@ func formatSolidity(code string) (string, error) {
 	return outBuf.String(), nil
 }
 
-type abiField struct {
-	Type    string      `json:"type"`
-	Name    string      `json:"name"`
-	Inputs  []arguments `json:"inputs,omitempty"`
-	Outputs []arguments `json:"outputs,omitempty"`
-}
-
-type arguments struct {
-	Name         string      `json:"name"`
-	Type         string      `json:"type"`
-	InternalType string      `json:"internalType,omitempty"`
-	Components   []arguments `json:"components,omitempty"`
-	Indexed      bool        `json:"indexed,omitempty"`
-}
-
-func generateABI(out string, dd desc) error {
-	abiEncode := []*abiField{}
-
-	var encodeType func(name, typ string) arguments
-
-	encodeType = func(name, typ string) arguments {
-		arg := arguments{
-			Name: name,
-		}
-		_, err := abi.NewType(typ, "", nil)
-		if err == nil {
-			// basic type
-			arg.Type = typ
-			arg.InternalType = typ
-		} else {
-			// struct type
-			arg.InternalType = fmt.Sprintf("struct Suave.%s", typ)
-			if strings.HasSuffix(typ, "[]") {
-				arg.Type = "tuple[]"
-				typ = strings.TrimSuffix(typ, "[]")
-			} else {
-				arg.Type = "tuple"
-			}
-
-			var subElem structsDef
-			var found bool
-
-			for _, f := range dd.Structs {
-				if f.Name == typ {
-					subElem = f
-					found = true
-					break
-				}
-			}
-			if found {
-				for _, ff := range subElem.Fields {
-					arg.Components = append(arg.Components, encodeType(ff.Name, ff.Typ))
-				}
-			} else {
-				// try to search as an alias
-				for _, a := range dd.Types {
-					if a.Name == typ {
-						arg.Type = a.Typ
-					}
-				}
-			}
-		}
-
-		return arg
-	}
-
-	for _, f := range dd.Functions {
-		field := &abiField{
-			Name:   f.Name,
-			Type:   "function",
-			Inputs: []arguments{},
-		}
-
-		for _, i := range f.Input {
-			field.Inputs = append(field.Inputs, encodeType(i.Name, i.Typ))
-		}
-		for _, i := range f.Output.Fields {
-			field.Outputs = append(field.Outputs, encodeType(i.Name, i.Typ))
-		}
-
-		abiEncode = append(abiEncode, field)
-	}
-
-	// marshal the object
-	raw, err := json.Marshal(abiEncode)
-	if err != nil {
-		return err
-	}
-
-	// try to decode the output with abi.ABI to validate
-	// that the result is correct
-	if _, err := abi.JSON(bytes.NewReader(raw)); err != nil {
-		return err
-	}
-
-	if err := outputFile(out, string(raw)); err != nil {
-		return err
-	}
-	return nil
-}
-
 func outputFile(out string, str string) error {
 	if !writeFlag {
 		fmt.Println("=> " + out)
@@ -643,27 +401,13 @@ func outputFile(out string, str string) error {
 	return nil
 }
 
-func encodeTypeName(typName string, addMemory bool, addLink bool) string {
-	var isMemoryType bool
-
-	typ, err := abi.NewType(typName, "", nil)
-	if err != nil {
-		// not a basic type (i.e. struct or []struct)
-		if typName != "BidId" {
-			isMemoryType = true
-		}
-		// add the link reference to Suave library if necessary
-		if addLink {
-			typName = "Suave." + typName
-		}
-	} else {
-		if typ.T == abi.StringTy || typ.T == abi.BytesTy || typ.T == abi.SliceTy {
-			isMemoryType = true
-		}
+func firstLetterToLower(s string) string {
+	if len(s) == 0 {
+		return s
 	}
 
-	if isMemoryType && addMemory {
-		return typName + " memory"
-	}
-	return typName
+	r := []rune(s)
+	r[0] = unicode.ToLower(r[0])
+
+	return string(r)
 }

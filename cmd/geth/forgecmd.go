@@ -8,10 +8,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,7 +33,7 @@ var (
 			// 2. The name of the precompile.
 			addr := args.Get(0)
 			if !strings.HasPrefix(addr, "0x") {
-				mAddr, ok := artifacts.SuaveMethods[addr]
+				mAddr, ok := vm.GetRuntime().GetAddrFromName(addr)
 				if !ok {
 					return fmt.Errorf("unknown precompile name '%s'", addr)
 				}
