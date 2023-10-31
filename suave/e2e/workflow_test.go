@@ -2,6 +2,8 @@ package e2e
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +18,7 @@ import (
 	builderCapella "github.com/attestantio/go-builder-client/api/capella"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -27,15 +30,18 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
+	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
@@ -226,6 +232,57 @@ func TestMempool(t *testing.T) {
 	}
 }
 
+func TestTxSigningPrecompile(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	tx := types.NewTransaction(15, common.Address{0x14}, big.NewInt(50), 1000000, big.NewInt(42313), []byte{0x42})
+	txBytes, err := tx.MarshalBinary()
+	require.NoError(t, err)
+
+	sk, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	skHex := hex.EncodeToString(crypto.FromECDSA(sk))
+
+	txChainId := big.NewInt(13)
+	chainIdHex := hexutil.EncodeBig(txChainId)
+
+	// function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
+	args, err := artifacts.SuaveAbi.Methods["signEthTransaction"].Inputs.Pack(txBytes, chainIdHex, skHex)
+	require.NoError(t, err)
+
+	gas := hexutil.Uint64(1000000)
+	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
+
+	var callResult hexutil.Bytes
+	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &signEthTransaction,
+		Gas:            &gas,
+		IsConfidential: true,
+		ChainID:        &chainId,
+		Data:           (*hexutil.Bytes)(&args),
+	}), "latest")
+	requireNoRpcError(t, err)
+
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods["signEthTransaction"].Outputs.Unpack(callResult)
+	require.NoError(t, err)
+
+	var signedTx types.Transaction
+	require.NoError(t, signedTx.UnmarshalBinary(unpackedCallResult[0].([]byte)))
+
+	require.Equal(t, tx.Nonce(), signedTx.Nonce())
+	require.Equal(t, *tx.To(), *signedTx.To())
+	require.Equal(t, 0, tx.Value().Cmp(signedTx.Value()))
+	require.Equal(t, tx.Gas(), signedTx.Gas())
+	require.Equal(t, tx.GasPrice(), signedTx.GasPrice())
+	require.Equal(t, tx.Data(), signedTx.Data())
+
+	sender, err := types.Sender(types.LatestSignerForChainID(txChainId), &signedTx)
+	require.NoError(t, err)
+
+	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), sender)
+}
+
 func TestBundleBid(t *testing.T) {
 	// t.Fatal("not implemented")
 
@@ -291,13 +348,15 @@ func TestBundleBid(t *testing.T) {
 }
 
 func TestBundleSenderContract(t *testing.T) {
-	fr := newFramework(t)
+	skOpt, bundleSigningKeyPub := WithBundleSigningKeyOpt(t)
+	fr := newFramework(t, skOpt)
 	defer fr.Close()
 
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params types.RpcSBundle
+		Id     json.RawMessage
+		Params []types.RpcSBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -309,6 +368,17 @@ func TestBundleSenderContract(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
+		splitSig := strings.Split(r.Header.Get("x-flashbots-signature"), ":")
+		require.Equal(t, 2, len(splitSig))
+		require.Equal(t, splitSig[0], crypto.PubkeyToAddress(*bundleSigningKeyPub).Hex())
+
+		signature := hexutil.MustDecode(splitSig[1])
+		hashedBody := accounts.TextHash([]byte(crypto.Keccak256Hash(bodyBytes).Hex()))
+		pk, err := crypto.SigToPub(hashedBody, signature)
+		require.NoError(t, err)
+		require.True(t, pk.Equal(bundleSigningKeyPub))
+		require.True(t, crypto.VerifySignature(crypto.CompressPubkey(bundleSigningKeyPub), hashedBody, signature[:64]))
 
 		w.WriteHeader(http.StatusOK)
 	}
@@ -363,17 +433,18 @@ func TestBundleSenderContract(t *testing.T) {
 		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
 		require.Equal(t, uint64(1), receipts[0].Status)
 
-		require.Equal(t, 1, len(bundleSentToBuilder.Params.Txs))
+		require.Equal(t, 1, len(bundleSentToBuilder.Params))
+		require.Equal(t, 1, len(bundleSentToBuilder.Params[0].Txs))
 
 		var recoveredTx types.Transaction
-		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params.Txs[0]))
+		require.NoError(t, recoveredTx.UnmarshalBinary(bundleSentToBuilder.Params[0].Txs[0]))
 		expectedTxJson, err := signedTx.MarshalJSON()
 		require.NoError(t, err)
 		recoveredTxJson, err := recoveredTx.MarshalJSON()
 		require.NoError(t, err)
 		require.Equal(t, expectedTxJson, recoveredTxJson)
 
-		require.Equal(t, bundleSentToBuilder.Params.BlockNumber.ToInt().Uint64(), targetBlock)
+		require.Equal(t, bundleSentToBuilder.Params[0].BlockNumber.ToInt().Uint64(), targetBlock)
 	}
 }
 
@@ -552,7 +623,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 	clt := fr.NewSDKClient()
 
 	bundleSentToBuilder := &struct {
-		Params types.RPCMevShareBundle
+		Params []types.RPCMevShareBundle
 	}{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -622,7 +693,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), receipt.Status)
 
-		retrievedBlockNumber, err := hexutil.DecodeUint64(bundleSentToBuilder.Params.Inclusion.Block)
+		retrievedBlockNumber, err := hexutil.DecodeUint64(bundleSentToBuilder.Params[0].Inclusion.Block)
 		require.NoError(t, err)
 		require.Equal(t, targetBlock, retrievedBlockNumber)
 
@@ -633,7 +704,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NoError(t, err)
 
 		retrievedTxs := []string{}
-		for _, be := range bundleSentToBuilder.Params.Body {
+		for _, be := range bundleSentToBuilder.Params[0].Body {
 			retrievedTxs = append(retrievedTxs, be.Tx)
 		}
 
@@ -811,7 +882,8 @@ func TestBlockBuildingContract(t *testing.T) {
 }
 
 func TestRelayBlockSubmissionContract(t *testing.T) {
-	fr := newFramework(t, WithExecutionNode())
+	skOpt, signingPubkey := WithBlockSigningKeyOpt(t)
+	fr := newFramework(t, WithExecutionNode(), skOpt)
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
@@ -833,6 +905,12 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
+		genesisForkVersion := phase0.Version{0x00, 0x00, 0x10, 0x20}
+		builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
+		ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, bls.PublicKeyToBytes(signingPubkey), blockPayloadSentToRelay.Signature[:])
+		require.NoError(t, err)
+		require.True(t, ok)
 
 		w.WriteHeader(http.StatusOK)
 	}
@@ -937,6 +1015,67 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	require.True(t, ok)
 }
 
+func TestE2E_ForgeIntegration(t *testing.T) {
+	// This end-to-end test ensures that the precompile lifecycle expected in Forge works
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
+
+	rpcClient := fr.suethSrv.RPCNode()
+	ethClient := ethclient.NewClient(rpcClient)
+
+	chainIdRaw, err := ethClient.ChainID(context.Background())
+	require.NoError(t, err)
+
+	doCall := func(methodName string, args ...interface{}) []interface{} {
+		toAddr, ok := artifacts.SuaveMethods[methodName]
+		require.True(t, ok, fmt.Sprintf("suave method %s not found", methodName))
+
+		method := artifacts.SuaveAbi.Methods[methodName]
+
+		input, err := method.Inputs.Pack(args...)
+		require.NoError(t, err)
+
+		chainId := hexutil.Big(*chainIdRaw)
+
+		callArgs := ethapi.TransactionArgs{
+			To:             &toAddr,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&input),
+		}
+		var simResult hexutil.Bytes
+		err = rpcClient.Call(&simResult, "eth_call", setTxArgsDefaults(callArgs), "latest")
+		require.NoError(t, err)
+
+		if methodName == "confidentialStoreRetrieve" {
+			// this method does not abi pack the output
+			return []interface{}{[]byte(simResult)}
+		}
+
+		result, err := method.Outputs.Unpack(simResult)
+		require.NoError(t, err)
+		return result
+	}
+
+	addrList := []common.Address{suave.AllowedPeekerAny}
+	bidRaw := doCall("newBid", uint64(0), addrList, addrList, "default:v0:ethBundles")
+
+	var bid types.Bid
+	require.NoError(t, mapstructure.Decode(bidRaw[0], &bid))
+
+	bidsRaw := doCall("fetchBids", uint64(0), "default:v0:ethBundles")
+	var bids []types.Bid
+	require.NoError(t, mapstructure.Decode(bidsRaw[0], &bids))
+	require.Len(t, bids, 1)
+	require.Equal(t, bids[0].Id, bid.Id)
+
+	val := []byte{0x1, 0x2, 0x3}
+	doCall("confidentialStoreStore", bid.Id, "a", val)
+
+	valRaw := doCall("confidentialStoreRetrieve", bid.Id, "a")
+	require.Equal(t, val, valRaw[0])
+}
+
 func TestE2EPrecompile_Call(t *testing.T) {
 	// This end-to-end tests that the callx precompile gets called from a confidential request
 	fr := newFramework(t, WithExecutionNode())
@@ -955,6 +1094,17 @@ func TestE2EPrecompile_Call(t *testing.T) {
 	incorrectNum := big.NewInt(102)
 	_, err = sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, incorrectNum}, nil)
 	require.Error(t, err)
+}
+
+func TestE2EExecutionAddressEndpoint(t *testing.T) {
+	// this end-to-end tests ensures that we can call eth_executionAddress endpoint in a MEVM node
+	// and return the correct execution address list
+	fr := newFramework(t, WithExecutionNode())
+	defer fr.Close()
+
+	var addrs []common.Address
+	require.NoError(t, fr.suethSrv.RPCNode().Call(&addrs, "eth_executionAddress"))
+	require.NotEmpty(t, addrs)
 }
 
 type clientWrapper struct {
@@ -1036,6 +1186,22 @@ func WithRedisTransportOpt(t *testing.T) frameworkOpt {
 	}
 }
 
+func WithBundleSigningKeyOpt(t *testing.T) (frameworkOpt, *ecdsa.PublicKey) {
+	sk, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	return func(c *frameworkConfig) {
+		c.suaveConfig.EthBundleSigningKeyHex = hex.EncodeToString(crypto.FromECDSA(sk))
+	}, &sk.PublicKey
+}
+
+func WithBlockSigningKeyOpt(t *testing.T) (frameworkOpt, *bls.PublicKey) {
+	sk, pk, err := bls.GenerateNewKeypair()
+	require.NoError(t, err)
+	return func(c *frameworkConfig) {
+		c.suaveConfig.EthBlockSigningKeyHex = hexutil.Encode(bls.SecretKeyToBytes(sk))
+	}, pk
+}
+
 func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	cfg := defaultFrameworkConfig
 	for _, opt := range opts {
@@ -1114,8 +1280,10 @@ var (
 	isConfidentialAddress     = common.HexToAddress("0x42010000")
 	fetchBidsAddress          = common.HexToAddress("0x42030001")
 	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
-	simulateBundleAddress     = common.HexToAddress("0x42100000")
-	buildEthBlockAddress      = common.HexToAddress("0x42100001")
+
+	signEthTransaction    = common.HexToAddress("0x40100001")
+	simulateBundleAddress = common.HexToAddress("0x42100000")
+	buildEthBlockAddress  = common.HexToAddress("0x42100001")
 
 	/* contracts */
 	newBundleBidAddress = common.HexToAddress("0x642300000")

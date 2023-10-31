@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 )
 
-var AllowedPeekerAny = common.HexToAddress("0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829") // "*"
+var AllowedPeekerAny = common.HexToAddress("0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829") // "*"
 
 type Bytes = hexutil.Bytes
 type BidId = types.BidId

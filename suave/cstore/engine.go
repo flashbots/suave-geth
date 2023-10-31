@@ -156,6 +156,9 @@ func (e *ConfidentialStoreEngine) ProcessMessages() {
 }
 
 func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types.Transaction) (suave.Bid, error) {
+	// Share with all stores this node trusts
+	bid.AllowedStores = append(bid.AllowedStores, e.daSigner.LocalAddresses()...)
+
 	expectedId, err := calculateBidId(bid)
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)
@@ -341,7 +344,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on bid %x", recoveredMessageSigner, sw.Bid.Id)
 		}
 
-		if !slices.Contains(sw.Bid.AllowedPeekers, sw.Caller) {
+		if !slices.Contains(sw.Bid.AllowedPeekers, sw.Caller) && !slices.Contains(sw.Bid.AllowedPeekers, suave.AllowedPeekerAny) {
 			return fmt.Errorf("confidential engine: caller %x not allowed on bid %x", sw.Caller, sw.Bid.Id)
 		}
 

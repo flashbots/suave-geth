@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -122,6 +123,8 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	if err != nil {
 		return suave.ErrBidNotFound
 	}
+
+	log.Info("confStoreStore", "bidId", bidId, "key", key)
 
 	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreStoreAddress, bid)
 	if err != nil {
@@ -339,6 +342,10 @@ func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) 
 
 func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {
 	return (&confStoreStore{}).runImpl(b.suaveContext, bidId, key, data)
+}
+
+func (b *suaveRuntime) signEthTransaction(txn []byte, chainId string, signingKey string) ([]byte, error) {
+	return (&signEthTransaction{}).runImpl(txn, chainId, signingKey)
 }
 
 func (b *suaveRuntime) extractHint(bundleData []byte) ([]byte, error) {

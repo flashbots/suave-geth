@@ -1048,7 +1048,7 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			SkipAccountChecks: true,
 		}
 
-		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg)
+		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg, true)
 		if err != nil {
 			return nil, err
 		}
@@ -1879,7 +1879,7 @@ func (s *TransactionAPI) SendTransaction(ctx context.Context, args TransactionAr
 			return common.Hash{}, err
 		}
 
-		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, signed, msg)
+		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, signed, msg, false)
 		if err != nil {
 			return common.Hash{}, err
 		}
@@ -1929,7 +1929,7 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 			return common.Hash{}, err
 		}
 
-		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg)
+		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
 		if err != nil {
 			return tx.Hash(), err
 		}
@@ -1944,32 +1944,27 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 }
 
 // TODO: should be its own api
-func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message) (*types.Transaction, *core.ExecutionResult, func() error, error) {
+func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
 
 	// TODO: copy the inner, but only once
-	confidentialRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
+	confidentialRequest, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 	if !ok {
 		return nil, nil, nil, errors.New("invalid transaction passed")
 	}
 
 	// Look up the wallet containing the requested execution node
-	account := accounts.Account{Address: confidentialRequestTx.ExecutionNode}
+	account := accounts.Account{Address: confidentialRequest.ExecutionNode}
 	wallet, err := b.AccountManager().Find(account)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
-
-	suaveCtx := vm.SuaveContext{
-		ConfidentialComputeRequestTx: tx,
-		ConfidentialInputs:           confidentialRequestTx.ConfidentialInputs,
-	}
-
-	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true}, &blockCtx, &suaveCtx)
+	suaveCtx := b.SuaveContext(tx, confidentialRequest)
+	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -2010,7 +2005,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequestTx.ExecutionNode, ConfidentialComputeRequest: confidentialRequestTx.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequest.ExecutionNode, ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {
@@ -2337,4 +2332,9 @@ func toHexSlice(b [][]byte) []string {
 		r[i] = hexutil.Encode(b[i])
 	}
 	return r
+}
+
+// ExecutionAddress returns the execution addresseses available in the Kettle.
+func (s *TransactionAPI) ExecutionAddress(ctx context.Context) ([]common.Address, error) {
+	return s.b.AccountManager().Accounts(), nil
 }
