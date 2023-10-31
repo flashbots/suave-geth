@@ -100,10 +100,6 @@ func (c *simulateBundle) Name() string {
 	return "simulateBundle"
 }
 
-func (c *simulateBundle) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
 func (c *simulateBundle) Address() common.Address {
 	return simulateBundleAddress
 }
@@ -143,10 +139,6 @@ func (c *extractHint) RequiredGas(input []byte) uint64 {
 
 func (c *extractHint) Name() string {
 	return "extractHint"
-}
-
-func (c *extractHint) Run(input []byte) ([]byte, error) {
-	return input, nil
 }
 
 func (c *extractHint) Address() common.Address {
@@ -406,10 +398,6 @@ func (c *submitEthBlockBidToRelay) RequiredGas(input []byte) uint64 {
 
 func (c *submitEthBlockBidToRelay) Name() string {
 	return "submitEthBlockBidToRelay"
-}
-
-func (c *submitEthBlockBidToRelay) Run(input []byte) ([]byte, error) {
-	return input, nil
 }
 
 func (c *submitEthBlockBidToRelay) Address() common.Address {

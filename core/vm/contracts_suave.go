@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -119,10 +118,6 @@ func (c *confStoreRetrieve) RequiredGas(input []byte) uint64 {
 	return 100
 }
 
-func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
-	return nil, errors.New("not available in this suaveContext")
-}
-
 func (c *confStoreRetrieve) Address() common.Address {
 	return confStoreRetrieveAddress
 }
@@ -171,10 +166,6 @@ func (c *newBid) Name() string {
 	return "newBid"
 }
 
-func (c *newBid) Run(input []byte) ([]byte, error) {
-	return input, nil
-}
-
 func (c *newBid) Address() common.Address {
 	return newBidAddress
 }
@@ -211,10 +202,6 @@ func (c *fetchBids) Name() string {
 
 func (c *fetchBids) RequiredGas(input []byte) uint64 {
 	return 1000
-}
-
-func (c *fetchBids) Run(input []byte) ([]byte, error) {
-	return input, nil
 }
 
 func (c *fetchBids) Address() common.Address {
