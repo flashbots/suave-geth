@@ -1,5 +1,6 @@
 pragma solidity ^0.8.13;
 
+import "./libraries/Suave.sol";
 import "./libraries/bn256g1.sol";
 import "./libraries/encryption.sol";
 import "./libraries/ethtransaction.sol";
@@ -43,7 +44,7 @@ contract BatchAuction {
 	// Normally (in Oasis, Secret) we would initialize this on-chain.
 	// Without this avialable in SUAVE, we'll just hardcode it for hackathon
 	// secretKey := pseudoRandomBytes32();
-	bytes32 secretKey = bytes32(uint(0x424242));
+	bytes32 secretKey = bytes32(uint(0x4646464646464646464646464646464646464646464646464646464646464646));
 	publicKey = Curve.g1mul(Curve.P1(), uint(secretKey));
     }
 
@@ -60,11 +61,11 @@ contract BatchAuction {
     }
 
     // This should be called offline in confidential mode
-    function completeBatch() public returns(bytes[] memory) {
+    function completeBatch(uint nonce, uint gasPrice, uint gasLimit) public returns(bytes memory) {
 	bytes[] memory msgs = new bytes[](orderCount-fulfilled);
 
 	// Confidential!!!!
-	bytes32 secretKey = bytes32(uint(0x424242));
+	bytes32 secretKey = bytes32(uint(0x4646464646464646464646464646464646464646464646464646464646464646));
 	
 	for (uint i = fulfilled; i < orderCount; i++) {
 	    // Try to decrypt. If it fails, put "" in its place
@@ -72,13 +73,23 @@ contract BatchAuction {
 	    msgs[i-fulfilled] = message;
 	}
 
-	// TODO: 
 	// 1.Now construct calldata by encoding these messages
+	bytes memory data = abi.encodeWithSignature("fulfillOrders(bytes[])", msgs);
 	
 	// 2.Now construct the TX with this as calldata
+	EthTransaction.Transaction memory t = EthTransaction.Transaction({
+	    nonce: nonce,
+	    gasPrice: gasPrice,
+	    gasLimit: gasLimit,
+	    to: address(ethL1contract),
+	    value: 0,
+	    data: data,
+	    v: 0, r: 0, s: 0});
+	bytes memory txn = EthTransaction.serializeNew(t, 0x5);
 	
 	// 3.Now sign the transaction
-	return msgs;
+	//bytes memory t2 = Suave.signEthTransaction(txn, "5", "4646464646464646464646464646464646464646464646464646464646464646");
+	return txn;
     }
 
     // This will be called to have the SUAVE chain catch up with its

@@ -37,7 +37,7 @@ contract EncryptionExample is Script {
 
 	BatchAuction auction = new BatchAuction();
 
-	bytes32 secretKey = bytes32(uint(0x424242));
+	bytes32 secretKey = bytes32(uint(0x4646464646464646464646464646464646464646464646464646464646464646));
 	bytes32 r = bytes32(uint(0x1231251)); // This would be sampled randomly by client
 
 	bytes memory message = bytes("hello there suave,      #32bytes");
@@ -66,10 +66,9 @@ contract EncryptionExample is Script {
 	auction.submitOrder(ciphertext);
 	auction.submitOrder(ciphertext);
 
-	bytes[] memory msgs = auction.completeBatch();
-	for (uint i = 0; i < msgs.length; i++)
-	    console.log(string(msgs[i]));
-
+	bytes memory txn = auction.completeBatch(0, 21 *10**9, 1 *10**6);
+	console.logBytes(txn);
+	
 	vm.stopBroadcast();	
 	
 	console.log("Ok.");
