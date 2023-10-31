@@ -80,9 +80,9 @@ library SuaveForge {
         return abi.decode(data, (bytes));
     }
 
-    function isConfidential() internal view returns (bytes memory) {
+    function isConfidential() internal view returns (bool) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042010000", abi.encode());
-        return abi.decode(data, (bytes));
+        return abi.decode(data, (bool));
     }
 
     function newBid(uint64 param1, address[] memory param2, address[] memory param3, string memory param4)

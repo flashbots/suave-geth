@@ -69,7 +69,7 @@ func TestIsConfidential(t *testing.T) {
 
 		res, err := artifacts.SuaveAbi.Methods["isConfidential"].Outputs.Unpack(result)
 		require.NoError(t, err)
-		require.Equal(t, []byte{1}, res[0])
+		require.Equal(t, true, res[0])
 	}
 
 	{
@@ -124,7 +124,7 @@ func TestIsConfidential(t *testing.T) {
 
 		res, err := artifacts.SuaveAbi.Methods["isConfidential"].Outputs.Unpack(block.Transactions()[0].Data())
 		require.NoError(t, err)
-		require.Equal(t, []byte{1}, res[0])
+		require.Equal(t, true, res[0])
 		require.Equal(t, []byte{}, block.Transactions()[1].Data())
 	}
 }

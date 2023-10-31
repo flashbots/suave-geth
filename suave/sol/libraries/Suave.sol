@@ -131,12 +131,12 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function isConfidential() public view returns (bytes memory) {
+    function isConfidential() public view returns (bool) {
         (bool success, bytes memory data) = IS_CONFIDENTIAL.staticcall(abi.encode());
         if (!success) {
             revert PeekerReverted(IS_CONFIDENTIAL, data);
         }
-        return abi.decode(data, (bytes));
+        return abi.decode(data, (bool));
     }
 
     function newBid(uint64 param1, address[] memory param2, address[] memory param3, string memory param4)

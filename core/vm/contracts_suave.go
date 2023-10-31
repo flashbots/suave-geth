@@ -44,8 +44,8 @@ func (c *isConfidentialPrecompile) Address() common.Address {
 	return isConfidentialAddress
 }
 
-func (c *isConfidentialPrecompile) Do(suaveContext *SuaveContext) ([]byte, error) {
-	return []byte{0x1}, nil
+func (c *isConfidentialPrecompile) Do(suaveContext *SuaveContext) (bool, error) {
+	return true, nil
 }
 
 type confidentialInputsPrecompile struct{}
@@ -84,10 +84,12 @@ func (c *confStoreStore) Address() common.Address {
 }
 
 func (c *confStoreStore) Do(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
+	fmt.Println("_SSSSS")
 	return c.runImpl(suaveContext, bidId, key, data)
 }
 
 func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
+	fmt.Println("_YYYY")
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return suave.ErrBidNotFound
