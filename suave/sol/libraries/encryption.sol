@@ -1,12 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract SimpleEncryption {
+import "./bn256g1.sol";
+
+library Signing {
+    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s) {
+	return (0,0,0);
+    }
+}
+
+library PKE {
+    // Improvised... replace with ECIES or similar later
+    function encrypt(Curve.G1Point memory pub, bytes32 r, bytes memory m) public view
+    returns (bytes memory) {
+	Curve.G1Point memory sk    = Curve.g1mul(pub,        uint(r));
+	Curve.G1Point memory mypub = Curve.g1mul(Curve.P1(), uint(r));
+
+	// Encrypt using the curve point as secret key
+	bytes32 key = bytes32(sk.X);
+	(bytes memory ciphertext, bytes32 tag) = SimpleEncryption.encrypt(key, m);
+	return abi.encode(mypub.X, mypub.Y, ciphertext, tag);
+    }
+
+    function decrypt(bytes32 secretKey, bytes memory ciph) public view
+    returns (bytes memory) {
+	(uint X, uint Y, bytes memory ciphertext, bytes32 tag) =
+	    abi.decode(ciph, (uint, uint, bytes, bytes32));
+	Curve.G1Point memory mypub = Curve.G1Point(X,Y);	
+
+	Curve.G1Point memory sk = Curve.g1mul(mypub, uint(secretKey));
+	// Decrypt using the curve point as secret key
+	bytes32 key = bytes32(sk.X);
+	bytes memory message = SimpleEncryption.decrypt(key, ciphertext, tag);
+	return message;
+    }
+}
+
+library SimpleEncryption {
     // This function produces a masking stream using a PRF (in this case, keccak256)
     function produceMaskingStream(bytes32 key, uint256 counter) private pure returns (bytes32) {
 	return keccak256(abi.encodePacked(key, counter));
     }
-
+    
     function encrypt(bytes32 key, bytes memory message) public pure returns (bytes memory ciphertext, bytes32 tag) {
         require(message.length % 32 == 0, "Message length should be a multiple of 32");
 

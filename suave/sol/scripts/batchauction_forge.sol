@@ -4,36 +4,60 @@ pragma solidity ^0.8.13;
 import "../libraries/SuaveForge.sol";
 import "forge-std/Script.sol";
 
-import {BatchAuction} from "../batchauction.sol";
+import {BatchAuction, PKE, Curve, EthTransaction} from "../batchauction.sol";
 
-contract Example is Script {
-    address[] public addressList = [0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829];
-
+contract TransactionExample is Script {
     function run() public {
-        Suave.Bid memory bid = SuaveForge.newBid(0, addressList, addressList, "default:v0:ethBundles");
+	
+	// Construct a transaction
+	EthTransaction.Transaction memory t = EthTransaction.Transaction({
+	    nonce: 0,
+	    gasPrice: 200000,
+	    gasLimit: 1000000,
+	    to: address(0), // This should be the suave contract 
+	    value: 0,
+	    data: bytes(abi.encode(0xdeadbeef)), // Calldata, this will be the bit to append
+	    v: 0, r: 0, s: 0});
 
-        Suave.Bid[] memory allShareMatchBids = SuaveForge.fetchBids(0, "default:v0:ethBundles");
-        console.log(allShareMatchBids.length);
-
-        SuaveForge.confidentialStoreStore(bid.id, "a", abi.encodePacked("bbbbbb"));
-        bytes memory result = SuaveForge.confidentialStoreRetrieve(bid.id, "a");
-        console.logBytes(result);
+	bytes memory x = EthTransaction.serialize(t);
+	console.logBytes(x);
     }
 }
 
 
-
-contract Example2 is Script {
+contract EncryptionExample is Script {
     function run() public {
-
-        vm.startBroadcast();
 
 	BatchAuction auction = new BatchAuction();
 
-	auction.call();
-	console.log("Ok.");
+	bytes32 secretKey = bytes32(uint(0x424242));
+	bytes32 r = bytes32(uint(0x1231251)); // This would be sampled randomly by client
 
-	vm.stopBroadcast();
+	bytes memory message = bytes("hello there suave,      #32bytes");
+
+	// Encrypt the message to the auction contract
+	(uint X, uint Y) = auction.publicKey();
+	Curve.G1Point memory pub = Curve.G1Point(X,Y);
+	bytes memory ciphertext = PKE.encrypt(pub, r, message);
+	console.log("Ciphertext:");
+	console.logBytes(ciphertext);
+
+	// Decrypt the message (using hardcoded auction contract secretkey):
+	bytes memory message2 = PKE.decrypt(secretKey, ciphertext);
+	console.log(string(message2));
+	console.log("Encryption/Decryption ok");
+
+	// Test some on-chain behavior
+
+	// Check that the message is signed 
 	
+        vm.startBroadcast();
+
+	auction.submitOrder(0, ciphertext);
+	auction.submitOrder(1, ciphertext);
+
+	vm.stopBroadcast();	
+	
+	console.log("Ok.");
     }
 }
