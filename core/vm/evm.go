@@ -43,12 +43,9 @@ type (
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
-		if p, ok := PrecompiledContractsSuave[addr]; ok {
-			if evm.Config.IsConfidential {
-				suaveContext := NewRuntimeSuaveContext(evm, addr)
-				return NewSuavePrecompiledContractWrapper(addr, suaveContext, p), true
-			}
-			return p, ok
+		if isPrecompileAddr(addr) && evm.Config.IsConfidential {
+			suaveContext := NewRuntimeSuaveContext(evm, addr)
+			return NewSuavePrecompiledContractWrapper(addr, suaveContext), true
 		}
 	}
 	var precompiles map[common.Address]PrecompiledContract
