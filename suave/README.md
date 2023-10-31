@@ -20,10 +20,10 @@ forge script ./sol/scripts/batchauction_forge.sol --ffi --tc EncryptionExample
   
     This includes both the EthL1 contract as well as the Suave chain contract. The EthL1 contract receives batches of fulfilled orders at a time.
 
-    Encrypted orders are submitted on the SUAVE chain contract. The encrypted payload in this case is just a message. Solvers are constrained  
-- [sol/libraries/ethtransaction.sol](sol/libraries/ethtransactions.sol)
+    Encrypted orders are submitted on the SUAVE chain contract. The encrypted payload in this case is just a message. Solvers are constrained to invoke the `completeBatch` function and that's it.
+- [sol/libraries/ethtransaction.sol](sol/libraries/ethtransactions.sol) and [sol/libraries/RLPEncode.sol](sol/libraries/RLPEncode.sol)
 
-    For constructing an Ethereum transaction within SUAVE (this doesn't seem to work yet)
+    For constructing an Ethereum transaction within SUAVE.
 - [sol/libraries/encryption.sol](sol/libraries/encryption.sol)
 
   This defines a public key encryption format, based on ECIES. It uses elliptic curve operations on alt_bn128 G1.
