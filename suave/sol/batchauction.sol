@@ -74,7 +74,9 @@ contract BatchAuction {
 
 	// TODO: 
 	// 1.Now construct calldata by encoding these messages
+	
 	// 2.Now construct the TX with this as calldata
+	
 	// 3.Now sign the transaction
 	return msgs;
     }

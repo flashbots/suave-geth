@@ -8,19 +8,26 @@ import {BatchAuction, EthContract, PKE, Curve, EthTransaction} from "../batchauc
 
 contract TransactionExample is Script {
     function run() public {
+	// Compare with test vector here:
+	//   https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
+	
 	
 	// Construct a transaction
 	EthTransaction.Transaction memory t = EthTransaction.Transaction({
-	    nonce: 0,
-	    gasPrice: 200000,
-	    gasLimit: 1000000,
-	    to: address(0), // This should be the suave contract 
-	    value: 0,
-	    data: bytes(abi.encode(0xdeadbeef)), // Calldata, this will be the bit to append
+	    nonce: 9,
+	    gasPrice: 20 * 10**9,
+	    gasLimit: 21000,
+	    to: address(0x3535353535353535353535353535353535353535),
+	    // This should be the suave contract 
+	    value: 10**18,
+	    data: bytes(''), // Calldata, this will be the bit to append
 	    v: 0, r: 0, s: 0});
 
-	bytes memory x = EthTransaction.serialize(t);
+	// Hash the transaction
+	bytes memory x = EthTransaction.serializeNew(t, 0x1);
+	bytes32 hashedTx = keccak256(x);
 	console.logBytes(x);
+	console.logBytes32(hashedTx);
     }
 }
 
