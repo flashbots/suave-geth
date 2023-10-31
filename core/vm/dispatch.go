@@ -48,7 +48,7 @@ func NewDispatchTable() *DispatchTable {
 
 // SuavePrecompiledContract is an optional interface for precompiled Suave contracts.
 // During confidential execution the contract will be called with their RunConfidential method.
-type SuavePrecompiledContract2 interface {
+type SuavePrecompiledContract interface {
 	RequiredGas(input []byte) uint64
 	Address() common.Address
 	Name() string
@@ -207,7 +207,7 @@ type PrecompileWithName interface {
 	Name() string
 }
 
-func (d *DispatchTable) Register(fn SuavePrecompiledContract2) error {
+func (d *DispatchTable) Register(fn SuavePrecompiledContract) error {
 	// reflect and generate the type of the 'Do' function
 	typ := reflect.TypeOf(fn)
 
@@ -300,7 +300,7 @@ func (d *DispatchTable) Register(fn SuavePrecompiledContract2) error {
 	return nil
 }
 
-func (d *DispatchTable) MustRegister(fn SuavePrecompiledContract2) {
+func (d *DispatchTable) MustRegister(fn SuavePrecompiledContract) {
 	if err := d.Register(fn); err != nil {
 		panic(err)
 	}

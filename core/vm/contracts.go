@@ -40,13 +40,6 @@ type PrecompiledContract interface {
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 }
 
-// SuavePrecompiledContract is an optional interface for precompiled Suave contracts.
-// During confidential execution the contract will be called with their RunConfidential method.
-type SuavePrecompiledContract interface {
-	PrecompiledContract
-	RunConfidential(context *SuaveContext, input []byte) ([]byte, error)
-}
-
 // PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
 // contracts used in the Frontier and Homestead releases.
 var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
