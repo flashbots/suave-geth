@@ -3,7 +3,6 @@ package vm
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -105,19 +104,11 @@ func (m EngineModule) InitializeBid(ctx context.Context, bid ethtypes.Bid) (etht
 }
 
 func (m EngineModule) StoreRetrieve(ctx context.Context, args suave_wasi.RetrieveHostFnArgs) ([]byte, error) {
-	if len(m.SuaveContext.CallerStack) == 0 {
-		return nil, errors.New("caller stack not initialized, refusing to retrieve")
-	}
-	caller := m.SuaveContext.CallerStack[len(m.SuaveContext.CallerStack)-1]
-	return m.SuaveContext.Backend.ConfidentialStore.Retrieve(args.BidId, *caller, args.Key)
+	return (&confStoreRetrieve{}).runImpl(m.SuaveContext, args.BidId, args.Key)
 }
 
 func (m EngineModule) StorePut(ctx context.Context, args suave_wasi.StoreHostFnArgs) (ethtypes.EngineBid, error) {
-	if len(m.SuaveContext.CallerStack) == 0 {
-		return ethtypes.EngineBid{}, errors.New("caller stack not initialized, refusing to retrieve")
-	}
-	caller := m.SuaveContext.CallerStack[len(m.SuaveContext.CallerStack)-1]
-	return m.SuaveContext.Backend.ConfidentialStore.Store(args.BidId, *caller, args.Key, args.Value)
+	return ethtypes.EngineBid{}, (&confStoreStore{}).runImpl(m.SuaveContext, args.BidId, args.Key, args.Value)
 }
 
 func (m EngineModule) FetchBidById(ctx context.Context, bidId suave.BidId) (ethtypes.EngineBid, error) {

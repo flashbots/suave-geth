@@ -100,10 +100,10 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 		ret, err = (&confidentialInputsPrecompile{}).RunConfidential(p.suaveContext, input)
 
 	case confStoreStoreAddress:
-		ret, err = stub.confidentialStoreStore(input)
+		ret, err = (&WasiPrecompileWrapper{bytecode: wasmStorePutBytecode}).RunConfidential(p.suaveContext, input)
 
 	case confStoreRetrieveAddress:
-		ret, err = stub.confidentialStoreRetrieve(input)
+		ret, err = (&WasiPrecompileWrapper{bytecode: wasmRetrieveBytecode}).RunConfidential(p.suaveContext, input)
 
 	case newBidAddress:
 		ret, err = stub.newBid(input)

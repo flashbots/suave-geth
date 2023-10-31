@@ -19,6 +19,9 @@ var (
 	helloworld         []byte
 	wasmHelloWorldAddr = extractHintAddress // common.HexToAddress("0x67000001")
 
+	//go:embed suave_wasm/store_put.wasm
+	wasmStorePutBytecode []byte
+
 	//go:embed suave_wasm/store_retrieve.wasm
 	wasmRetrieveBytecode []byte
 

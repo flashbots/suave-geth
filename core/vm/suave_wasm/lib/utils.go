@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"unsafe"
@@ -19,6 +20,15 @@ func UnpackInputs(argSpec abi.Arguments) ([]interface{}, error) {
 	}
 
 	return unpacked, nil
+}
+
+func ReturnPackedArgs(argSpec abi.Arguments, args ...interface{}) {
+	packed, err := argSpec.Pack(args...)
+	if err != nil {
+		Fail(fmt.Errorf("could not pack output: %w", err))
+	}
+
+	ReturnBytes(packed)
 }
 
 func Fail(err error) {

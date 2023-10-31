@@ -337,16 +337,7 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 }
 
 func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
-	input, err := artifacts.SuaveAbi.Methods["confidentialStoreRetrieve"].Inputs.Pack(bidId, key)
-	if err != nil {
-		return []byte(err.Error()), err
-	}
-	res, err := (&WasiPrecompileWrapper{bytecode: wasmRetrieveBytecode}).RunConfidential(b.suaveContext, input)
-	if err != nil {
-		log.Error("XX", "res", res, "err", err)
-	}
-	return res, err
-	// return (&confStoreRetrieve{}).runImpl(b.suaveContext, bidId, key)
+	return (&confStoreRetrieve{}).runImpl(b.suaveContext, bidId, key)
 }
 
 func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {

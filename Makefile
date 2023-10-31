@@ -52,6 +52,7 @@ suavedevtools:
 
 wasm:
 	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/store_retrieve.wasm core/vm/suave_wasm/store_retrieve/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/store_put.wasm core/vm/suave_wasm/store_put/main.go
 	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/extract_hint.wasm core/vm/suave_wasm/extract_hint/main.go
 	GOOS=wasip1 GOARCH=wasm go build -o core/vm/suave_wasm/suavexec.wasm core/vm/suave_wasm/suavexec/main.go
 

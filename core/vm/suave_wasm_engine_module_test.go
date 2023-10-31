@@ -79,8 +79,9 @@ func (MockConfidentialStoreBackend) Store(bidId suave.BidId, caller common.Addre
 	panic("NOT IMPLEMENTED")
 }
 
+var wantBid = types.BidId{0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef}
+
 func (b MockConfidentialStoreBackend) Retrieve(bid suave.BidId, caller common.Address, key string) ([]byte, error) {
-	wantBid := types.BidId{0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, 0xbe, 0xef}
 
 	assert.Equal(b.T, wantBid, bid)
 	assert.Equal(b.T, wantAddr, caller)
@@ -89,8 +90,12 @@ func (b MockConfidentialStoreBackend) Retrieve(bid suave.BidId, caller common.Ad
 	return []byte("test data"), nil
 }
 
-func (b MockConfidentialStoreBackend) FetchBidById(suave.BidId) (suave.Bid, error) {
-	panic("NOT IMPLEMENTED")
+func (b MockConfidentialStoreBackend) FetchBidById(bid suave.BidId) (suave.Bid, error) {
+
+	assert.Equal(b.T, wantBid, bid)
+	return suave.Bid{
+		AllowedPeekers: []common.Address{wantAddr},
+	}, nil
 }
 
 func (b MockConfidentialStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
