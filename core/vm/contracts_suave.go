@@ -39,7 +39,21 @@ func (c *isConfidentialPrecompile) RequiredGas(input []byte) uint64 {
 	return 0 // incurs only the call cost (100)
 }
 
+func (c *isConfidentialPrecompile) Name() string {
+	return "isConfidential"
+}
+
+func (c *isConfidentialPrecompile) Address() common.Address {
+	return isConfidentialAddress
+}
+
+func (c *isConfidentialPrecompile) Do(suaveContext *SuaveContext) ([]byte, error) {
+	fmt.Println("? DO ?")
+	return []byte{0x1}, nil
+}
+
 func (c *isConfidentialPrecompile) Run(input []byte) ([]byte, error) {
+	fmt.Println("? RUN ?")
 	if len(input) == 1 {
 		// The precompile was called *directly* confidentially, and the result was cached - return 1
 		if input[0] == 0x01 {

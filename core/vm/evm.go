@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -44,6 +45,7 @@ var dd *DispatchTable
 
 func init() {
 	dd = NewDispatchTable()
+	dd.MustRegister(&isConfidentialPrecompile{})
 	dd.MustRegister(&confStoreStore{})
 	dd.MustRegister(&confStoreRetrieve{})
 	dd.MustRegister(&ethCallPrecompile{})
@@ -64,15 +66,12 @@ func GetRuntime() *DispatchTable {
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
-		if dd.IsPrecompile(addr) {
+		fmt.Println("--xx", evm.Config.IsConfidential)
+		fmt.Println(addr)
+
+		if dd.IsPrecompile(addr) && evm.Config.IsConfidential {
+			fmt.Println("YYY")
 			return dd.Wrap(evm.SuaveContext, addr), true
-		}
-		if p, ok := PrecompiledContractsSuave[addr]; ok {
-			if evm.Config.IsConfidential {
-				suaveContext := NewRuntimeSuaveContext(evm, addr)
-				return NewSuavePrecompiledContractWrapper(addr, suaveContext, p), true
-			}
-			return p, ok
 		}
 	}
 	var precompiles map[common.Address]PrecompiledContract
