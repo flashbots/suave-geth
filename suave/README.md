@@ -8,7 +8,7 @@ The guarantee provided here is that solvers are constrained to processing the SU
 
 ## To run
 ```
-forge script ./sol/scripts/batchauction_forge.sol --ffi
+forge script ./sol/scripts/batchauction_forge.sol --ffi --tc EncryptionExample
 ```
 
 ## Code layout

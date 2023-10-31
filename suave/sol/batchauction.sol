@@ -5,28 +5,39 @@ import "./libraries/encryption.sol";
 import "./libraries/ethtransaction.sol";
 
 contract EthContract {
-    event Fulfilled(string message, uint strikeprice);
+    event Fulfilled(string message);
     uint public ordersFulfilled = 0;
 
-    function fulfillOrders(bytes[] calldata messages, uint strikeprice) public
+    address public suaveContract;
+    
+    constructor (address _suaveContract) {
+	suaveContract = _suaveContract;
+    }
+
+    function fulfillOrders(bytes[] calldata messages) public
     {
+	// Only called by SUAVE
+	require(msg.sender == suaveContract);
+
 	for (uint i = 0; i < messages.length; i++) {
-	    emit Fulfilled(string(messages[i]), strikeprice);
+	    emit Fulfilled(string(messages[i]));
 	}
 	ordersFulfilled += messages.length;
     }
-
-    
 }
 
 contract BatchAuction {
     
     Curve.G1Point public publicKey;
-
-    address addr;
+    EthContract ethL1contract;
 
     // Confidential
     // secretKey confidential;
+
+    function init(address _ethL1contract) public {
+	require(address(ethL1contract) == address(0));
+	ethL1contract = EthContract(_ethL1contract);
+    }
     
     constructor() {
 	// Normally (in Oasis, Secret) we would initialize this on-chain.
@@ -36,33 +47,48 @@ contract BatchAuction {
 	publicKey = Curve.g1mul(Curve.P1(), uint(secretKey));
     }
 
-    mapping (address => mapping (uint => bool)) public canceled;
-    mapping (address => mapping (uint => bytes)) public payloads;
+    mapping (uint => bytes) orders;
+    uint orderCount;
+    uint fulfilled;
 
-    struct Order {
-	address a;
-	bytes m;
-	bytes32 v; bytes32 r; bytes32 s;
+    event OrderSubmitted(address sender, uint idx, bytes);
+    function submitOrder(bytes memory encryptedOrder) public {
+	require(encryptedOrder.length != 0);
+	orders[orderCount] = encryptedOrder;
+	orderCount++;
+	emit OrderSubmitted(msg.sender, orderCount-1, encryptedOrder);
     }
 
-    Order[] orderqueue;
+    // This should be called offline in confidential mode
+    function completeBatch() public returns(bytes[] memory) {
+	bytes[] memory msgs = new bytes[](orderCount-fulfilled);
 
-    event OrderSubmitted(address sender, uint nonce);
-    function submitOrder(uint nonce, bytes memory encryptedPayload) public {
-	require(encryptedPayload.length != 0);
-	require(canceled[msg.sender][nonce] == false);
-	require(payloads[msg.sender][nonce].length == 0);
-	payloads[msg.sender][nonce] = encryptedPayload;
-	emit OrderSubmitted(msg.sender, nonce);
-    }
-
-
-    function completeBatch() public {
-	// All the 
-    }
-
-    function receivePayment() public {
-	// The point is that I want to authorize a payment only after a value is confirmed in EthL1.
+	// Confidential!!!!
+	bytes32 secretKey = bytes32(uint(0x424242));
 	
+	for (uint i = fulfilled; i < orderCount; i++) {
+	    // Try to decrypt. If it fails, put "" in its place
+	    bytes memory message = PKE.decrypt(secretKey, orders[i]);
+	    msgs[i-fulfilled] = message;
+	}
+
+	// TODO: 
+	// 1.Now construct calldata by encoding these messages
+	// 2.Now construct the TX with this as calldata
+	// 3.Now sign the transaction
+	return msgs;
+    }
+
+    // This will be called to have the SUAVE chain catch up with its
+    // view of the Ethereum chain
+    function advanceBatch() public {
+	uint ethL1ordersFulfilled = 0;
+	// TODO: Call the Eth L1
+	// ethL1ordersFulfilled = suave.ethcall("ordersFulfilled");
+
+	for (uint i = fulfilled; i < ethL1ordersFulfilled; i++) {
+	    delete orders[i];
+	}
+	fulfilled = ethL1ordersFulfilled;
     }
 }

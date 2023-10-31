@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "../libraries/SuaveForge.sol";
 import "forge-std/Script.sol";
 
-import {BatchAuction, PKE, Curve, EthTransaction} from "../batchauction.sol";
+import {BatchAuction, EthContract, PKE, Curve, EthTransaction} from "../batchauction.sol";
 
 contract TransactionExample is Script {
     function run() public {
@@ -53,8 +53,15 @@ contract EncryptionExample is Script {
 	
         vm.startBroadcast();
 
-	auction.submitOrder(0, ciphertext);
-	auction.submitOrder(1, ciphertext);
+	EthContract e = new EthContract(address(auction));
+	auction.init(address(e));
+
+	auction.submitOrder(ciphertext);
+	auction.submitOrder(ciphertext);
+
+	bytes[] memory msgs = auction.completeBatch();
+	for (uint i = 0; i < msgs.length; i++)
+	    console.log(string(msgs[i]));
 
 	vm.stopBroadcast();	
 	
