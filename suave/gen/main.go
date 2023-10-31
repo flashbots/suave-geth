@@ -246,6 +246,10 @@ var ({{range .Functions}}
 	{{.Name}}Addr = common.HexToAddress("{{.Address}}"){{end}}
 )
 
+var addrList = []common.Address{
+	{{range .Functions}}{{.Name}}Addr, {{end}}
+}
+
 type SuaveRuntimeAdapter struct {
 	impl SuaveRuntime
 }

@@ -137,7 +137,6 @@ var PrecompiledContractsBLS = map[common.Address]PrecompiledContract{
 }
 
 var (
-	PrecompiledAddressesSuave     []common.Address
 	PrecompiledAddressesBerlin    []common.Address
 	PrecompiledAddressesIstanbul  []common.Address
 	PrecompiledAddressesByzantium []common.Address
@@ -157,9 +156,6 @@ func init() {
 	for k := range PrecompiledContractsBerlin {
 		PrecompiledAddressesBerlin = append(PrecompiledAddressesBerlin, k)
 	}
-	for k := range PrecompiledContractsSuave {
-		PrecompiledAddressesSuave = append(PrecompiledAddressesSuave, k)
-	}
 }
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
@@ -178,7 +174,7 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 	}
 
 	if rules.IsSuave {
-		return append(basePrecompiles, PrecompiledAddressesSuave...)
+		return append(basePrecompiles, addrList...)
 	}
 
 	return basePrecompiles
