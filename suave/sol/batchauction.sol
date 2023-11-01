@@ -78,7 +78,7 @@ contract BatchAuction {
     }
 
     // This should be called offline in confidential mode
-    function completeBatch(uint nonce, uint gasPrice, uint gasLimit) public view returns(bytes memory) {
+    function completeBatch(uint nonce, uint gasPrice, uint gasLimit) public returns(bytes memory) {
 	bytes[] memory msgs = new bytes[](orderCount-fulfilled);
 
 	// Confidential!!!!
@@ -109,10 +109,12 @@ contract BatchAuction {
 
 	// 4. TODO: Finally send the bundle
 	bytes memory bundle = t2;
-	Suave.submitBundleJsonRPC("https://rpc-goerli.flashbots.net", "eth_sendBundle", bundle);
-	
-	return txn;
+	//Suave.submitBundleJsonRPC("https://rpc-goerli.flashbots.net", "eth_sendBundle", bundle);
+	emit BatchEvent(data.length, t2);
+	return bundle;
     }
+
+    event BatchEvent(uint batchsize, bytes aux);
 
     // This will be called to have the SUAVE chain catch up with its
     // view of the Ethereum chain
