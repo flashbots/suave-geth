@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "../libraries/SuaveForge.sol";
 import "forge-std/Script.sol";
-
+import "../libraries/secp256k1.sol";
 import {BatchAuction, EthContract, PKE, Curve, EthTransaction} from "../batchauction.sol";
 
 contract TransactionExample is Script {
@@ -37,6 +37,16 @@ contract EncryptionExample is Script {
 
 	BatchAuction auction = new BatchAuction();
 
+	{
+	    bytes32 sk = bytes32(0x4646464646464646464646464646464646464646464646464646464646464646);
+	    //bytes32 sk = bytes32(0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d);
+	    (uint qx, uint qy) = Secp256k1.derivePubKey(uint(sk));
+	    address a = auction.deriveAddress(uint(sk));
+	    bytes memory ser = bytes.concat(bytes32(qx), bytes32(qy));
+	    console.logAddress(a);
+	}
+
+
 	bytes32 secretKey = bytes32(uint(0x4646464646464646464646464646464646464646464646464646464646464646));
 	bytes32 r = bytes32(uint(0x1231251)); // This would be sampled randomly by client
 
@@ -60,8 +70,10 @@ contract EncryptionExample is Script {
 	
         vm.startBroadcast();
 
-	EthContract e = new EthContract(address(auction));
+	EthContract e = new EthContract(auction.suappPubkey());
 	auction.init(address(e));
+	console.log("Suapp Pubkey:");
+	console.logAddress(auction.suappPubkey());
 
 	auction.submitOrder(ciphertext);
 	auction.submitOrder(ciphertext);

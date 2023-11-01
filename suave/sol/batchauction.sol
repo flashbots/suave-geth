@@ -4,21 +4,22 @@ import "./libraries/Suave.sol";
 import "./libraries/bn256g1.sol";
 import "./libraries/encryption.sol";
 import "./libraries/ethtransaction.sol";
+import "./libraries/secp256k1.sol";
 
 contract EthContract {
     event Fulfilled(string message);
     uint public ordersFulfilled = 0;
 
-    address public suaveContract;
+    address public suappPubkey;
     
-    constructor (address _suaveContract) {
-	suaveContract = _suaveContract;
+    constructor (address _suappPubkey) {
+	suappPubkey = _suappPubkey;
     }
 
     function fulfillOrders(bytes[] calldata messages) public
     {
-	// Only called by SUAVE
-	require(msg.sender == suaveContract);
+	// Can only be invoked by the SuApp itself
+	require(msg.sender == suappPubkey);
 
 	for (uint i = 0; i < messages.length; i++) {
 	    emit Fulfilled(string(messages[i]));
@@ -30,22 +31,33 @@ contract EthContract {
 contract BatchAuction {
     
     Curve.G1Point public publicKey;
+    address public suappPubkey;
     EthContract ethL1contract;
 
-    // Confidential
+    // Confidential:
     // secretKey confidential;
 
     function init(address _ethL1contract) public {
 	require(address(ethL1contract) == address(0));
+	require(EthContract(_ethL1contract).suappPubkey() == suappPubkey);
 	ethL1contract = EthContract(_ethL1contract);
+    }
+
+    function deriveAddress(uint secretKey) pure public returns(address) {
+	(uint qx, uint qy) = Secp256k1.derivePubKey(secretKey);
+	bytes memory ser = bytes.concat(bytes32(qx), bytes32(qy));
+	return address(uint160(uint256(keccak256(ser))));
     }
     
     constructor() {
 	// Normally (in Oasis, Secret) we would initialize this on-chain.
-	// Without this avialable in SUAVE, we'll just hardcode it for hackathon
+	// It will be possible to do this through a round of off-chain communication
+	// in SUAVE.
+	// For now in the hackathon, we'll just hardcode it
 	// secretKey := pseudoRandomBytes32();
 	bytes32 secretKey = bytes32(uint(0x4646464646464646464646464646464646464646464646464646464646464646));
 	publicKey = Curve.g1mul(Curve.P1(), uint(secretKey));
+	suappPubkey = deriveAddress(uint(secretKey));
     }
 
     mapping (uint => bytes) orders;
@@ -87,8 +99,13 @@ contract BatchAuction {
 	    v: 0, r: 0, s: 0});
 	bytes memory txn = EthTransaction.serializeNew(t, 0x5);
 	
-	// 3.Now sign the transaction
-	//bytes memory t2 = Suave.signEthTransaction(txn, "5", "4646464646464646464646464646464646464646464646464646464646464646");
+	// 3. TODO: Now sign the transaction
+	bytes memory t2 = Suave.signEthTransaction(txn, "5", "4646464646464646464646464646464646464646464646464646464646464646");
+
+	// 4. TODO: Finally send the bundle
+	bytes memory bundle = t2;
+	Suave.submitBundleJsonRPC("https://rpc-goerli.flashbots.net", "eth_sendBundle", bundle);
+	
 	return txn;
     }
 
