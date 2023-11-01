@@ -25,8 +25,8 @@ var (
 
 	confidentialInputsAddress = common.HexToAddress("0x42010001")
 
-	confStoreStoreAddress    = common.HexToAddress("0x42020000")
-	confStoreRetrieveAddress = common.HexToAddress("0x42020001")
+	confStoreAddress    = common.HexToAddress("0x42020000")
+	confRetrieveAddress = common.HexToAddress("0x42020001")
 
 	newBidAddress    = common.HexToAddress("0x42030000")
 	fetchBidsAddress = common.HexToAddress("0x42030001")
@@ -80,25 +80,25 @@ func (c *confidentialInputsPrecompile) RunConfidential(suaveContext *SuaveContex
 
 /* Confidential store precompiles */
 
-type confStoreStore struct {
+type confStore struct {
 	inoutAbi abi.Method
 }
 
-func newConfStoreStore() *confStoreStore {
+func newconfStore() *confStore {
 	inoutAbi := mustParseMethodAbi(`[{"inputs":[{"type":"bytes16"}, {"type":"bytes16"}, {"type":"string"}, {"type":"bytes"}],"name":"store","outputs":[],"stateMutability":"nonpayable","type":"function"}]`, "store")
 
-	return &confStoreStore{inoutAbi}
+	return &confStore{inoutAbi}
 }
 
-func (c *confStoreStore) RequiredGas(input []byte) uint64 {
+func (c *confStore) RequiredGas(input []byte) uint64 {
 	return uint64(100 * len(input))
 }
 
-func (c *confStoreStore) Run(input []byte) ([]byte, error) {
+func (c *confStore) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this suaveContext")
 }
 
-func (c *confStoreStore) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+func (c *confStore) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
 	if len(suaveContext.CallerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
 	}
@@ -118,15 +118,15 @@ func (c *confStoreStore) RunConfidential(suaveContext *SuaveContext, input []byt
 	return nil, nil
 }
 
-func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
+func (c *confStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string, data []byte) error {
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return suave.ErrBidNotFound
 	}
 
-	log.Info("confStoreStore", "bidId", bidId, "key", key)
+	log.Info("confStore", "bidId", bidId, "key", key)
 
-	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreStoreAddress, bid)
+	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreAddress, bid)
 	if err != nil {
 		return err
 	}
@@ -143,21 +143,21 @@ func (c *confStoreStore) runImpl(suaveContext *SuaveContext, bidId suave.BidId, 
 	return nil
 }
 
-type confStoreRetrieve struct{}
+type confRetrieve struct{}
 
-func newConfStoreRetrieve() *confStoreRetrieve {
-	return &confStoreRetrieve{}
+func newconfRetrieve() *confRetrieve {
+	return &confRetrieve{}
 }
 
-func (c *confStoreRetrieve) RequiredGas(input []byte) uint64 {
+func (c *confRetrieve) RequiredGas(input []byte) uint64 {
 	return 100
 }
 
-func (c *confStoreRetrieve) Run(input []byte) ([]byte, error) {
+func (c *confRetrieve) Run(input []byte) ([]byte, error) {
 	return nil, errors.New("not available in this suaveContext")
 }
 
-func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+func (c *confRetrieve) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
 	if len(suaveContext.CallerStack) == 0 {
 		return []byte("not allowed"), errors.New("not allowed in this suaveContext")
 	}
@@ -173,13 +173,13 @@ func (c *confStoreRetrieve) RunConfidential(suaveContext *SuaveContext, input []
 	return c.runImpl(suaveContext, bidId, key)
 }
 
-func (c *confStoreRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
+func (c *confRetrieve) runImpl(suaveContext *SuaveContext, bidId suave.BidId, key string) ([]byte, error) {
 	bid, err := suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return nil, suave.ErrBidNotFound
 	}
 
-	caller, err := checkIsPrecompileCallAllowed(suaveContext, confStoreRetrieveAddress, bid)
+	caller, err := checkIsPrecompileCallAllowed(suaveContext, confRetrieveAddress, bid)
 	if err != nil {
 		return nil, err
 	}
@@ -336,12 +336,12 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 	return (&confidentialInputsPrecompile{}).RunConfidential(b.suaveContext, nil)
 }
 
-func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
-	return (&confStoreRetrieve{}).runImpl(b.suaveContext, bidId, key)
+func (b *suaveRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]byte, error) {
+	return (&confRetrieve{}).runImpl(b.suaveContext, bidId, key)
 }
 
-func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {
-	return (&confStoreStore{}).runImpl(b.suaveContext, bidId, key, data)
+func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []byte) error {
+	return (&confStore{}).runImpl(b.suaveContext, bidId, key, data)
 }
 
 func (b *suaveRuntime) signEthTransaction(txn []byte, chainId string, signingKey string) ([]byte, error) {

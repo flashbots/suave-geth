@@ -620,7 +620,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 		return nil, err
 	}
 
-	matchedBundleIdsBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, bidId, "mevshare:v0:mergedBids")
+	matchedBundleIdsBytes, err := (&confRetrieve{}).runImpl(suaveContext, bidId, "mevshare:v0:mergedBids")
 	if err != nil {
 		return nil, err
 	}
@@ -632,7 +632,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 
 	matchBidIds := unpackedBidIds[0].([][16]byte)
 
-	userBundleBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, matchBidIds[0], "mevshare:v0:ethBundles")
+	userBundleBytes, err := (&confRetrieve{}).runImpl(suaveContext, matchBidIds[0], "mevshare:v0:ethBundles")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
@@ -642,7 +642,7 @@ func (c *fillMevShareBundle) runImpl(suaveContext *SuaveContext, bidId types.Bid
 		return nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
 
-	matchBundleBytes, err := (&confStoreRetrieve{}).runImpl(suaveContext, matchBidIds[1], "mevshare:v0:ethBundles")
+	matchBundleBytes, err := (&confRetrieve{}).runImpl(suaveContext, matchBidIds[1], "mevshare:v0:ethBundles")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 	}

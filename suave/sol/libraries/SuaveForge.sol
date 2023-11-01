@@ -53,13 +53,13 @@ library SuaveForge {
         return data;
     }
 
-    function confidentialStoreRetrieve(Suave.BidId bidId, string memory key) internal view returns (bytes memory) {
+    function confidentialRetrieve(Suave.BidId bidId, string memory key) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020001", abi.encode(bidId, key));
 
         return data;
     }
 
-    function confidentialStoreStore(Suave.BidId bidId, string memory key, bytes memory data1) internal view {
+    function confidentialStore(Suave.BidId bidId, string memory key, bytes memory data1) internal view {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(bidId, key, data1));
     }
 

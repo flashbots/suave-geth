@@ -1047,7 +1047,7 @@ func TestE2E_ForgeIntegration(t *testing.T) {
 		err = rpcClient.Call(&simResult, "eth_call", setTxArgsDefaults(callArgs), "latest")
 		require.NoError(t, err)
 
-		if methodName == "confidentialStoreRetrieve" {
+		if methodName == "confidentialRetrieve" {
 			// this method does not abi pack the output
 			return []interface{}{[]byte(simResult)}
 		}
@@ -1070,9 +1070,9 @@ func TestE2E_ForgeIntegration(t *testing.T) {
 	require.Equal(t, bids[0].Id, bid.Id)
 
 	val := []byte{0x1, 0x2, 0x3}
-	doCall("confidentialStoreStore", bid.Id, "a", val)
+	doCall("confidentialStore", bid.Id, "a", val)
 
-	valRaw := doCall("confidentialStoreRetrieve", bid.Id, "a")
+	valRaw := doCall("confidentialRetrieve", bid.Id, "a")
 	require.Equal(t, val, valRaw[0])
 }
 

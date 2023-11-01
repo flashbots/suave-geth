@@ -39,9 +39,9 @@ library Suave {
 
     address public constant CONFIDENTIAL_INPUTS = 0x0000000000000000000000000000000042010001;
 
-    address public constant CONFIDENTIAL_STORE_RETRIEVE = 0x0000000000000000000000000000000042020001;
+    address public constant CONFIDENTIAL_RETRIEVE = 0x0000000000000000000000000000000042020001;
 
-    address public constant CONFIDENTIAL_STORE_STORE = 0x0000000000000000000000000000000042020000;
+    address public constant CONFIDENTIAL_STORE = 0x0000000000000000000000000000000042020000;
 
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
@@ -97,19 +97,19 @@ library Suave {
         return data;
     }
 
-    function confidentialStoreRetrieve(BidId bidId, string memory key) internal view returns (bytes memory) {
-        (bool success, bytes memory data) = CONFIDENTIAL_STORE_RETRIEVE.staticcall(abi.encode(bidId, key));
+    function confidentialRetrieve(BidId bidId, string memory key) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = CONFIDENTIAL_RETRIEVE.staticcall(abi.encode(bidId, key));
         if (!success) {
-            revert PeekerReverted(CONFIDENTIAL_STORE_RETRIEVE, data);
+            revert PeekerReverted(CONFIDENTIAL_RETRIEVE, data);
         }
 
         return data;
     }
 
-    function confidentialStoreStore(BidId bidId, string memory key, bytes memory data1) internal view {
-        (bool success, bytes memory data) = CONFIDENTIAL_STORE_STORE.staticcall(abi.encode(bidId, key, data1));
+    function confidentialStore(BidId bidId, string memory key, bytes memory data1) internal view {
+        (bool success, bytes memory data) = CONFIDENTIAL_STORE.staticcall(abi.encode(bidId, key, data1));
         if (!success) {
-            revert PeekerReverted(CONFIDENTIAL_STORE_STORE, data);
+            revert PeekerReverted(CONFIDENTIAL_STORE, data);
         }
     }
 

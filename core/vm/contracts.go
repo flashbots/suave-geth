@@ -91,8 +91,8 @@ var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	isConfidentialAddress:     &isConfidentialPrecompile{},
 	confidentialInputsAddress: &confidentialInputsPrecompile{},
 
-	confStoreStoreAddress:    newConfStoreStore(),
-	confStoreRetrieveAddress: newConfStoreRetrieve(),
+	confStoreAddress:    newconfStore(),
+	confRetrieveAddress: newconfRetrieve(),
 
 	newBidAddress:      newNewBid(),
 	fetchBidsAddress:   newFetchBids(),

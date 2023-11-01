@@ -127,7 +127,7 @@
           "type": "string"
         }
       ],
-      "name": "confidentialStoreRetrieve",
+      "name": "confidentialRetrieve",
       "outputs": [
         {
           "internalType": "bytes",
@@ -156,7 +156,7 @@
           "type": "bytes"
         }
       ],
-      "name": "confidentialStoreStore",
+      "name": "confidentialStore",
       "outputs": [],
       "stateMutability": "view",
       "type": "function"

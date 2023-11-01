@@ -44,7 +44,7 @@
     },
     {
       "inputs": [],
-      "name": "CONFIDENTIAL_STORE_RETRIEVE",
+      "name": "CONFIDENTIAL_RETRIEVE",
       "outputs": [
         {
           "internalType": "address",
@@ -57,7 +57,7 @@
     },
     {
       "inputs": [],
-      "name": "CONFIDENTIAL_STORE_STORE",
+      "name": "CONFIDENTIAL_STORE",
       "outputs": [
         {
           "internalType": "address",
