@@ -53,9 +53,7 @@ contract EncryptionExample is Script {
 	bytes memory message = bytes("hello there suave,      #32bytes");
 
 	// Encrypt the message to the auction contract
-	(uint X, uint Y) = auction.publicKey();
-	Curve.G1Point memory pub = Curve.G1Point(X,Y);
-	bytes memory ciphertext = PKE.encrypt(pub, r, message);
+	bytes memory ciphertext = auction.encryptMessage(message, r);
 	console.log("Ciphertext:");
 	console.logBytes(ciphertext);
 

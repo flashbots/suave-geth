@@ -64,6 +64,11 @@ contract BatchAuction {
     uint orderCount;
     uint fulfilled;
 
+    function encryptMessage(bytes memory message, bytes32 nonce) public view returns (bytes memory) {
+	//require(message.length / 32 == 0);
+	return PKE.encrypt(publicKey, nonce, message);
+    }
+
     event OrderSubmitted(address sender, uint idx, bytes);
     function submitOrder(bytes memory encryptedOrder) public {
 	require(encryptedOrder.length != 0);
@@ -73,7 +78,7 @@ contract BatchAuction {
     }
 
     // This should be called offline in confidential mode
-    function completeBatch(uint nonce, uint gasPrice, uint gasLimit) public returns(bytes memory) {
+    function completeBatch(uint nonce, uint gasPrice, uint gasLimit) public view returns(bytes memory) {
 	bytes[] memory msgs = new bytes[](orderCount-fulfilled);
 
 	// Confidential!!!!
