@@ -11,14 +11,14 @@ import (
 // Simplified Share Bundle Type for PoC
 
 type SBundle struct {
-	BlockNumber     *big.Int      `json:"blockNumber"` // if BlockNumber is set it must match DecryptionCondition!
+	BlockNumber     *big.Int      `json:"blockNumber,omitempty"` // if BlockNumber is set it must match DecryptionCondition!
 	Txs             Transactions  `json:"txs"`
 	RevertingHashes []common.Hash `json:"revertingHashes,omitempty"`
 	RefundPercent   *int          `json:"percent,omitempty"`
 }
 
 type RpcSBundle struct {
-	BlockNumber     hexutil.Big     `json:"blockNumber"`
+	BlockNumber     *hexutil.Big    `json:"blockNumber,omitempty"`
 	Txs             []hexutil.Bytes `json:"txs"`
 	RevertingHashes []common.Hash   `json:"revertingHashes,omitempty"`
 	RefundPercent   *int            `json:"percent,omitempty"`
@@ -34,9 +34,10 @@ func (s *SBundle) MarshalJSON() ([]byte, error) {
 		txs = append(txs, txBytes)
 	}
 
-	var blockNumber hexutil.Big
+	var blockNumber *hexutil.Big
 	if s.BlockNumber != nil {
-		blockNumber = hexutil.Big(*s.BlockNumber)
+		blockNumber = new(hexutil.Big)
+		*blockNumber = hexutil.Big(*s.BlockNumber)
 	}
 
 	return json.Marshal(&RpcSBundle{
@@ -64,7 +65,7 @@ func (s *SBundle) UnmarshalJSON(data []byte) error {
 		txs = append(txs, &tx)
 	}
 
-	s.BlockNumber = (*big.Int)(&rpcSBundle.BlockNumber)
+	s.BlockNumber = (*big.Int)(rpcSBundle.BlockNumber)
 	s.Txs = txs
 	s.RevertingHashes = rpcSBundle.RevertingHashes
 	s.RefundPercent = rpcSBundle.RefundPercent
