@@ -19,8 +19,8 @@ var (
 type SuaveRuntime interface {
 	buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error)
 	confidentialInputs() ([]byte, error)
-	confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error)
-	confidentialStoreStore(bidId types.BidId, key string, data1 []byte) error
+	confidentialRetrieve(bidId types.BidId, key string) ([]byte, error)
+	confidentialStore(bidId types.BidId, key string, data1 []byte) error
 	ethcall(contractAddr common.Address, input1 []byte) ([]byte, error)
 	extractHint(bundleData []byte) ([]byte, error)
 	fetchBids(cond uint64, namespace string) ([]types.Bid, error)
@@ -35,8 +35,8 @@ type SuaveRuntime interface {
 var (
 	buildEthBlockAddr             = common.HexToAddress("0x0000000000000000000000000000000042100001")
 	confidentialInputsAddr        = common.HexToAddress("0x0000000000000000000000000000000042010001")
-	confidentialStoreRetrieveAddr = common.HexToAddress("0x0000000000000000000000000000000042020001")
-	confidentialStoreStoreAddr    = common.HexToAddress("0x0000000000000000000000000000000042020000")
+	confidentialRetrieveAddr = common.HexToAddress("0x0000000000000000000000000000000042020001")
+	confidentialStoreAddr    = common.HexToAddress("0x0000000000000000000000000000000042020000")
 	ethcallAddr                   = common.HexToAddress("0x0000000000000000000000000000000042100003")
 	extractHintAddr               = common.HexToAddress("0x0000000000000000000000000000000042100037")
 	fetchBidsAddr                 = common.HexToAddress("0x0000000000000000000000000000000042030001")
@@ -60,11 +60,11 @@ func (b *SuaveRuntimeAdapter) run(addr common.Address, input []byte) ([]byte, er
 	case confidentialInputsAddr:
 		return b.confidentialInputs(input)
 
-	case confidentialStoreRetrieveAddr:
-		return b.confidentialStoreRetrieve(input)
+	case confidentialRetrieveAddr:
+		return b.confidentialRetrieve(input)
 
-	case confidentialStoreStoreAddr:
-		return b.confidentialStoreStore(input)
+	case confidentialStoreAddr:
+		return b.confidentialStore(input)
 
 	case ethcallAddr:
 		return b.ethcall(input)
@@ -179,7 +179,7 @@ func (b *SuaveRuntimeAdapter) confidentialInputs(input []byte) (res []byte, err 
 
 }
 
-func (b *SuaveRuntimeAdapter) confidentialStoreRetrieve(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) confidentialRetrieve(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -188,7 +188,7 @@ func (b *SuaveRuntimeAdapter) confidentialStoreRetrieve(input []byte) (res []byt
 	_ = unpacked
 	_ = result
 
-	unpacked, err = artifacts.SuaveAbi.Methods["confidentialStoreRetrieve"].Inputs.Unpack(input)
+	unpacked, err = artifacts.SuaveAbi.Methods["confidentialRetrieve"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
 		return
@@ -210,7 +210,7 @@ func (b *SuaveRuntimeAdapter) confidentialStoreRetrieve(input []byte) (res []byt
 		output1 []byte
 	)
 
-	if output1, err = b.impl.confidentialStoreRetrieve(bidId, key); err != nil {
+	if output1, err = b.impl.confidentialRetrieve(bidId, key); err != nil {
 		return
 	}
 
@@ -219,7 +219,7 @@ func (b *SuaveRuntimeAdapter) confidentialStoreRetrieve(input []byte) (res []byt
 
 }
 
-func (b *SuaveRuntimeAdapter) confidentialStoreStore(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) confidentialStore(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -228,7 +228,7 @@ func (b *SuaveRuntimeAdapter) confidentialStoreStore(input []byte) (res []byte, 
 	_ = unpacked
 	_ = result
 
-	unpacked, err = artifacts.SuaveAbi.Methods["confidentialStoreStore"].Inputs.Unpack(input)
+	unpacked, err = artifacts.SuaveAbi.Methods["confidentialStore"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
 		return
@@ -250,7 +250,7 @@ func (b *SuaveRuntimeAdapter) confidentialStoreStore(input []byte) (res []byte, 
 
 	var ()
 
-	if err = b.impl.confidentialStoreStore(bidId, key, data1); err != nil {
+	if err = b.impl.confidentialStore(bidId, key, data1); err != nil {
 		return
 	}
 

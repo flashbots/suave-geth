@@ -10,8 +10,8 @@ import (
 var (
 	buildEthBlockAddr             = common.HexToAddress("0x0000000000000000000000000000000042100001")
 	confidentialInputsAddr        = common.HexToAddress("0x0000000000000000000000000000000042010001")
-	confidentialStoreRetrieveAddr = common.HexToAddress("0x0000000000000000000000000000000042020001")
-	confidentialStoreStoreAddr    = common.HexToAddress("0x0000000000000000000000000000000042020000")
+	confidentialRetrieveAddr = common.HexToAddress("0x0000000000000000000000000000000042020001")
+	confidentialStoreAddr    = common.HexToAddress("0x0000000000000000000000000000000042020000")
 	ethcallAddr                   = common.HexToAddress("0x0000000000000000000000000000000042100003")
 	extractHintAddr               = common.HexToAddress("0x0000000000000000000000000000000042100037")
 	fetchBidsAddr                 = common.HexToAddress("0x0000000000000000000000000000000042030001")
@@ -26,8 +26,8 @@ var (
 var SuaveMethods = map[string]common.Address{
 	"buildEthBlock":             buildEthBlockAddr,
 	"confidentialInputs":        confidentialInputsAddr,
-	"confidentialStoreRetrieve": confidentialStoreRetrieveAddr,
-	"confidentialStoreStore":    confidentialStoreStoreAddr,
+	"confidentialRetrieve": confidentialRetrieveAddr,
+	"confidentialStore":    confidentialStoreAddr,
 	"ethcall":                   ethcallAddr,
 	"extractHint":               extractHintAddr,
 	"fetchBids":                 fetchBidsAddr,
@@ -45,10 +45,10 @@ func PrecompileAddressToName(addr common.Address) string {
 		return "buildEthBlock"
 	case confidentialInputsAddr:
 		return "confidentialInputs"
-	case confidentialStoreRetrieveAddr:
-		return "confidentialStoreRetrieve"
-	case confidentialStoreStoreAddr:
-		return "confidentialStoreStore"
+	case confidentialRetrieveAddr:
+		return "confidentialRetrieve"
+	case confidentialStoreAddr:
+		return "confidentialStore"
 	case ethcallAddr:
 		return "ethcall"
 	case extractHintAddr:

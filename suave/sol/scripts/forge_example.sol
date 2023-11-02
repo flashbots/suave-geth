@@ -13,8 +13,8 @@ contract Example is Script {
         Suave.Bid[] memory allShareMatchBids = SuaveForge.fetchBids(0, "default:v0:ethBundles");
         console.log(allShareMatchBids.length);
 
-        SuaveForge.confidentialStoreStore(bid.id, "a", abi.encodePacked("bbbbbb"));
-        bytes memory result = SuaveForge.confidentialStoreRetrieve(bid.id, "a");
+        SuaveForge.confidentialStore(bid.id, "a", abi.encodePacked("bbbbbb"));
+        bytes memory result = SuaveForge.confidentialRetrieve(bid.id, "a");
         console.logBytes(result);
     }
 }

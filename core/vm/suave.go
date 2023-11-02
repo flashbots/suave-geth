@@ -117,7 +117,7 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 	isPrecompileAllowed := slices.Contains(bid.AllowedPeekers, precompile)
 
 	// Special case for confStore as those are implicitly allowed
-	if !isPrecompileAllowed && precompile != confStoreStoreAddress && precompile != confStoreRetrieveAddress {
+	if !isPrecompileAllowed && precompile != confStoreAddress && precompile != confRetrieveAddress {
 		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
 	}
 
