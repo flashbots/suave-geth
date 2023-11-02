@@ -89,6 +89,7 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 // are ran with their respective RunConfidential in confidential setting
 var PrecompiledContractsSuave = map[common.Address]SuavePrecompiledContract{
 	isConfidentialAddress:     &isConfidentialPrecompile{},
+	ccrCalldataAddress:        &ccrCalldataPrecompile{},
 	confidentialInputsAddress: &confidentialInputsPrecompile{},
 
 	confStoreStoreAddress:    newConfStoreStore(),

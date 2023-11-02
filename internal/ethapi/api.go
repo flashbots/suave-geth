@@ -1044,6 +1044,7 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			To:                tx.To(),
 			Value:             tx.Value(),
 			Data:              tx.Data(),
+			CCRCalldata:       nil,
 			AccessList:        tx.AccessList(),
 			SkipAccountChecks: true,
 		}

@@ -125,16 +125,17 @@ func toWordSize(size uint64) uint64 {
 // A Message contains the data derived from a single transaction that is relevant to state
 // processing.
 type Message struct {
-	To         *common.Address
-	From       common.Address
-	Nonce      uint64
-	Value      *big.Int
-	GasLimit   uint64
-	GasPrice   *big.Int
-	GasFeeCap  *big.Int
-	GasTipCap  *big.Int
-	Data       []byte
-	AccessList types.AccessList
+	To          *common.Address
+	From        common.Address
+	Nonce       uint64
+	Value       *big.Int
+	GasLimit    uint64
+	GasPrice    *big.Int
+	GasFeeCap   *big.Int
+	GasTipCap   *big.Int
+	Data        []byte
+	CCRCalldata *[]byte // a bit hacky
+	AccessList  types.AccessList
 
 	// When SkipAccountChecks is true, the message nonce is not checked against the
 	// account nonce in state. It also disables checking that the sender is an EOA.
@@ -156,6 +157,12 @@ func TransactionToMessage(tx *types.Transaction, s types.Signer, baseFee *big.In
 		AccessList:        tx.AccessList(),
 		SkipAccountChecks: false,
 	}
+
+	suaveTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
+	if ok {
+		msg.CCRCalldata = &suaveTx.ConfidentialComputeRequest.Data
+	}
+
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	if baseFee != nil {
 		msg.GasPrice = cmath.BigMin(msg.GasPrice.Add(msg.GasTipCap, baseFee), msg.GasFeeCap)

@@ -23,6 +23,84 @@ contract AnyBidContract {
 	}
 }
 
+contract PrivateKeyHolderContract {
+	bool initialized; /* there's better ways, for illustrative purposes */
+	Suave.BidId keyConfStoreId;
+	bytes pubkey;
+
+	address deployer;
+
+	/* there's better ways, for illustrative purposes */
+	constructor() {
+		initialized = false;
+		deployer = msg.sender;
+	}
+
+	function setInitialized(Suave.BidId _keyConfStoreId, bytes memory _pubkey) public {
+		require(msg.sender == deployer, "not authorized");
+		require(!initialized, "already initialized");
+
+		bytes memory confidentialRequestData = Suave.confidentialRequestData();
+		for (uint i = 0; i < 4; i++) {
+		require(this.initialize.selector[i] == confidentialRequestData[i], "insecure bid, ccr was not to initialize()");
+		}
+
+		initialized = true;
+		keyConfStoreId = _keyConfStoreId;
+		pubkey = _pubkey;
+	}
+
+	/* if initialize() is called multiple times, only the last call will be persisted */
+	function initialize(address[] memory allowedStores) public returns (bytes memory) {
+		require(Suave.isConfidential());
+		require(msg.sender == deployer);
+		require(!initialized);
+		
+		address[] memory allowedPeekers = new address[](1);
+		allowedPeekers[0] = address(this);
+
+		(bytes memory privkey, bytes memory _pubkey) = Suave.generateKeyPair();
+
+		Suave.Bid memory bid = Suave.newBid(0, allowedPeekers, allowedStores, "private_key_contract:v0");
+		Suave.confidentialStoreStore(bid.id, "privkey", privkey);
+
+		return bytes.concat(this.setInitialized.selector, abi.encode(_pubkey, bid.id));
+	}
+
+	/* for illustrative purposes only, should not be public */
+	function encrypt(bytes memory data) public returns (bytes memory) {
+		if (Suave.isConfidential()) {
+			// encrypt to pubkey and move the encrypted data on chain
+			return bytes.concat(this.encrypt.selector, abi.encode(data));
+		} else {
+			return data;
+		}
+	}
+
+	/* for illustrative purposes only, should not be public */
+	function decrypt(bytes memory data) public returns (bytes memory) {
+		if (Suave.isConfidential()) {
+			bytes memory privkey = Suave.confidentialStoreRetrieve(keyConfStoreId, "privkey");
+			// decrypt using privkey
+			return bytes.concat(this.decrypt.selector, abi.encode(data));
+		} else {
+			return data;
+		}
+	}
+
+	/* for illustrative purposes only, should not be public */
+	function sign(bytes memory data) public returns (bytes memory) {
+		if (Suave.isConfidential()) {
+			bytes memory privkey = Suave.confidentialStoreRetrieve(keyConfStoreId, "privkey");
+			// sign using privkey
+			// push the signature on chain
+			return bytes.concat(this.sign.selector, abi.encode(data));
+		} else {
+			return data;
+		}
+	}
+}
+
 contract BundleBidContract is AnyBidContract {
 
 	function newBid(uint64 decryptionCondition, address[] memory bidAllowedPeekers, address[] memory bidAllowedStores) external payable returns (bytes memory) {

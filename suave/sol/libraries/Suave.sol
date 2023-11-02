@@ -39,6 +39,8 @@ library Suave {
 
     address public constant CONFIDENTIAL_INPUTS = 0x0000000000000000000000000000000042010001;
 
+    address public constant CONFIDENTIAL_REQUEST_DATA = 0x0000000000000000000000000000000000000007;
+
     address public constant CONFIDENTIAL_STORE_RETRIEVE = 0x0000000000000000000000000000000042020001;
 
     address public constant CONFIDENTIAL_STORE_STORE = 0x0000000000000000000000000000000042020000;
@@ -50,6 +52,8 @@ library Suave {
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
+
+    address public constant GENERATE_KEY_PAIR = 0x0000000000000000000000000000000040100003;
 
     address public constant GENERATE_PSEUDO_RANDOM_BYTES = 0x0000000000000000000000000000000040100000;
 
@@ -94,6 +98,15 @@ library Suave {
         (bool success, bytes memory data) = CONFIDENTIAL_INPUTS.staticcall(abi.encode());
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_INPUTS, data);
+        }
+
+        return data;
+    }
+
+    function confidentialRequestData() internal view returns (bytes memory) {
+        (bool success, bytes memory data) = CONFIDENTIAL_REQUEST_DATA.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(CONFIDENTIAL_REQUEST_DATA, data);
         }
 
         return data;
@@ -151,6 +164,15 @@ library Suave {
         }
 
         return data;
+    }
+
+    function generateKeyPair() internal view returns (bytes memory, bytes memory) {
+        (bool success, bytes memory data) = GENERATE_KEY_PAIR.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(GENERATE_KEY_PAIR, data);
+        }
+
+        return abi.decode(data, (bytes, bytes));
     }
 
     function generatePseudoRandomBytes(uint64 numBytes, bytes memory domainSeparator)

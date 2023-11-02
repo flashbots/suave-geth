@@ -280,6 +280,12 @@ func (args *TransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int) (*
 		AccessList:        accessList,
 		SkipAccountChecks: true,
 	}
+
+	// Only set in case of SuaveTransaction
+	if args.ConfidentialResult != nil {
+		msg.CCRCalldata = (*[]byte)(args.ConfidentialInputs)
+	}
+
 	return msg, nil
 }
 

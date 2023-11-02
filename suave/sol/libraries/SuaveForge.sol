@@ -53,6 +53,12 @@ library SuaveForge {
         return data;
     }
 
+    function confidentialRequestData() internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000000000007", abi.encode());
+
+        return data;
+    }
+
     function confidentialStoreRetrieve(Suave.BidId bidId, string memory key) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020001", abi.encode(bidId, key));
 
@@ -85,6 +91,12 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000043200001", abi.encode(bidId));
 
         return data;
+    }
+
+    function generateKeyPair() internal view returns (bytes memory, bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000040100003", abi.encode());
+
+        return abi.decode(data, (bytes, bytes));
     }
 
     function generatePseudoRandomBytes(uint64 numBytes, bytes memory domainSeparator)

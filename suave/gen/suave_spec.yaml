@@ -52,6 +52,21 @@ functions:
       fields:
         - name: output1
           type: bytes
+  - name: confidentialRequestData
+    address: "0x0000000000000000000000000000000000000007"
+    output:
+      packed: true
+      fields:
+        - name: output1
+          type: bytes
+  - name: generateKeyPair
+    address: "0x0000000000000000000000000000000040100003"
+    output:
+      fields:
+        - name: privkey
+          type: bytes
+        - name: pubkey
+          type: bytes
   - name: generatePseudoRandomBytes
     address: "0x0000000000000000000000000000000040100000"
     input:

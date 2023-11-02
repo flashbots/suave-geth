@@ -48,6 +48,16 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 				suaveContext := NewRuntimeSuaveContext(evm, addr)
 				return NewSuavePrecompiledContractWrapper(addr, suaveContext, p), true
 			}
+
+			// Special case for ccrCalldataPrecompile as it needs TxContext set
+			// Since this is *the only* special case leaving it as is
+			// Please do not add more special cases, instead write a separate interface
+			ccrcp, castOk := p.(*ccrCalldataPrecompile)
+			if castOk {
+				ccrcp.txContext = evm.TxContext
+				return ccrcp, true
+			}
+
 			return p, ok
 		}
 	}
@@ -93,6 +103,8 @@ type TxContext struct {
 	// Message information
 	Origin   common.Address // Provides information for ORIGIN
 	GasPrice *big.Int       // Provides information for GASPRICE
+	// Suave-specific extra
+	ConfidentialRecordData *[]byte
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides

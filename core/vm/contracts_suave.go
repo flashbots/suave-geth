@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"crypto"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
@@ -23,6 +23,7 @@ var (
 
 var (
 	isConfidentialAddress               = common.HexToAddress("0x42010000")
+	ccrCalldataAddress                  = common.HexToAddress("0x07")
 	errIsConfidentialInvalidInputLength = errors.New("invalid input length")
 
 	confidentialInputsAddress = common.HexToAddress("0x42010001")
@@ -64,6 +65,25 @@ func (c *isConfidentialPrecompile) RunConfidential(suaveContext *SuaveContext, i
 		return nil, errIsConfidentialInvalidInputLength
 	}
 	return []byte{0x01}, nil
+}
+
+type ccrCalldataPrecompile struct {
+	txContext TxContext
+}
+
+func (c *ccrCalldataPrecompile) RequiredGas(input []byte) uint64 {
+	return 1000
+}
+
+func (c *ccrCalldataPrecompile) Run(input []byte) ([]byte, error) {
+	if c.txContext.ConfidentialRecordData != nil {
+		return common.CopyBytes(*c.txContext.ConfidentialRecordData), nil
+	}
+	return []byte{}, nil
+}
+
+func (c *ccrCalldataPrecompile) RunConfidential(suaveContext *SuaveContext, input []byte) ([]byte, error) {
+	return c.Run(input)
 }
 
 type confidentialInputsPrecompile struct{}
@@ -326,6 +346,10 @@ type suaveRuntime struct {
 
 var _ SuaveRuntime = &suaveRuntime{}
 
+func (b *suaveRuntime) confidentialRequestData() ([]byte, error) {
+	return (&ccrCalldataPrecompile{}).Run(nil)
+}
+
 func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byte, error) {
 	return (&ethCallPrecompile{}).runImpl(b.suaveContext, contractAddr, input)
 }
@@ -339,25 +363,28 @@ func (b *suaveRuntime) generatePseudoRandomBytes(numBytes uint64, domainSeparato
 		return nil, errors.New("refusing to generate more than 65kB random bytes")
 	}
 
-	nChunks := (numBytes + 31) / 32 // align with 32-byte blocks
-	buf := make([]byte, nChunks*32)
+	buf := make([]byte, numBytes)
+	b.suaveContext.ConfidentialComputeRequestTx.To()
+
 	nRead, err := rand.Read(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	if uint64(nRead) != nChunks*32 {
+	if uint64(nRead) != numBytes {
 		return nil, errors.New("too many bytes")
 	}
 
-	for chunk := 0; uint64(chunk) < nChunks; chunk++ {
-		// buf[0:31] = sha256(initial random buf, domainSeparator)
-		// buf[32:64] = sha256(sha256(initial random buf, domainSeparator), domainSeparator)
-		// ...
-		copy(buf[chunk*32:], crypto.SHA256.New().Sum(append(buf, domainSeparator...)))
+	return buf, nil
+}
+
+func (b *suaveRuntime) generateKeyPair() ([]byte, []byte, error) {
+	privkey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return buf[:numBytes], nil
+	return crypto.FromECDSA(privkey), crypto.FromECDSAPub(&privkey.PublicKey), nil
 }
 
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
