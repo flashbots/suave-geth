@@ -417,7 +417,7 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 		return nil, err
 	}
 
-	matchedBundleIdsBytes, err := c.confidentialStoreRetrieve(bidId, "mevshare:v0:mergedBids")
+	matchedBundleIdsBytes, err := c.confidentialRetrieve(bidId, "mevshare:v0:mergedBids")
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +429,7 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 
 	matchBidIds := unpackedBidIds[0].([][16]byte)
 
-	userBundleBytes, err := c.confidentialStoreRetrieve(matchBidIds[0], "mevshare:v0:ethBundles")
+	userBundleBytes, err := c.confidentialRetrieve(matchBidIds[0], "mevshare:v0:ethBundles")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
@@ -439,7 +439,7 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 		return nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
 
-	matchBundleBytes, err := c.confidentialStoreRetrieve(matchBidIds[1], "mevshare:v0:ethBundles")
+	matchBundleBytes, err := c.confidentialRetrieve(matchBidIds[1], "mevshare:v0:ethBundles")
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 	}

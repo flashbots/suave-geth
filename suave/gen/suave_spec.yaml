@@ -78,7 +78,7 @@ functions:
       fields:
         - name: bid
           type: Bid[]
-  - name: confidentialStoreStore
+  - name: confidentialStore
     address: "0x0000000000000000000000000000000042020000"
     input:
       - name: bidId
@@ -87,7 +87,7 @@ functions:
         type: string
       - name: data1
         type: bytes
-  - name: confidentialStoreRetrieve
+  - name: confidentialRetrieve
     address: "0x0000000000000000000000000000000042020001"
     input:
       - name: bidId

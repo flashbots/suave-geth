@@ -118,9 +118,9 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
-		"no caller of confidentialStoreRetrieve (0000000000000000000000000000000042020001) is allowed on 00000000000000000000000000000000",
+		"no caller of confidentialRetrieve (0000000000000000000000000000000042020001) is allowed on 00000000000000000000000000000000",
 		"precompile fillMevShareBundle (0000000000000000000000000000000043200001) not allowed on 00000000000000000000000000000000",
-		"no caller of confidentialStoreStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
+		"no caller of confidentialStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
 		"precompile buildEthBlock (0000000000000000000000000000000042100001) not allowed on 00000000000000000000000000000000",
 	}
 
@@ -229,27 +229,27 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	data := []byte{0x1}
 
 	// cannot store a value for a bid that does not exist
-	err := b.confidentialStoreStore(types.BidId{}, "key", data)
+	err := b.confidentialStore(types.BidId{}, "key", data)
 	require.Error(t, err)
 
 	bid, err := b.newBid(5, []common.Address{callerAddr}, nil, "a")
 	require.NoError(t, err)
 
 	// cannot store the bid if the caller is not allowed to
-	err = b.confidentialStoreStore(bid.Id, "key", data)
+	err = b.confidentialStore(bid.Id, "key", data)
 	require.Error(t, err)
 
 	// now, the caller is allowed to store the bid
 	b.suaveContext.CallerStack = append(b.suaveContext.CallerStack, &callerAddr)
-	err = b.confidentialStoreStore(bid.Id, "key", data)
+	err = b.confidentialStore(bid.Id, "key", data)
 	require.NoError(t, err)
 
-	val, err := b.confidentialStoreRetrieve(bid.Id, "key")
+	val, err := b.confidentialRetrieve(bid.Id, "key")
 	require.NoError(t, err)
 	require.Equal(t, data, val)
 
 	// cannot retrieve the value if the caller is not allowed to
 	b.suaveContext.CallerStack = []*common.Address{}
-	_, err = b.confidentialStoreRetrieve(bid.Id, "key")
+	_, err = b.confidentialRetrieve(bid.Id, "key")
 	require.Error(t, err)
 }

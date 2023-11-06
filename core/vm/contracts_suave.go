@@ -29,15 +29,15 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 
 /* Confidential store precompiles */
 
-func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, data []byte) error {
+func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []byte) error {
 	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return suave.ErrBidNotFound
 	}
 
-	log.Info("confStoreStore", "bidId", bidId, "key", key)
+	log.Info("confStore", "bidId", bidId, "key", key)
 
-	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreStoreAddr, bid)
+	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreAddr, bid)
 	if err != nil {
 		return err
 	}
@@ -54,13 +54,13 @@ func (b *suaveRuntime) confidentialStoreStore(bidId types.BidId, key string, dat
 	return nil
 }
 
-func (b *suaveRuntime) confidentialStoreRetrieve(bidId types.BidId, key string) ([]byte, error) {
+func (b *suaveRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]byte, error) {
 	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
 	if err != nil {
 		return nil, suave.ErrBidNotFound
 	}
 
-	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreRetrieveAddr, bid)
+	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialRetrieveAddr, bid)
 	if err != nil {
 		return nil, err
 	}

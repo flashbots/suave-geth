@@ -12,7 +12,7 @@ func TestToAddressName(t *testing.T) {
 		expected string
 	}{
 		{"newBid", "NEW_BID"},
-		{"confidentialStoreRetrieve", "CONFIDENTIAL_STORE_RETRIEVE"},
+		{"confidentialRetrieve", "CONFIDENTIAL_RETRIEVE"},
 	}
 
 	for _, c := range cases {
