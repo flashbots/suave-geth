@@ -63,7 +63,7 @@ func NewSuavePrecompiledContractWrapper(addr common.Address, suaveContext *Suave
 }
 
 func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
-	// TODO: Fix this!!!
+	// TODO: Figure out how to handle gas consumption of the precompiles
 	return 1000
 }
 
