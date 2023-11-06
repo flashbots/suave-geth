@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/tracers"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/vm"
+	"github.com/flashbots/suave-geth/eth/tracers"
 )
 
 func init() {

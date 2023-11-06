@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	suave "github.com/flashbots/suave-geth/suave/core"
 	"golang.org/x/exp/slices"
 )
 

@@ -4,10 +4,10 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/suave-geth/beacon/engine"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	suave "github.com/flashbots/suave-geth/suave/core"
 )
 
 // EthBackend is the set of functions exposed from the SUAVE-enabled node

@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/eth/protocols/snap"
-	"github.com/ethereum/go-ethereum/internal/utesting"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/eth/protocols/snap"
+	"github.com/flashbots/suave-geth/internal/utesting"
+	"github.com/flashbots/suave-geth/light"
+	"github.com/flashbots/suave-geth/trie"
 	"golang.org/x/crypto/sha3"
 )
 

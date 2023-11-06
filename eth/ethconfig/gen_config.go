@@ -5,12 +5,12 @@ package ethconfig
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/miner"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/txpool"
+	"github.com/flashbots/suave-geth/eth/downloader"
+	"github.com/flashbots/suave-geth/eth/gasprice"
+	"github.com/flashbots/suave-geth/miner"
 )
 
 // MarshalTOML marshals as TOML.

@@ -24,8 +24,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/p2p/enode"
 )
 
 const jsonIndent = "    "

@@ -3,8 +3,8 @@ package cstore
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/suave-geth/common"
+	suave "github.com/flashbots/suave-geth/suave/core"
 	"github.com/stretchr/testify/require"
 )
 

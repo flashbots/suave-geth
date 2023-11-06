@@ -5,10 +5,10 @@ package logger
 import (
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/hexutil"
+	"github.com/flashbots/suave-geth/common/math"
+	"github.com/flashbots/suave-geth/core/vm"
 	"github.com/holiman/uint256"
 )
 

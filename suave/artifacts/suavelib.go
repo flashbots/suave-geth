@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/flashbots/suave-geth/accounts/abi"
 )
 
 //go:embed SuaveLib.json

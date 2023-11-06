@@ -25,11 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/msgrate"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/eth/protocols/eth"
+	"github.com/flashbots/suave-geth/event"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/p2p/msgrate"
 )
 
 const (

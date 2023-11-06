@@ -17,9 +17,9 @@
 package trie
 
 import (
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/trie/triedb/hashdb"
+	"github.com/flashbots/suave-geth/core/rawdb"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/trie/triedb/hashdb"
 )
 
 // newTestDatabase initializes the trie database with specified scheme.

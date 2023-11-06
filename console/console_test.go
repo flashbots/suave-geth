@@ -25,14 +25,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/internal/jsre"
-	"github.com/ethereum/go-ethereum/miner"
-	"github.com/ethereum/go-ethereum/node"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/console/prompt"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/eth"
+	"github.com/flashbots/suave-geth/eth/ethconfig"
+	"github.com/flashbots/suave-geth/internal/jsre"
+	"github.com/flashbots/suave-geth/miner"
+	"github.com/flashbots/suave-geth/node"
 )
 
 const (

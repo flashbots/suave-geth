@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

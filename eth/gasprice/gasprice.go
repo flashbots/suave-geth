@@ -22,14 +22,14 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/lru"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/lru"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/event"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/params"
+	"github.com/flashbots/suave-geth/rpc"
 )
 
 const sampleNumber = 3 // Number of transactions sampled in a block

@@ -22,14 +22,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/tracers"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/state"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/core/vm"
+	"github.com/flashbots/suave-geth/eth/tracers"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/trie"
 )
 
 // noopReleaser is returned in case there is no operation expected

@@ -3,7 +3,7 @@ package suave
 import (
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/flashbots/suave-geth/core/types"
 	"github.com/google/uuid"
 )
 

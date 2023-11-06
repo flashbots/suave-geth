@@ -26,17 +26,17 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/consensus"
+	"github.com/flashbots/suave-geth/consensus/misc"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/state"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/event"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/params"
+	"github.com/flashbots/suave-geth/trie"
 )
 
 const (
@@ -1184,7 +1184,7 @@ func (w *worker) commit(env *environment, interval func(), update bool, start ti
 			interval()
 		}
 		// Create a local environment copy, avoid the data race with snapshot state.
-		// https://github.com/ethereum/go-ethereum/issues/24299
+		// https://github.com/flashbots/suave-geth/issues/24299
 		env := env.copy()
 		// Withdrawals are set to nil here, because this is only called in PoW.
 		block, err := w.engine.FinalizeAndAssemble(w.chain, env.header, env.state, env.txs, env.unclelist(), env.receipts, nil)

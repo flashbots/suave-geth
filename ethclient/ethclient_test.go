@@ -25,17 +25,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/flashbots/suave-geth"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/consensus/ethash"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/eth"
+	"github.com/flashbots/suave-geth/eth/ethconfig"
+	"github.com/flashbots/suave-geth/node"
+	"github.com/flashbots/suave-geth/params"
+	"github.com/flashbots/suave-geth/rpc"
 )
 
 // Verify that Client implements the ethereum interfaces.

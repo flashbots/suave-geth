@@ -17,10 +17,10 @@
 package trie
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie/trienode"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/rlp"
+	"github.com/flashbots/suave-geth/trie/trienode"
 )
 
 // SecureTrie is the old name of StateTrie.

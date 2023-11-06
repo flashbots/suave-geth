@@ -19,10 +19,10 @@ package les
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/les/downloader"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/rawdb"
+	"github.com/flashbots/suave-geth/les/downloader"
+	"github.com/flashbots/suave-geth/log"
 )
 
 // synchronise tries to sync up our local chain with a remote peer.

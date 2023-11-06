@@ -20,16 +20,16 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/light"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/state"
+	"github.com/flashbots/suave-geth/core/txpool"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/light"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/metrics"
+	"github.com/flashbots/suave-geth/rlp"
+	"github.com/flashbots/suave-geth/trie"
 )
 
 // serverBackend defines the backend functions needed for serving LES requests

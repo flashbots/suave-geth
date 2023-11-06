@@ -23,13 +23,13 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/external"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/flashbots/suave-geth/accounts"
+	"github.com/flashbots/suave-geth/accounts/external"
+	"github.com/flashbots/suave-geth/accounts/keystore"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/log"
 )
 
 // ErrNoChainID is returned whenever the user failed to specify a chain id.

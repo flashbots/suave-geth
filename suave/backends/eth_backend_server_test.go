@@ -5,13 +5,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/rpc"
+	"github.com/flashbots/suave-geth/trie"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/suave-geth/core/types"
+	suave "github.com/flashbots/suave-geth/suave/core"
 )
 
 func TestEthBackend_Compatibility(t *testing.T) {

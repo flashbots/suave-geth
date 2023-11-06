@@ -23,13 +23,13 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/flashbots/suave-geth/common/mclock"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/metrics"
+	"github.com/flashbots/suave-geth/p2p/enode"
+	"github.com/flashbots/suave-geth/p2p/enr"
+	"github.com/flashbots/suave-geth/rlp"
 )
 
 var (

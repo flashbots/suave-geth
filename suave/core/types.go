@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/node"
+	"github.com/flashbots/suave-geth/beacon/engine"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/hexutil"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/node"
 )
 
 var AllowedPeekerAny = common.HexToAddress("0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829") // "*"

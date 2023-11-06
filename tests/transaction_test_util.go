@@ -19,12 +19,12 @@ package tests
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/hexutil"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/params"
+	"github.com/flashbots/suave-geth/rlp"
 )
 
 // TransactionTest checks RLP decoding and sender derivation of transactions.

@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/light"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/light"
 )
 
 // Test light syncing which will download all headers from genesis.

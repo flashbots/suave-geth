@@ -24,12 +24,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common/compiler"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/internal/flags"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/flashbots/suave-geth/accounts/abi/bind"
+	"github.com/flashbots/suave-geth/cmd/utils"
+	"github.com/flashbots/suave-geth/common/compiler"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/internal/flags"
+	"github.com/flashbots/suave-geth/log"
 	"github.com/urfave/cli/v2"
 )
 

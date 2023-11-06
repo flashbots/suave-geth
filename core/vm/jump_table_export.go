@@ -19,7 +19,7 @@ package vm
 import (
 	"errors"
 
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/params"
 )
 
 // LookupInstructionSet returns the instructionset for the fork configured by

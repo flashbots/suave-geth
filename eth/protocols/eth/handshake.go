@@ -21,9 +21,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/forkid"
-	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/forkid"
+	"github.com/flashbots/suave-geth/p2p"
 )
 
 const (

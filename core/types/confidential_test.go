@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/flashbots/suave-geth/crypto"
 	"github.com/stretchr/testify/require"
 )
 

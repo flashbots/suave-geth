@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/suave/artifacts"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/metrics"
+	"github.com/flashbots/suave-geth/suave/artifacts"
+	suave "github.com/flashbots/suave-geth/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 	"golang.org/x/exp/slices"
 )

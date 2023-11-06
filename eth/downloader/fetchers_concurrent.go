@@ -21,10 +21,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/prque"
+	"github.com/flashbots/suave-geth/eth/protocols/eth"
+	"github.com/flashbots/suave-geth/log"
 )
 
 // timeoutGracePeriod is the amount of time to allow for a peer to deliver a

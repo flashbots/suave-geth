@@ -1,4 +1,4 @@
-module github.com/ethereum/go-ethereum
+module github.com/flashbots/suave-geth
 
 go 1.19
 

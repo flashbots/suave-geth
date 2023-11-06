@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/consensus/ethash"
+	"github.com/flashbots/suave-geth/core/rawdb"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/core/vm"
+	"github.com/flashbots/suave-geth/params"
 )
 
 // rewindTest is a test case for chain rollback upon user request.

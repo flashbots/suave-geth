@@ -21,13 +21,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/rawdb"
+	"github.com/flashbots/suave-geth/core/state"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/trie"
 	"golang.org/x/crypto/sha3"
 )
 

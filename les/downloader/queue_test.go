@@ -24,12 +24,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/consensus/ethash"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/params"
 )
 
 // makeChain creates a chain of n blocks starting at and including parent.

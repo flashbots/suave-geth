@@ -25,11 +25,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/p2p/dnsdisc"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/flashbots/suave-geth/accounts/keystore"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/console/prompt"
+	"github.com/flashbots/suave-geth/p2p/dnsdisc"
+	"github.com/flashbots/suave-geth/p2p/enode"
 	"github.com/urfave/cli/v2"
 )
 

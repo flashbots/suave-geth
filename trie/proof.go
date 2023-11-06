@@ -21,9 +21,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/log"
 )
 
 // Prove constructs a merkle proof for key. The result contains all encoded nodes

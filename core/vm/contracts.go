@@ -22,13 +22,13 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/blake2b"
-	"github.com/ethereum/go-ethereum/crypto/bls12381"
-	"github.com/ethereum/go-ethereum/crypto/bn256"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/math"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/crypto/blake2b"
+	"github.com/flashbots/suave-geth/crypto/bls12381"
+	"github.com/flashbots/suave-geth/crypto/bn256"
+	"github.com/flashbots/suave-geth/params"
 	"golang.org/x/crypto/ripemd160"
 )
 

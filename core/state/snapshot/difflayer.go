@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/rlp"
 	bloomfilter "github.com/holiman/bloomfilter/v2"
 )
 

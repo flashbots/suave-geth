@@ -27,12 +27,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/internal/testlog"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/ethereum/go-ethereum/p2p/rlpx"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/internal/testlog"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/p2p/enode"
+	"github.com/flashbots/suave-geth/p2p/enr"
+	"github.com/flashbots/suave-geth/p2p/rlpx"
 )
 
 type testTransport struct {

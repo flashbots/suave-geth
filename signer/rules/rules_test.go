@@ -22,14 +22,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/signer/core"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
-	"github.com/ethereum/go-ethereum/signer/storage"
+	"github.com/flashbots/suave-geth/accounts"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/hexutil"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/internal/ethapi"
+	"github.com/flashbots/suave-geth/signer/core"
+	"github.com/flashbots/suave-geth/signer/core/apitypes"
+	"github.com/flashbots/suave-geth/signer/storage"
 )
 
 const JS = `

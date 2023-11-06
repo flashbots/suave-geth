@@ -21,12 +21,12 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/rawdb"
+	"github.com/flashbots/suave-geth/core/txpool"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/ethdb"
 )
 
 // NoOdr is the default context passed to an ODR capable function when the ODR

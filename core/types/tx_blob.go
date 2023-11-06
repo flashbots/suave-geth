@@ -19,8 +19,8 @@ package types
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/params"
 	"github.com/holiman/uint256"
 )
 

@@ -10,8 +10,8 @@ import (
 	"github.com/flashbots/go-utils/cli"
 	"github.com/go-redis/redis/v8"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/log"
 )
 
 var (

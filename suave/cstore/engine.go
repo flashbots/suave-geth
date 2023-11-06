@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/node"
+	suave "github.com/flashbots/suave-geth/suave/core"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )

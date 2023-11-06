@@ -35,11 +35,11 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/node"
+	"github.com/flashbots/suave-geth/p2p"
+	"github.com/flashbots/suave-geth/p2p/enode"
+	"github.com/flashbots/suave-geth/rpc"
 	"github.com/gorilla/websocket"
 )
 

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/flashbots/suave-geth/common/hexutil"
+	"github.com/flashbots/suave-geth/crypto"
 	"github.com/flashbots/go-boost-utils/bls"
 )
 

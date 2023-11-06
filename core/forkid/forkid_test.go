@@ -21,9 +21,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/params"
+	"github.com/flashbots/suave-geth/rlp"
 )
 
 // TestCreation tests that different genesis and fork rule combinations result in

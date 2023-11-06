@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/params"
+	"github.com/flashbots/suave-geth/rlp"
 )
 
 // ReadDatabaseVersion retrieves the version number of the database.

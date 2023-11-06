@@ -23,13 +23,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/ethdb/memorydb"
-	"github.com/ethereum/go-ethereum/les/utils"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/ethereum/go-ethereum/p2p/nodestate"
+	"github.com/flashbots/suave-geth/common/mclock"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/ethdb/memorydb"
+	"github.com/flashbots/suave-geth/les/utils"
+	"github.com/flashbots/suave-geth/p2p/enode"
+	"github.com/flashbots/suave-geth/p2p/enr"
+	"github.com/flashbots/suave-geth/p2p/nodestate"
 )
 
 type zeroExpirer struct{}

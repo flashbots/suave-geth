@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/eth"
+	"github.com/flashbots/suave-geth/eth/downloader"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/node"
 )
 
 // FullSyncTester is an auxiliary service that allows Geth to perform full sync

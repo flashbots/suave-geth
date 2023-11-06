@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	vfs "github.com/ethereum/go-ethereum/les/vflux/server"
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/flashbots/suave-geth/common/mclock"
+	vfs "github.com/flashbots/suave-geth/les/vflux/server"
+	"github.com/flashbots/suave-geth/p2p/enode"
 )
 
 var errUnknownBenchmarkType = errors.New("unknown benchmark type")

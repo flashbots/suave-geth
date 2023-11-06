@@ -21,11 +21,11 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	cmath "github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/common"
+	cmath "github.com/flashbots/suave-geth/common/math"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/core/vm"
+	"github.com/flashbots/suave-geth/params"
 )
 
 // ExecutionResult includes all output after executing given evm

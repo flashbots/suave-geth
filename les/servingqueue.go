@@ -21,8 +21,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/common/prque"
+	"github.com/flashbots/suave-geth/common/mclock"
+	"github.com/flashbots/suave-geth/common/prque"
 )
 
 // servingQueue allows running tasks in a limited number of threads and puts the

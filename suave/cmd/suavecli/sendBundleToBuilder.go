@@ -10,16 +10,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/suave/e2e"
-	"github.com/ethereum/go-ethereum/suave/sdk"
+	"github.com/flashbots/suave-geth/cmd/utils"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/hexutil"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/crypto"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/rpc"
+	"github.com/flashbots/suave-geth/suave/e2e"
+	"github.com/flashbots/suave-geth/suave/sdk"
 )
 
 func cmdSendBundleToBuilder() {

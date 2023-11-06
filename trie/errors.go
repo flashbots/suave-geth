@@ -19,7 +19,7 @@ package trie
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/flashbots/suave-geth/common"
 )
 
 // MissingNodeError is returned by the trie functions (Get, Update, Delete)

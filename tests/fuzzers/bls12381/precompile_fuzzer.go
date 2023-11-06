@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/vm"
 )
 
 const (

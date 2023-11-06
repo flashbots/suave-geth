@@ -2,7 +2,7 @@
 // Hash: 23a6dd8b9b224b11b8baea19a80c55c7787c50c0eb2fc69727e66d615c913483
 package types
 
-import "github.com/ethereum/go-ethereum/common"
+import "github.com/flashbots/suave-geth/common"
 
 type BidId [16]byte
 

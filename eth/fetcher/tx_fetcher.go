@@ -25,12 +25,12 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/core/txpool"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/common/mclock"
+	"github.com/flashbots/suave-geth/core/txpool"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/metrics"
 )
 
 const (

@@ -39,24 +39,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/internal/version"
-	"github.com/ethereum/go-ethereum/les"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/flashbots/suave-geth/accounts"
+	"github.com/flashbots/suave-geth/accounts/keystore"
+	"github.com/flashbots/suave-geth/cmd/utils"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/eth/downloader"
+	"github.com/flashbots/suave-geth/eth/ethconfig"
+	"github.com/flashbots/suave-geth/ethclient"
+	"github.com/flashbots/suave-geth/ethstats"
+	"github.com/flashbots/suave-geth/internal/version"
+	"github.com/flashbots/suave-geth/les"
+	"github.com/flashbots/suave-geth/log"
+	"github.com/flashbots/suave-geth/node"
+	"github.com/flashbots/suave-geth/p2p"
+	"github.com/flashbots/suave-geth/p2p/enode"
+	"github.com/flashbots/suave-geth/p2p/nat"
+	"github.com/flashbots/suave-geth/params"
 	"github.com/gorilla/websocket"
 )
 
@@ -464,7 +464,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			id = username
 		default:
 			//lint:ignore ST1005 This error is to be displayed in the browser
-			err = errors.New("Something funky happened, please open an issue at https://github.com/ethereum/go-ethereum/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/flashbots/suave-geth/issues")
 		}
 		if err != nil {
 			if err = sendError(wsconn, err); err != nil {

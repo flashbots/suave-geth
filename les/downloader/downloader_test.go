@@ -26,15 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state/snapshot"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/protocols/eth"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/flashbots/suave-geth"
+	"github.com/flashbots/suave-geth/common"
+	"github.com/flashbots/suave-geth/core/rawdb"
+	"github.com/flashbots/suave-geth/core/state/snapshot"
+	"github.com/flashbots/suave-geth/core/types"
+	"github.com/flashbots/suave-geth/eth/protocols/eth"
+	"github.com/flashbots/suave-geth/ethdb"
+	"github.com/flashbots/suave-geth/event"
+	"github.com/flashbots/suave-geth/trie"
 )
 
 // Reduce some of the parameters to make the tester faster.

@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/flashbots/suave-geth/accounts/abi"
 )
 
 func mustParseAbi(data string) abi.ABI {
