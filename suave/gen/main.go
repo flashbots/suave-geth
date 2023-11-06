@@ -355,6 +355,9 @@ struct {{.Name}} {
 	{{end}} }
 {{end}}
 
+address public constant ANYALLOWED = 
+0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829;
+
 address public constant IS_CONFIDENTIAL_ADDR =
 0x0000000000000000000000000000000042010000;
 {{range .Functions}}
