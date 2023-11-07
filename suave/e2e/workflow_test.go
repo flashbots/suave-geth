@@ -1076,6 +1076,45 @@ func TestE2E_ForgeIntegration(t *testing.T) {
 	require.Equal(t, val, valRaw[0])
 }
 
+func TestE2E_EstimateGas(t *testing.T) {
+	// This end-to-end test ensures that the precompile lifecycle expected in Forge works
+	fr := newFramework(t)
+	defer fr.Close()
+
+	rpcClient := fr.suethSrv.RPCNode()
+	ethClient := ethclient.NewClient(rpcClient)
+
+	chainIdRaw, err := ethClient.ChainID(context.Background())
+	require.NoError(t, err)
+
+	estimateGas := func(methodName string, args ...interface{}) {
+		toAddr, ok := artifacts.SuaveMethods[methodName]
+		require.True(t, ok, fmt.Sprintf("suave method %s not found", methodName))
+
+		method := artifacts.SuaveAbi.Methods[methodName]
+
+		input, err := method.Inputs.Pack(args...)
+		require.NoError(t, err)
+
+		chainId := hexutil.Big(*chainIdRaw)
+
+		callArgs := ethapi.TransactionArgs{
+			To:             &toAddr,
+			IsConfidential: true,
+			ChainID:        &chainId,
+			Data:           (*hexutil.Bytes)(&input),
+		}
+		var simResult hexutil.Bytes
+		err = rpcClient.Call(&simResult, "eth_estimateGas", setTxArgsDefaults(callArgs), "latest")
+		fmt.Println(err)
+	}
+
+	addrList := []common.Address{suave.AllowedPeekerAny}
+	estimateGas("newBid", uint64(0), addrList, addrList, "default:v0:ethBundles")
+
+	fmt.Println(len(fr.ConfidentialStoreBackend().FetchBidsByProtocolAndBlock(0, "default:v0:ethBundles")))
+}
+
 func TestE2EPrecompile_Call(t *testing.T) {
 	// This end-to-end tests that the callx precompile gets called from a confidential request
 	fr := newFramework(t, WithExecutionNode())
