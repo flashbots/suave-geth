@@ -48,6 +48,10 @@ var (
 	submitEthBlockBidToRelayAddr = common.HexToAddress("0x0000000000000000000000000000000042100002")
 )
 
+var addrList = []common.Address{
+	buildEthBlockAddr, confidentialInputsAddr, confidentialRetrieveAddr, confidentialStoreAddr, ethcallAddr, extractHintAddr, fetchBidsAddr, fillMevShareBundleAddr, newBidAddr, signEthTransactionAddr, simulateBundleAddr, submitBundleJsonRPCAddr, submitEthBlockBidToRelayAddr,
+}
+
 type SuaveRuntimeAdapter struct {
 	impl SuaveRuntime
 }

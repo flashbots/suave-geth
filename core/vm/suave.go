@@ -56,15 +56,15 @@ func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 type SuavePrecompiledContractWrapper struct {
 	addr         common.Address
 	suaveContext *SuaveContext
-	contract     SuavePrecompiledContract
 }
 
-func NewSuavePrecompiledContractWrapper(addr common.Address, suaveContext *SuaveContext, contract SuavePrecompiledContract) *SuavePrecompiledContractWrapper {
-	return &SuavePrecompiledContractWrapper{addr: addr, suaveContext: suaveContext, contract: contract}
+func NewSuavePrecompiledContractWrapper(addr common.Address, suaveContext *SuaveContext) *SuavePrecompiledContractWrapper {
+	return &SuavePrecompiledContractWrapper{addr: addr, suaveContext: suaveContext}
 }
 
 func (p *SuavePrecompiledContractWrapper) RequiredGas(input []byte) uint64 {
-	return p.contract.RequiredGas(input)
+	// TODO: Figure out how to handle gas consumption of the precompiles
+	return 1000
 }
 
 func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
@@ -85,8 +85,8 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	}
 
 	if p.addr == isConfidentialAddress {
-		// 'isConfidential' is a special precompile
-		return (&isConfidentialPrecompile{}).RunConfidential(p.suaveContext, input)
+		// 'isConfidential' is a special precompile, redo as a function?
+		return []byte{0x1}, nil
 	}
 
 	ret, err := stub.run(p.addr, input)
@@ -95,6 +95,13 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	}
 
 	return ret, err
+}
+
+func isPrecompileAddr(addr common.Address) bool {
+	if addr == isConfidentialAddress {
+		return true
+	}
+	return slices.Contains(addrList, addr)
 }
 
 // Returns the caller
@@ -117,7 +124,7 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 	isPrecompileAllowed := slices.Contains(bid.AllowedPeekers, precompile)
 
 	// Special case for confStore as those are implicitly allowed
-	if !isPrecompileAllowed && precompile != confStoreAddress && precompile != confRetrieveAddress {
+	if !isPrecompileAllowed && precompile != confidentialStoreAddr && precompile != confidentialRetrieveAddr {
 		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
 	}
 

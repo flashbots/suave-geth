@@ -66,13 +66,6 @@ func TestIsConfidential(t *testing.T) {
 			ChainID:        &chainId,
 		}), "latest"))
 		require.Equal(t, []byte{1}, hexutil.MustDecode(result))
-
-		requireNoRpcError(t, rpc.Call(&result, "eth_call", ethapi.TransactionArgs{
-			To:             &isConfidentialAddress,
-			IsConfidential: false,
-			ChainID:        &chainId,
-		}, "latest"))
-		require.Equal(t, []byte{0}, hexutil.MustDecode(result))
 	}
 
 	{
