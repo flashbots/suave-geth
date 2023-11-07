@@ -148,8 +148,6 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.S = (*hexutil.Big)(itx.S)
 
 	case *SuaveTransaction:
-		enc.KettleAddress = &itx.KettleAddress
-
 		wrapped, err := NewTx(&itx.ConfidentialComputeRequest).MarshalJSON()
 		if err != nil {
 			return nil, err
@@ -522,12 +520,6 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	case SuaveTxType:
 		var itx SuaveTransaction
 		inner = &itx
-
-		if dec.KettleAddress == nil {
-			return errors.New("missing required field 'kettleAddress' in transaction")
-		}
-
-		itx.KettleAddress = *dec.KettleAddress
 
 		if dec.Wrapped == nil {
 			return errors.New("missing required field 'wrapped' in transaction")

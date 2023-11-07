@@ -338,7 +338,6 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 		}
 
 		data = &types.SuaveTransaction{
-			KettleAddress:              kettleAddress,
 			ChainID:                    (*big.Int)(args.ChainID),
 			ConfidentialComputeRequest: ccr,
 			ConfidentialComputeResult:  confResult,

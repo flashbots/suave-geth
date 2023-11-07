@@ -285,8 +285,8 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, err
 		}
 
-		if recovered != txdata.KettleAddress {
-			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), txdata.KettleAddress.Hex())
+		if recovered != ccr.KettleAddress {
+			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), ccr.KettleAddress.Hex())
 		}
 	case *ConfidentialComputeRequest:
 		ccr = &txdata.ConfidentialComputeRecord
@@ -354,7 +354,6 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
-				txdata.KettleAddress,
 				s.Hash(NewTx(&txdata.ConfidentialComputeRequest)),
 				txdata.ConfidentialComputeResult,
 			})

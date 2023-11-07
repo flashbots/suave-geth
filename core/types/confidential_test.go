@@ -88,7 +88,6 @@ func TestSuaveTx(t *testing.T) {
 	require.True(t, ok)
 
 	unsignedTx := NewTx(&SuaveTransaction{
-		KettleAddress:              crypto.PubkeyToAddress(testKey.PublicKey),
 		ConfidentialComputeRequest: *signedInnerCCR,
 	})
 	signedTx, err := SignTx(unsignedTx, signer, testKey)
