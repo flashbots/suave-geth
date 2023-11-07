@@ -442,7 +442,7 @@ func (MockChainSigner) Sender(tx *types.Transaction) (common.Address, error) {
 func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error) {
 	innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
 	if ok {
-		return innerExecutedTx.KettleAddress, nil
+		return innerExecutedTx.ConfidentialComputeRequest.KettleAddress, nil
 	}
 
 	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)

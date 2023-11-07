@@ -1468,8 +1468,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
-		result.KettleAddress = &inner.KettleAddress
-
 		// TODO: should be rpc marshaled
 		rrBytes, err := types.NewTx(&inner.ConfidentialComputeRequest).MarshalJSON()
 		if err != nil {
@@ -2005,7 +2003,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{KettleAddress: confidentialRequest.KettleAddress, ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {

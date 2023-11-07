@@ -132,11 +132,10 @@ func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.I
 }
 
 type SuaveTransaction struct {
-	KettleAddress              common.Address            `json:"kettleAddress" gencodec:"required"`
 	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`
 	ConfidentialComputeResult  []byte                    `json:"confidentialComputeResult" gencodec:"required"`
 
-	// KettleAddress's signature
+	// request KettleAddress's signature
 	ChainID *big.Int
 	V       *big.Int
 	R       *big.Int
@@ -146,7 +145,6 @@ type SuaveTransaction struct {
 // copy creates a deep copy of the transaction data and initializes all fields.
 func (tx *SuaveTransaction) copy() TxData {
 	cpy := &SuaveTransaction{
-		KettleAddress:              tx.KettleAddress,
 		ConfidentialComputeRequest: tx.ConfidentialComputeRequest,
 		ConfidentialComputeResult:  common.CopyBytes(tx.ConfidentialComputeResult),
 		ChainID:                    new(big.Int),
