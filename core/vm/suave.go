@@ -98,6 +98,9 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 }
 
 func isPrecompileAddr(addr common.Address) bool {
+	if addr == isConfidentialAddress {
+		return true
+	}
 	return slices.Contains(addrList, addr)
 }
 
