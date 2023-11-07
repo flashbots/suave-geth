@@ -135,15 +135,15 @@ func (t *TransactionResult) Hash() common.Hash {
 }
 
 type Client struct {
-	rpc      *ethclient.Client
-	key      *ecdsa.PrivateKey
+	rpc           *ethclient.Client
+	key           *ecdsa.PrivateKey
 	kettleAddress common.Address
 }
 
 func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, kettleAddress common.Address) *Client {
 	c := &Client{
-		rpc:      ethclient.NewClient(rpc),
-		key:      key,
+		rpc:           ethclient.NewClient(rpc),
+		key:           key,
 		kettleAddress: kettleAddress,
 	}
 	return c
