@@ -285,8 +285,8 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, err
 		}
 
-		if recovered != txdata.ExecutionNode {
-			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), txdata.ExecutionNode.Hex())
+		if recovered != txdata.KettleAddress {
+			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), txdata.KettleAddress.Hex())
 		}
 	case *ConfidentialComputeRequest:
 		ccr = &txdata.ConfidentialComputeRecord
@@ -354,7 +354,7 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
-				txdata.ExecutionNode,
+				txdata.KettleAddress,
 				s.Hash(NewTx(&txdata.ConfidentialComputeRequest)),
 				txdata.ConfidentialComputeResult,
 			})
@@ -362,7 +362,7 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 		return prefixedRlpHash(
 			ConfidentialComputeRecordTxType, // Note: this is the same as the Record so that hashes match!
 			[]interface{}{
-				txdata.ExecutionNode,
+				txdata.KettleAddress,
 				txdata.ConfidentialInputsHash,
 				tx.Nonce(),
 				tx.GasPrice(),
@@ -375,7 +375,7 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
-				txdata.ExecutionNode,
+				txdata.KettleAddress,
 				txdata.ConfidentialInputsHash,
 				tx.Nonce(),
 				tx.GasPrice(),

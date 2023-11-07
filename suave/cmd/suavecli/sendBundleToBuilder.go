@@ -29,7 +29,7 @@ func cmdSendBundleToBuilder() {
 
 	var (
 		suaveRpc                = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		executionNodeAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		kettleAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
 		goerliRpc               = flagset.String("goerli_rpc", "http://127.0.0.1:8555", "address of goerli rpc")
 		privKeyHex              = flagset.String("privkey", "", "private key as hex (for testing)")
 		contractAddressFlag     = flagset.String("contract", "", "contract address to use (default: deploy new one)")
@@ -47,15 +47,15 @@ func cmdSendBundleToBuilder() {
 	RequireNoErrorf(err, "-nodekeyhex: %v", err)
 	/* shush linter */ privKey.Public()
 
-	if executionNodeAddressHex == nil || *executionNodeAddressHex == "" {
+	if kettleAddressHex == nil || *kettleAddressHex == "" {
 		utils.Fatalf("please provide ex_node_addr")
 	}
-	executionNodeAddress := common.HexToAddress(*executionNodeAddressHex)
+	kettleAddress := common.HexToAddress(*kettleAddressHex)
 
 	suaveClient, err := rpc.DialContext(context.TODO(), *suaveRpc)
 	RequireNoErrorf(err, "could not connect to suave rpc: %v", err)
 
-	suaveSdkClient := sdk.NewClient(suaveClient, privKey, executionNodeAddress)
+	suaveSdkClient := sdk.NewClient(suaveClient, privKey, kettleAddress)
 
 	goerliClient, err := rpc.DialContext(context.TODO(), *goerliRpc)
 	RequireNoErrorf(err, "could not connect to goerli rpc: %v", err)

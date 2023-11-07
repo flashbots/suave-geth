@@ -66,7 +66,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			ExecutionNode: c.client.execNode,
+			KettleAddress: c.client.execNode,
 			Nonce:         nonce,
 			To:            &c.addr,
 			Value:         nil,

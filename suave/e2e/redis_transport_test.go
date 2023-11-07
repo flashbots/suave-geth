@@ -16,13 +16,13 @@ import (
 func TestRedisBackends(t *testing.T) {
 	withMiniredisTransportOpt := WithRedisTransportOpt(t)
 
-	fr1 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(), withMiniredisTransportOpt)
+	fr1 := newFramework(t, WithKettleAddress(), WithRedisStoreBackend(), withMiniredisTransportOpt)
 	t.Cleanup(fr1.Close)
 
 	var keystoreBackend *keystore.KeyStore = fr1.suethSrv.service.APIBackend.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	keystoreBackend.ImportECDSA(testKey, "")
 
-	fr2 := newFramework(t, WithExecutionNode(), WithRedisStoreBackend(), withMiniredisTransportOpt)
+	fr2 := newFramework(t, WithKettleAddress(), WithRedisStoreBackend(), withMiniredisTransportOpt)
 	t.Cleanup(fr2.Close)
 
 	clt1 := fr1.NewSDKClient()
@@ -55,7 +55,7 @@ func TestRedisBackends(t *testing.T) {
 
 		bundleBidContractI := sdk.GetContract(newBundleBidAddress, BundleBidContract.Abi, clt1)
 
-		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr1.ExecutionNode(), fr2.ExecutionNode()}}, confidentialDataBytes)
+		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr1.KettleAddress(), fr2.KettleAddress()}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
 	}
 

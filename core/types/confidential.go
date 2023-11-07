@@ -14,7 +14,7 @@ type ConfidentialComputeRecord struct {
 	Value    *big.Int
 	Data     []byte
 
-	ExecutionNode          common.Address
+	KettleAddress          common.Address
 	ConfidentialInputsHash common.Hash
 
 	ChainID *big.Int
@@ -28,7 +28,7 @@ func (tx *ConfidentialComputeRecord) copy() TxData {
 		To:                     copyAddressPtr(tx.To),
 		Data:                   common.CopyBytes(tx.Data),
 		Gas:                    tx.Gas,
-		ExecutionNode:          tx.ExecutionNode,
+		KettleAddress:          tx.KettleAddress,
 		ConfidentialInputsHash: tx.ConfidentialInputsHash,
 
 		Value:    new(big.Int),
@@ -132,11 +132,11 @@ func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.I
 }
 
 type SuaveTransaction struct {
-	ExecutionNode              common.Address            `json:"executionNode" gencodec:"required"`
+	KettleAddress              common.Address            `json:"kettleAddress" gencodec:"required"`
 	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`
 	ConfidentialComputeResult  []byte                    `json:"confidentialComputeResult" gencodec:"required"`
 
-	// ExecutionNode's signature
+	// KettleAddress's signature
 	ChainID *big.Int
 	V       *big.Int
 	R       *big.Int
@@ -146,7 +146,7 @@ type SuaveTransaction struct {
 // copy creates a deep copy of the transaction data and initializes all fields.
 func (tx *SuaveTransaction) copy() TxData {
 	cpy := &SuaveTransaction{
-		ExecutionNode:              tx.ExecutionNode,
+		KettleAddress:              tx.KettleAddress,
 		ConfidentialComputeRequest: tx.ConfidentialComputeRequest,
 		ConfidentialComputeResult:  common.CopyBytes(tx.ConfidentialComputeResult),
 		ChainID:                    new(big.Int),

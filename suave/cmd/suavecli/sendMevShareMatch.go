@@ -24,7 +24,7 @@ func cmdSendMevShareMatch() {
 
 	var (
 		suaveRpc                = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		executionNodeAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		kettleAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
 		mevshareAddressHex      = flagset.String("mev_share_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of mev share contract")
 		blockSenderHex          = flagset.String("block_sender_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of mev share contract")
 		matchBidId              = flagset.String("match_bid_id", "123-123-123", "ID of mev share bundle bid to back run")
@@ -44,10 +44,10 @@ func cmdSendMevShareMatch() {
 	RequireNoErrorf(err, "-nodekeyhex: %v", err)
 	/* shush linter */ privKey.Public()
 
-	if executionNodeAddressHex == nil || *executionNodeAddressHex == "" {
+	if kettleAddressHex == nil || *kettleAddressHex == "" {
 		utils.Fatalf("please provide ex_node_addr")
 	}
-	executionNodeAddress := common.HexToAddress(*executionNodeAddressHex)
+	kettleAddress := common.HexToAddress(*kettleAddressHex)
 	mevshareAddresss := common.HexToAddress(*mevshareAddressHex)
 	blockSenderAddress := common.HexToAddress(*blockSenderHex)
 
@@ -76,7 +76,7 @@ func cmdSendMevShareMatch() {
 		26,
 		mevshareAddresss,
 		blockSenderAddress,
-		executionNodeAddress,
+		kettleAddress,
 		matchBidIdBytes,
 		privKey,
 	)
@@ -97,7 +97,7 @@ func sendMevShareMatchTx(
 	targetBlock uint64,
 	mevShareAddr common.Address,
 	blockSenderAddr common.Address,
-	executionNodeAddr common.Address,
+	kettleAddress common.Address,
 	matchBidId types.BidId,
 	// account specific
 	privKey *ecdsa.PrivateKey,
@@ -117,7 +117,7 @@ func sendMevShareMatchTx(
 	err = suaveClient.Call(&suaveAccNonce, "eth_getTransactionCount", crypto.PubkeyToAddress(privKey.PublicKey), "pending")
 	RequireNoErrorf(err, "could not call eth_getTransactionCount on suave: %v", err)
 
-	_, backrunBidTxBytes, err := prepareMevBackrunBidTx(suaveSigner, privKey, executionNodeAddr, uint64(suaveAccNonce), matchCalldata, mevShareAddr)
+	_, backrunBidTxBytes, err := prepareMevBackrunBidTx(suaveSigner, privKey, kettleAddress, uint64(suaveAccNonce), matchCalldata, mevShareAddr)
 	RequireNoErrorf(err, "could not prepare backrun bid: %v", err)
 
 	// TODO : reusing this function selector from bid contract to avoid creating another ABI
@@ -170,10 +170,10 @@ func prepareEthBackrunBundle(
 	return *bundle, bundleBytes, nil
 }
 
-func prepareMevBackrunBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, executionNodeAddr common.Address, suaveAccNonce uint64, calldata []byte, mevShareAddr common.Address) (*types.Transaction, hexutil.Bytes, error) {
+func prepareMevBackrunBidTx(suaveSigner types.Signer, privKey *ecdsa.PrivateKey, kettleAddress common.Address, suaveAccNonce uint64, calldata []byte, mevShareAddr common.Address) (*types.Transaction, hexutil.Bytes, error) {
 	wrappedTxData := &types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			ExecutionNode: executionNodeAddr,
+			KettleAddress: kettleAddress,
 			Nonce:         suaveAccNonce,
 			To:            &mevShareAddr,
 			Value:         nil,

@@ -186,7 +186,7 @@ func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types
 		return suave.Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
 	}
 
-	signingAccount, err := ExecutionNodeFromTransaction(creationTx)
+	signingAccount, err := KettleAddressFromTransaction(creationTx)
 	if err != nil {
 		return suave.Bid{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
 	}
@@ -254,7 +254,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[su
 		return fmt.Errorf("confidential engine: could not hash message for signing: %w", err)
 	}
 
-	signingAccount, err := ExecutionNodeFromTransaction(tx)
+	signingAccount, err := KettleAddressFromTransaction(tx)
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not recover execution node from source transaction: %w", err)
 	}
@@ -282,7 +282,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	if err != nil {
 		return fmt.Errorf("confidential engine: incorrect message signature: %w", err)
 	}
-	expectedMessageSigner, err := ExecutionNodeFromTransaction(message.SourceTx)
+	expectedMessageSigner, err := KettleAddressFromTransaction(message.SourceTx)
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not recover signer from message: %w", err)
 	}
@@ -332,7 +332,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 		if err != nil {
 			return fmt.Errorf("confidential engine: incorrect bid signature: %w", err)
 		}
-		expectedBidSigner, err := ExecutionNodeFromTransaction(sw.Bid.CreationTx)
+		expectedBidSigner, err := KettleAddressFromTransaction(sw.Bid.CreationTx)
 		if err != nil {
 			return fmt.Errorf("confidential engine: could not recover signer from bid: %w", err)
 		}
@@ -439,15 +439,15 @@ func (MockChainSigner) Sender(tx *types.Transaction) (common.Address, error) {
 	return types.NewSuaveSigner(tx.ChainId()).Sender(tx)
 }
 
-func ExecutionNodeFromTransaction(tx *types.Transaction) (common.Address, error) {
+func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error) {
 	innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
 	if ok {
-		return innerExecutedTx.ExecutionNode, nil
+		return innerExecutedTx.KettleAddress, nil
 	}
 
 	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 	if ok {
-		return innerRequestTx.ExecutionNode, nil
+		return innerRequestTx.KettleAddress, nil
 	}
 
 	return common.Address{}, fmt.Errorf("transaction is not of confidential type")

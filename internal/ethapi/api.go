@@ -1023,9 +1023,9 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 	}
 
 	if args.IsConfidential {
-		if args.ExecutionNode == nil {
+		if args.KettleAddress == nil {
 			acc := b.AccountManager().Accounts()[0]
-			args.ExecutionNode = &acc
+			args.KettleAddress = &acc
 		}
 
 		tx := args.ToTransaction()
@@ -1370,7 +1370,7 @@ type RPCTransaction struct {
 	Type                      hexutil.Uint64    `json:"type"`
 	Accesses                  *types.AccessList `json:"accessList,omitempty"`
 	ChainID                   *hexutil.Big      `json:"chainId,omitempty"`
-	ExecutionNode             *common.Address   `json:"executionNode,omitempty"`
+	KettleAddress             *common.Address   `json:"kettleAddress,omitempty"`
 	ConfidentialInputsHash    *common.Hash      `json:"confidentialInputsHash,omitempty"`
 	ConfidentialInputs        *hexutil.Bytes    `json:"confidentialInputs,omitempty"`
 	RequestRecord             *json.RawMessage  `json:"requestRecord,omitempty"`
@@ -1437,7 +1437,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
-		result.ExecutionNode = &inner.ExecutionNode
+		result.KettleAddress = &inner.KettleAddress
 
 		// if a legacy transaction has an EIP-155 chain id, include it explicitly
 		if id := tx.ChainId(); id.Sign() != 0 {
@@ -1452,7 +1452,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
-		result.ExecutionNode = &inner.ExecutionNode
+		result.KettleAddress = &inner.KettleAddress
 
 		// if a legacy transaction has an EIP-155 chain id, include it explicitly
 		if id := tx.ChainId(); id.Sign() != 0 {
@@ -1468,7 +1468,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
-		result.ExecutionNode = &inner.ExecutionNode
+		result.KettleAddress = &inner.KettleAddress
 
 		// TODO: should be rpc marshaled
 		rrBytes, err := types.NewTx(&inner.ConfidentialComputeRequest).MarshalJSON()
@@ -1956,7 +1956,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	}
 
 	// Look up the wallet containing the requested execution node
-	account := accounts.Account{Address: confidentialRequest.ExecutionNode}
+	account := accounts.Account{Address: confidentialRequest.KettleAddress}
 	wallet, err := b.AccountManager().Find(account)
 	if err != nil {
 		return nil, nil, nil, err
@@ -2005,7 +2005,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ExecutionNode: confidentialRequest.ExecutionNode, ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{KettleAddress: confidentialRequest.KettleAddress, ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {
@@ -2334,7 +2334,7 @@ func toHexSlice(b [][]byte) []string {
 	return r
 }
 
-// ExecutionAddress returns the execution addresseses available in the Kettle.
-func (s *TransactionAPI) ExecutionAddress(ctx context.Context) ([]common.Address, error) {
+// KettleAddress returns the execution addresseses available in the Kettle.
+func (s *TransactionAPI) KettleAddress(ctx context.Context) ([]common.Address, error) {
 	return s.b.AccountManager().Accounts(), nil
 }

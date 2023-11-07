@@ -57,7 +57,7 @@ Let’s take a look at how you can request confidential computation through an e
     ```go
     allowedPeekers := []common.Address{newBlockBidPeeker, newBundleBidPeeker, buildEthBlockPeeker} // express which contracts should have access to your data (by their addresses)
     confidentialComputeRecord := &types.ConfidentialComputeRecord{
-        ExecutionNode: "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B",
+        KettleAddress: "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B",
         Nonce:    suaveAccNonce,
         To:       &newBundleBidAddress,
         Value:    nil,
@@ -189,7 +189,7 @@ We introduce a few new transaction types.
 
     ```go
     type ConfidentialComputeRecord struct {
-        ExecutionNode          common.Address
+        KettleAddress          common.Address
         ConfidentialInputsHash common.Hash
 
         // LegacyTx fields
@@ -217,11 +217,11 @@ We introduce a few new transaction types.
 
 * `SuaveTransaction`
 
-    A specialized transaction type that encapsulates the result of a confidential computation request. It includes the `ConfidentialComputeRequest`, signed by the user, which ensures that the result comes from the expected computor, as the `SuaveTransaction`'s signer must match the `ExecutionNode`.  
+    A specialized transaction type that encapsulates the result of a confidential computation request. It includes the `ConfidentialComputeRequest`, signed by the user, which ensures that the result comes from the expected computor, as the `SuaveTransaction`'s signer must match the `KettleAddress`.  
 
     ```go
     type SuaveTransaction struct {
-        ExecutionNode              common.Address
+        KettleAddress              common.Address
         ConfidentialComputeRequest ConfidentialComputeRecord
         ConfidentialComputeResult  []byte
         /* Execution node's signature fields */
@@ -374,8 +374,8 @@ The mempool operates on the underlying Confidential Store, thereby maintaining t
 
 ### Changes to RPC methods
 
-1. New `IsConfidential` and `ExecutionNode` fields are added to TransactionArgs, used in `eth_sendTransaction` and `eth_call` methods.
-If `IsConfidential` is set to true, the call will be performed as a confidential call, using the `ExecutionNode` passed in for constructing `ConfidentialComputeRequest`.
+1. New `IsConfidential` and `KettleAddress` fields are added to TransactionArgs, used in `eth_sendTransaction` and `eth_call` methods.
+If `IsConfidential` is set to true, the call will be performed as a confidential call, using the `KettleAddress` passed in for constructing `ConfidentialComputeRequest`.
 `SuaveTransaction` is the result of `eth_sendTransaction`!
 
 2. New optional argument - `confidential_data` is added to `eth_sendRawTransaction`, `eth_sendTransaction` and `eth_call` methods.

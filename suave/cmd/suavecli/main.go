@@ -140,12 +140,12 @@ func extractBidId(suaveClient *rpc.Client, txHash common.Hash) (suave.BidId, err
 	return suave.BidId{0}, err
 }
 
-func setUpSuaveAndGoerli(privKeyHex *string, executionNodeAddressHex *string, suaveRpc *string, goerliRpc *string) (*ecdsa.PrivateKey, common.Address, *rpc.Client, *rpc.Client, types.Signer, types.Signer) {
+func setUpSuaveAndGoerli(privKeyHex *string, kettleAddressHex *string, suaveRpc *string, goerliRpc *string) (*ecdsa.PrivateKey, common.Address, *rpc.Client, *rpc.Client, types.Signer, types.Signer) {
 	privKey, err := crypto.HexToECDSA(*privKeyHex)
 	RequireNoErrorf(err, "-nodekeyhex: %v", err)
 	/* shush linter */ privKey.Public()
 
-	executionNodeAddress := common.HexToAddress(*executionNodeAddressHex)
+	kettleAddress := common.HexToAddress(*kettleAddressHex)
 
 	suaveClient, err := rpc.DialContext(context.TODO(), *suaveRpc)
 	RequireNoErrorf(err, "could not connect to suave rpc: %v", err)
@@ -158,5 +158,5 @@ func setUpSuaveAndGoerli(privKeyHex *string, executionNodeAddressHex *string, su
 
 	goerliSigner := types.LatestSigner(core.DefaultGoerliGenesisBlock().Config)
 
-	return privKey, executionNodeAddress, suaveClient, goerliClient, suaveSigner, goerliSigner
+	return privKey, kettleAddress, suaveClient, goerliClient, suaveSigner, goerliSigner
 }

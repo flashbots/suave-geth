@@ -72,7 +72,7 @@ func TestIsConfidential(t *testing.T) {
 		// Verify sending computation requests and onchain transactions to isConfidentialAddress
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				ExecutionNode: fr.ExecutionNode(),
+				KettleAddress: fr.KettleAddress(),
 				Nonce:         0,
 				To:            &isConfidentialAddress,
 				Value:         nil,
@@ -136,7 +136,7 @@ func TestMempool(t *testing.T) {
 		targetBlock := uint64(16103213)
 		creationTx := types.NewTx(&types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				ExecutionNode: fr.ExecutionNode(),
+				KettleAddress: fr.KettleAddress(),
 			},
 		})
 
@@ -195,7 +195,7 @@ func TestMempool(t *testing.T) {
 		// Verify via transaction
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				ExecutionNode: fr.ExecutionNode(),
+				KettleAddress: fr.KettleAddress(),
 				Nonce:         0,
 				To:            &fetchBidsAddress,
 				Value:         nil,
@@ -499,7 +499,7 @@ func TestMevShare(t *testing.T) {
 	// 3. build share block
 	//   3a. confirm share bundle
 
-	fr := newFramework(t, WithExecutionNode())
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
@@ -514,7 +514,7 @@ func TestMevShare(t *testing.T) {
 	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, buildEthBlockAddress, mevShareAddress}
 
 	bundleBidContractI := sdk.GetContract(mevShareAddress, BundleBidContract.Abi, clt)
-	_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}}, confidentialDataBytes)
+	_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}}, confidentialDataBytes)
 	requireNoRpcError(t, err)
 
 	//   1a. confirm submission
@@ -542,7 +542,7 @@ func TestMevShare(t *testing.T) {
 	backrunTx, _, confidentialDataMatchBytes := prepareMevShareBackrun(t, shareBidId)
 
 	cc := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
-	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.ExecutionNode()}, shareBidId}, confidentialDataMatchBytes)
+	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}, shareBidId}, confidentialDataMatchBytes)
 	requireNoRpcError(t, err)
 
 	block = fr.suethSrv.ProgressChain()
@@ -677,7 +677,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 
 		matchTx, _, confidentialDataMatchBytes := prepareMevShareBackrun(t, shareBidId)
 
-		txRes, err = bundleSenderContract.SendTransaction("newMatch", []interface{}{targetBlock, allowedPeekers, []common.Address{fr.ExecutionNode()}, shareBidId}, confidentialDataMatchBytes)
+		txRes, err = bundleSenderContract.SendTransaction("newMatch", []interface{}{targetBlock, allowedPeekers, []common.Address{fr.KettleAddress()}, shareBidId}, confidentialDataMatchBytes)
 		requireNoRpcError(t, err)
 
 		fr.suethSrv.ProgressChain()
@@ -707,7 +707,7 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 }
 
 func TestBlockBuildingPrecompiles(t *testing.T) {
-	fr := newFramework(t, WithExecutionNode())
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
@@ -756,7 +756,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 
 		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				ExecutionNode: fr.ExecutionNode(),
+				KettleAddress: fr.KettleAddress(),
 			},
 		})
 		require.NoError(t, err)
@@ -764,7 +764,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		bid, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{suave.AllowedPeekerAny},
-			AllowedStores:       []common.Address{fr.ExecutionNode()},
+			AllowedStores:       []common.Address{fr.KettleAddress()},
 			Version:             "default:v0:ethBundles",
 		}, dummyCreationTx)
 		require.NoError(t, err)
@@ -816,7 +816,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 }
 
 func TestBlockBuildingContract(t *testing.T) {
-	fr := newFramework(t, WithExecutionNode())
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
 	clt := fr.NewSDKClient()
@@ -876,7 +876,7 @@ func TestBlockBuildingContract(t *testing.T) {
 
 func TestRelayBlockSubmissionContract(t *testing.T) {
 	skOpt, signingPubkey := WithBlockSigningKeyOpt(t)
-	fr := newFramework(t, WithExecutionNode(), skOpt)
+	fr := newFramework(t, WithKettleAddress(), skOpt)
 	defer fr.Close()
 
 	rpc := fr.suethSrv.RPCNode()
@@ -1010,7 +1010,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 func TestE2E_ForgeIntegration(t *testing.T) {
 	// This end-to-end test ensures that the precompile lifecycle expected in Forge works
-	fr := newFramework(t, WithExecutionNode())
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
 	rpcClient := fr.suethSrv.RPCNode()
@@ -1071,7 +1071,7 @@ func TestE2E_ForgeIntegration(t *testing.T) {
 
 func TestE2EPrecompile_Call(t *testing.T) {
 	// This end-to-end tests that the callx precompile gets called from a confidential request
-	fr := newFramework(t, WithExecutionNode())
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
 	clt := fr.NewSDKClient()
@@ -1089,14 +1089,14 @@ func TestE2EPrecompile_Call(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestE2EExecutionAddressEndpoint(t *testing.T) {
-	// this end-to-end tests ensures that we can call eth_executionAddress endpoint in a MEVM node
+func TestE2EKettleAddressEndpoint(t *testing.T) {
+	// this end-to-end tests ensures that we can call eth_kettleAddress endpoint in a MEVM node
 	// and return the correct execution address list
-	fr := newFramework(t, WithExecutionNode())
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
 	var addrs []common.Address
-	require.NoError(t, fr.suethSrv.RPCNode().Call(&addrs, "eth_executionAddress"))
+	require.NoError(t, fr.suethSrv.RPCNode().Call(&addrs, "eth_kettleAddress"))
 	require.NotEmpty(t, addrs)
 }
 
@@ -1147,22 +1147,22 @@ type framework struct {
 }
 
 type frameworkConfig struct {
-	executionNode     bool
+	kettleAddress     bool
 	redisStoreBackend bool
 	suaveConfig       suave.Config
 }
 
 var defaultFrameworkConfig = frameworkConfig{
-	executionNode:     false,
+	kettleAddress:     false,
 	redisStoreBackend: false,
 	suaveConfig:       suave.Config{},
 }
 
 type frameworkOpt func(*frameworkConfig)
 
-func WithExecutionNode() frameworkOpt {
+func WithKettleAddress() frameworkOpt {
 	return func(c *frameworkConfig) {
-		c.executionNode = true
+		c.kettleAddress = true
 	}
 }
 
@@ -1203,7 +1203,7 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 
 	var ethSrv *clientWrapper
 
-	if cfg.executionNode {
+	if cfg.kettleAddress {
 		ethNode, ethEthService := startEthService(t, testEthGenesis, nil)
 		ethEthService.APIs()
 
@@ -1229,7 +1229,7 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 }
 
 func (f *framework) NewSDKClient() *sdk.Client {
-	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.ExecutionNode())
+	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.KettleAddress())
 }
 
 func (f *framework) ConfidentialStoreBackend() cstore.ConfidentialStorageBackend {
@@ -1240,7 +1240,7 @@ func (f *framework) ConfidentialEngine() *cstore.ConfidentialStoreEngine {
 	return f.suethSrv.service.APIBackend.SuaveEngine()
 }
 
-func (f *framework) ExecutionNode() common.Address {
+func (f *framework) KettleAddress() common.Address {
 	return f.suethSrv.service.AccountManager().Accounts()[0]
 }
 

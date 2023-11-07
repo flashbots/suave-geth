@@ -86,7 +86,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			ExecutionNode: common.Address{},
+			KettleAddress: common.Address{},
 		},
 	})
 
@@ -175,7 +175,7 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			ExecutionNode: common.Address{},
+			KettleAddress: common.Address{},
 		},
 	})
 
