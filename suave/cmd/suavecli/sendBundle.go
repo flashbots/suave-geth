@@ -24,7 +24,7 @@ func cmdSendBundle() {
 
 	var (
 		suaveRpc                = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		kettleAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		kettleAddressHex = flagset.String("kettleAddress", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
 		goerliRpc               = flagset.String("goerli_rpc", "http://127.0.0.1:8545", "address of goerli rpc")
 		privKeyHex              = flagset.String("privkey", "", "private key as hex (for testing)")
 		verbosity               = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
@@ -42,7 +42,7 @@ func cmdSendBundle() {
 	/* shush linter */ privKey.Public()
 
 	if kettleAddressHex == nil || *kettleAddressHex == "" {
-		utils.Fatalf("please provide ex_node_addr")
+		utils.Fatalf("please provide kettleAddress")
 	}
 	kettleAddress := common.HexToAddress(*kettleAddressHex)
 

@@ -24,7 +24,7 @@ func cmdSendMevShareMatch() {
 
 	var (
 		suaveRpc                = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		kettleAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		kettleAddressHex = flagset.String("kettleAddress", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
 		mevshareAddressHex      = flagset.String("mev_share_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of mev share contract")
 		blockSenderHex          = flagset.String("block_sender_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of mev share contract")
 		matchBidId              = flagset.String("match_bid_id", "123-123-123", "ID of mev share bundle bid to back run")
@@ -45,7 +45,7 @@ func cmdSendMevShareMatch() {
 	/* shush linter */ privKey.Public()
 
 	if kettleAddressHex == nil || *kettleAddressHex == "" {
-		utils.Fatalf("please provide ex_node_addr")
+		utils.Fatalf("please provide kettleAddress")
 	}
 	kettleAddress := common.HexToAddress(*kettleAddressHex)
 	mevshareAddresss := common.HexToAddress(*mevshareAddressHex)

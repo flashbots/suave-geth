@@ -45,7 +45,7 @@ func cmdSendBuildShareBlock() {
 		goerliBeaconRpc         = flagset.String("goerli_beacon_rpc", "http://127.0.0.1:5052", "address of goerli beacon rpc")
 		boostRelayUrl           = flagset.String("relay_url", "http://127.0.0.1:8091", "address of boost relay that the contract will send blocks to")
 		blockSenderAddressHex   = flagset.String("block_sender_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of block sender contract")
-		kettleAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		kettleAddressHex = flagset.String("kettleAddress", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
 		privKeyHex              = flagset.String("privkey", "", "private key as hex (for testing)")
 		verbosity               = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
 		privKey                 *ecdsa.PrivateKey
@@ -62,7 +62,7 @@ func cmdSendBuildShareBlock() {
 	/* shush linter */ privKey.Public()
 
 	if kettleAddressHex == nil || *kettleAddressHex == "" {
-		utils.Fatalf("please provide ex_node_addr")
+		utils.Fatalf("please provide kettleAddress")
 	}
 	kettleAddress := common.HexToAddress(*kettleAddressHex)
 	blockSenderAddr := common.HexToAddress(*blockSenderAddressHex)

@@ -87,7 +87,7 @@ Ensure these details for the command line tool are on hand:
 - `suave_rpc` : address of suave rpc
 - `goerli_rpc` : address of goerli execution node rpc
 - `goerli_beacon_rpc` : address of goerli beacon rpc
-- `ex_node_addr` : wallet address of execution node
+- `kettleAddress` : wallet address of execution node
 - `privKeyHex` : private key as hex (for testing)
 - `relay_url` : address of boost relay that the contract will send blocks to
 
