@@ -66,7 +66,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: c.client.execNode,
+			KettleAddress: c.client.kettleAddress,
 			Nonce:         nonce,
 			To:            &c.addr,
 			Value:         nil,
@@ -137,14 +137,14 @@ func (t *TransactionResult) Hash() common.Hash {
 type Client struct {
 	rpc      *ethclient.Client
 	key      *ecdsa.PrivateKey
-	execNode common.Address
+	kettleAddress common.Address
 }
 
-func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, execNode common.Address) *Client {
+func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, kettleAddress common.Address) *Client {
 	c := &Client{
 		rpc:      ethclient.NewClient(rpc),
 		key:      key,
-		execNode: execNode,
+		kettleAddress: kettleAddress,
 	}
 	return c
 }
