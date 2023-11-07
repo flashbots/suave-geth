@@ -15,7 +15,7 @@ func TestCCRequestToRecord(t *testing.T) {
 	signer := NewSuaveSigner(new(big.Int))
 	unsignedTx := NewTx(&ConfidentialComputeRequest{
 		ConfidentialComputeRecord: ConfidentialComputeRecord{
-			ExecutionNode: crypto.PubkeyToAddress(testKey.PublicKey),
+			KettleAddress: crypto.PubkeyToAddress(testKey.PublicKey),
 		},
 		ConfidentialInputs: []byte{0x46},
 	})
@@ -80,7 +80,7 @@ func TestSuaveTx(t *testing.T) {
 	signer := NewSuaveSigner(new(big.Int))
 
 	signedCCR, err := SignTx(NewTx(&ConfidentialComputeRecord{
-		ExecutionNode: crypto.PubkeyToAddress(testKey.PublicKey),
+		KettleAddress: crypto.PubkeyToAddress(testKey.PublicKey),
 	}), signer, testKey)
 	require.NoError(t, err)
 
@@ -88,7 +88,7 @@ func TestSuaveTx(t *testing.T) {
 	require.True(t, ok)
 
 	unsignedTx := NewTx(&SuaveTransaction{
-		ExecutionNode:              crypto.PubkeyToAddress(testKey.PublicKey),
+		KettleAddress:              crypto.PubkeyToAddress(testKey.PublicKey),
 		ConfidentialComputeRequest: *signedInnerCCR,
 	})
 	signedTx, err := SignTx(unsignedTx, signer, testKey)

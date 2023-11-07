@@ -42,7 +42,7 @@ type txJSON struct {
 	Input                     *hexutil.Bytes   `json:"input"`
 	AccessList                *AccessList      `json:"accessList,omitempty"`
 	BlobVersionedHashes       []common.Hash    `json:"blobVersionedHashes,omitempty"`
-	ExecutionNode             *common.Address  `json:"executionNode,omitempty"`
+	KettleAddress             *common.Address  `json:"kettleAddress,omitempty"`
 	ConfidentialInputsHash    *common.Hash     `json:"confidentialInputsHash,omitempty"`
 	ConfidentialInputs        *hexutil.Bytes   `json:"confidentialInputs,omitempty"`
 	Wrapped                   *json.RawMessage `json:"wrapped,omitempty"`
@@ -119,7 +119,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.S = (*hexutil.Big)(itx.S.ToBig())
 
 	case *ConfidentialComputeRecord:
-		enc.ExecutionNode = &itx.ExecutionNode
+		enc.KettleAddress = &itx.KettleAddress
 		enc.ConfidentialInputsHash = &itx.ConfidentialInputsHash
 		enc.Nonce = (*hexutil.Uint64)(&itx.Nonce)
 		enc.To = tx.To()
@@ -133,7 +133,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.S = (*hexutil.Big)(itx.S)
 
 	case *ConfidentialComputeRequest:
-		enc.ExecutionNode = &itx.ExecutionNode
+		enc.KettleAddress = &itx.KettleAddress
 		enc.ConfidentialInputs = (*hexutil.Bytes)(&itx.ConfidentialInputs)
 		enc.ConfidentialInputsHash = &itx.ConfidentialInputsHash
 		enc.Nonce = (*hexutil.Uint64)(&itx.Nonce)
@@ -148,7 +148,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.S = (*hexutil.Big)(itx.S)
 
 	case *SuaveTransaction:
-		enc.ExecutionNode = &itx.ExecutionNode
+		enc.KettleAddress = &itx.KettleAddress
 
 		wrapped, err := NewTx(&itx.ConfidentialComputeRequest).MarshalJSON()
 		if err != nil {
@@ -401,10 +401,10 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		var itx ConfidentialComputeRequest
 		inner = &itx
 
-		if dec.ExecutionNode == nil {
-			return errors.New("missing required field 'executionNode' in transaction")
+		if dec.KettleAddress == nil {
+			return errors.New("missing required field 'kettleAddress' in transaction")
 		}
-		itx.ExecutionNode = *dec.ExecutionNode
+		itx.KettleAddress = *dec.KettleAddress
 
 		if dec.ConfidentialInputsHash != nil {
 			itx.ConfidentialInputsHash = *dec.ConfidentialInputsHash
@@ -460,10 +460,10 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		var itx ConfidentialComputeRequest
 		inner = &itx
 
-		if dec.ExecutionNode == nil {
-			return errors.New("missing required field 'executionNode' in transaction")
+		if dec.KettleAddress == nil {
+			return errors.New("missing required field 'kettleAddress' in transaction")
 		}
-		itx.ExecutionNode = *dec.ExecutionNode
+		itx.KettleAddress = *dec.KettleAddress
 
 		if dec.ConfidentialInputsHash != nil {
 			itx.ConfidentialInputsHash = *dec.ConfidentialInputsHash
@@ -523,11 +523,11 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		var itx SuaveTransaction
 		inner = &itx
 
-		if dec.ExecutionNode == nil {
-			return errors.New("missing required field 'executionNode' in transaction")
+		if dec.KettleAddress == nil {
+			return errors.New("missing required field 'kettleAddress' in transaction")
 		}
 
-		itx.ExecutionNode = *dec.ExecutionNode
+		itx.KettleAddress = *dec.KettleAddress
 
 		if dec.Wrapped == nil {
 			return errors.New("missing required field 'wrapped' in transaction")

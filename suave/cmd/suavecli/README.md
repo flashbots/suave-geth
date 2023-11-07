@@ -87,7 +87,7 @@ Ensure these details for the command line tool are on hand:
 - `suave_rpc` : address of suave rpc
 - `goerli_rpc` : address of goerli execution node rpc
 - `goerli_beacon_rpc` : address of goerli beacon rpc
-- `ex_node_addr` : wallet address of execution node
+- `kettleAddress` : wallet address of execution node
 - `privKeyHex` : private key as hex (for testing)
 - `relay_url` : address of boost relay that the contract will send blocks to
 
@@ -185,7 +185,7 @@ Similar as above, `sendBlockSenderCreationTx` operates like any other contract d
 Once our contracts have been succesfully deployed we will craft a goerli bundle and send it to our newly deployed mev-share contract.
 
 ```go
-	mevShareTx, err := sendMevShareBidTx(suaveClient, goerliClient, suaveSigner, goerliSigner, 5, mevShareAddr, blockSenderAddr, executionNodeAddress, privKey)
+	mevShareTx, err := sendMevShareBidTx(suaveClient, goerliClient, suaveSigner, goerliSigner, 5, mevShareAddr, blockSenderAddr, kettleAddress, privKey)
 	if err != nil {
 		err = errors.Wrap(err, unwrapPeekerError(err).Error())
 		panic(err.Error())
@@ -252,7 +252,7 @@ func sendMevShareBidTx(
 	}
 
 	mevShareTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequestTx{
-		ExecutionNode: executionNodeAddr,
+		KettleAddress: kettleAddress,
 		Wrapped:       *types.NewTx(wrappedTxData),
 	}), suaveSigner, privKey)
 	if err != nil {
@@ -282,7 +282,7 @@ func sendMevShareBidTx(
 
 ```
 
-A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `executionNodeAddr`. These arguement are to utilize a new transaction primitive `types.ConfidentialComputeRequest`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#confidential-compute-requests).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `executionNodeAddr` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
+A SUAVE transaction, referred to as a mevshare bid in the code, takes in two extra arguments: `allowedPeekers` and `kettleAddress`. These arguement are to utilize a new transaction primitive `types.ConfidentialComputeRequest`, which you can read more about [here](https://github.com/flashbots/suave-geth/tree/suave-poc/suave#confidential-compute-requests).  The role of `allowedPeekers` is to dictate which contracts can view the confidential data, in our scenario, the goerli bundle being submitted. Meanwhile, `kettleAddress` points to the intended execution node for the transaction. Lastly, Suave nodes have a modified `ethSendRawTransaction` to support this new transaction type.
 
 ### 4. Send Mevshare Matches 🎯
 
@@ -302,7 +302,7 @@ Now that a MEV-share bid has been sent in we can simulate sending in a match. On
         mevShareTx.blockNumber,
         mevShareAddr,
         blockSenderAddr,
-        executionNodeAddress,
+        kettleAddress,
         bidIdBytes,
         privKey,
     )
@@ -318,7 +318,7 @@ Now that a MEV-share bid has been sent in we can simulate sending in a match. On
 Now that our SUAVE node's bidpool has a mevshare bid and match, we can trigger block building to combine these transactions, simulate for validity, and insert the refund transaction.
 
 ```go
-    _, err = sendBuildShareBlockTx(suaveClient, suaveSigner, privKey, executionNodeAddress, blockSenderAddr, payloadArgsTuple, uint64(goerliBlockNum)+1)
+    _, err = sendBuildShareBlockTx(suaveClient, suaveSigner, privKey, kettleAddress, blockSenderAddr, payloadArgsTuple, uint64(goerliBlockNum)+1)
     if err != nil {
         err = errors.Wrap(err, unwrapPeekerError(err).Error())
         if strings.Contains(err.Error(), "no bids") {

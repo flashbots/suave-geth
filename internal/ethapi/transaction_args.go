@@ -43,7 +43,7 @@ type TransactionArgs struct {
 	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
 	Value                *hexutil.Big    `json:"value"`
 	IsConfidential       bool            `json:"isConfidential"`
-	ExecutionNode        *common.Address `json:"executionNode"`
+	KettleAddress        *common.Address `json:"kettleAddress"`
 	ConfidentialInputs   *hexutil.Bytes  `json:"confidentialInputs"` // TODO: testme
 	ConfidentialResult   *hexutil.Bytes  `json:"confidentialResult"` // TODO: testme
 	Nonce                *hexutil.Uint64 `json:"nonce"`
@@ -286,9 +286,9 @@ func (args *TransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int) (*
 // toTransaction converts the arguments to a transaction.
 // This assumes that setDefaults has been called.
 func (args *TransactionArgs) toTransaction() *types.Transaction {
-	var executionNode common.Address
-	if args.IsConfidential && args.ExecutionNode != nil {
-		executionNode = *args.ExecutionNode
+	var kettleAddress common.Address
+	if args.IsConfidential && args.KettleAddress != nil {
+		kettleAddress = *args.KettleAddress
 	}
 
 	var data types.TxData
@@ -338,12 +338,12 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 		}
 
 		data = &types.SuaveTransaction{
-			ExecutionNode:              executionNode,
+			KettleAddress:              kettleAddress,
 			ChainID:                    (*big.Int)(args.ChainID),
 			ConfidentialComputeRequest: ccr,
 			ConfidentialComputeResult:  confResult,
 		}
-	case args.ExecutionNode != nil:
+	case args.KettleAddress != nil:
 		var confidentialInputs []byte
 		if args.ConfidentialInputs != nil {
 			confidentialInputs = *args.ConfidentialInputs
@@ -351,7 +351,7 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 
 		data = &types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				ExecutionNode: executionNode,
+				KettleAddress: kettleAddress,
 				// TODO: hashme
 				To:       args.To,
 				Nonce:    uint64(*args.Nonce),

@@ -40,15 +40,15 @@ func cmdSendBuildShareBlock() {
 	flagset := flag.NewFlagSet("sendBuildShareBlock", flag.ExitOnError)
 
 	var (
-		suaveRpc                = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		goerliRpc               = flagset.String("goerli_rpc", "http://127.0.0.1:8545", "address of goerli rpc")
-		goerliBeaconRpc         = flagset.String("goerli_beacon_rpc", "http://127.0.0.1:5052", "address of goerli beacon rpc")
-		boostRelayUrl           = flagset.String("relay_url", "http://127.0.0.1:8091", "address of boost relay that the contract will send blocks to")
-		blockSenderAddressHex   = flagset.String("block_sender_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of block sender contract")
-		executionNodeAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
-		privKeyHex              = flagset.String("privkey", "", "private key as hex (for testing)")
-		verbosity               = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
-		privKey                 *ecdsa.PrivateKey
+		suaveRpc              = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
+		goerliRpc             = flagset.String("goerli_rpc", "http://127.0.0.1:8545", "address of goerli rpc")
+		goerliBeaconRpc       = flagset.String("goerli_beacon_rpc", "http://127.0.0.1:5052", "address of goerli beacon rpc")
+		boostRelayUrl         = flagset.String("relay_url", "http://127.0.0.1:8091", "address of boost relay that the contract will send blocks to")
+		blockSenderAddressHex = flagset.String("block_sender_addr", "0x42042042028AE1CDE26d5BcF17Ba83f447068E5B", "address of block sender contract")
+		kettleAddressHex      = flagset.String("kettleAddress", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		privKeyHex            = flagset.String("privkey", "", "private key as hex (for testing)")
+		verbosity             = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
+		privKey               *ecdsa.PrivateKey
 	)
 
 	flagset.Parse(os.Args[2:])
@@ -61,10 +61,10 @@ func cmdSendBuildShareBlock() {
 	RequireNoErrorf(err, "-nodekeyhex: %v", err)
 	/* shush linter */ privKey.Public()
 
-	if executionNodeAddressHex == nil || *executionNodeAddressHex == "" {
-		utils.Fatalf("please provide ex_node_addr")
+	if kettleAddressHex == nil || *kettleAddressHex == "" {
+		utils.Fatalf("please provide kettleAddress")
 	}
-	executionNodeAddress := common.HexToAddress(*executionNodeAddressHex)
+	kettleAddress := common.HexToAddress(*kettleAddressHex)
 	blockSenderAddr := common.HexToAddress(*blockSenderAddressHex)
 
 	suaveClient, err := rpc.DialContext(context.TODO(), *suaveRpc)
@@ -138,7 +138,7 @@ func cmdSendBuildShareBlock() {
 		}
 
 		for i := 0; i < 3; i++ {
-			_, err = sendBuildShareBlockTx(suaveClient, suaveSigner, privKey, executionNodeAddress, blockSenderAddr, payloadArgsTuple, uint64(goerliBlockNum)+1)
+			_, err = sendBuildShareBlockTx(suaveClient, suaveSigner, privKey, kettleAddress, blockSenderAddr, payloadArgsTuple, uint64(goerliBlockNum)+1)
 			if err != nil {
 				err = errors.Wrap(err, unwrapPeekerError(err).Error())
 				if strings.Contains(err.Error(), "no bids") {
@@ -161,7 +161,7 @@ func sendBuildShareBlockTx(
 	suaveClient *rpc.Client,
 	suaveSigner types.Signer,
 	privKey *ecdsa.PrivateKey,
-	executionNodeAddress common.Address,
+	kettleAddress common.Address,
 	blockSenderAddr common.Address,
 	payloadArgsTuple payloadArgs,
 	goerliBlockNum uint64,
@@ -176,7 +176,7 @@ func sendBuildShareBlockTx(
 
 	wrappedTxData := &types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			ExecutionNode: executionNodeAddress,
+			KettleAddress: kettleAddress,
 			Nonce:         suaveAccNonce,
 			To:            &blockSenderAddr,
 			Value:         nil,

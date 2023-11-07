@@ -23,12 +23,12 @@ func cmdSendBundle() {
 	flagset := flag.NewFlagSet("sendBundle", flag.ExitOnError)
 
 	var (
-		suaveRpc                = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
-		executionNodeAddressHex = flagset.String("ex_node_addr", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
-		goerliRpc               = flagset.String("goerli_rpc", "http://127.0.0.1:8545", "address of goerli rpc")
-		privKeyHex              = flagset.String("privkey", "", "private key as hex (for testing)")
-		verbosity               = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
-		privKey                 *ecdsa.PrivateKey
+		suaveRpc         = flagset.String("suave_rpc", "http://127.0.0.1:8545", "address of suave rpc")
+		kettleAddressHex = flagset.String("kettleAddress", "0x4E2B0c0e428AE1CDE26d5BcF17Ba83f447068E5B", "wallet address of execution node")
+		goerliRpc        = flagset.String("goerli_rpc", "http://127.0.0.1:8545", "address of goerli rpc")
+		privKeyHex       = flagset.String("privkey", "", "private key as hex (for testing)")
+		verbosity        = flagset.Int("verbosity", int(log.LvlInfo), "log verbosity (0-5)")
+		privKey          *ecdsa.PrivateKey
 	)
 
 	flagset.Parse(os.Args[2:])
@@ -41,10 +41,10 @@ func cmdSendBundle() {
 	RequireNoErrorf(err, "-nodekeyhex: %v", err)
 	/* shush linter */ privKey.Public()
 
-	if executionNodeAddressHex == nil || *executionNodeAddressHex == "" {
-		utils.Fatalf("please provide ex_node_addr")
+	if kettleAddressHex == nil || *kettleAddressHex == "" {
+		utils.Fatalf("please provide kettleAddress")
 	}
-	executionNodeAddress := common.HexToAddress(*executionNodeAddressHex)
+	kettleAddress := common.HexToAddress(*kettleAddressHex)
 
 	suaveClient, err := rpc.DialContext(context.TODO(), *suaveRpc)
 	RequireNoErrorf(err, "could not connect to suave rpc: %v", err)
@@ -148,7 +148,7 @@ func cmdSendBundle() {
 		confidentialRequestInner := *confidentialInnerTxTemplate
 		confidentialInnerTxTemplate.Nonce += 1
 		confidentialRequestInner.Data = calldata
-		confidentialRequestInner.ExecutionNode = executionNodeAddress
+		confidentialRequestInner.KettleAddress = kettleAddress
 
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&confidentialRequestInner), suaveSigner, privKey)
 		RequireNoErrorf(err, "could not sign confidentialRequestTx: %v", err)
@@ -238,7 +238,7 @@ func cmdSendBundle() {
 
 		wrappedTxData := &types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				ExecutionNode: executionNodeAddress,
+				KettleAddress: kettleAddress,
 				Nonce:         suaveAccNonce,
 				To:            &newBlockBidAddress,
 				Value:         nil,
