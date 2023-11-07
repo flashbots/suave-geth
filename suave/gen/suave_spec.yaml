@@ -16,6 +16,58 @@ structs:
         type: address[]
       - name: version
         type: string
+  - name: Bundle
+    fields:
+      - name: blockNumber
+        type: uint64
+      - name: txs
+        type: bytes[]
+      - name: revertingHashes
+        type: hash[]
+  - name: Transaction
+    fields:
+      - name: Type
+        type: uint64
+      - name: ChainID
+        type: uint64
+      - name: Nonce
+        type: uint64
+      - name: To 
+        type: address
+      - name: Gas
+        type: uint64
+      - name: GasPrice
+        type: uint64
+      - name: MaxPriorityFeePerGas
+        type: uint64
+      - name: MaxFeePerGas
+        type: uint64
+      - name: MaxFeePerDataGas
+        type: uint64
+      - name: Value
+        type: uint64
+      - name: Input
+        type: bytes
+      - name: AccessList
+        type: bytes
+      - name: BlobVersionedHashes
+        type: bytes
+      - name: ExecutionNode
+        type: address
+      - name: ConfidentialInputsHash
+        type: hash
+      - name: ConfidentialInputs
+        type: bytes
+      - name: Wrapped
+        type: bytes
+      - name: ConfidentialComputeResult
+        type: bytes
+      - name: V
+        type: bytes
+      - name: R
+        type: bytes
+      - name: S
+        type: bytes
   - name: Withdrawal
     fields:
       - name: index
