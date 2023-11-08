@@ -102,14 +102,16 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 
 // SignTx signs the transaction using the given signer and private key.
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	if tx.Type() == ConfidentialComputeRequestTxType {
-		inner, ok := CastTxInner[*ConfidentialComputeRequest](tx)
-		if !ok {
-			return nil, errors.New("incorrect inner cast!")
+	/*
+		if tx.Type() == ConfidentialComputeRequestTxType {
+			inner, ok := CastTxInner[*ConfidentialComputeRequest](tx)
+			if !ok {
+				return nil, errors.New("incorrect inner cast!")
+			}
+			// inner.ConfidentialInputsHash = crypto.Keccak256Hash(inner.ConfidentialInputs)
+			tx = NewTx(inner)
 		}
-		// inner.ConfidentialInputsHash = crypto.Keccak256Hash(inner.ConfidentialInputs)
-		tx = NewTx(inner)
-	}
+	*/
 
 	h := s.Hash(tx)
 	sig, err := crypto.Sign(h[:], prv)
