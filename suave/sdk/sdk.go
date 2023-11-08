@@ -54,6 +54,8 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	}
 
 	senderAddr := crypto.PubkeyToAddress(c.client.key.PublicKey)
+	fmt.Println("_ SENDER ADDR _", senderAddr)
+
 	nonce, err := c.client.rpc.PendingNonceAt(context.Background(), senderAddr)
 	if err != nil {
 		return nil, err
@@ -65,16 +67,14 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	}
 
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: c.client.kettleAddress,
-			Nonce:         nonce,
-			To:            &c.addr,
-			Value:         nil,
-			GasPrice:      gasPrice,
-			Gas:           1000000,
-			Data:          calldata,
-		},
-		ConfidentialInputs: confidentialDataBytes,
+		KettleAddress:      c.client.kettleAddress,
+		Nonce:              nonce,
+		To:                 &c.addr,
+		Value:              nil,
+		GasPrice:           gasPrice,
+		Gas:                1000000,
+		Data:               calldata,
+		ConfidentialInputs: &confidentialDataBytes,
 	}), signer, c.client.key)
 	if err != nil {
 		return nil, err

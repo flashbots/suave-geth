@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type ConfidentialComputeRecord struct {
+type ConfidentialComputeRequest struct {
 	Nonce    uint64
 	GasPrice *big.Int
 	Gas      uint64
@@ -14,22 +14,22 @@ type ConfidentialComputeRecord struct {
 	Value    *big.Int
 	Data     []byte
 
-	KettleAddress          common.Address
-	ConfidentialInputsHash common.Hash
+	KettleAddress common.Address
 
 	ChainID *big.Int
 	V, R, S *big.Int
+
+	ConfidentialInputs *[]byte `rlp:"nil"`
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *ConfidentialComputeRecord) copy() TxData {
-	cpy := &ConfidentialComputeRecord{
-		Nonce:                  tx.Nonce,
-		To:                     copyAddressPtr(tx.To),
-		Data:                   common.CopyBytes(tx.Data),
-		Gas:                    tx.Gas,
-		KettleAddress:          tx.KettleAddress,
-		ConfidentialInputsHash: tx.ConfidentialInputsHash,
+func (tx *ConfidentialComputeRequest) copy() TxData {
+	cpy := &ConfidentialComputeRequest{
+		Nonce:         tx.Nonce,
+		To:            copyAddressPtr(tx.To),
+		Data:          common.CopyBytes(tx.Data),
+		Gas:           tx.Gas,
+		KettleAddress: tx.KettleAddress,
 
 		Value:    new(big.Int),
 		GasPrice: new(big.Int),
@@ -57,48 +57,6 @@ func (tx *ConfidentialComputeRecord) copy() TxData {
 	}
 	if tx.S != nil {
 		cpy.S.Set(tx.S)
-	}
-
-	return cpy
-}
-
-func (tx *ConfidentialComputeRecord) txType() byte              { return ConfidentialComputeRecordTxType }
-func (tx *ConfidentialComputeRecord) chainID() *big.Int         { return tx.ChainID }
-func (tx *ConfidentialComputeRecord) accessList() AccessList    { return nil }
-func (tx *ConfidentialComputeRecord) data() []byte              { return tx.Data }
-func (tx *ConfidentialComputeRecord) gas() uint64               { return tx.Gas }
-func (tx *ConfidentialComputeRecord) gasPrice() *big.Int        { return tx.GasPrice }
-func (tx *ConfidentialComputeRecord) gasTipCap() *big.Int       { return tx.GasPrice }
-func (tx *ConfidentialComputeRecord) gasFeeCap() *big.Int       { return tx.GasPrice }
-func (tx *ConfidentialComputeRecord) value() *big.Int           { return tx.Value }
-func (tx *ConfidentialComputeRecord) nonce() uint64             { return tx.Nonce }
-func (tx *ConfidentialComputeRecord) to() *common.Address       { return tx.To }
-func (tx *ConfidentialComputeRecord) blobGas() uint64           { return 0 }
-func (tx *ConfidentialComputeRecord) blobGasFeeCap() *big.Int   { return nil }
-func (tx *ConfidentialComputeRecord) blobHashes() []common.Hash { return nil }
-
-func (tx *ConfidentialComputeRecord) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
-	return dst.Set(tx.GasPrice)
-}
-
-func (tx *ConfidentialComputeRecord) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.V, tx.R, tx.S
-}
-
-func (tx *ConfidentialComputeRecord) setSignatureValues(chainID, v, r, s *big.Int) {
-	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
-}
-
-type ConfidentialComputeRequest struct {
-	ConfidentialComputeRecord
-	ConfidentialInputs []byte
-}
-
-// copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *ConfidentialComputeRequest) copy() TxData {
-	cpy := &ConfidentialComputeRequest{
-		ConfidentialComputeRecord: *(tx.ConfidentialComputeRecord.copy().(*ConfidentialComputeRecord)),
-		ConfidentialInputs:        tx.ConfidentialInputs,
 	}
 
 	return cpy
@@ -132,8 +90,8 @@ func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.I
 }
 
 type SuaveTransaction struct {
-	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`
-	ConfidentialComputeResult  []byte                    `json:"confidentialComputeResult" gencodec:"required"`
+	ConfidentialComputeRequest ConfidentialComputeRequest `json:"confidentialComputeRequest" gencodec:"required"`
+	ConfidentialComputeResult  []byte                     `json:"confidentialComputeResult" gencodec:"required"`
 
 	// request KettleAddress's signature
 	ChainID *big.Int

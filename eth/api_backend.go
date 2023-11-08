@@ -444,8 +444,9 @@ func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.Co
 	storeTransaction := b.suaveEngine.NewTransactionalStore(requestTx)
 	return vm.SuaveContext{
 		ConfidentialComputeRequestTx: requestTx,
-		ConfidentialInputs:           ccr.ConfidentialInputs,
-		CallerStack:                  []*common.Address{},
+		// TODO
+		// ConfidentialInputs:           *ccr.ConfidentialInputs,
+		CallerStack: []*common.Address{},
 		Backend: &vm.SuaveExecutionBackend{
 			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
 			EthBlockSigningKey:     b.suaveEthBlockSigningKey,

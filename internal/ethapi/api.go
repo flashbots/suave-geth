@@ -1430,21 +1430,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		} else {
 			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
 		}
-	case types.ConfidentialComputeRecordTxType:
-		inner, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
-		if !ok {
-			log.Error("could not marshal rpc transaction: tx did not cast correctly")
-			return nil
-		}
-
-		result.KettleAddress = &inner.KettleAddress
-
-		// if a legacy transaction has an EIP-155 chain id, include it explicitly
-		if id := tx.ChainId(); id.Sign() != 0 {
-			result.ChainID = (*hexutil.Big)(id)
-		}
-		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
-		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.ConfidentialComputeRequestTxType:
 		inner, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
 		if !ok {
@@ -1458,8 +1443,8 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		if id := tx.ChainId(); id.Sign() != 0 {
 			result.ChainID = (*hexutil.Big)(id)
 		}
-		result.ConfidentialInputs = (*hexutil.Bytes)(&inner.ConfidentialInputs)
-		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
+		result.ConfidentialInputs = (*hexutil.Bytes)(inner.ConfidentialInputs)
+		// result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
 	case types.SuaveTxType:
 		inner, ok := types.CastTxInner[*types.SuaveTransaction](tx)
@@ -1922,10 +1907,16 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 			return common.Hash{}, err
 		}
 
+		fmt.Println("___ TRANSACTION COMES HERE ____")
+		fmt.Println(tx)
+
 		msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
 		if err != nil {
 			return common.Hash{}, err
 		}
+
+		fmt.Println("___ MESSAGE ___")
+		fmt.Println(msg)
 
 		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
 		if err != nil {
@@ -1987,6 +1978,9 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		return nil, nil, nil, err
 	}
 
+	fmt.Println("___ MEVM EXECUTION ___")
+	fmt.Println(result.Failed())
+
 	if result.Failed() {
 		return nil, nil, nil, fmt.Errorf("%w: %s", result.Err, hexutil.Encode(result.Revert()))
 	}
@@ -2003,12 +1997,15 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
+	suaveResultTxData := &types.SuaveTransaction{ConfidentialComputeRequest: *confidentialRequest, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	fmt.Println("__ NEW SIGNED __")
+	fmt.Println(signed)
 
 	// will copy the inner tx again!
 	return signed, result, storeFinalize, nil

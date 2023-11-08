@@ -42,11 +42,11 @@ var (
 
 // Transaction types.
 const (
-	LegacyTxType                     = 0x00
-	AccessListTxType                 = 0x01
-	DynamicFeeTxType                 = 0x02
-	BlobTxType                       = 0x03
-	ConfidentialComputeRecordTxType  = 0x42
+	LegacyTxType     = 0x00
+	AccessListTxType = 0x01
+	DynamicFeeTxType = 0x02
+	BlobTxType       = 0x03
+	// ConfidentialComputeRecordTxType  = 0x42
 	ConfidentialComputeRequestTxType = 0x43
 	SuaveTxType                      = 0x50
 )

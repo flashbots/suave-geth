@@ -109,7 +109,10 @@ func (b *suaveRuntime) extractHint(bundleBytes []byte) ([]byte, error) {
 }
 
 func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byte, error) {
-	return b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
+	res, err := b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
+
+	fmt.Println("__ ETH CALL __", res, err)
+	return res, err
 }
 
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {

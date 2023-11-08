@@ -85,9 +85,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{},
-		},
+		KettleAddress: common.Address{},
 	})
 
 	suaveContext := SuaveContext{
@@ -174,9 +172,7 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 	t.Cleanup(func() { confEngine.Stop() })
 
 	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{},
-		},
+		KettleAddress: common.Address{},
 	})
 
 	b := &suaveRuntime{

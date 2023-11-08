@@ -118,24 +118,26 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.R = (*hexutil.Big)(itx.R.ToBig())
 		enc.S = (*hexutil.Big)(itx.S.ToBig())
 
-	case *ConfidentialComputeRecord:
-		enc.KettleAddress = &itx.KettleAddress
-		enc.ConfidentialInputsHash = &itx.ConfidentialInputsHash
-		enc.Nonce = (*hexutil.Uint64)(&itx.Nonce)
-		enc.To = tx.To()
-		enc.Gas = (*hexutil.Uint64)(&itx.Gas)
-		enc.GasPrice = (*hexutil.Big)(itx.GasPrice)
-		enc.Value = (*hexutil.Big)(itx.Value)
-		enc.Input = (*hexutil.Bytes)(&itx.Data)
-		enc.ChainID = (*hexutil.Big)(itx.ChainID)
-		enc.V = (*hexutil.Big)(itx.V)
-		enc.R = (*hexutil.Big)(itx.R)
-		enc.S = (*hexutil.Big)(itx.S)
+	/*
+		case *ConfidentialComputeRecord:
+			enc.KettleAddress = &itx.KettleAddress
+			enc.ConfidentialInputsHash = &itx.ConfidentialInputsHash
+			enc.Nonce = (*hexutil.Uint64)(&itx.Nonce)
+			enc.To = tx.To()
+			enc.Gas = (*hexutil.Uint64)(&itx.Gas)
+			enc.GasPrice = (*hexutil.Big)(itx.GasPrice)
+			enc.Value = (*hexutil.Big)(itx.Value)
+			enc.Input = (*hexutil.Bytes)(&itx.Data)
+			enc.ChainID = (*hexutil.Big)(itx.ChainID)
+			enc.V = (*hexutil.Big)(itx.V)
+			enc.R = (*hexutil.Big)(itx.R)
+			enc.S = (*hexutil.Big)(itx.S)
+	*/
 
 	case *ConfidentialComputeRequest:
 		enc.KettleAddress = &itx.KettleAddress
-		enc.ConfidentialInputs = (*hexutil.Bytes)(&itx.ConfidentialInputs)
-		enc.ConfidentialInputsHash = &itx.ConfidentialInputsHash
+		enc.ConfidentialInputs = (*hexutil.Bytes)(itx.ConfidentialInputs)
+		// enc.ConfidentialInputsHash = &itx.ConfidentialInputsHash
 		enc.Nonce = (*hexutil.Uint64)(&itx.Nonce)
 		enc.To = tx.To()
 		enc.Gas = (*hexutil.Uint64)(&itx.Gas)
@@ -395,64 +397,66 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			}
 		}
 
-	case ConfidentialComputeRecordTxType:
-		var itx ConfidentialComputeRequest
-		inner = &itx
+	/*
+		case ConfidentialComputeRecordTxType:
+			var itx ConfidentialComputeRequest
+			inner = &itx
 
-		if dec.KettleAddress == nil {
-			return errors.New("missing required field 'kettleAddress' in transaction")
-		}
-		itx.KettleAddress = *dec.KettleAddress
-
-		if dec.ConfidentialInputsHash != nil {
-			itx.ConfidentialInputsHash = *dec.ConfidentialInputsHash
-		}
-
-		if dec.Nonce == nil {
-			return errors.New("missing required field 'nonce' in transaction")
-		}
-		itx.Nonce = uint64(*dec.Nonce)
-		if dec.To != nil {
-			itx.To = dec.To
-		}
-		if dec.Gas == nil {
-			return errors.New("missing required field 'gas' in transaction")
-		}
-		itx.Gas = uint64(*dec.Gas)
-		if dec.GasPrice == nil {
-			return errors.New("missing required field 'gasPrice' in transaction")
-		}
-		itx.GasPrice = (*big.Int)(dec.GasPrice)
-		if dec.Value == nil {
-			return errors.New("missing required field 'value' in transaction")
-		}
-		itx.Value = (*big.Int)(dec.Value)
-		if dec.Input == nil {
-			return errors.New("missing required field 'input' in transaction")
-		}
-		itx.Data = *dec.Input
-		if dec.ChainID == nil {
-			return errors.New("missing required field 'chainId' in transaction")
-		}
-		itx.ChainID = (*big.Int)(dec.ChainID)
-		if dec.V == nil {
-			return errors.New("missing required field 'r' in transaction")
-		}
-		itx.V = (*big.Int)(dec.V)
-		if dec.R == nil {
-			return errors.New("missing required field 'r' in transaction")
-		}
-		itx.R = (*big.Int)(dec.R)
-		if dec.S == nil {
-			return errors.New("missing required field 's' in transaction")
-		}
-		itx.S = (*big.Int)(dec.S)
-		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
-		if withSignature {
-			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
-				return err
+			if dec.KettleAddress == nil {
+				return errors.New("missing required field 'kettleAddress' in transaction")
 			}
-		}
+			itx.KettleAddress = *dec.KettleAddress
+
+			if dec.ConfidentialInputsHash != nil {
+				itx.ConfidentialInputsHash = *dec.ConfidentialInputsHash
+			}
+
+			if dec.Nonce == nil {
+				return errors.New("missing required field 'nonce' in transaction")
+			}
+			itx.Nonce = uint64(*dec.Nonce)
+			if dec.To != nil {
+				itx.To = dec.To
+			}
+			if dec.Gas == nil {
+				return errors.New("missing required field 'gas' in transaction")
+			}
+			itx.Gas = uint64(*dec.Gas)
+			if dec.GasPrice == nil {
+				return errors.New("missing required field 'gasPrice' in transaction")
+			}
+			itx.GasPrice = (*big.Int)(dec.GasPrice)
+			if dec.Value == nil {
+				return errors.New("missing required field 'value' in transaction")
+			}
+			itx.Value = (*big.Int)(dec.Value)
+			if dec.Input == nil {
+				return errors.New("missing required field 'input' in transaction")
+			}
+			itx.Data = *dec.Input
+			if dec.ChainID == nil {
+				return errors.New("missing required field 'chainId' in transaction")
+			}
+			itx.ChainID = (*big.Int)(dec.ChainID)
+			if dec.V == nil {
+				return errors.New("missing required field 'r' in transaction")
+			}
+			itx.V = (*big.Int)(dec.V)
+			if dec.R == nil {
+				return errors.New("missing required field 'r' in transaction")
+			}
+			itx.R = (*big.Int)(dec.R)
+			if dec.S == nil {
+				return errors.New("missing required field 's' in transaction")
+			}
+			itx.S = (*big.Int)(dec.S)
+			withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+			if withSignature {
+				if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+					return err
+				}
+			}
+	*/
 
 	case ConfidentialComputeRequestTxType:
 		var itx ConfidentialComputeRequest
@@ -463,12 +467,12 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		}
 		itx.KettleAddress = *dec.KettleAddress
 
-		if dec.ConfidentialInputsHash != nil {
-			itx.ConfidentialInputsHash = *dec.ConfidentialInputsHash
-		}
+		//if dec.ConfidentialInputsHash != nil {
+		//	itx.ConfidentialInputsHash = *dec.ConfidentialInputsHash
+		//}
 
 		if dec.ConfidentialInputs != nil {
-			itx.ConfidentialInputs = *dec.ConfidentialInputs
+			// itx.ConfidentialInputs = dec.ConfidentialInputs
 		}
 
 		if dec.Nonce == nil {
@@ -531,7 +535,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			return err
 		}
 
-		ccr, ok := CastTxInner[*ConfidentialComputeRecord](&wrappedTx)
+		ccr, ok := CastTxInner[*ConfidentialComputeRequest](&wrappedTx)
 		if !ok {
 			return errors.New("wrapped tx not a ConfidentialComputeRecord")
 		}

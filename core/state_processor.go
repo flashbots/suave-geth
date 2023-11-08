@@ -111,6 +111,9 @@ func applyTransaction(msg *Message, config *params.ChainConfig, gp *GasPool, sta
 		return nil, err
 	}
 
+	fmt.Println("__ APPLY RESULT __")
+	fmt.Println(result)
+
 	// Update the state with pending changes.
 	var root []byte
 	if config.IsByzantium(blockNumber) {

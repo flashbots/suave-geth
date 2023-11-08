@@ -162,6 +162,9 @@ func TransactionToMessage(tx *types.Transaction, s types.Signer, baseFee *big.In
 	}
 	var err error
 	msg.From, err = types.Sender(s, tx)
+
+	fmt.Println("-- sender decoded --", msg.From, err)
+
 	return msg, err
 }
 
