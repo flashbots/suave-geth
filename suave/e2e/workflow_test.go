@@ -136,6 +136,7 @@ func TestTxMarshaling(t *testing.T) {
 
 	tx := types.NewTransaction(15, common.Address{0x5, 0x4, 0x3, 0x2, 0x1, 0x0}, big.NewInt(10), 21000, big.NewInt(100), []byte{0x16})
 	txBytes, err := tx.MarshalBinary()
+	require.NoError(t, err)
 
 	calldata, err := decodeTxAbi.Inputs.Pack(txBytes)
 	require.NoError(t, err)

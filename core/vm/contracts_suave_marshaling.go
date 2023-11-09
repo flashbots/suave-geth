@@ -248,7 +248,7 @@ func (p *marshalBundlePrecompile) Run(input []byte) ([]byte, error) {
 
 	bundleBytes, err := p.marshalBundle(types.Bundle{
 		BlockNumber:     unpackedBundle.BlockNumber,
-		Txs:             [][]byte(unpackedBundle.Txs),
+		Txs:             unpackedBundle.Txs,
 		RevertingHashes: revertingHashes,
 	})
 	if err != nil {
