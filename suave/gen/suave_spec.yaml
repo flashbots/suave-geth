@@ -23,8 +23,8 @@ structs:
       - name: txs
         type: bytes[]
       - name: revertingHashes
-        type: hash[]
-  - name: Transaction
+        type: bytes32[]
+  - name: TransactionArgs
     fields:
       - name: Type
         type: uint64
@@ -55,7 +55,7 @@ structs:
       - name: ExecutionNode
         type: address
       - name: ConfidentialInputsHash
-        type: hash
+        type: bytes32
       - name: ConfidentialInputs
         type: bytes
       - name: Wrapped
@@ -151,6 +151,44 @@ functions:
       fields:
         - name: output1
           type: bytes
+  - name: encodeTransaction
+    address: "0x0000000000000000000000000000000030300000"
+    input:
+      - name: txn
+        type: TransactionArgs
+    output:
+      packed: true
+      fields:
+        - name: output1
+          type: bytes
+  - name: decodeTransaction
+    address: "0x0000000000000000000000000000000030300001"
+    input:
+      - name: txn
+        type: bytes
+    output:
+      fields:
+        - name: output1
+          type: TransactionArgs
+  - name: marshalBundle
+    address: "0x0000000000000000000000000000000030300010"
+    input:
+      - name: bundle
+        type: Bundle
+    output:
+      packed: true
+      fields:
+        - name: output1
+          type: bytes
+  - name: unmarshalBundle
+    address: "0x0000000000000000000000000000000030300010"
+    input:
+      - name: bundle
+        type: bytes
+    output:
+      fields:
+        - name: output1
+          type: Bundle
   - name: signEthTransaction
     address: "0x0000000000000000000000000000000040100001"
     input:

@@ -63,6 +63,18 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(bidId, key, data1));
     }
 
+    function decodeTransaction(bytes memory txn) internal view returns (Suave.TransactionArgs memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000030300001", abi.encode(txn));
+
+        return abi.decode(data, (Suave.TransactionArgs));
+    }
+
+    function encodeTransaction(Suave.TransactionArgs memory txn) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000030300000", abi.encode(txn));
+
+        return abi.decode(data, (bytes));
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100003", abi.encode(contractAddr, input1));
 
@@ -85,6 +97,12 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000043200001", abi.encode(bidId));
 
         return data;
+    }
+
+    function marshalBundle(Suave.Bundle memory bundle) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000030300010", abi.encode(bundle));
+
+        return abi.decode(data, (bytes));
     }
 
     function newBid(
@@ -135,5 +153,11 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderBid));
 
         return data;
+    }
+
+    function unmarshalBundle(bytes memory bundle) internal view returns (Suave.Bundle memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000030300010", abi.encode(bundle));
+
+        return abi.decode(data, (Suave.Bundle));
     }
 }

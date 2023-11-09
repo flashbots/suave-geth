@@ -23,6 +23,11 @@ var (
 
 /* General utility precompiles */
 
+type isConfidentialPrecompile struct{}
+
+func (*isConfidentialPrecompile) RequiredGas(input []byte) uint64  { return 1000 }
+func (*isConfidentialPrecompile) Run(input []byte) ([]byte, error) { return []byte{0x0}, nil }
+
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 	return b.suaveContext.ConfidentialInputs, nil
 }

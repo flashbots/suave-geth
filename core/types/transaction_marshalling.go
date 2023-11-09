@@ -55,6 +55,8 @@ type txJSON struct {
 	Hash common.Hash `json:"hash"`
 }
 
+type TxJson = txJSON
+
 // MarshalJSON marshals as JSON with a hash.
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	var enc txJSON

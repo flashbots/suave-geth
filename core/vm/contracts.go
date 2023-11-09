@@ -111,6 +111,14 @@ var PrecompiledContractsBLS = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{18}): &bls12381MapG2{},
 }
 
+var SuaveOnchainPrecompiles = map[common.Address]PrecompiledContract{
+	isConfidentialAddress: &isConfidentialPrecompile{},
+	encodeTransactionAddr: &encodeTransactionPrecompile{},
+	decodeTransactionAddr: &decodeTransactionPrecompile{},
+	marshalBundleAddr:     &marshalBundlePrecompile{},
+	unmarshalBundleAddr:   &unmarshalBundlePrecompile{},
+}
+
 var (
 	PrecompiledAddressesBerlin    []common.Address
 	PrecompiledAddressesIstanbul  []common.Address

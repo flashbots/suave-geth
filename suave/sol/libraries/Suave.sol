@@ -26,6 +26,36 @@ library Suave {
         Withdrawal[] withdrawals;
     }
 
+    struct Bundle {
+        uint64 blockNumber;
+        bytes[] txs;
+        bytes32[] revertingHashes;
+    }
+
+    struct TransactionArgs {
+        uint64 Type;
+        uint64 ChainID;
+        uint64 Nonce;
+        address To;
+        uint64 Gas;
+        uint64 GasPrice;
+        uint64 MaxPriorityFeePerGas;
+        uint64 MaxFeePerGas;
+        uint64 MaxFeePerDataGas;
+        uint64 Value;
+        bytes Input;
+        bytes AccessList;
+        bytes BlobVersionedHashes;
+        address ExecutionNode;
+        bytes32 ConfidentialInputsHash;
+        bytes ConfidentialInputs;
+        bytes Wrapped;
+        bytes ConfidentialComputeResult;
+        bytes V;
+        bytes R;
+        bytes S;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -45,6 +75,10 @@ library Suave {
 
     address public constant CONFIDENTIAL_STORE = 0x0000000000000000000000000000000042020000;
 
+    address public constant DECODE_TRANSACTION = 0x0000000000000000000000000000000030300001;
+
+    address public constant ENCODE_TRANSACTION = 0x0000000000000000000000000000000030300000;
+
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
@@ -52,6 +86,8 @@ library Suave {
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
+
+    address public constant MARSHAL_BUNDLE = 0x0000000000000000000000000000000030300010;
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
@@ -62,6 +98,8 @@ library Suave {
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
+
+    address public constant UNMARSHAL_BUNDLE = 0x0000000000000000000000000000000030300010;
 
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {
@@ -115,6 +153,24 @@ library Suave {
         }
     }
 
+    function decodeTransaction(bytes memory txn) internal view returns (TransactionArgs memory) {
+        (bool success, bytes memory data) = DECODE_TRANSACTION.staticcall(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(DECODE_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (TransactionArgs));
+    }
+
+    function encodeTransaction(TransactionArgs memory txn) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = ENCODE_TRANSACTION.staticcall(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(ENCODE_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         (bool success, bytes memory data) = ETHCALL.staticcall(abi.encode(contractAddr, input1));
         if (!success) {
@@ -151,6 +207,15 @@ library Suave {
         }
 
         return data;
+    }
+
+    function marshalBundle(Bundle memory bundle) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = MARSHAL_BUNDLE.staticcall(abi.encode(bundle));
+        if (!success) {
+            revert PeekerReverted(MARSHAL_BUNDLE, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function newBid(
@@ -216,5 +281,14 @@ library Suave {
         }
 
         return data;
+    }
+
+    function unmarshalBundle(bytes memory bundle) internal view returns (Bundle memory) {
+        (bool success, bytes memory data) = UNMARSHAL_BUNDLE.staticcall(abi.encode(bundle));
+        if (!success) {
+            revert PeekerReverted(UNMARSHAL_BUNDLE, data);
+        }
+
+        return abi.decode(data, (Bundle));
     }
 }
