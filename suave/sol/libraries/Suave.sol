@@ -99,7 +99,7 @@ library Suave {
 
     address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
-    address public constant UNMARSHAL_BUNDLE = 0x0000000000000000000000000000000030300010;
+    address public constant UNMARSHAL_BUNDLE = 0x0000000000000000000000000000000030300011;
 
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {
@@ -168,7 +168,7 @@ library Suave {
             revert PeekerReverted(ENCODE_TRANSACTION, data);
         }
 
-        return abi.decode(data, (bytes));
+        return data;
     }
 
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
@@ -215,7 +215,7 @@ library Suave {
             revert PeekerReverted(MARSHAL_BUNDLE, data);
         }
 
-        return abi.decode(data, (bytes));
+        return data;
     }
 
     function newBid(

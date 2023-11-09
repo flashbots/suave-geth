@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -84,4 +85,74 @@ func TestDecodeTransaction(t *testing.T) {
 	require.Equal(t, uint64(100), recoveredTxArgs.GasPrice)
 	require.Equal(t, uint64(10), recoveredTxArgs.Value)
 	require.Equal(t, []byte{0x16}, recoveredTxArgs.Input)
+}
+
+func TestMarshalBundle(t *testing.T) {
+	pAbi := artifacts.SuaveAbi.Methods["marshalBundle"]
+
+	tx := types.NewTransaction(15, common.Address{0x5, 0x4, 0x3, 0x2, 0x1, 0x0}, big.NewInt(10), 21000, big.NewInt(100), []byte{0x16})
+
+	txBytes, err := tx.MarshalBinary()
+	require.NoError(t, err)
+
+	bundle := types.Bundle{
+		BlockNumber:     100,
+		Txs:             [][]byte{txBytes},
+		RevertingHashes: []common.Hash{common.Hash{0x01}},
+	}
+
+	packedInput, err := pAbi.Inputs.Pack(bundle)
+	require.NoError(t, err)
+	outp, err := (&marshalBundlePrecompile{}).Run(packedInput)
+	require.NoError(t, err)
+
+	recoveredBundle := &types.SBundle{}
+	require.NoError(t, json.Unmarshal(outp, &recoveredBundle))
+
+	require.Equal(t, 1, len(recoveredBundle.Txs))
+	marshaledRecoveredTx, err := recoveredBundle.Txs[0].MarshalBinary()
+	require.NoError(t, err)
+
+	require.Equal(t, txBytes, marshaledRecoveredTx)
+	require.Equal(t, big.NewInt(100), recoveredBundle.BlockNumber)
+	require.Equal(t, []common.Hash{common.Hash{0x01}}, recoveredBundle.RevertingHashes)
+}
+
+func TestUnmarshalBundle(t *testing.T) {
+	pAbi := artifacts.SuaveAbi.Methods["unmarshalBundle"]
+
+	tx := types.NewTransaction(15, common.Address{0x5, 0x4, 0x3, 0x2, 0x1, 0x0}, big.NewInt(10), 21000, big.NewInt(100), []byte{0x16})
+
+	txBytes, err := tx.MarshalBinary()
+	require.NoError(t, err)
+
+	bundle := &types.SBundle{
+		BlockNumber:     big.NewInt(100),
+		Txs:             types.Transactions{tx},
+		RevertingHashes: []common.Hash{common.Hash{0x01}},
+	}
+
+	bundleBytes, err := json.Marshal(bundle)
+	require.NoError(t, err)
+
+	packedInput, err := pAbi.Inputs.Pack(bundleBytes)
+	require.NoError(t, err)
+
+	outp, err := (&unmarshalBundlePrecompile{}).Run(packedInput)
+	require.NoError(t, err)
+
+	unpackedOutput, err := pAbi.Outputs.Unpack(outp)
+	require.NoError(t, err)
+
+	recoveredBundle := unpackedOutput[0].(struct {
+		BlockNumber     uint64      "json:\"blockNumber\""
+		Txs             [][]uint8   "json:\"txs\""
+		RevertingHashes [][32]uint8 "json:\"revertingHashes\""
+	})
+
+	require.Equal(t, uint64(100), recoveredBundle.BlockNumber)
+	require.Equal(t, 1, len(recoveredBundle.Txs))
+	require.Equal(t, txBytes, recoveredBundle.Txs[0])
+	require.Equal(t, 1, len(recoveredBundle.RevertingHashes))
+	require.Equal(t, [32]uint8{1}, recoveredBundle.RevertingHashes[0])
 }

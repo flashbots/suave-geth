@@ -236,7 +236,21 @@ func (p *marshalBundlePrecompile) Run(input []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	bundleBytes, err := p.marshalBundle(unpackedArgs[0].(types.Bundle))
+	unpackedBundle := unpackedArgs[0].(struct {
+		BlockNumber     uint64      "json:\"blockNumber\""
+		Txs             [][]uint8   "json:\"txs\""
+		RevertingHashes [][32]uint8 "json:\"revertingHashes\""
+	})
+	revertingHashes := make([]common.Hash, len(unpackedBundle.RevertingHashes))
+	for i, rh := range unpackedBundle.RevertingHashes {
+		revertingHashes[i] = rh
+	}
+
+	bundleBytes, err := p.marshalBundle(types.Bundle{
+		BlockNumber:     unpackedBundle.BlockNumber,
+		Txs:             [][]byte(unpackedBundle.Txs),
+		RevertingHashes: revertingHashes,
+	})
 	if err != nil {
 		return nil, err
 	}

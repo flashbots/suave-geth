@@ -200,6 +200,73 @@ func TestTxMarshaling(t *testing.T) {
 	require.Equal(t, []byte{0x16}, recoveredTx.Data())
 }
 
+func TestBundleMarshaling(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// marshalBundleAbi := artifacts.SuaveAbi.Methods["marshalBundle"]
+	marshalBundleAddr := artifacts.SuaveMethods["marshalBundle"]
+	unmarshalBundleAbi := artifacts.SuaveAbi.Methods["unmarshalBundle"]
+	unmarshalBundleAddr := artifacts.SuaveMethods["unmarshalBundle"]
+
+	tx := types.NewTransaction(15, common.Address{0x5, 0x4, 0x3, 0x2, 0x1, 0x0}, big.NewInt(10), 21000, big.NewInt(100), []byte{0x16})
+
+	txBytes, err := tx.MarshalBinary()
+	require.NoError(t, err)
+
+	bundle := &types.SBundle{
+		BlockNumber:     big.NewInt(100),
+		Txs:             types.Transactions{tx},
+		RevertingHashes: []common.Hash{common.Hash{0x01}},
+	}
+
+	bundleBytes, err := json.Marshal(bundle)
+	require.NoError(t, err)
+
+	calldata, err := unmarshalBundleAbi.Inputs.Pack(bundleBytes)
+	require.NoError(t, err)
+
+	decodedBundleReturn, err := clt.RPC().CallContract(context.TODO(), ethereum.CallMsg{
+		To:   &unmarshalBundleAddr,
+		Data: calldata,
+	}, nil)
+	require.NoError(t, err)
+
+	unpackedDecodedBundleReturn, err := unmarshalBundleAbi.Outputs.Unpack(decodedBundleReturn)
+	require.NoError(t, err)
+
+	recoveredDecodedBundle := unpackedDecodedBundleReturn[0].(struct {
+		BlockNumber     uint64      "json:\"blockNumber\""
+		Txs             [][]uint8   "json:\"txs\""
+		RevertingHashes [][32]uint8 "json:\"revertingHashes\""
+	})
+
+	require.Equal(t, uint64(100), recoveredDecodedBundle.BlockNumber)
+	require.Equal(t, 1, len(recoveredDecodedBundle.Txs))
+	require.Equal(t, txBytes, recoveredDecodedBundle.Txs[0])
+	require.Equal(t, 1, len(recoveredDecodedBundle.RevertingHashes))
+	require.Equal(t, [32]uint8{1}, recoveredDecodedBundle.RevertingHashes[0])
+
+	encodedBundleReturn, err := clt.RPC().CallContract(context.TODO(), ethereum.CallMsg{
+		To:   &marshalBundleAddr,
+		Data: decodedBundleReturn,
+	}, nil)
+	require.NoError(t, err)
+
+	recoveredBundle := &types.SBundle{}
+	require.NoError(t, json.Unmarshal(encodedBundleReturn, &recoveredBundle))
+
+	require.Equal(t, 1, len(recoveredBundle.Txs))
+	marshaledRecoveredTx, err := recoveredBundle.Txs[0].MarshalBinary()
+	require.NoError(t, err)
+
+	require.Equal(t, txBytes, marshaledRecoveredTx)
+	require.Equal(t, big.NewInt(100), recoveredBundle.BlockNumber)
+	require.Equal(t, []common.Hash{common.Hash{0x01}}, recoveredBundle.RevertingHashes)
+}
+
 func TestMempool(t *testing.T) {
 	// t.Fatal("not implemented")
 	fr := newFramework(t)
