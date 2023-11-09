@@ -344,7 +344,9 @@ func geth(ctx *cli.Context) error {
 		return fmt.Errorf("failed to setup suave development mode: %v", err)
 	}
 
-	prepareSuaveNetworksRemapping(ctx)
+	if err := prepareSuaveNetworksRemapping(ctx); err != nil {
+		return err
+	}
 
 	prepare(ctx)
 	stack, backend := makeFullNode(ctx)
