@@ -260,9 +260,32 @@ type unmarshalBundlePrecompile struct{}
 func (*unmarshalBundlePrecompile) RequiredGas(input []byte) uint64 { return 1000 }
 
 func (p *unmarshalBundlePrecompile) Run(input []byte) ([]byte, error) {
-	return nil, nil
+	mAbi := artifacts.SuaveAbi.Methods[artifacts.PrecompileAddressToName(unmarshalBundleAddr)]
+	unpackedArgs, err := mAbi.Inputs.Unpack(input)
+	if err != nil {
+		return nil, err
+	}
+	bundle, err := p.unmarshalBundle(unpackedArgs[0].([]byte))
+	if err != nil {
+		return nil, err
+	}
+	return mAbi.Outputs.Pack(bundle)
 }
 
-func (*unmarshalBundlePrecompile) unmarshalBundle(bundle []byte) (types.Bundle, error) {
-	return types.Bundle{}, nil
+func (*unmarshalBundlePrecompile) unmarshalBundle(bundleBytes []byte) (types.Bundle, error) {
+	rpcBundle := types.RpcSBundle{}
+	err := json.Unmarshal(bundleBytes, &rpcBundle)
+	if err != nil {
+		return types.Bundle{}, err
+	}
+
+	txs := make([][]byte, len(rpcBundle.Txs))
+	for i, tx := range rpcBundle.Txs {
+		txs[i] = ([]byte)(tx)
+	}
+	return types.Bundle{
+		BlockNumber:     rpcBundle.BlockNumber.ToInt().Uint64(),
+		Txs:             txs,
+		RevertingHashes: rpcBundle.RevertingHashes,
+	}, nil
 }
