@@ -21,7 +21,7 @@ To get started with the Suave CLI, follow these steps:
 
 2. Install the necessary dependencies by running `go mod tidy`.
 
-3. Build the CLI using `go build -o suavecli ./suave-geth/cmd/suavecli`.
+3. Build the CLI using `go build -o suavecli ./suave-geth/suave/cmd/suavecli`.
 
 4. Run the Suave CLI with the desired command and subcommand.
 
