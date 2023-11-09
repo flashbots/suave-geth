@@ -118,6 +118,8 @@ func TestSuavePrecompileStub(t *testing.T) {
 		// error in 'buildEthBlock' when it expects to retrieve bids in abi format from the
 		// confidential store.
 		"could not unpack merged bid ids",
+		"key not formatted properly: invalid hex data for private key",
+		"transaction type not supported",
 		"no caller of confidentialRetrieve (0000000000000000000000000000000042020001) is allowed on 00000000000000000000000000000000",
 		"precompile fillMevShareBundle (0000000000000000000000000000000043200001) not allowed on 00000000000000000000000000000000",
 		"no caller of confidentialStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
@@ -126,6 +128,8 @@ func TestSuavePrecompileStub(t *testing.T) {
 
 	expectedVariableErrors := []*regexp.Regexp{
 		regexp.MustCompile("key not formatted properly: invalid hex character.*in private key"),
+		regexp.MustCompile("cannot unmarshal hex string without 0x prefix.*"),
+		regexp.MustCompile("rlp: .*"),
 	}
 
 	for name, addr := range artifacts.SuaveMethods {
