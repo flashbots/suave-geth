@@ -2,14 +2,12 @@ package genesis
 
 import (
 	"embed"
+	"io/fs"
 	"os"
 	"strings"
 )
 
-// Right now there is only a test.json file because
-// the binary does not compile if the embed.FS is empty.
-//
-//go:embed *.json
+//go:embed fixtures
 var genesisFiles embed.FS
 
 func Load(name string) ([]byte, error) {
@@ -22,8 +20,12 @@ func Load(name string) ([]byte, error) {
 		return genesisRaw, nil
 	}
 
-	// load 'name' frrom the embedded files
-	data, err := genesisFiles.ReadFile(name + ".json")
+	// load 'name' from the embedded files
+	fsys, err := fs.Sub(genesisFiles, "fixtures")
+	if err != nil {
+		return nil, err
+	}
+	data, err := fs.ReadFile(fsys, name+".json")
 	if err != nil {
 		return nil, err
 	}
