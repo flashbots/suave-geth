@@ -42,6 +42,6 @@
         }
     },
     "bootnodes": [
-        "enode://3e575f38caa316c3c9cde227080578bbab03e3966e324616eaa22dac2aa085d9b77ac20c0fd0c67b7077b296b29db493af30a69e283d7a8c7c737203b5639ed2@13.59.100.95:0?discport=30303"
+        "enode://3e575f38caa316c3c9cde227080578bbab03e3966e324616eaa22dac2aa085d9b77ac20c0fd0c67b7077b296b29db493af30a69e283d7a8c7c737203b5639ed2@bootnode-0.rigil.suave.flashbots.net:0?discport=30303"
     ]
 }
