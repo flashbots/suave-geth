@@ -63,10 +63,10 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(bidId, key, data1));
     }
 
-    function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
+    function ethcall(address contractAddr, bytes memory input1) internal view returns (Suave.CallResult memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100003", abi.encode(contractAddr, input1));
 
-        return abi.decode(data, (bytes));
+        return abi.decode(data, (Suave.CallResult));
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {

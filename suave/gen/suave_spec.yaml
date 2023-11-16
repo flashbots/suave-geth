@@ -44,6 +44,20 @@ structs:
         type: bytes32
       - name: withdrawals
         type: Withdrawal[]
+  - name: CallResult
+    fields:
+      - name: returnData
+        type: bytes
+      - name: logs
+        type: CallLog[]
+  - name: CallLog
+    fields:
+      - name: addr
+        type: address
+      - name: data
+        type: bytes
+      - name: topics
+        type: bytes[]
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
@@ -170,7 +184,7 @@ functions:
     output:
       fields:
         - name: output1
-          type: bytes
+          type: CallResult
   - name: submitBundleJsonRPC
     address: "0x0000000000000000000000000000000043000001"
     isConfidential: true

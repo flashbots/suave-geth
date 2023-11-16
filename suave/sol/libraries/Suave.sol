@@ -26,6 +26,17 @@ library Suave {
         Withdrawal[] withdrawals;
     }
 
+    struct CallLog {
+        address addr;
+        bytes data;
+        bytes[] topics;
+    }
+
+    struct CallResult {
+        bytes returnData;
+        CallLog[] logs;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -115,13 +126,13 @@ library Suave {
         }
     }
 
-    function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
+    function ethcall(address contractAddr, bytes memory input1) internal view returns (CallResult memory) {
         (bool success, bytes memory data) = ETHCALL.staticcall(abi.encode(contractAddr, input1));
         if (!success) {
             revert PeekerReverted(ETHCALL, data);
         }
 
-        return abi.decode(data, (bytes));
+        return abi.decode(data, (CallResult));
     }
 
     function extractHint(bytes memory bundleData) internal view returns (bytes memory) {

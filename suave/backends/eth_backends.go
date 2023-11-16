@@ -33,7 +33,7 @@ func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.Buil
 	return engine.BlockToExecutableData(block, big.NewInt(11000)), nil
 }
 
-func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input []byte) (*types.CallResult, error) {
 	return nil, nil
 }
 
@@ -84,9 +84,9 @@ func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return &result, err
 }
 
-func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
-	var result []byte
+func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) (*types.CallResult, error) {
+	var result types.CallResult
 	err := e.call(ctx, &result, "suavex_call", contractAddr, input)
 
-	return result, err
+	return &result, err
 }

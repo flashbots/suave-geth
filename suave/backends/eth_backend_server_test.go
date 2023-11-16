@@ -53,6 +53,6 @@ func (n *mockBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suav
 	return block, big.NewInt(11000), nil
 }
 
-func (n *mockBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
-	return []byte{0x1}, nil
+func (n *mockBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) (*types.CallResult, error) {
+	return &types.CallResult{ReturnData: []byte{0x1}}, nil
 }

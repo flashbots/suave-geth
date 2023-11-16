@@ -34,6 +34,8 @@ type ExecutionResult struct {
 	UsedGas    uint64 // Total used gas but include the refunded gas
 	Err        error  // Any error encountered during the execution(listed in core/vm/errors.go)
 	ReturnData []byte // Returned data from evm(function result or data supplied with revert opcode)
+
+	Logs []*types.Log
 }
 
 // Unwrap returns the internal evm error which allows us for further

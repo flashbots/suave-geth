@@ -471,7 +471,7 @@ func (b *EthAPIBackend) StateAtTransaction(ctx context.Context, block *types.Blo
 	return b.eth.stateAtTransaction(ctx, block, txIndex, reexec)
 }
 
-func (b *EthAPIBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+func (b *EthAPIBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) (*types.CallResult, error) {
 	// Note: this is pretty close to be a circle dependency.
 	data := hexutil.Bytes(input)
 	txnArgs := ethapi.TransactionArgs{
@@ -485,5 +485,21 @@ func (b *EthAPIBackend) Call(ctx context.Context, contractAddr common.Address, i
 		return nil, err
 	}
 
-	return res.ReturnData, nil
+	fullRet := &types.CallResult{
+		ReturnData: res.ReturnData,
+		Logs:       []*types.CallLog{},
+	}
+	for _, log := range res.Logs {
+		topics := [][]byte{}
+		for _, topic := range log.Topics {
+			topics = append(topics, topic.Bytes())
+		}
+
+		fullRet.Logs = append(fullRet.Logs, &types.CallLog{
+			Addr:   log.Address,
+			Data:   log.Data,
+			Topics: topics,
+		})
+	}
+	return fullRet, nil
 }
