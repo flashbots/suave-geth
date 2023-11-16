@@ -1244,7 +1244,13 @@ func (w *worker) getSealingBlock(parent common.Hash, timestamp uint64, coinbase 
 	}
 }
 
-func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*types.Block, *big.Int, error) {
+type BlockResult struct {
+	Block    *types.Block
+	Profit   *big.Int
+	Receipts []*types.Receipt
+}
+
+func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*BlockResult, error) {
 	params := &generateParams{
 		timestamp:   args.Timestamp,
 		forceTime:   true,
@@ -1259,30 +1265,36 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 
 	work, err := w.prepareWork(params)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer work.discard()
 
 	profitPre := work.state.GetBalance(args.FeeRecipient)
 
 	if err := w.rawCommitTransactions(work, txs); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	profitPost := work.state.GetBalance(args.FeeRecipient)
 	block, err := w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts, params.withdrawals)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	blockProfit := new(big.Int).Sub(profitPost, profitPre)
-	return block, blockProfit, nil
+
+	result := &BlockResult{
+		Block:    block,
+		Profit:   blockProfit,
+		Receipts: work.receipts,
+	}
+	return result, nil
 }
 
-func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
+func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*BlockResult, error) {
 	// create ephemeral addr and private key for payment txn
 	ephemeralPrivKey, err := crypto.GenerateKey()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	ephemeralAddr := crypto.PubkeyToAddress(ephemeralPrivKey.PublicKey)
 
@@ -1300,7 +1312,7 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 
 	work, err := w.prepareWork(params)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer work.discard()
 
@@ -1315,7 +1327,7 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		// apply bundle
 		profitPreBundle := work.state.GetBalance(params.coinbase)
 		if err := w.rawCommitTransactions(work, bundle.Txs); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		profitPostBundle := work.state.GetBalance(params.coinbase)
 
@@ -1338,7 +1350,7 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 			bidTx := bundle.Txs[0] // NOTE : assumes first txn is refund recipient
 			refundAddr, err := types.Sender(types.LatestSignerForChainID(bidTx.ChainId()), bidTx)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			paymentTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
 				Nonce:    currNonce,
@@ -1349,12 +1361,12 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 			}), work.signer, ephemeralPrivKey)
 
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
 			// commit payment txn
 			if err := w.rawCommitTransactions(work, types.Transactions{paymentTx}); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
@@ -1373,20 +1385,26 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		GasPrice: work.header.BaseFee,
 	}), work.signer, ephemeralPrivKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
+		return nil, fmt.Errorf("could not sign proposer payment: %w", err)
 	}
 
 	// commit payment txn
 	if err := w.rawCommitTransactions(work, types.Transactions{paymentTx}); err != nil {
-		return nil, nil, fmt.Errorf("could not sign proposer payment: %w", err)
+		return nil, fmt.Errorf("could not sign proposer payment: %w", err)
 	}
 
 	log.Info("buildBlockFromBundles", "num_bundles", len(bundles), "num_txns", len(work.txs), "profit", proposerProfit)
 	block, err := w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts, params.withdrawals)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return block, proposerProfit, nil
+
+	result := &BlockResult{
+		Block:    block,
+		Profit:   proposerProfit,
+		Receipts: work.receipts,
+	}
+	return result, nil
 }
 
 func (w *worker) rawCommitTransactions(env *environment, txs types.Transactions) error {
