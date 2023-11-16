@@ -54,6 +54,10 @@ structs:
     fields:
       - name: data
         type: bytes
+      - name: addr
+        type: address
+      - name: topics
+        type: bytes32[]
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"

@@ -26,6 +26,7 @@ contract ExampleSimulateTransaction {
     function run(bytes memory txn) external payable returns (bytes memory) {
         Suave.SimulateTransactionResult memory result = Suave.simulateTransaction(txn);
         require(result.logs.length == 1);
+        require(result.logs[0].topics[0] == bytes32(abi.encodeWithSignature("get()")));
         return abi.encodeWithSelector(this.callback.selector);
     }
 }

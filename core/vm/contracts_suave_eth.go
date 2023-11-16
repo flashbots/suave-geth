@@ -502,15 +502,10 @@ func (s *suaveRuntime) simulateTransaction(input []byte) (types.SimulateTransact
 	logs := []*types.SimulatedLog{}
 	for _, receipt := range result.Receipts {
 		for _, log := range receipt.Logs {
-			topics := [][]byte{}
-			for _, topic := range log.Topics {
-				topics = append(topics, topic.Bytes())
-			}
-
 			simLog := &types.SimulatedLog{
-				//Addr:   log.Address,
-				Data: log.Data,
-				//Topics: topics,
+				Addr:   log.Address,
+				Data:   log.Data,
+				Topics: log.Topics,
 			}
 			logs = append(logs, simLog)
 		}

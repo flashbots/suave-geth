@@ -33,6 +33,8 @@ library Suave {
 
     struct SimulatedLog {
         bytes data;
+        address addr;
+        bytes32[] topics;
     }
 
     struct Withdrawal {
