@@ -26,6 +26,15 @@ library Suave {
         Withdrawal[] withdrawals;
     }
 
+    struct SimulateTransactionResult {
+        uint64 egp;
+        SimulatedLog[] logs;
+    }
+
+    struct SimulatedLog {
+        bytes data;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -58,6 +67,8 @@ library Suave {
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
+
+    address public constant SIMULATE_TRANSACTION = 0x0000000000000000000000000000000051100001;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
@@ -188,6 +199,15 @@ library Suave {
         }
 
         return abi.decode(data, (uint64));
+    }
+
+    function simulateTransaction(bytes memory bundleData) internal view returns (SimulateTransactionResult memory) {
+        (bool success, bytes memory data) = SIMULATE_TRANSACTION.staticcall(abi.encode(bundleData));
+        if (!success) {
+            revert PeekerReverted(SIMULATE_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (SimulateTransactionResult));
     }
 
     function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)

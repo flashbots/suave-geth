@@ -455,11 +455,11 @@ func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.Co
 	}
 }
 
-func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*miner.BlockResult, error) {
+func (b *EthAPIBackend) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
 	return b.eth.Miner().BuildBlockFromTxs(ctx, buildArgs, txs)
 }
 
-func (b *EthAPIBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*miner.BlockResult, error) {
+func (b *EthAPIBackend) BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.BlockResult, error) {
 	return b.eth.Miner().BuildBlockFromBundles(ctx, buildArgs, bundles)
 }
 

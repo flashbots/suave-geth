@@ -254,10 +254,10 @@ func (miner *Miner) BuildPayload(args *BuildPayloadArgs) (*Payload, error) {
 	return miner.worker.buildPayload(args)
 }
 
-func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*BlockResult, error) {
+func (miner *Miner) BuildBlockFromTxs(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
 	return miner.worker.buildBlockFromTxs(ctx, buildArgs, txs)
 }
 
-func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*BlockResult, error) {
+func (miner *Miner) BuildBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*types.BlockResult, error) {
 	return miner.worker.buildBlockFromBundles(ctx, buildArgs, bundles)
 }

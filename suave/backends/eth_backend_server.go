@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/miner"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -15,6 +14,7 @@ type EthBackend interface {
 	BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
+	BuildEthBlockFull(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error)
 }
 
 var _ EthBackend = &EthBackendServer{}
@@ -23,8 +23,8 @@ var _ EthBackend = &EthBackendServer{}
 // to resolve the EthBackend server queries
 type EthBackendServerBackend interface {
 	CurrentHeader() *types.Header
-	BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*miner.BlockResult, error)
-	BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*miner.BlockResult, error)
+	BuildBlockFromTxs(ctx context.Context, buildArgs *suave.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error)
+	BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.BlockResult, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
 
@@ -80,4 +80,24 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 
 func (e *EthBackendServer) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
 	return e.b.Call(ctx, contractAddr, input)
+}
+
+func (e *EthBackendServer) BuildEthBlockFull(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
+	if buildArgs == nil {
+		head := e.b.CurrentHeader()
+		buildArgs = &types.BuildBlockArgs{
+			Parent:       head.Hash(),
+			Timestamp:    head.Time + uint64(12),
+			FeeRecipient: common.Address{0x42},
+			GasLimit:     30000000,
+			Random:       head.Root,
+			Withdrawals:  nil,
+		}
+	}
+
+	result, err := e.b.BuildBlockFromTxs(ctx, buildArgs, txs)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

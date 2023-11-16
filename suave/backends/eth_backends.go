@@ -37,6 +37,10 @@ func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input [
 	return nil, nil
 }
 
+func (e *EthMock) BuildEthBlockFull(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
+	panic("TODO")
+}
+
 type RemoteEthBackend struct {
 	endpoint string
 	client   *rpc.Client
@@ -89,4 +93,11 @@ func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address
 	err := e.call(ctx, &result, "suavex_call", contractAddr, input)
 
 	return result, err
+}
+
+func (e *RemoteEthBackend) BuildEthBlockFull(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
+	var result types.BlockResult
+	err := e.call(ctx, &result, "suavex_buildEthBlockFull", buildArgs, txs)
+
+	return &result, err
 }

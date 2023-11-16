@@ -62,6 +62,10 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 	return nil, nil
 }
 
+func (m *mockSuaveBackend) BuildEthBlockFull(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
+	return nil, nil
+}
+
 func (m *mockSuaveBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
 	return nil, nil
 }

@@ -89,3 +89,9 @@ type RPCMevShareBundle struct {
 		} `json:"refund"`
 	} `json:"validity"`
 }
+
+type BlockResult struct {
+	Block    *Block
+	Profit   *big.Int
+	Receipts []*Receipt
+}

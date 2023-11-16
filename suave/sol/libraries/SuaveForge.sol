@@ -117,6 +117,16 @@ library SuaveForge {
         return abi.decode(data, (uint64));
     }
 
+    function simulateTransaction(bytes memory bundleData)
+        internal
+        view
+        returns (Suave.SimulateTransactionResult memory)
+    {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000051100001", abi.encode(bundleData));
+
+        return abi.decode(data, (Suave.SimulateTransactionResult));
+    }
+
     function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)
         internal
         view

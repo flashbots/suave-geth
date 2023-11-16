@@ -1089,6 +1089,30 @@ func TestE2EPrecompile_Call(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestE2EPrecompile_SimulateTransaction(t *testing.T) {
+	fr := newFramework(t, WithKettleAddress())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr3,
+		Gas:      100000,
+		GasPrice: big.NewInt(13),
+		Data:     exampleCallTargetContract.Abi.Methods["get"].ID,
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	bundle, _ := json.Marshal(ethTx)
+
+	// We reuse the same address for both the source and target contract
+	sourceContract := sdk.GetContract(testAddr4, exampleSimulateTxnContract.Abi, clt)
+
+	_, err = sourceContract.SendTransaction("run", []interface{}{bundle}, nil)
+	require.NoError(t, err)
+}
+
 func TestE2EKettleAddressEndpoint(t *testing.T) {
 	// this end-to-end tests ensures that we can call eth_kettleAddress endpoint in a MEVM node
 	// and return the correct execution address list
@@ -1266,6 +1290,7 @@ var (
 	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
 	testAddr3 = common.Address{0x3}
+	testAddr4 = common.Address{0x4}
 
 	testBalance = big.NewInt(2e18)
 
@@ -1296,6 +1321,7 @@ var (
 			newBlockBidAddress:  {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
 			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
+			testAddr4:           {Balance: big.NewInt(0), Code: exampleSimulateTxnContract.DeployedCode},
 		},
 	}
 

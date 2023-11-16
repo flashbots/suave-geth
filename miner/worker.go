@@ -1244,13 +1244,7 @@ func (w *worker) getSealingBlock(parent common.Hash, timestamp uint64, coinbase 
 	}
 }
 
-type BlockResult struct {
-	Block    *types.Block
-	Profit   *big.Int
-	Receipts []*types.Receipt
-}
-
-func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*BlockResult, error) {
+func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockArgs, txs types.Transactions) (*types.BlockResult, error) {
 	params := &generateParams{
 		timestamp:   args.Timestamp,
 		forceTime:   true,
@@ -1282,7 +1276,7 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	}
 	blockProfit := new(big.Int).Sub(profitPost, profitPre)
 
-	result := &BlockResult{
+	result := &types.BlockResult{
 		Block:    block,
 		Profit:   blockProfit,
 		Receipts: work.receipts,
@@ -1290,7 +1284,7 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	return result, nil
 }
 
-func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*BlockResult, error) {
+func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlockArgs, bundles []types.SBundle) (*types.BlockResult, error) {
 	// create ephemeral addr and private key for payment txn
 	ephemeralPrivKey, err := crypto.GenerateKey()
 	if err != nil {
@@ -1399,7 +1393,7 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		return nil, err
 	}
 
-	result := &BlockResult{
+	result := &types.BlockResult{
 		Block:    block,
 		Profit:   proposerProfit,
 		Receipts: work.receipts,

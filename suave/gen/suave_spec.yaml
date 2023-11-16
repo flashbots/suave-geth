@@ -44,6 +44,16 @@ structs:
         type: bytes32
       - name: withdrawals
         type: Withdrawal[]
+  - name: SimulateTransactionResult
+    fields:
+      - name: egp
+        type: uint64
+      - name: logs
+        type: SimulatedLog[]
+  - name: SimulatedLog
+    fields:
+      - name: data
+        type: bytes
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
@@ -121,6 +131,15 @@ functions:
       fields:
         - name: output1
           type: uint64
+  - name: simulateTransaction
+    address: "0x0000000000000000000000000000000051100001"
+    input:
+      - name: bundleData
+        type: bytes
+    output:
+      fields:
+        - name: output1
+          type: SimulateTransactionResult
   - name: extractHint
     address: "0x0000000000000000000000000000000042100037"
     isConfidential: true
