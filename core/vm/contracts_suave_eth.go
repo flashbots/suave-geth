@@ -454,6 +454,7 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 	}
 
 	shareBundle.Inclusion.Block = hexutil.EncodeUint64(bid.DecryptionCondition)
+	shareBundle.Inclusion.Block = hexutil.EncodeUint64(bid.DecryptionCondition + 25) // Assumes 25 block inclusion range
 
 	for _, tx := range append(userBundle.Txs, matchBundle.Txs...) {
 		txBytes, err := tx.MarshalBinary()
