@@ -19,6 +19,7 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
       - [Building from source](#building-from-source)
       - [Using Docker](#using-docker)
       - [Testing the devnet](#testing-the-devnet)
+      - [SUAPP examples](#suapp-examples)
     - [What do I use SUAVE for?](#what-do-i-use-suave-for)
     - [How do I execute a contract confidentially?](#how-do-i-execute-a-contract-confidentially)
     - [How do I run a SUAVE chain node?](#how-do-i-run-a-suave-chain-node)
@@ -106,6 +107,12 @@ Execute a RPC request with curl like this:
 ```bash
 $ curl 'http://localhost:8545' --header 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"eth_blockNumber", "params":[], "id":83 }'
 ```
+
+#### SUAPP examples
+
+See https://github.com/flashbots/suapp-examples 🚀
+
+---
 
 ### What do I use SUAVE for?
 
