@@ -13,28 +13,101 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
 
 **Table of Contents**
 
-1. [Getting Started](#getting-started)
-    1. [How do I use the SUAVE?](#how-do-i-use-suave)
-    1. [How do I execute a contract confidentially?](#how-do-i-execute-a-contract-confidentially)
-    1. [How do I run a SUAVE chain node?](#how-do-i-run-a-suave-chain-node)
-    1. [How do I run a SUAVE execution node?](#how-do-i-run-a-suave-execution-node)
-1. [suave-geth technical details](#suave-geth-technical-details)
-    1. [SUAVE Runtime (MEVM)](#suave-runtime-mevm)
-    1. [Confidential execution of smart contracts](#confidential-execution-of-smart-contracts)
-    1. [Confidential compute requests](#confidential-compute-requests)
-    1. [SUAVE Bids](#suave-bids)
-    1. [SUAVE library](#suave-library)
-    1. [Confidential APIs](#confidential-apis)
-    1. [Confidential Store](#confidential-store)
-    1. [SUAVE Mempool](#suave-mempool)
-    1. [Notable differences from standard issue go-ethereum](#notable-differences-from-standard-issue-go-ethereum)
-    1. [Suave precompiles](#suave-precompiles)
+- [SUAVE](#suave)
+  - [Getting Started](#getting-started)
+    - [Starting a local devnet](#starting-a-local-devnet)
+      - [Building from source](#building-from-source)
+      - [Using Docker](#using-docker)
+      - [Testing the devnet](#testing-the-devnet)
+    - [What do I use SUAVE for?](#what-do-i-use-suave-for)
+    - [How do I execute a contract confidentially?](#how-do-i-execute-a-contract-confidentially)
+    - [How do I run a SUAVE chain node?](#how-do-i-run-a-suave-chain-node)
+    - [How do I run a SUAVE execution node?](#how-do-i-run-a-suave-execution-node)
+  - [suave-geth technical details](#suave-geth-technical-details)
+    - [SUAVE Runtime (MEVM)](#suave-runtime-mevm)
+    - [Confidential execution of smart contracts](#confidential-execution-of-smart-contracts)
+    - [Confidential compute requests](#confidential-compute-requests)
+    - [SUAVE Bids](#suave-bids)
+    - [SUAVE library](#suave-library)
+    - [Confidential APIs](#confidential-apis)
+    - [Confidential Store](#confidential-store)
+    - [SUAVE Mempool](#suave-mempool)
+  - [Notable differences from standard issue go-ethereum](#notable-differences-from-standard-issue-go-ethereum)
+    - [Changes to RPC methods](#changes-to-rpc-methods)
+    - [SuavePrecompiledContract](#suaveprecompiledcontract)
+    - [SUAVE precompile wrapper](#suave-precompile-wrapper)
+    - [SuaveExecutionBackend](#suaveexecutionbackend)
+    - [EVM Interpreter](#evm-interpreter)
+    - [Basic Eth block building RPC](#basic-eth-block-building-rpc)
+  - [SUAVE precompiles](#suave-precompiles)
+    - [IsConfidential](#isconfidential)
+    - [ConfidentialInputs](#confidentialinputs)
+    - [ConfidentialStore](#confidentialstore)
+    - [ConfidentialRetrieve](#confidentialretrieve)
+    - [NewBid](#newbid)
+    - [FetchBids](#fetchbids)
+    - [SimulateBundle](#simulatebundle)
+    - [ExtractHint](#extracthint)
+    - [BuildEthBlock](#buildethblock)
+    - [SubmitEthBlockBidToRelay](#submitethblockbidtorelay)
 
 ---
 
 ## Getting Started
 
-### How do I use SUAVE?
+### Starting a local devnet
+
+
+There's two ways to start the local devnet: with Docker or directly using the suave-geth binary.
+
+#### Building from source
+
+```bash
+# build the binary
+$ make suave
+```
+
+Now you have the `suave` binary in your Go bin directory. You can check this by running:
+
+```bash
+$ which suave
+$ suave --version
+```
+
+Start the local devnet like this:
+
+```bash
+$ suave --suave.dev
+```
+
+#### Using Docker
+
+```bash
+# spin up the local devnet with docker-compose
+$ make devnet-up
+
+# check that the containers are running
+$ docker ps
+
+# you can stop the local devnet like this
+$ make devnet-down
+```
+
+#### Testing the devnet
+
+Create a few example transactions:
+
+```bash
+$ go run suave/devenv/cmd/main.go
+```
+
+Execute a RPC request with curl like this:
+
+```bash
+$ curl 'http://localhost:8545' --header 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"eth_blockNumber", "params":[], "id":83 }'
+```
+
+### What do I use SUAVE for?
 
 1. **Deploy confidential smart contracts.**
    Smart contracts on SUAVE follow the same rules as on Ethereum with the added advantage of being able to access additional precompiles during confidential execution. Precompiles are available through the [SUAVE library](#suave-library).
@@ -48,7 +121,7 @@ For a deeper dive, check out the [technical details section](#suave-geth-technic
 
 ### How do I execute a contract confidentially?
 
-Let’s take a look at how you can request confidential computation through an execution node.  
+Let’s take a look at how you can request confidential computation through an execution node.
 
 1. Pick your favorite execution node. You’ll need its URL and wallet address. Note that the execution node is fully trusted to provide the result of your confidential computation.
 
@@ -206,7 +279,7 @@ We introduce a few new transaction types.
 
 * `ConfidentialComputeRequest`
 
-    This type facilitates users in interacting with the MEVM through the `eth_sendRawTransaction` method. After processing, the request's `ConfidentialComputeRecord` is embedded into `SuaveTransaction.ConfidentialComputeRequest` and serves as an onchain record of computation.  
+    This type facilitates users in interacting with the MEVM through the `eth_sendRawTransaction` method. After processing, the request's `ConfidentialComputeRecord` is embedded into `SuaveTransaction.ConfidentialComputeRequest` and serves as an onchain record of computation.
 
     ```go
     type ConfidentialComputeRequest struct {
@@ -217,7 +290,7 @@ We introduce a few new transaction types.
 
 * `SuaveTransaction`
 
-    A specialized transaction type that encapsulates the result of a confidential computation request. It includes the `ConfidentialComputeRequest`, signed by the user, which ensures that the result comes from the expected computor, as the `SuaveTransaction`'s signer must match the `KettleAddress`.  
+    A specialized transaction type that encapsulates the result of a confidential computation request. It includes the `ConfidentialComputeRequest`, signed by the user, which ensures that the result comes from the expected computor, as the `SuaveTransaction`'s signer must match the `KettleAddress`.
 
     ```go
     type SuaveTransaction struct {
@@ -243,7 +316,7 @@ The basic flow is as follows:
 3. The execution node creates a `SuaveTransaction` using the confidential computation request and the result of its execution, the node then signs and submits the transaction into the mempool
 4. The transaction makes its way into a block, by executing the `ConfidentialComputeResult` as calldata, as long as the execution node's signature matches the requested executor node in (1.2.)
 
-The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.  
+The initial confidential computation has access to both the public and confidential data, but only the public data becomes part of the transaction propagated through the mempool. Any confidential data passed in by the user is discarded after the execution.
 
 Architecture reference
 ![image](suave/docs/execution_node_architecture.png)
@@ -303,8 +376,8 @@ library Suave {
 
 ### Confidential APIs
 
-Confidential precompiles have access to the following [Confidential APIs](suave/core/types.go) during execution.  
-This is subject to change!  
+Confidential precompiles have access to the following [Confidential APIs](suave/core/types.go) during execution.
+This is subject to change!
 
 ```go
 type ConfidentialStoreEngine interface {
@@ -329,10 +402,10 @@ type ConfidentialEthBackend interface {
 
 The Confidential Store is an integral part of the SUAVE chain, designed to facilitate secure and privacy-preserving transactions and smart contract interactions. It functions as a key-value store where users can safely store and retrieve confidential data related to their bids. The Confidential Store restricts access (both reading and writing) only to the allowed peekers of each bid, allowing developers to define the entire data model of their application!
 
-The current, and certainly not final, implementation of the Confidential Store is managed by the `ConfidentialStoreEngine`. The engine consists of a storage backend, which holds the raw data, and a transport topic, which relays synchronization messages between nodes.  
-We provide two storage backends to the confidential store engine: the `LocalConfidentialStore`, storing data in memory in a simple dictionary, and `RedisStoreBackend`, storing data in redis. To enable redis as the storage backed, pass redis endpoint via `--suave.confidential.redis-store-endpoint`.  
-For synchronization of confidential stores via transport we provide an implementation using a shared Redis PubSub in `RedisPubSubTransport`, as well as a *crude* synchronization protocol. To enable redis transport, pass redis endpoint via `--suave.confidential.redis-transport-endpoint`. Note that Redis transport only synchronizes *current* state, there is no initial synchronization - a newly connected node will not have access to old data.  
-Redis as either storage backend or transport is *temporary* and will be removed once we have a well-tested p2p solution.  
+The current, and certainly not final, implementation of the Confidential Store is managed by the `ConfidentialStoreEngine`. The engine consists of a storage backend, which holds the raw data, and a transport topic, which relays synchronization messages between nodes.
+We provide two storage backends to the confidential store engine: the `LocalConfidentialStore`, storing data in memory in a simple dictionary, and `RedisStoreBackend`, storing data in redis. To enable redis as the storage backed, pass redis endpoint via `--suave.confidential.redis-store-endpoint`.
+For synchronization of confidential stores via transport we provide an implementation using a shared Redis PubSub in `RedisPubSubTransport`, as well as a *crude* synchronization protocol. To enable redis transport, pass redis endpoint via `--suave.confidential.redis-transport-endpoint`. Note that Redis transport only synchronizes *current* state, there is no initial synchronization - a newly connected node will not have access to old data.
+Redis as either storage backend or transport is *temporary* and will be removed once we have a well-tested p2p solution.
 
 ![image](suave/docs/confidential_store_engine.png)
 
@@ -446,22 +519,22 @@ For details and implementation see [contracts_suave.go](core/vm/contracts_suave.
 
 ### IsConfidential
 
-|   |   |
-|---|---|
+|         |              |
+| ------- | ------------ |
 | Address | `0x42010000` |
-| Inputs | None |
-| Outputs | boolean |
+| Inputs  | None         |
+| Outputs | boolean      |
 
 Outputs whether execution mode is regular (on-chain) or confidential.
 
 
 ### ConfidentialInputs
 
-|   |   |
-|---|---|
+|         |              |
+| ------- | ------------ |
 | Address | `0x42010001` |
-| Inputs | None |
-| Outputs | bytes |
+| Inputs  | None         |
+| Outputs | bytes        |
 
 Outputs the confidential inputs passed in with the confidential computation request.
 
@@ -470,11 +543,11 @@ NOTE: currently all precompiles have access to the data passed in. This might ch
 
 ### ConfidentialStore
 
-|   |   |
-|---|---|
-| Address | `0x42020000` |
-| Inputs | (Suave.BidId bidId, string key, bytes data) |
-| Outputs | None |
+|         |                                             |
+| ------- | ------------------------------------------- |
+| Address | `0x42020000`                                |
+| Inputs  | (Suave.BidId bidId, string key, bytes data) |
+| Outputs | None                                        |
 
 
 Stores the value in underlying confidential store.
@@ -482,11 +555,11 @@ Requires that the caller is present in the `AllowedPeekers` of the bid passed in
 
 ### ConfidentialRetrieve
 
-|   |   |
-|---|---|
-| Address | `0x42020001` |
-| Inputs | (Suave.BidId bidId, string key) |
-| Outputs | bytes |
+|         |                                 |
+| ------- | ------------------------------- |
+| Address | `0x42020001`                    |
+| Inputs  | (Suave.BidId bidId, string key) |
+| Outputs | bytes                           |
 
 
 Retrieves the value from underlying confidential store.
@@ -496,43 +569,43 @@ Requires that the caller is present in the `AllowedPeekers` of the bid passed in
 ### NewBid
 
 
-|   |   |
-|---|---|
-| Address | `0x42030000` |
-| Inputs | (uint64 decryptionCondition, string[] allowedPeekers) |
-| Outputs | Suave.Bid |
+|         |                                                       |
+| ------- | ----------------------------------------------------- |
+| Address | `0x42030000`                                          |
+| Inputs  | (uint64 decryptionCondition, string[] allowedPeekers) |
+| Outputs | Suave.Bid                                             |
 
 Initializes the bid in ConfidentialStore. All bids must be initialized before attempting to store data on them.
 Initialization of bids can *only* be done through this precompile!
 
 ### FetchBids
 
-|   |   |
-|---|---|
-| Address | `0x42030001` |
-| Inputs | uint64 DecryptionCondition |
-| Outputs | Suave.Bid[] |
+|         |                            |
+| ------- | -------------------------- |
+| Address | `0x42030001`               |
+| Inputs  | uint64 DecryptionCondition |
+| Outputs | Suave.Bid[]                |
 
 Returns all bids matching the decryption condition.
 This method is subject to change! In the near future bids will be stored in a different way, possibly changing how they are accessed.
 
 ### SimulateBundle
 
-|   |   |
-|---|---|
-| Address | `0x42100000` |
-| Inputs | bytes bundleArgs (json) |
+|         |                            |
+| ------- | -------------------------- |
+| Address | `0x42100000`               |
+| Inputs  | bytes bundleArgs (json)    |
 | Outputs | (bool success, uint64 egp) |
 
 Simulates the bundle by building a block containing it, returns whether the apply was successful and the EGP of the resulting block.
 
 ### ExtractHint
 
-|   |   |
-|---|---|
-| Address | `0x42100037` |
-| Inputs | bytes bundleData (json) |
-| Outputs | bytes hintData (json) |
+|         |                         |
+| ------- | ----------------------- |
+| Address | `0x42100037`            |
+| Inputs  | bytes bundleData (json) |
+| Outputs | bytes hintData (json)   |
 
 Parses the bundle data and extracts the hint - "To" address and the calldata.
 
@@ -547,11 +620,11 @@ struct {
 
 ### BuildEthBlock
 
-|   |   |
-|---|---|
-| Address | `0x42100001` |
-| Inputs | (Suave.BuildBlockArgs blockArgs, Suave.BidId bidId) |
-| Outputs | (bytes builderBid, bytes blockPayload) |
+|         |                                                     |
+| ------- | --------------------------------------------------- |
+| Address | `0x42100001`                                        |
+| Inputs  | (Suave.BuildBlockArgs blockArgs, Suave.BidId bidId) |
+| Outputs | (bytes builderBid, bytes blockPayload)              |
 
 
 Builds an Ethereum block based on the bid passed in.
@@ -560,11 +633,11 @@ The block is built *in order*, without any attepmts at re-ordering. The block wi
 
 ### SubmitEthBlockBidToRelay
 
-|   |   |
-|---|---|
-| Address | `0x42100002` |
-| Inputs | (string relayUrl, bytes builderBid (json) |
-| Outputs | (bytes error) |
+|         |                                           |
+| ------- | ----------------------------------------- |
+| Address | `0x42100002`                              |
+| Inputs  | (string relayUrl, bytes builderBid (json) |
+| Outputs | (bytes error)                             |
 
 Submits provided builderBid to a boost relay. If the submission is successful, returns nothing, otherwise returns an error string.
 
