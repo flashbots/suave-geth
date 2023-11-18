@@ -37,6 +37,10 @@ library Suave {
         bytes32[] topics;
     }
 
+    struct SimulatedTransaction {
+        bytes body;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -203,7 +207,11 @@ library Suave {
         return abi.decode(data, (uint64));
     }
 
-    function simulateTransaction(bytes memory bundleData) internal view returns (SimulateTransactionResult memory) {
+    function simulateTransaction(SimulatedTransaction[] memory bundleData)
+        internal
+        view
+        returns (SimulateTransactionResult memory)
+    {
         (bool success, bytes memory data) = SIMULATE_TRANSACTION.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(SIMULATE_TRANSACTION, data);

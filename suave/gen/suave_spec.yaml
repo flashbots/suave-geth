@@ -58,6 +58,10 @@ structs:
         type: address
       - name: topics
         type: bytes32[]
+  - name: SimulatedTransaction
+    fields:
+      - name: body
+        type: bytes
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
@@ -139,7 +143,7 @@ functions:
     address: "0x0000000000000000000000000000000051100001"
     input:
       - name: bundleData
-        type: bytes
+        type: SimulatedTransaction[]
     output:
       fields:
         - name: output1

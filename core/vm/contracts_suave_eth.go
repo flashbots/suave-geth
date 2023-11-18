@@ -484,17 +484,23 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 	return json.Marshal(shareBundle)
 }
 
-func (s *suaveRuntime) simulateTransaction(input []byte) (types.SimulateTransactionResult, error) {
-	var txn types.Transaction
-	err := json.Unmarshal(input, &txn)
-	if err != nil {
-		return types.SimulateTransactionResult{}, err
+func (s *suaveRuntime) simulateTransaction(inputs []types.SimulatedTransaction) (types.SimulateTransactionResult, error) {
+	var txns types.Transactions
+
+	for _, input := range inputs {
+		var txn types.Transaction
+
+		err := json.Unmarshal(input.Body, &txn)
+		if err != nil {
+			return types.SimulateTransactionResult{}, err
+		}
+		txns = append(txns, &txn)
 	}
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	defer cancel()
 
-	result, err := s.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlockFull(ctx, nil, types.Transactions{&txn})
+	result, err := s.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlockFull(ctx, nil, txns)
 	if err != nil {
 		return types.SimulateTransactionResult{}, err
 	}

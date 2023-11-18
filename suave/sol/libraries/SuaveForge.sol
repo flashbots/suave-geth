@@ -117,7 +117,7 @@ library SuaveForge {
         return abi.decode(data, (uint64));
     }
 
-    function simulateTransaction(bytes memory bundleData)
+    function simulateTransaction(Suave.SimulatedTransaction[] memory bundleData)
         internal
         view
         returns (Suave.SimulateTransactionResult memory)
