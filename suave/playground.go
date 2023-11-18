@@ -34,6 +34,16 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(receipt.ContractAddress)
+
+	contract := sdk.GetContract(receipt.ContractAddress, artifact.Abi, clt)
+	result, err = contract.SendTransaction("example", []interface{}{}, nil)
+	if err != nil {
+		panic(err)
+	}
+	receipt, err = result.Wait()
+	if err != nil {
+		panic(err)
+	}
 }
 
 type privKey struct {
