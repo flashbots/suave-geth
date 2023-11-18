@@ -76,7 +76,11 @@ func (e *RemoteEthBackend) call(ctx context.Context, result interface{}, method 
 }
 
 func (e *RemoteEthBackend) BlockNumber() (uint64, error) {
-	return ethclient.NewClient(e.client).BlockNumber(context.Background())
+	client, err := rpc.DialContext(context.Background(), e.endpoint)
+	if err != nil {
+		return 0, err
+	}
+	return ethclient.NewClient(client).BlockNumber(context.Background())
 }
 
 func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
