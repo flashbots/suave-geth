@@ -197,3 +197,10 @@ functions:
       fields:
         - name: encodedBundle
           type: bytes
+  - name: aaa
+    address: "0x0000000000000000000000000000000442010001"
+    output:
+      packed: true
+      fields:
+        - name: output1
+          type: bytes

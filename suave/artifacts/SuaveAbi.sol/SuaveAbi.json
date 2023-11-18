@@ -446,7 +446,7 @@
     "submitBundleJsonRPC(string,string,bytes)": "92649e7d",
     "submitEthBlockBidToRelay(string,bytes)": "37a5686a"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"PeekerReverted\",\"type\":\"error\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"slot\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"proposerPubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"parent\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"feeRecipient\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"gasLimit\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"random\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"validator\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"amount\",\"type\":\"uint64\"}],\"internalType\":\"struct Suave.Withdrawal[]\",\"name\":\"withdrawals\",\"type\":\"tuple[]\"}],\"internalType\":\"struct Suave.BuildBlockArgs\",\"name\":\"blockArgs\",\"type\":\"tuple\"},{\"internalType\":\"Suave.BidId\",\"name\":\"bid\",\"type\":\"bytes16\"},{\"internalType\":\"string\",\"name\":\"namespace\",\"type\":\"string\"}],\"name\":\"buildEthBlock\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"Suave.BidId\",\"name\":\"bidId\",\"type\":\"bytes16\"},{\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"confidentialRetrieve\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"Suave.BidId\",\"name\":\"bidId\",\"type\":\"bytes16\"},{\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"confidentialStore\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"bundleData\",\"type\":\"bytes\"}],\"name\":\"extractHint\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"cond\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"namespace\",\"type\":\"string\"}],\"name\":\"fetchBids\",\"outputs\":[{\"components\":[{\"internalType\":\"Suave.BidId\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"Suave.BidId\",\"name\":\"salt\",\"type\":\"bytes16\"},{\"internalType\":\"uint64\",\"name\":\"decryptionCondition\",\"type\":\"uint64\"},{\"internalType\":\"address[]\",\"name\":\"allowedPeekers\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedStores\",\"type\":\"address[]\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"}],\"internalType\":\"struct Suave.Bid[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"Suave.BidId\",\"name\":\"bidId\",\"type\":\"bytes16\"}],\"name\":\"fillMevShareBundle\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"decryptionCondition\",\"type\":\"uint64\"},{\"internalType\":\"address[]\",\"name\":\"allowedPeekers\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedStores\",\"type\":\"address[]\"},{\"internalType\":\"string\",\"name\":\"BidType\",\"type\":\"string\"}],\"name\":\"newBid\",\"outputs\":[{\"components\":[{\"internalType\":\"Suave.BidId\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"Suave.BidId\",\"name\":\"salt\",\"type\":\"bytes16\"},{\"internalType\":\"uint64\",\"name\":\"decryptionCondition\",\"type\":\"uint64\"},{\"internalType\":\"address[]\",\"name\":\"allowedPeekers\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedStores\",\"type\":\"address[]\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"}],\"internalType\":\"struct Suave.Bid\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"txn\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"chainId\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"signingKey\",\"type\":\"string\"}],\"name\":\"signEthTransaction\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"bundleData\",\"type\":\"bytes\"}],\"name\":\"simulateBundle\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"url\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"}],\"name\":\"submitBundleJsonRPC\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"relayUrl\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"builderBid\",\"type\":\"bytes\"}],\"name\":\"submitEthBlockBidToRelay\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"sol/libraries/SuaveAbi.sol\":\"SuaveAbi\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\"]},\"sources\":{\"sol/libraries/Suave.sol\":{\"keccak256\":\"0x94056d6a87fc407bd453c59e90e5f69b8d9b22e73e78a890b7e33e8ace1100ef\",\"license\":\"UNLICENSED\",\"urls\":[\"bzz-raw://d19a248c05c6a224e87ea4067a9c24650b6ef28bfdffcfb46356f11df8deadfd\",\"dweb:/ipfs/QmNzxR8mWuPEc68vNAXeeW8h38QvEy6tw1gGy6ZCkswaRj\"]},\"sol/libraries/SuaveAbi.sol\":{\"keccak256\":\"0x6cc1782baba025c16b05f9d499d0aae81fdc0486eabb8344123e723f66ad7a7b\",\"urls\":[\"bzz-raw://8b1b8fc2cc964c56901f1835f3cb8c7578d238925d74d73130f89578ef0faa8e\",\"dweb:/ipfs/QmbHfiHhf7neJCyhEf8TtY1dSurkB15fGtUub8PwY6XYre\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"name\":\"PeekerReverted\",\"type\":\"error\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint64\",\"name\":\"slot\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"proposerPubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"parent\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"feeRecipient\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"gasLimit\",\"type\":\"uint64\"},{\"internalType\":\"bytes32\",\"name\":\"random\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"validator\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"amount\",\"type\":\"uint64\"}],\"internalType\":\"struct Suave.Withdrawal[]\",\"name\":\"withdrawals\",\"type\":\"tuple[]\"}],\"internalType\":\"struct Suave.BuildBlockArgs\",\"name\":\"blockArgs\",\"type\":\"tuple\"},{\"internalType\":\"Suave.BidId\",\"name\":\"bid\",\"type\":\"bytes16\"},{\"internalType\":\"string\",\"name\":\"namespace\",\"type\":\"string\"}],\"name\":\"buildEthBlock\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"Suave.BidId\",\"name\":\"bidId\",\"type\":\"bytes16\"},{\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"confidentialRetrieve\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"Suave.BidId\",\"name\":\"bidId\",\"type\":\"bytes16\"},{\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"confidentialStore\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"bundleData\",\"type\":\"bytes\"}],\"name\":\"extractHint\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"cond\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"namespace\",\"type\":\"string\"}],\"name\":\"fetchBids\",\"outputs\":[{\"components\":[{\"internalType\":\"Suave.BidId\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"Suave.BidId\",\"name\":\"salt\",\"type\":\"bytes16\"},{\"internalType\":\"uint64\",\"name\":\"decryptionCondition\",\"type\":\"uint64\"},{\"internalType\":\"address[]\",\"name\":\"allowedPeekers\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedStores\",\"type\":\"address[]\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"}],\"internalType\":\"struct Suave.Bid[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"Suave.BidId\",\"name\":\"bidId\",\"type\":\"bytes16\"}],\"name\":\"fillMevShareBundle\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"decryptionCondition\",\"type\":\"uint64\"},{\"internalType\":\"address[]\",\"name\":\"allowedPeekers\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedStores\",\"type\":\"address[]\"},{\"internalType\":\"string\",\"name\":\"BidType\",\"type\":\"string\"}],\"name\":\"newBid\",\"outputs\":[{\"components\":[{\"internalType\":\"Suave.BidId\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"Suave.BidId\",\"name\":\"salt\",\"type\":\"bytes16\"},{\"internalType\":\"uint64\",\"name\":\"decryptionCondition\",\"type\":\"uint64\"},{\"internalType\":\"address[]\",\"name\":\"allowedPeekers\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"allowedStores\",\"type\":\"address[]\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"}],\"internalType\":\"struct Suave.Bid\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"txn\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"chainId\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"signingKey\",\"type\":\"string\"}],\"name\":\"signEthTransaction\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"bundleData\",\"type\":\"bytes\"}],\"name\":\"simulateBundle\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"url\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"params\",\"type\":\"bytes\"}],\"name\":\"submitBundleJsonRPC\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"relayUrl\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"builderBid\",\"type\":\"bytes\"}],\"name\":\"submitEthBlockBidToRelay\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"sol/libraries/SuaveAbi.sol\":\"SuaveAbi\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\"]},\"sources\":{\"sol/libraries/Suave.sol\":{\"keccak256\":\"0x4532813c74d8bb133abdb39a4bd74b64dfbc03b702cd52bc315655aa870e24b8\",\"license\":\"UNLICENSED\",\"urls\":[\"bzz-raw://781ab8d4b1d2ba64e92452a15a9b1275b24e6154b980c5dc0976649bbbdaca39\",\"dweb:/ipfs/Qmf3HJrfBaMonbCdC88iuGSZ7pvvcgz3xdCWHFx6iGf1L6\"]},\"sol/libraries/SuaveAbi.sol\":{\"keccak256\":\"0x6cc1782baba025c16b05f9d499d0aae81fdc0486eabb8344123e723f66ad7a7b\",\"urls\":[\"bzz-raw://8b1b8fc2cc964c56901f1835f3cb8c7578d238925d74d73130f89578ef0faa8e\",\"dweb:/ipfs/QmbHfiHhf7neJCyhEf8TtY1dSurkB15fGtUub8PwY6XYre\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.19+commit.7dd6d404"
@@ -906,10 +906,10 @@
     },
     "sources": {
       "sol/libraries/Suave.sol": {
-        "keccak256": "0x94056d6a87fc407bd453c59e90e5f69b8d9b22e73e78a890b7e33e8ace1100ef",
+        "keccak256": "0x4532813c74d8bb133abdb39a4bd74b64dfbc03b702cd52bc315655aa870e24b8",
         "urls": [
-          "bzz-raw://d19a248c05c6a224e87ea4067a9c24650b6ef28bfdffcfb46356f11df8deadfd",
-          "dweb:/ipfs/QmNzxR8mWuPEc68vNAXeeW8h38QvEy6tw1gGy6ZCkswaRj"
+          "bzz-raw://781ab8d4b1d2ba64e92452a15a9b1275b24e6154b980c5dc0976649bbbdaca39",
+          "dweb:/ipfs/Qmf3HJrfBaMonbCdC88iuGSZ7pvvcgz3xdCWHFx6iGf1L6"
         ],
         "license": "UNLICENSED"
       },
@@ -926,20 +926,20 @@
   },
   "ast": {
     "absolutePath": "sol/libraries/SuaveAbi.sol",
-    "id": 40187,
+    "id": 40218,
     "exportedSymbols": {
       "Suave": [
-        40049
+        40080
       ],
       "SuaveAbi": [
-        40186
+        40217
       ]
     },
     "nodeType": "SourceUnit",
     "src": "0:1455:16",
     "nodes": [
       {
-        "id": 40051,
+        "id": 40082,
         "nodeType": "PragmaDirective",
         "src": "0:23:16",
         "nodes": [],
@@ -951,23 +951,23 @@
         ]
       },
       {
-        "id": 40053,
+        "id": 40084,
         "nodeType": "ImportDirective",
         "src": "25:34:16",
         "nodes": [],
         "absolutePath": "sol/libraries/Suave.sol",
         "file": "./Suave.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 40187,
-        "sourceUnit": 40050,
+        "scope": 40218,
+        "sourceUnit": 40081,
         "symbolAliases": [
           {
             "foreign": {
-              "id": 40052,
+              "id": 40083,
               "name": "Suave",
               "nodeType": "Identifier",
               "overloadedDeclarations": [],
-              "referencedDeclaration": 40049,
+              "referencedDeclaration": 40080,
               "src": "33:5:16",
               "typeDescriptions": {}
             },
@@ -977,12 +977,12 @@
         "unitAlias": ""
       },
       {
-        "id": 40186,
+        "id": 40217,
         "nodeType": "ContractDefinition",
         "src": "61:1393:16",
         "nodes": [
           {
-            "id": 40059,
+            "id": 40090,
             "nodeType": "ErrorDefinition",
             "src": "85:37:16",
             "nodes": [],
@@ -990,17 +990,17 @@
             "name": "PeekerReverted",
             "nameLocation": "91:14:16",
             "parameters": {
-              "id": 40058,
+              "id": 40089,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40055,
+                  "id": 40086,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40059,
+                  "scope": 40090,
                   "src": "106:7:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1009,7 +1009,7 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 40054,
+                    "id": 40085,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "106:7:16",
@@ -1023,12 +1023,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40057,
+                  "id": 40088,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40059,
+                  "scope": 40090,
                   "src": "115:5:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1037,7 +1037,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40056,
+                    "id": 40087,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "115:5:16",
@@ -1053,12 +1053,12 @@
             }
           },
           {
-            "id": 40076,
+            "id": 40107,
             "nodeType": "FunctionDefinition",
             "src": "128:175:16",
             "nodes": [],
             "body": {
-              "id": 40075,
+              "id": 40106,
               "nodeType": "Block",
               "src": "301:2:16",
               "nodes": [],
@@ -1071,17 +1071,17 @@
             "name": "newBid",
             "nameLocation": "137:6:16",
             "parameters": {
-              "id": 40070,
+              "id": 40101,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40061,
+                  "id": 40092,
                   "mutability": "mutable",
                   "name": "decryptionCondition",
                   "nameLocation": "151:19:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40076,
+                  "scope": 40107,
                   "src": "144:26:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1090,7 +1090,7 @@
                     "typeString": "uint64"
                   },
                   "typeName": {
-                    "id": 40060,
+                    "id": 40091,
                     "name": "uint64",
                     "nodeType": "ElementaryTypeName",
                     "src": "144:6:16",
@@ -1103,12 +1103,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40064,
+                  "id": 40095,
                   "mutability": "mutable",
                   "name": "allowedPeekers",
                   "nameLocation": "189:14:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40076,
+                  "scope": 40107,
                   "src": "172:31:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1118,7 +1118,7 @@
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 40062,
+                      "id": 40093,
                       "name": "address",
                       "nodeType": "ElementaryTypeName",
                       "src": "172:7:16",
@@ -1128,7 +1128,7 @@
                         "typeString": "address"
                       }
                     },
-                    "id": 40063,
+                    "id": 40094,
                     "nodeType": "ArrayTypeName",
                     "src": "172:9:16",
                     "typeDescriptions": {
@@ -1140,12 +1140,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40067,
+                  "id": 40098,
                   "mutability": "mutable",
                   "name": "allowedStores",
                   "nameLocation": "222:13:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40076,
+                  "scope": 40107,
                   "src": "205:30:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1155,7 +1155,7 @@
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 40065,
+                      "id": 40096,
                       "name": "address",
                       "nodeType": "ElementaryTypeName",
                       "src": "205:7:16",
@@ -1165,7 +1165,7 @@
                         "typeString": "address"
                       }
                     },
-                    "id": 40066,
+                    "id": 40097,
                     "nodeType": "ArrayTypeName",
                     "src": "205:9:16",
                     "typeDescriptions": {
@@ -1177,12 +1177,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40069,
+                  "id": 40100,
                   "mutability": "mutable",
                   "name": "BidType",
                   "nameLocation": "251:7:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40076,
+                  "scope": 40107,
                   "src": "237:21:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1191,7 +1191,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40068,
+                    "id": 40099,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "237:6:16",
@@ -1206,17 +1206,17 @@
               "src": "143:116:16"
             },
             "returnParameters": {
-              "id": 40074,
+              "id": 40105,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40073,
+                  "id": 40104,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40076,
+                  "scope": 40107,
                   "src": "283:16:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1225,10 +1225,10 @@
                     "typeString": "struct Suave.Bid"
                   },
                   "typeName": {
-                    "id": 40072,
+                    "id": 40103,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 40071,
+                      "id": 40102,
                       "name": "Suave.Bid",
                       "nameLocations": [
                         "283:5:16",
@@ -1250,18 +1250,18 @@
               ],
               "src": "282:18:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40088,
+            "id": 40119,
             "nodeType": "FunctionDefinition",
             "src": "305:102:16",
             "nodes": [],
             "body": {
-              "id": 40087,
+              "id": 40118,
               "nodeType": "Block",
               "src": "405:2:16",
               "nodes": [],
@@ -1274,17 +1274,17 @@
             "name": "fetchBids",
             "nameLocation": "314:9:16",
             "parameters": {
-              "id": 40081,
+              "id": 40112,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40078,
+                  "id": 40109,
                   "mutability": "mutable",
                   "name": "cond",
                   "nameLocation": "331:4:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40088,
+                  "scope": 40119,
                   "src": "324:11:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1293,7 +1293,7 @@
                     "typeString": "uint64"
                   },
                   "typeName": {
-                    "id": 40077,
+                    "id": 40108,
                     "name": "uint64",
                     "nodeType": "ElementaryTypeName",
                     "src": "324:6:16",
@@ -1306,12 +1306,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40080,
+                  "id": 40111,
                   "mutability": "mutable",
                   "name": "namespace",
                   "nameLocation": "351:9:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40088,
+                  "scope": 40119,
                   "src": "337:23:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1320,7 +1320,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40079,
+                    "id": 40110,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "337:6:16",
@@ -1335,17 +1335,17 @@
               "src": "323:38:16"
             },
             "returnParameters": {
-              "id": 40086,
+              "id": 40117,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40085,
+                  "id": 40116,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40088,
+                  "scope": 40119,
                   "src": "385:18:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1355,10 +1355,10 @@
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 40083,
+                      "id": 40114,
                       "nodeType": "UserDefinedTypeName",
                       "pathNode": {
-                        "id": 40082,
+                        "id": 40113,
                         "name": "Suave.Bid",
                         "nameLocations": [
                           "385:5:16",
@@ -1375,7 +1375,7 @@
                         "typeString": "struct Suave.Bid"
                       }
                     },
-                    "id": 40084,
+                    "id": 40115,
                     "nodeType": "ArrayTypeName",
                     "src": "385:11:16",
                     "typeDescriptions": {
@@ -1388,18 +1388,18 @@
               ],
               "src": "384:20:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40099,
+            "id": 40130,
             "nodeType": "FunctionDefinition",
             "src": "412:100:16",
             "nodes": [],
             "body": {
-              "id": 40098,
+              "id": 40129,
               "nodeType": "Block",
               "src": "510:2:16",
               "nodes": [],
@@ -1412,17 +1412,17 @@
             "name": "confidentialStore",
             "nameLocation": "421:17:16",
             "parameters": {
-              "id": 40096,
+              "id": 40127,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40091,
+                  "id": 40122,
                   "mutability": "mutable",
                   "name": "bidId",
                   "nameLocation": "451:5:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40099,
+                  "scope": 40130,
                   "src": "439:17:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1431,10 +1431,10 @@
                     "typeString": "Suave.BidId"
                   },
                   "typeName": {
-                    "id": 40090,
+                    "id": 40121,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 40089,
+                      "id": 40120,
                       "name": "Suave.BidId",
                       "nameLocations": [
                         "439:5:16",
@@ -1455,12 +1455,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40093,
+                  "id": 40124,
                   "mutability": "mutable",
                   "name": "key",
                   "nameLocation": "472:3:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40099,
+                  "scope": 40130,
                   "src": "458:17:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1469,7 +1469,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40092,
+                    "id": 40123,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "458:6:16",
@@ -1482,12 +1482,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40095,
+                  "id": 40126,
                   "mutability": "mutable",
                   "name": "data",
                   "nameLocation": "490:4:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40099,
+                  "scope": 40130,
                   "src": "477:17:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1496,7 +1496,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40094,
+                    "id": 40125,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "477:5:16",
@@ -1511,23 +1511,23 @@
               "src": "438:57:16"
             },
             "returnParameters": {
-              "id": 40097,
+              "id": 40128,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "510:0:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40110,
+            "id": 40141,
             "nodeType": "FunctionDefinition",
             "src": "517:107:16",
             "nodes": [],
             "body": {
-              "id": 40109,
+              "id": 40140,
               "nodeType": "Block",
               "src": "622:2:16",
               "nodes": [],
@@ -1540,17 +1540,17 @@
             "name": "confidentialRetrieve",
             "nameLocation": "526:20:16",
             "parameters": {
-              "id": 40105,
+              "id": 40136,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40102,
+                  "id": 40133,
                   "mutability": "mutable",
                   "name": "bidId",
                   "nameLocation": "559:5:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40110,
+                  "scope": 40141,
                   "src": "547:17:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1559,10 +1559,10 @@
                     "typeString": "Suave.BidId"
                   },
                   "typeName": {
-                    "id": 40101,
+                    "id": 40132,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 40100,
+                      "id": 40131,
                       "name": "Suave.BidId",
                       "nameLocations": [
                         "547:5:16",
@@ -1583,12 +1583,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40104,
+                  "id": 40135,
                   "mutability": "mutable",
                   "name": "key",
                   "nameLocation": "580:3:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40110,
+                  "scope": 40141,
                   "src": "566:17:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1597,7 +1597,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40103,
+                    "id": 40134,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "566:6:16",
@@ -1612,17 +1612,17 @@
               "src": "546:38:16"
             },
             "returnParameters": {
-              "id": 40108,
+              "id": 40139,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40107,
+                  "id": 40138,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40110,
+                  "scope": 40141,
                   "src": "608:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1631,7 +1631,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40106,
+                    "id": 40137,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "608:5:16",
@@ -1645,18 +1645,18 @@
               ],
               "src": "607:14:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40122,
+            "id": 40153,
             "nodeType": "FunctionDefinition",
             "src": "629:134:16",
             "nodes": [],
             "body": {
-              "id": 40121,
+              "id": 40152,
               "nodeType": "Block",
               "src": "761:2:16",
               "nodes": [],
@@ -1669,17 +1669,17 @@
             "name": "signEthTransaction",
             "nameLocation": "638:18:16",
             "parameters": {
-              "id": 40117,
+              "id": 40148,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40112,
+                  "id": 40143,
                   "mutability": "mutable",
                   "name": "txn",
                   "nameLocation": "670:3:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40122,
+                  "scope": 40153,
                   "src": "657:16:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1688,7 +1688,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40111,
+                    "id": 40142,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "657:5:16",
@@ -1701,12 +1701,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40114,
+                  "id": 40145,
                   "mutability": "mutable",
                   "name": "chainId",
                   "nameLocation": "689:7:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40122,
+                  "scope": 40153,
                   "src": "675:21:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1715,7 +1715,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40113,
+                    "id": 40144,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "675:6:16",
@@ -1728,12 +1728,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40116,
+                  "id": 40147,
                   "mutability": "mutable",
                   "name": "signingKey",
                   "nameLocation": "712:10:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40122,
+                  "scope": 40153,
                   "src": "698:24:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1742,7 +1742,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40115,
+                    "id": 40146,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "698:6:16",
@@ -1757,17 +1757,17 @@
               "src": "656:67:16"
             },
             "returnParameters": {
-              "id": 40120,
+              "id": 40151,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40119,
+                  "id": 40150,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40122,
+                  "scope": 40153,
                   "src": "747:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1776,7 +1776,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40118,
+                    "id": 40149,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "747:5:16",
@@ -1790,18 +1790,18 @@
               ],
               "src": "746:14:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40130,
+            "id": 40161,
             "nodeType": "FunctionDefinition",
             "src": "768:82:16",
             "nodes": [],
             "body": {
-              "id": 40129,
+              "id": 40160,
               "nodeType": "Block",
               "src": "848:2:16",
               "nodes": [],
@@ -1814,17 +1814,17 @@
             "name": "simulateBundle",
             "nameLocation": "777:14:16",
             "parameters": {
-              "id": 40125,
+              "id": 40156,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40124,
+                  "id": 40155,
                   "mutability": "mutable",
                   "name": "bundleData",
                   "nameLocation": "805:10:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40130,
+                  "scope": 40161,
                   "src": "792:23:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1833,7 +1833,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40123,
+                    "id": 40154,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "792:5:16",
@@ -1848,17 +1848,17 @@
               "src": "791:25:16"
             },
             "returnParameters": {
-              "id": 40128,
+              "id": 40159,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40127,
+                  "id": 40158,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40130,
+                  "scope": 40161,
                   "src": "840:6:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1867,7 +1867,7 @@
                     "typeString": "uint64"
                   },
                   "typeName": {
-                    "id": 40126,
+                    "id": 40157,
                     "name": "uint64",
                     "nodeType": "ElementaryTypeName",
                     "src": "840:6:16",
@@ -1881,18 +1881,18 @@
               ],
               "src": "839:8:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40138,
+            "id": 40169,
             "nodeType": "FunctionDefinition",
             "src": "855:85:16",
             "nodes": [],
             "body": {
-              "id": 40137,
+              "id": 40168,
               "nodeType": "Block",
               "src": "938:2:16",
               "nodes": [],
@@ -1905,17 +1905,17 @@
             "name": "extractHint",
             "nameLocation": "864:11:16",
             "parameters": {
-              "id": 40133,
+              "id": 40164,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40132,
+                  "id": 40163,
                   "mutability": "mutable",
                   "name": "bundleData",
                   "nameLocation": "889:10:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40138,
+                  "scope": 40169,
                   "src": "876:23:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1924,7 +1924,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40131,
+                    "id": 40162,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "876:5:16",
@@ -1939,17 +1939,17 @@
               "src": "875:25:16"
             },
             "returnParameters": {
-              "id": 40136,
+              "id": 40167,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40135,
+                  "id": 40166,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40138,
+                  "scope": 40169,
                   "src": "924:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1958,7 +1958,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40134,
+                    "id": 40165,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "924:5:16",
@@ -1972,18 +1972,18 @@
               ],
               "src": "923:14:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40154,
+            "id": 40185,
             "nodeType": "FunctionDefinition",
             "src": "942:157:16",
             "nodes": [],
             "body": {
-              "id": 40153,
+              "id": 40184,
               "nodeType": "Block",
               "src": "1097:2:16",
               "nodes": [],
@@ -1996,17 +1996,17 @@
             "name": "buildEthBlock",
             "nameLocation": "951:13:16",
             "parameters": {
-              "id": 40147,
+              "id": 40178,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40141,
+                  "id": 40172,
                   "mutability": "mutable",
                   "name": "blockArgs",
                   "nameLocation": "993:9:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40154,
+                  "scope": 40185,
                   "src": "965:37:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2015,10 +2015,10 @@
                     "typeString": "struct Suave.BuildBlockArgs"
                   },
                   "typeName": {
-                    "id": 40140,
+                    "id": 40171,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 40139,
+                      "id": 40170,
                       "name": "Suave.BuildBlockArgs",
                       "nameLocations": [
                         "965:5:16",
@@ -2039,12 +2039,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40144,
+                  "id": 40175,
                   "mutability": "mutable",
                   "name": "bid",
                   "nameLocation": "1016:3:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40154,
+                  "scope": 40185,
                   "src": "1004:15:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -2053,10 +2053,10 @@
                     "typeString": "Suave.BidId"
                   },
                   "typeName": {
-                    "id": 40143,
+                    "id": 40174,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 40142,
+                      "id": 40173,
                       "name": "Suave.BidId",
                       "nameLocations": [
                         "1004:5:16",
@@ -2077,12 +2077,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40146,
+                  "id": 40177,
                   "mutability": "mutable",
                   "name": "namespace",
                   "nameLocation": "1035:9:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40154,
+                  "scope": 40185,
                   "src": "1021:23:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2091,7 +2091,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40145,
+                    "id": 40176,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "1021:6:16",
@@ -2106,17 +2106,17 @@
               "src": "964:81:16"
             },
             "returnParameters": {
-              "id": 40152,
+              "id": 40183,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40149,
+                  "id": 40180,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40154,
+                  "scope": 40185,
                   "src": "1069:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2125,7 +2125,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40148,
+                    "id": 40179,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1069:5:16",
@@ -2138,12 +2138,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40151,
+                  "id": 40182,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40154,
+                  "scope": 40185,
                   "src": "1083:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2152,7 +2152,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40150,
+                    "id": 40181,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1083:5:16",
@@ -2166,18 +2166,18 @@
               ],
               "src": "1068:28:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40164,
+            "id": 40195,
             "nodeType": "FunctionDefinition",
             "src": "1104:122:16",
             "nodes": [],
             "body": {
-              "id": 40163,
+              "id": 40194,
               "nodeType": "Block",
               "src": "1224:2:16",
               "nodes": [],
@@ -2190,17 +2190,17 @@
             "name": "submitEthBlockBidToRelay",
             "nameLocation": "1113:24:16",
             "parameters": {
-              "id": 40159,
+              "id": 40190,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40156,
+                  "id": 40187,
                   "mutability": "mutable",
                   "name": "relayUrl",
                   "nameLocation": "1152:8:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40164,
+                  "scope": 40195,
                   "src": "1138:22:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2209,7 +2209,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40155,
+                    "id": 40186,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "1138:6:16",
@@ -2222,12 +2222,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40158,
+                  "id": 40189,
                   "mutability": "mutable",
                   "name": "builderBid",
                   "nameLocation": "1175:10:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40164,
+                  "scope": 40195,
                   "src": "1162:23:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2236,7 +2236,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40157,
+                    "id": 40188,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1162:5:16",
@@ -2251,17 +2251,17 @@
               "src": "1137:49:16"
             },
             "returnParameters": {
-              "id": 40162,
+              "id": 40193,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40161,
+                  "id": 40192,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40164,
+                  "scope": 40195,
                   "src": "1210:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2270,7 +2270,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40160,
+                    "id": 40191,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1210:5:16",
@@ -2284,18 +2284,18 @@
               ],
               "src": "1209:14:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40173,
+            "id": 40204,
             "nodeType": "FunctionDefinition",
             "src": "1231:86:16",
             "nodes": [],
             "body": {
-              "id": 40172,
+              "id": 40203,
               "nodeType": "Block",
               "src": "1315:2:16",
               "nodes": [],
@@ -2308,17 +2308,17 @@
             "name": "fillMevShareBundle",
             "nameLocation": "1240:18:16",
             "parameters": {
-              "id": 40168,
+              "id": 40199,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40167,
+                  "id": 40198,
                   "mutability": "mutable",
                   "name": "bidId",
                   "nameLocation": "1271:5:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40173,
+                  "scope": 40204,
                   "src": "1259:17:16",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -2327,10 +2327,10 @@
                     "typeString": "Suave.BidId"
                   },
                   "typeName": {
-                    "id": 40166,
+                    "id": 40197,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 40165,
+                      "id": 40196,
                       "name": "Suave.BidId",
                       "nameLocations": [
                         "1259:5:16",
@@ -2353,17 +2353,17 @@
               "src": "1258:19:16"
             },
             "returnParameters": {
-              "id": 40171,
+              "id": 40202,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40170,
+                  "id": 40201,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40173,
+                  "scope": 40204,
                   "src": "1301:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2372,7 +2372,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40169,
+                    "id": 40200,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1301:5:16",
@@ -2386,18 +2386,18 @@
               ],
               "src": "1300:14:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 40185,
+            "id": 40216,
             "nodeType": "FunctionDefinition",
             "src": "1322:130:16",
             "nodes": [],
             "body": {
-              "id": 40184,
+              "id": 40215,
               "nodeType": "Block",
               "src": "1450:2:16",
               "nodes": [],
@@ -2410,17 +2410,17 @@
             "name": "submitBundleJsonRPC",
             "nameLocation": "1331:19:16",
             "parameters": {
-              "id": 40180,
+              "id": 40211,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40175,
+                  "id": 40206,
                   "mutability": "mutable",
                   "name": "url",
                   "nameLocation": "1365:3:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40185,
+                  "scope": 40216,
                   "src": "1351:17:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2429,7 +2429,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40174,
+                    "id": 40205,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "1351:6:16",
@@ -2442,12 +2442,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40177,
+                  "id": 40208,
                   "mutability": "mutable",
                   "name": "method",
                   "nameLocation": "1384:6:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40185,
+                  "scope": 40216,
                   "src": "1370:20:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2456,7 +2456,7 @@
                     "typeString": "string"
                   },
                   "typeName": {
-                    "id": 40176,
+                    "id": 40207,
                     "name": "string",
                     "nodeType": "ElementaryTypeName",
                     "src": "1370:6:16",
@@ -2469,12 +2469,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 40179,
+                  "id": 40210,
                   "mutability": "mutable",
                   "name": "params",
                   "nameLocation": "1405:6:16",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40185,
+                  "scope": 40216,
                   "src": "1392:19:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2483,7 +2483,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40178,
+                    "id": 40209,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1392:5:16",
@@ -2498,17 +2498,17 @@
               "src": "1350:62:16"
             },
             "returnParameters": {
-              "id": 40183,
+              "id": 40214,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 40182,
+                  "id": 40213,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 40185,
+                  "scope": 40216,
                   "src": "1436:12:16",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -2517,7 +2517,7 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 40181,
+                    "id": 40212,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
                     "src": "1436:5:16",
@@ -2531,7 +2531,7 @@
               ],
               "src": "1435:14:16"
             },
-            "scope": 40186,
+            "scope": 40217,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -2544,13 +2544,13 @@
         "contractKind": "contract",
         "fullyImplemented": true,
         "linearizedBaseContracts": [
-          40186
+          40217
         ],
         "name": "SuaveAbi",
         "nameLocation": "70:8:16",
-        "scope": 40187,
+        "scope": 40218,
         "usedErrors": [
-          40059
+          40090
         ]
       }
     ]

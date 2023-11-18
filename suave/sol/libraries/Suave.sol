@@ -37,6 +37,8 @@ library Suave {
 
     address public constant IS_CONFIDENTIAL_ADDR = 0x0000000000000000000000000000000042010000;
 
+    address public constant AAA = 0x0000000000000000000000000000000442010001;
+
     address public constant BUILD_ETH_BLOCK = 0x0000000000000000000000000000000042100001;
 
     address public constant CONFIDENTIAL_INPUTS = 0x0000000000000000000000000000000042010001;
@@ -75,6 +77,15 @@ library Suave {
             // Load the data after 32 bytes, so add 0x20
             b := mload(add(isConfidentialBytes, 0x20))
         }
+    }
+
+    function aaa() internal view returns (bytes memory) {
+        (bool success, bytes memory data) = AAA.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(AAA, data);
+        }
+
+        return data;
     }
 
     function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bidId, string memory namespace)

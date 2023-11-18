@@ -36,6 +36,12 @@ library SuaveForge {
         return string(abi.encodePacked("0x", converted));
     }
 
+    function aaa() internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000442010001", abi.encode());
+
+        return data;
+    }
+
     function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.BidId bidId, string memory namespace)
         internal
         view

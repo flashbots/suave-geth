@@ -9,6 +9,8 @@ contract ConfidentialStore {
         address[] memory allowedList = new address[](1);
         allowedList[0] = address(this);
 
+        Suave.aaa();
+        
         Suave.Bid memory bid = Suave.newBid(
             10,
             allowedList,
