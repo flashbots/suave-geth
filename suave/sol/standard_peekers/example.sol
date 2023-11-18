@@ -8,8 +8,22 @@ contract ExampleEthCallSource {
         (uint256 num) = abi.decode(output, (uint64));
         require(num == expected);
     }
+
+    function example() public {
+        Suave.callBinance();
+    }
 }
 
+contract X {
+    createClaim(earth uint64) {
+        
+    }
+
+    settle() {
+        Suave.callBinance()
+
+    }
+}
 contract ExampleEthCallTarget {
     event Nil();
 

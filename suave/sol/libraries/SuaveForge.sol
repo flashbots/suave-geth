@@ -47,6 +47,12 @@ library SuaveForge {
         return abi.decode(data, (bytes, bytes));
     }
 
+    function callBinance(string memory token1) internal view returns (string memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000543200001", abi.encode(token1));
+
+        return abi.decode(data, (string));
+    }
+
     function confidentialInputs() internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042010001", abi.encode());
 

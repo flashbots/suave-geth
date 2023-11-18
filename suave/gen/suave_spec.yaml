@@ -220,3 +220,13 @@ functions:
       fields:
         - name: encodedBundle
           type: bytes
+  - name: callBinance
+    address: "0x0000000000000000000000000000000543200001"
+    isConfidential: true
+    input:
+      - name: token1
+        type: string
+    output:
+      fields:
+        - name: value
+          type: string

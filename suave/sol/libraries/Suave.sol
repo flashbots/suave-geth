@@ -50,6 +50,8 @@ library Suave {
 
     address public constant BUILD_ETH_BLOCK = 0x0000000000000000000000000000000042100001;
 
+    address public constant CALL_BINANCE = 0x0000000000000000000000000000000543200001;
+
     address public constant CONFIDENTIAL_INPUTS = 0x0000000000000000000000000000000042010001;
 
     address public constant CONFIDENTIAL_RETRIEVE = 0x0000000000000000000000000000000042020001;
@@ -101,6 +103,16 @@ library Suave {
         }
 
         return abi.decode(data, (bytes, bytes));
+    }
+
+    function callBinance(string memory token1) internal view returns (string memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = CALL_BINANCE.staticcall(abi.encode(token1));
+        if (!success) {
+            revert PeekerReverted(CALL_BINANCE, data);
+        }
+
+        return abi.decode(data, (string));
     }
 
     function confidentialInputs() internal view returns (bytes memory) {

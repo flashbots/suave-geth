@@ -2,6 +2,8 @@ package vm
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -133,3 +135,17 @@ type suaveRuntime struct {
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+func (s *suaveRuntime) callBinance(token1 string) (string, error) {
+	resp, err := http.Get("www.google.com")
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	return string(data), nil
+}
