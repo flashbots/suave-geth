@@ -133,3 +133,7 @@ type suaveRuntime struct {
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+func (b *suaveRuntime) aaa() ([]byte, error) {
+	return []byte{}, nil
+}
