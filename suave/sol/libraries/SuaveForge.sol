@@ -87,6 +87,12 @@ library SuaveForge {
         return data;
     }
 
+    function getBlockNumber() internal view returns (uint64) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000543200001", abi.encode());
+
+        return abi.decode(data, (uint64));
+    }
+
     function newBid(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,

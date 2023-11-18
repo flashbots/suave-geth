@@ -197,3 +197,9 @@ functions:
       fields:
         - name: encodedBundle
           type: bytes
+  - name: getBlockNumber
+    address: "0x0000000000000000000000000000000543200001"
+    output:
+      fields:
+        - name: number
+          type: uint64

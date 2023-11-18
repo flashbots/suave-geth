@@ -53,6 +53,8 @@ library Suave {
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
+    address public constant GET_BLOCK_NUMBER = 0x0000000000000000000000000000000543200001;
+
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
@@ -151,6 +153,15 @@ library Suave {
         }
 
         return data;
+    }
+
+    function getBlockNumber() internal view returns (uint64) {
+        (bool success, bytes memory data) = GET_BLOCK_NUMBER.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(GET_BLOCK_NUMBER, data);
+        }
+
+        return abi.decode(data, (uint64));
     }
 
     function newBid(

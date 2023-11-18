@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/trie"
@@ -18,6 +19,10 @@ var (
 )
 
 type EthMock struct{}
+
+func (e *EthMock) BlockNumber() (uint64, error) {
+	return 0, nil
+}
 
 func (e *EthMock) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
 	block := types.NewBlock(&types.Header{GasUsed: 1000}, txs, nil, nil, trie.NewStackTrie(nil))
@@ -68,6 +73,10 @@ func (e *RemoteEthBackend) call(ctx context.Context, result interface{}, method 
 	}
 
 	return nil
+}
+
+func (e *RemoteEthBackend) BlockNumber() (uint64, error) {
+	return ethclient.NewClient(e.client).BlockNumber(context.Background())
 }
 
 func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
