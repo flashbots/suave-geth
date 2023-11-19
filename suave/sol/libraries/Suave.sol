@@ -26,6 +26,10 @@ library Suave {
         Withdrawal[] withdrawals;
     }
 
+    struct HttpConfig {
+        string[] headers;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -52,6 +56,10 @@ library Suave {
     address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
+
+    address public constant HTTP_GET = 0x0000000000000000000000000000000143200001;
+
+    address public constant HTTP_POST = 0x0000000000000000000000000000000153200001;
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
@@ -151,6 +159,28 @@ library Suave {
         }
 
         return data;
+    }
+
+    function httpGet(string memory url, HttpConfig memory config) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = HTTP_GET.staticcall(abi.encode(url, config));
+        if (!success) {
+            revert PeekerReverted(HTTP_GET, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    function httpPost(string memory url, bytes memory body, HttpConfig memory config)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = HTTP_POST.staticcall(abi.encode(url, body, config));
+        if (!success) {
+            revert PeekerReverted(HTTP_POST, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function newBid(

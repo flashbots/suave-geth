@@ -1,7 +1,10 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -133,3 +136,59 @@ type suaveRuntime struct {
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+func (s *suaveRuntime) httpGet(url string, config types.HttpConfig) ([]byte, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// decode headers
+	for _, header := range config.Headers {
+		prts := strings.Split(header, ":")
+		if len(prts) != 2 {
+			return nil, fmt.Errorf("incorrect header format")
+		}
+		req.Header.Add(prts[0], prts[1])
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (s *suaveRuntime) httpPost(url string, body []byte, config types.HttpConfig) ([]byte, error) {
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	// decode headers
+	for _, header := range config.Headers {
+		prts := strings.Split(header, ":")
+		if len(prts) != 2 {
+			return nil, fmt.Errorf("incorrect header format")
+		}
+		req.Header.Add(prts[0], prts[1])
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}

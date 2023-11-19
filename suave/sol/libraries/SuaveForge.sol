@@ -87,6 +87,22 @@ library SuaveForge {
         return data;
     }
 
+    function httpGet(string memory url, Suave.HttpConfig memory config) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000143200001", abi.encode(url, config));
+
+        return abi.decode(data, (bytes));
+    }
+
+    function httpPost(string memory url, bytes memory body, Suave.HttpConfig memory config)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000153200001", abi.encode(url, body, config));
+
+        return abi.decode(data, (bytes));
+    }
+
     function newBid(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,

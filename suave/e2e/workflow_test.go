@@ -1100,6 +1100,42 @@ func TestE2EKettleAddressEndpoint(t *testing.T) {
 	require.NotEmpty(t, addrs)
 }
 
+func TestE2E_HttpPrecompiles(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	t.Run("Get", func(t *testing.T) {
+		srvAddr := fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, r.Method, "GET")
+			require.Equal(t, r.Header.Get("a"), "b")
+			w.Write([]byte{0x1, 0x2, 0x3})
+		})
+
+		contract.SendTransaction("getExample", []interface{}{srvAddr}, nil)
+	})
+
+	t.Run("Post", func(t *testing.T) {
+		body := []byte{0x1, 0x2, 0x3}
+
+		srvAddr := fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, r.Method, "POST")
+			require.Equal(t, r.Header.Get("b"), "c")
+
+			bodyRes, _ := io.ReadAll(r.Body)
+			require.Equal(t, body, bodyRes)
+
+			w.Write([]byte{0x1, 0x2, 0x3})
+		})
+
+		contract.SendTransaction("postExample", []interface{}{srvAddr, body}, nil)
+	})
+}
+
 type clientWrapper struct {
 	t *testing.T
 
@@ -1226,6 +1262,24 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	}
 
 	return f
+}
+
+type handlerFunc func(http.ResponseWriter, *http.Request)
+
+type dummyRelayer struct {
+	fn handlerFunc
+}
+
+func (d *dummyRelayer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	d.fn(w, r)
+}
+
+func (f *framework) testHttpRelayer(handler handlerFunc) string {
+	httpSrv := httptest.NewServer(&dummyRelayer{fn: handler})
+	f.t.Cleanup(func() {
+		httpSrv.Close()
+	})
+	return httpSrv.URL
 }
 
 func (f *framework) NewSDKClient() *sdk.Client {

@@ -44,6 +44,10 @@ structs:
         type: bytes32
       - name: withdrawals
         type: Withdrawal[]
+  - name: HttpConfig
+    fields:
+      - name: headers
+        type: string[]
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
@@ -196,4 +200,28 @@ functions:
       packed: true
       fields:
         - name: encodedBundle
+          type: bytes
+  - name: httpGet
+    address: "0x0000000000000000000000000000000143200001"
+    input:
+      - name: url
+        type: string
+      - name: config
+        type: HttpConfig
+    output:
+      fields:
+        - name: getResult
+          type: bytes
+  - name: httpPost
+    address: "0x0000000000000000000000000000000153200001"
+    input:
+      - name: url
+        type: string
+      - name: body
+        type: bytes
+      - name: config
+        type: HttpConfig
+    output:
+      fields:
+        - name: postResult
           type: bytes

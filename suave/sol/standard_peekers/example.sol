@@ -8,6 +8,22 @@ contract ExampleEthCallSource {
         (uint256 num) = abi.decode(output, (uint64));
         require(num == expected);
     }
+
+    function getExample(string memory url) public {
+        Suave.HttpConfig memory config;
+        config.headers = new string[](1);
+        config.headers[0] = "a:b";
+
+        Suave.httpGet(url, config);
+    }
+
+    function postExample(string memory url, bytes memory body) public {
+        Suave.HttpConfig memory config;
+        config.headers = new string[](1);
+        config.headers[0] = "b:c";
+
+        Suave.httpPost(url, body, config);
+    }
 }
 
 contract ExampleEthCallTarget {
