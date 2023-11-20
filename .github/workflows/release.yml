@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CGO_CFLAGS_ALLOW: "-O -D__BLST_PORTABLE__"
+  CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+
+jobs:
+  gh-release:
+    name: Generate artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.20
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Install gox
+        run: go install github.com/mitchellh/gox@latest
+
+      - name: Build artifacts
+        run: ./suave/scripts/build-release.sh
+
+      - name: Generate changelog
+        run: ./suave/scripts/parse-changelog.sh 0.0.2 > changelog_0.0.2.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: 0.0.2
+          body_path: changelog_0.0.2.md
+          draft: false
+          prerelease: false
+          files: |
+            ./pkg/darwin_amd64.zip
+            ./pkg/linux_amd64.zip
