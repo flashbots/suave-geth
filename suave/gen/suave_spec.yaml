@@ -44,6 +44,8 @@ structs:
         type: bytes32
       - name: withdrawals
         type: Withdrawal[]
+      - name: extra
+        type: bytes
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"

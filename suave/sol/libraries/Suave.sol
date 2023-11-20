@@ -24,6 +24,7 @@ library Suave {
         uint64 gasLimit;
         bytes32 random;
         Withdrawal[] withdrawals;
+        bytes extra;
     }
 
     struct Withdrawal {
