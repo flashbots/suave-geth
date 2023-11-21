@@ -76,6 +76,11 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 
 	if metrics.EnabledExpensive {
 		precompileName := artifacts.PrecompileAddressToName(p.addr)
+		if precompileName == "" {
+			// This happens because isConfidential is not part of the precompile list
+			// but a special case
+			precompileName = "isConfidential"
+		}
 		metrics.GetOrRegisterMeter("suave/runtime/"+precompileName, nil).Mark(1)
 
 		now := time.Now()
