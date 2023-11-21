@@ -192,3 +192,11 @@ func (s *suaveRuntime) httpPost(url string, body []byte, config types.HttpConfig
 	}
 	return data, nil
 }
+
+func (s *suaveRuntime) jsonUnmarshal(a string) ([]byte, error) {
+
+	fmt.Println("-- unmarshal --")
+	fmt.Println(a)
+
+	return nil, nil
+}

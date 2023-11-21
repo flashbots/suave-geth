@@ -103,6 +103,12 @@ library SuaveForge {
         return abi.decode(data, (bytes));
     }
 
+    function jsonUnmarshal(string memory abispec) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000163200001", abi.encode(abispec));
+
+        return abi.decode(data, (bytes));
+    }
+
     function newBid(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,

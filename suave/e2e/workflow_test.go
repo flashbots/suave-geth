@@ -1136,6 +1136,29 @@ func TestE2E_HttpPrecompiles(t *testing.T) {
 	})
 }
 
+func TestE2E_Experiment(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+		bodyRes, _ := io.ReadAll(r.Body)
+
+		fmt.Println("__ REQUEST __")
+		fmt.Println(string(bodyRes))
+		fmt.Println(r.Method)
+
+		w.Write([]byte{0x1, 0x2, 0x3})
+	})
+
+	goerliAddr := "https://goerli.infura.io/v3/34336fb3098841258d3bb8481fd5faf4"
+	contract.SendTransaction("sampleJSON", []interface{}{goerliAddr}, nil)
+}
+
 type clientWrapper struct {
 	t *testing.T
 

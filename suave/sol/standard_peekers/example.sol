@@ -1,6 +1,8 @@
 pragma solidity ^0.8.8;
 
 import "../libraries/Suave.sol";
+import "../suave-std/api/ethereum/ethereum.sol";
+import "../suave-std/builder/Builder.sol";
 
 contract ExampleEthCallSource {
     function callTarget(address target, uint256 expected) public {
@@ -23,6 +25,21 @@ contract ExampleEthCallSource {
         config.headers[0] = "b:c";
 
         Suave.httpPost(url, body, config);
+    }
+
+    function sampleJSON(string memory url) public {
+        Ethereum jj = new Ethereum(url);
+        jj.version();
+        jj.blockNumber();
+        jj.blockByNumber(20);
+    }
+}
+
+contract BuilderExample {
+    function example() public {
+        Builder bb = new Builder();
+        bb.execTransaction();
+        bb.call();
     }
 }
 

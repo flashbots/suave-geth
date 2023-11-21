@@ -61,6 +61,8 @@ library Suave {
 
     address public constant HTTP_POST = 0x0000000000000000000000000000000153200001;
 
+    address public constant JSON_UNMARSHAL = 0x0000000000000000000000000000000163200001;
+
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
@@ -178,6 +180,15 @@ library Suave {
         (bool success, bytes memory data) = HTTP_POST.staticcall(abi.encode(url, body, config));
         if (!success) {
             revert PeekerReverted(HTTP_POST, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    function jsonUnmarshal(string memory abispec) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = JSON_UNMARSHAL.staticcall(abi.encode(abispec));
+        if (!success) {
+            revert PeekerReverted(JSON_UNMARSHAL, data);
         }
 
         return abi.decode(data, (bytes));

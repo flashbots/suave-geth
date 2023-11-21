@@ -225,3 +225,12 @@ functions:
       fields:
         - name: postResult
           type: bytes
+  - name: jsonUnmarshal
+    address: "0x0000000000000000000000000000000163200001"
+    input:
+      - name: abispec
+        type: string
+    output:
+      fields:
+        - name: decodedObj
+          type: bytes
