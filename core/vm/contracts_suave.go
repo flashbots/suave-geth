@@ -194,6 +194,7 @@ func (s *suaveRuntime) httpPost(url string, body []byte, config types.HttpConfig
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Println("_POST ERROR _", err)
 		return nil, err
 	}
 

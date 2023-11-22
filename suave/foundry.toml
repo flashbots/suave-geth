@@ -4,3 +4,5 @@ out = 'artifacts'
 bytecode_hash = 'none'
 cache = false
 solc_version = '0.8.19'
+optimize = true
+optimize_runs = 800

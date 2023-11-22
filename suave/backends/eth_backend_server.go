@@ -2,6 +2,7 @@ package backends
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -37,6 +38,8 @@ func NewEthBackendServer(b EthBackendServerBackend) *EthBackendServer {
 }
 
 func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+	fmt.Println("=== BUILD ETH BLOCK ===")
+
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
 		buildArgs = &types.BuildBlockArgs{

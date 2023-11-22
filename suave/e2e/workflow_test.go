@@ -1137,10 +1137,61 @@ func TestE2E_HttpPrecompiles(t *testing.T) {
 }
 
 func TestE2E_Experiment(t *testing.T) {
-	fr := newFramework(t)
+	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
+	/*
+		This one works
+		=> {"jsonrpc":"2.0","id":1,"method":"suavex_buildEthBlock","params":[null,[{"type":"0x0","nonce":"0x0","to":"0x71562b71999873db5b286df957af199ec94617f7","gas":"0x5208","gasPrice":"0xd","maxPriorityFeePerGas":null,"maxFeePerGas":null,"value":"0x3e8","input":"0x","v":"0xa96","r":"0x1fdcfebe9cbc245ce3c099e2d124fd182a068b0a2af6a3a52f2f9916278196ca","s":"0x2bb82542ce5ac2d7a1b156531f20691b1920bdcc9ac26ddf198c3349ddf5e50d","hash":"0xc316c9c8e5afb4c4da38af97b23a9c8baa60d403fa7e7b57f6309119bfc73525"}]]}
+	*/
+
+	/*
+		input := `{"jsonrpc": "2.0", "method": "suavex_buildEthBlock", "params": [null, [{"gas":"0x5208","gasPrice":"0xd","nonce":"0x0","value":"0x0","chainId":"0x0", "input": "0x", "v":"0xa96","r":"0x1fdcfebe9cbc245ce3c099e2d124fd182a068b0a2af6a3a52f2f9916278196ca","s":"0x2bb82542ce5ac2d7a1b156531f20691b1920bdcc9ac26ddf198c3349ddf5e50d"}]], "id": 1}`
+
+		resp, err := http.Post(fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, "application/json", bytes.NewBuffer([]byte(input)))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(resp)
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(string(data))
+	*/
+
 	clt := fr.NewSDKClient()
+
+	signedTx, err := types.SignNewTx(testKey, signer, &types.LegacyTx{
+		Nonce:    0,
+		GasPrice: big.NewInt(1000),
+		Gas:      100000,
+	})
+	require.NoError(t, err)
+
+	v, r, s := signedTx.RawSignatureValues()
+
+	txxn := &Transaction{
+		Gas:      signedTx.Gas(),
+		GasPrice: signedTx.GasPrice().Uint64(),
+		Value:    signedTx.Value().Uint64(),
+		Nonce:    signedTx.Nonce(),
+		Data:     signedTx.Data(),
+		ChainId:  signedTx.ChainId().Uint64(),
+		V:        v.Bytes(),
+		R:        r.Bytes(),
+		S:        s.Bytes(),
+	}
+	if to := signedTx.To(); to != nil {
+		txxn.To = *to
+	}
+
+	fmt.Println("-- r -v -s")
+	fmt.Println(txxn.R)
+	fmt.Println(txxn.S)
+	fmt.Println(txxn.V)
 
 	contractAddr := common.Address{0x3}
 	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
@@ -1158,9 +1209,26 @@ func TestE2E_Experiment(t *testing.T) {
 	*/
 
 	fmt.Println("_ LETS GO ! _")
+	fmt.Println(txxn)
 
-	goerliAddr := "https://goerli.infura.io/v3/34336fb3098841258d3bb8481fd5faf4"
-	contract.SendTransaction("sampleJSON", []interface{}{goerliAddr}, nil)
+	/*
+		contract.SendTransaction("sampleJSON", []interface{}{goerliAddr}, nil)
+	*/
+
+	contract.SendTransaction("simulateTxn", []interface{}{fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, txxn}, nil)
+}
+
+type Transaction struct {
+	To       common.Address
+	Gas      uint64
+	GasPrice uint64
+	Value    uint64
+	Nonce    uint64
+	Data     []byte
+	ChainId  uint64
+	R        []byte
+	S        []byte
+	V        []byte
 }
 
 func TestE2EPrecompile_Other(t *testing.T) {
@@ -1220,6 +1288,7 @@ func (c *clientWrapper) ProgressChain() *block {
 type framework struct {
 	t *testing.T
 
+	cfg      *frameworkConfig
 	ethSrv   *clientWrapper
 	suethSrv *clientWrapper
 }
@@ -1299,6 +1368,7 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 
 	f := &framework{
 		t:        t,
+		cfg:      &cfg,
 		ethSrv:   ethSrv,
 		suethSrv: &clientWrapper{t, node, ethservice},
 	}
