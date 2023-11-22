@@ -172,6 +172,11 @@ var (
 		Usage:    "Path to a custom chain specification file",
 		Category: flags.EthCategory,
 	}
+	RigilFlag = &cli.BoolFlag{
+		Name:     "rigil",
+		Usage:    "Rigil network: pre-configured proof-of-authority test network",
+		Category: flags.EthCategory,
+	}
 
 	// Dev mode
 	DeveloperFlag = &cli.BoolFlag{
@@ -996,6 +1001,7 @@ var (
 		SuaveFlag,
 		SepoliaFlag,
 		CustomChainFlag,
+		RigilFlag,
 	}
 	// NetworkFlags is the flag group of all built-in supported networks.
 	NetworkFlags = append([]cli.Flag{MainnetFlag}, TestnetFlags...)

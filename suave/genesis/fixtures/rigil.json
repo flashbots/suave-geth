@@ -1,0 +1,47 @@
+{
+    "name": "suave-rigil",
+    "config": {
+        "chainId": 16813125,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "berlinBlock": 0,
+        "suaveBlock": 0,
+        "clique": {
+            "period": 4,
+            "epoch": 30000,
+            "initial_signers": [
+                "0981717712ed2c4919fdbc27dfc804800a9eeff9",
+                "0e5b9aa4925ed1beeb08d1c5a92477a1b719baa7",
+                "0e8705e07bbe1ce2c39093df3d20aaa5120bfc7a"
+            ]
+        }
+    },
+    "difficulty": "1",
+    "gasLimit": "30000000",
+    "alloc": {
+        "7514bf4200868b9e40b6ea36bbeb6ce4965d4a57": {
+            "balance": "524288000000000000000000"
+        },
+        "a5104355c4cdca495fc00b17f4d8d29ad4fc0000": {
+            "balance": "524288000000000000000000"
+        },
+        "0981717712ed2c4919fdbc27dfc804800a9eeff9": {
+            "balance": "524288000000000000000000"
+        },
+        "0e5b9aa4925ed1beeb08d1c5a92477a1b719baa7": {
+            "balance": "524288000000000000000000"
+        },
+        "0e8705e07bbe1ce2c39093df3d20aaa5120bfc7a": {
+            "balance": "524288000000000000000000"
+        }
+    },
+    "bootnodes": [
+        "enode://3e575f38caa316c3c9cde227080578bbab03e3966e324616eaa22dac2aa085d9b77ac20c0fd0c67b7077b296b29db493af30a69e283d7a8c7c737203b5639ed2@bootnode-0.rigil.suave.flashbots.net:0?discport=30303"
+    ]
+}

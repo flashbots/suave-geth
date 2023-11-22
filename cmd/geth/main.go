@@ -344,6 +344,10 @@ func geth(ctx *cli.Context) error {
 		return fmt.Errorf("failed to setup suave development mode: %v", err)
 	}
 
+	if err := prepareSuaveNetworksRemapping(ctx); err != nil {
+		return err
+	}
+
 	prepare(ctx)
 	stack, backend := makeFullNode(ctx)
 	defer stack.Close()
@@ -480,6 +484,15 @@ func unlockAccounts(ctx *cli.Context, stack *node.Node) {
 	for i, account := range unlocks {
 		unlockAccount(ks, account, i, passwords)
 	}
+}
+
+func prepareSuaveNetworksRemapping(ctx *cli.Context) error {
+	if ctx.Bool(utils.RigilFlag.Name) {
+		if err := ctx.Set(utils.CustomChainFlag.Name, "rigil"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func prepareSuaveDev(ctx *cli.Context) error {
