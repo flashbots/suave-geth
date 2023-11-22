@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"regexp"
 	"strings"
@@ -252,4 +253,24 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+func TestJsonMarshal(t *testing.T) {
+	s := &suaveRuntime{}
+	s.jsonMarshal("", nil)
+}
+
+func TestJsonUnmarshal(t *testing.T) {
+	data := `{"a": 1, "b": [2], "c": {"d": 3}, "e": "4"}`
+	fmt.Println(data)
+	abiSpec := convertStringJsonToAbiSpec(data)
+
+	s := &suaveRuntime{}
+	decoded, err := s.jsonUnmarshal(data)
+	require.NoError(t, err)
+
+	encoded, err := s.jsonMarshal(abiSpec, decoded)
+	require.NoError(t, err)
+
+	fmt.Println(encoded)
 }

@@ -234,3 +234,19 @@ functions:
       fields:
         - name: decodedObj
           type: bytes
+  - name: jsonMarshal
+    address: "0x0000000000000000000000000000000173200001"
+    input:
+      - name: abispec
+        type: string
+      - name: obj
+        type: bytes
+    output:
+      fields:
+        - name: encodedObj
+          type: bytes
+  - name: simpleConsole
+    address: "0x0000000000000000000000000000000183200001"
+    input:
+      - name: obj
+        type: bytes

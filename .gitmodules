@@ -12,3 +12,6 @@
 [submodule "suave/lib/solmate"]
 	path = suave/lib/solmate
 	url = https://github.com/transmissions11/solmate
+[submodule "suave/lib/solady"]
+	path = suave/lib/solady
+	url = https://github.com/vectorized/solady

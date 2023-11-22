@@ -2,10 +2,14 @@ package vm
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
+
+	betterAbi "github.com/umbracle/ethgo/abi"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -171,6 +175,8 @@ func (s *suaveRuntime) httpPost(url string, body []byte, config types.HttpConfig
 		return nil, err
 	}
 
+	fmt.Println("__ POST __", url, string(body))
+
 	// decode headers
 	for _, header := range config.Headers {
 		prts := strings.Split(header, ":")
@@ -190,13 +196,122 @@ func (s *suaveRuntime) httpPost(url string, body []byte, config types.HttpConfig
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("__ POST RESPONSE __", string(data))
+
 	return data, nil
 }
 
+func convertStringJsonToAbiSpec(a string) string {
+	var f map[string]interface{}
+	if err := json.Unmarshal([]byte(a), &f); err != nil {
+		panic(err)
+	}
+	return convertInterfaceToAbiSpec(f)
+}
+
+func convertInterfaceToAbiSpec(i interface{}) string {
+	switch x := i.(type) {
+	case map[string]interface{}:
+		elems := []struct {
+			name string
+			typ  string
+		}{}
+
+		for k, v := range x {
+			elems = append(elems, struct {
+				name string
+				typ  string
+			}{
+				name: k,
+				typ:  convertInterfaceToAbiSpec(v),
+			})
+		}
+		// sort
+		sort.Slice(elems, func(i, j int) bool {
+			return elems[i].name < elems[j].name
+		})
+
+		finElems := []string{}
+		for _, elem := range elems {
+			finElems = append(finElems, elem.typ+" "+elem.name)
+		}
+		return "tuple(" + strings.Join(finElems, ", ") + ")"
+
+	case []interface{}:
+		return convertInterfaceToAbiSpec(x[0]) + "[]"
+
+	case string:
+		return "string"
+
+	case float64:
+		return "uint256"
+
+	default:
+		panic(fmt.Sprintf("unknown type %T", x))
+	}
+}
+
 func (s *suaveRuntime) jsonUnmarshal(a string) ([]byte, error) {
+	// Parse the json file as an abstract map
+	var f map[string]interface{}
+	if err := json.Unmarshal([]byte(a), &f); err != nil {
+		return nil, err
+	}
 
-	fmt.Println("-- unmarshal --")
-	fmt.Println(a)
+	xx := convertInterfaceToAbiSpec(f)
 
-	return nil, nil
+	fmt.Println("- abi spec 1 -")
+	fmt.Println(xx)
+
+	typ, err := betterAbi.NewType(xx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := typ.Encode(f)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *suaveRuntime) jsonMarshal(abispec string, obj []byte) ([]byte, error) {
+	fmt.Println("-- obj --")
+	fmt.Println(obj)
+	fmt.Println("- abi spec 2 -")
+	fmt.Println(abispec)
+
+	typ, err := betterAbi.NewType(abispec)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(typ)
+
+	xx, err := typ.Decode(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("-- decoded --")
+	fmt.Println(xx)
+
+	yy, err := json.Marshal(xx)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("-- final --")
+	fmt.Println(string(yy))
+
+	return yy, nil
+}
+
+func (s *suaveRuntime) simpleConsole(b []byte) error {
+	fmt.Println("_ SIMPLE CONSOLE _")
+
+	fmt.Println(b)
+	fmt.Println(string(b))
+
+	return nil
 }

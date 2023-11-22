@@ -1145,18 +1145,37 @@ func TestE2E_Experiment(t *testing.T) {
 	contractAddr := common.Address{0x3}
 	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
 
-	fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
-		bodyRes, _ := io.ReadAll(r.Body)
+	/*
+		fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+			bodyRes, _ := io.ReadAll(r.Body)
 
-		fmt.Println("__ REQUEST __")
-		fmt.Println(string(bodyRes))
-		fmt.Println(r.Method)
+			fmt.Println("__ REQUEST __")
+			fmt.Println(string(bodyRes))
+			fmt.Println(r.Method)
 
-		w.Write([]byte{0x1, 0x2, 0x3})
-	})
+			w.Write([]byte{0x1, 0x2, 0x3})
+		})
+	*/
+
+	fmt.Println("_ LETS GO ! _")
 
 	goerliAddr := "https://goerli.infura.io/v3/34336fb3098841258d3bb8481fd5faf4"
 	contract.SendTransaction("sampleJSON", []interface{}{goerliAddr}, nil)
+}
+
+func TestE2EPrecompile_Other(t *testing.T) {
+	// This end-to-end tests that the callx precompile gets called from a confidential request
+	fr := newFramework(t, WithKettleAddress())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// We reuse the same address for both the source and target contract
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	_, err := sourceContract.SendTransaction("other", []interface{}{}, nil)
+	require.NoError(t, err)
 }
 
 type clientWrapper struct {

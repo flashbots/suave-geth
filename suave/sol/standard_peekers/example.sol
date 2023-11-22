@@ -2,7 +2,7 @@ pragma solidity ^0.8.8;
 
 import "../libraries/Suave.sol";
 import "../suave-std/api/ethereum/ethereum.sol";
-import "../suave-std/builder/Builder.sol";
+import "../suave-std/builder/builder.sol";
 
 contract ExampleEthCallSource {
     function callTarget(address target, uint256 expected) public {
@@ -28,10 +28,17 @@ contract ExampleEthCallSource {
     }
 
     function sampleJSON(string memory url) public {
+        Suave.simpleConsole(abi.encode(11));
+
         Ethereum jj = new Ethereum(url);
-        jj.version();
-        jj.blockNumber();
+        // jj.version();
+        // jj.blockNumber();
         jj.blockByNumber(20);
+        Suave.simpleConsole(abi.encode(22));
+    }
+
+    function other() public {
+
     }
 }
 

@@ -2,8 +2,12 @@
 pragma solidity ^0.8.8;
 
 import "../../../libraries/Suave.sol";
+//import "solady/src/utils/JSONParserLib.sol";
+//import "../../utils/Strings.sol";
 
 contract Jsonrpc {
+    //using JSONParserLib for *;
+
     string url;
 
     constructor(string memory _url) {
@@ -21,7 +25,23 @@ contract Jsonrpc {
         string memory request = string(abi.encodePacked('{"jsonrpc": "2.0", "method": "', method, '", "params": ', string(body), ', "id": 1}'));
         bytes memory response = Suave.httpPost(url, bytes(request), config);
 
-        Suave.jsonUnmarshal(string(response));
         return response;
+
+        /*
+        string memory s = string(response);
+        JSONParserLib.Item memory item;
+
+        item = s.parse();
+
+        // loop over the children of item and return the one with key 'result'
+        JSONParserLib.Item[] memory children = item.children();
+        for (uint256 i = 0; i < children.length; i++) {
+            if (Strings.equal(children[i].key(), "result")) {
+                return children[i];
+            }
+        }
+        */
+
+        revert("not found");
     }
 }

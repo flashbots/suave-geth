@@ -61,11 +61,15 @@ library Suave {
 
     address public constant HTTP_POST = 0x0000000000000000000000000000000153200001;
 
+    address public constant JSON_MARSHAL = 0x0000000000000000000000000000000173200001;
+
     address public constant JSON_UNMARSHAL = 0x0000000000000000000000000000000163200001;
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
+
+    address public constant SIMPLE_CONSOLE = 0x0000000000000000000000000000000183200001;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
 
@@ -185,6 +189,15 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    function jsonMarshal(string memory abispec, bytes memory obj) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = JSON_MARSHAL.staticcall(abi.encode(abispec, obj));
+        if (!success) {
+            revert PeekerReverted(JSON_MARSHAL, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
     function jsonUnmarshal(string memory abispec) internal view returns (bytes memory) {
         (bool success, bytes memory data) = JSON_UNMARSHAL.staticcall(abi.encode(abispec));
         if (!success) {
@@ -220,6 +233,13 @@ library Suave {
         }
 
         return abi.decode(data, (bytes));
+    }
+
+    function simpleConsole(bytes memory obj) internal view {
+        (bool success, bytes memory data) = SIMPLE_CONSOLE.staticcall(abi.encode(obj));
+        if (!success) {
+            revert PeekerReverted(SIMPLE_CONSOLE, data);
+        }
     }
 
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {

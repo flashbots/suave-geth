@@ -103,6 +103,12 @@ library SuaveForge {
         return abi.decode(data, (bytes));
     }
 
+    function jsonMarshal(string memory abispec, bytes memory obj) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000173200001", abi.encode(abispec, obj));
+
+        return abi.decode(data, (bytes));
+    }
+
     function jsonUnmarshal(string memory abispec) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000163200001", abi.encode(abispec));
 
@@ -131,6 +137,10 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000040100001", abi.encode(txn, chainId, signingKey));
 
         return abi.decode(data, (bytes));
+    }
+
+    function simpleConsole(bytes memory obj) internal view {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000183200001", abi.encode(obj));
     }
 
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
