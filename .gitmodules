@@ -9,3 +9,6 @@
 [submodule "suave/lib/forge-std"]
 	path = suave/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "suave/lib/solmate"]
+	path = suave/lib/solmate
+	url = https://github.com/transmissions11/solmate
