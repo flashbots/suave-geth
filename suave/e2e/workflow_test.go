@@ -1188,11 +1188,6 @@ func TestE2E_Experiment(t *testing.T) {
 		txxn.To = *to
 	}
 
-	fmt.Println("-- r -v -s")
-	fmt.Println(txxn.R)
-	fmt.Println(txxn.S)
-	fmt.Println(txxn.V)
-
 	contractAddr := common.Address{0x3}
 	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
 
