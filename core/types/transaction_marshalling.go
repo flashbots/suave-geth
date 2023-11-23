@@ -45,7 +45,7 @@ type txJSON struct {
 	KettleAddress             *common.Address  `json:"kettleAddress,omitempty"`
 	ConfidentialInputsHash    *common.Hash     `json:"confidentialInputsHash,omitempty"`
 	ConfidentialInputs        *hexutil.Bytes   `json:"confidentialInputs,omitempty"`
-	Wrapped                   *json.RawMessage `json:"wrapped,omitempty"`
+	RequestRecord             *json.RawMessage `json:"requestRecord,omitempty"`
 	ConfidentialComputeResult *hexutil.Bytes   `json:"confidentialComputeResult,omitempty"`
 	V                         *hexutil.Big     `json:"v"`
 	R                         *hexutil.Big     `json:"r"`
@@ -148,12 +148,12 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.S = (*hexutil.Big)(itx.S)
 
 	case *SuaveTransaction:
-		wrapped, err := NewTx(&itx.ConfidentialComputeRequest).MarshalJSON()
+		requestRecord, err := NewTx(&itx.ConfidentialComputeRequest).MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
 
-		enc.Wrapped = (*json.RawMessage)(&wrapped)
+		enc.RequestRecord = (*json.RawMessage)(&requestRecord)
 
 		enc.ChainID = (*hexutil.Big)(itx.ChainID)
 		enc.ConfidentialComputeResult = (*hexutil.Bytes)(&itx.ConfidentialComputeResult)
@@ -396,7 +396,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		}
 
 	case ConfidentialComputeRecordTxType:
-		var itx ConfidentialComputeRequest
+		var itx ConfidentialComputeRecord
 		inner = &itx
 
 		if dec.KettleAddress == nil {
@@ -521,17 +521,17 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 		var itx SuaveTransaction
 		inner = &itx
 
-		if dec.Wrapped == nil {
-			return errors.New("missing required field 'wrapped' in transaction")
+		if dec.RequestRecord == nil {
+			return errors.New("missing required field 'requestRecord' in transaction")
 		}
 
-		var wrappedTx Transaction
-		err := wrappedTx.UnmarshalJSON(([]byte)(*dec.Wrapped))
+		var requestRecord Transaction
+		err := requestRecord.UnmarshalJSON(([]byte)(*dec.RequestRecord))
 		if err != nil {
 			return err
 		}
 
-		ccr, ok := CastTxInner[*ConfidentialComputeRecord](&wrappedTx)
+		ccr, ok := CastTxInner[*ConfidentialComputeRecord](&requestRecord)
 		if !ok {
 			return errors.New("wrapped tx not a ConfidentialComputeRecord")
 		}
