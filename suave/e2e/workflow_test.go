@@ -1081,8 +1081,13 @@ func TestE2EPrecompile_Call(t *testing.T) {
 	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
 
 	expectedNum := big.NewInt(101)
-	_, err := sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, expectedNum}, nil)
+	res, err := sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, expectedNum}, nil)
 	require.NoError(t, err)
+
+	// make sure we can retrieve the transaction
+	tx, _, err := ethclient.NewClient(fr.suethSrv.RPCNode()).TransactionByHash(context.Background(), res.Hash())
+	require.NoError(t, err)
+	require.Equal(t, tx.Type(), uint8(types.SuaveTxType))
 
 	incorrectNum := big.NewInt(102)
 	_, err = sourceContract.SendTransaction("callTarget", []interface{}{contractAddr, incorrectNum}, nil)
