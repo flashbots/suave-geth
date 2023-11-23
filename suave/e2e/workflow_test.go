@@ -1105,6 +1105,30 @@ func TestE2EKettleAddressEndpoint(t *testing.T) {
 	require.NotEmpty(t, addrs)
 }
 
+func TestE2EEventLogs(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// We reuse the same address for both the source and target contract
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	numEvents := 10
+
+	res, err := sourceContract.SendTransaction("emitEvent", []interface{}{uint64(numEvents)}, nil)
+	require.NoError(t, err)
+
+	tx, _, err := ethclient.NewClient(fr.suethSrv.RPCNode()).TransactionByHash(context.Background(), res.Hash())
+	require.NoError(t, err)
+	require.Equal(t, tx.Type(), uint8(types.SuaveTxType))
+
+	suaveTxn, ok := types.CastTxInner[*types.SuaveTransaction](tx)
+	require.True(t, ok)
+	require.Len(t, suaveTxn.Logs, numEvents)
+}
+
 type clientWrapper struct {
 	t *testing.T
 

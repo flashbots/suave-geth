@@ -1378,6 +1378,9 @@ type RPCTransaction struct {
 	V                         *hexutil.Big      `json:"v"`
 	R                         *hexutil.Big      `json:"r"`
 	S                         *hexutil.Big      `json:"s"`
+
+	// Suave-specific fields
+	Logs []*types.SuaveLog `json:"logs,omitempty"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1475,6 +1478,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			return nil
 		}
 
+		result.Logs = inner.Logs
 		result.RequestRecord = (*json.RawMessage)(&rrBytes)
 		result.ConfidentialComputeResult = (*hexutil.Bytes)(&inner.ConfidentialComputeResult)
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
@@ -2003,7 +2007,21 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
-	suaveResultTxData := &types.SuaveTransaction{ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
+	logs := state.Logs()
+	suaveLogs := make([]*types.SuaveLog, len(logs))
+	for i, l := range logs {
+		suaveLogs[i] = &types.SuaveLog{
+			Address: l.Address,
+			Topics:  append([]common.Hash{}, l.Topics...),
+			Data:    append([]byte{}, l.Data...),
+		}
+	}
+
+	suaveResultTxData := &types.SuaveTransaction{
+		ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord,
+		ConfidentialComputeResult:  computeResult,
+		Logs:                       suaveLogs,
+	}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type ConfidentialComputeRecord struct {
@@ -131,9 +132,16 @@ func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.I
 	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
 
+type SuaveLog struct {
+	Topics  []common.Hash  `json:"topics"`
+	Data    hexutil.Bytes  `json:"data"`
+	Address common.Address `json:"address" `
+}
+
 type SuaveTransaction struct {
 	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`
 	ConfidentialComputeResult  []byte                    `json:"confidentialComputeResult" gencodec:"required"`
+	Logs                       []*SuaveLog               `json:"logs" gencodec:"required"`
 
 	// request KettleAddress's signature
 	ChainID *big.Int
@@ -165,6 +173,16 @@ func (tx *SuaveTransaction) copy() TxData {
 	}
 	if tx.S != nil {
 		cpy.S.Set(tx.S)
+	}
+
+	// copy logs
+	cpy.Logs = make([]*SuaveLog, len(tx.Logs))
+	for i, log := range tx.Logs {
+		cpy.Logs[i] = &SuaveLog{
+			Topics:  append([]common.Hash{}, log.Topics...),
+			Data:    common.CopyBytes(log.Data),
+			Address: log.Address,
+		}
 	}
 
 	return cpy
