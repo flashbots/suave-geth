@@ -1100,6 +1100,21 @@ func TestE2EKettleAddressEndpoint(t *testing.T) {
 	require.NotEmpty(t, addrs)
 }
 
+func TestE2EOnChainStateTransition(t *testing.T) {
+	// This end-to-end tests that the callx precompile gets called from a confidential request
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	// a confidential request cannot make a state change
+	_, err := sourceContract.SendTransaction("ilegalStateTransition", []interface{}{}, nil)
+	require.Error(t, err)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
