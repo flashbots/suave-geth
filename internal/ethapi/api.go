@@ -1941,6 +1941,33 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 	return SubmitTransaction(ctx, s.b, tx)
 }
 
+type mevmStateLogger struct {
+	hasStoredState bool
+}
+
+func (m *mevmStateLogger) CaptureStart(env *vm.EVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
+}
+
+func (m *mevmStateLogger) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, rData []byte, depth int, err error) {
+	if op == vm.SSTORE {
+		m.hasStoredState = true
+	}
+}
+
+func (m *mevmStateLogger) CaptureFault(pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, depth int, err error) {
+}
+
+func (m *mevmStateLogger) CaptureEnd(output []byte, gasUsed uint64, err error) {}
+
+func (m *mevmStateLogger) CaptureEnter(typ vm.OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
+}
+
+func (m *mevmStateLogger) CaptureExit(output []byte, gasUsed uint64, err error) {}
+
+func (m *mevmStateLogger) CaptureTxStart(gasLimit uint64) {}
+
+func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
+
 // TODO: should be its own api
 func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
@@ -1960,9 +1987,11 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		return nil, nil, nil, err
 	}
 
+	storageAccessTracer := &mevmStateLogger{}
+
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
 	suaveCtx := b.SuaveContext(tx, confidentialRequest)
-	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall}, &blockCtx, &suaveCtx)
+	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall, Tracer: storageAccessTracer}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1989,6 +2018,10 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 	if result.Failed() {
 		return nil, nil, nil, fmt.Errorf("%w: %s", result.Err, hexutil.Encode(result.Revert()))
+	}
+
+	if storageAccessTracer.hasStoredState {
+		return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
 	}
 
 	// Check for call in return
