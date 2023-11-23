@@ -10,7 +10,15 @@ contract ExampleEthCallSource {
         (uint256 num) = abi.decode(output, (uint64));
         require(num == expected);
     }
+    
+    event Event(uint64 num);
 
+    function emitEvent(uint64 numLogs) public payable {
+        for (uint64 i = 0; i < numLogs; i++) {
+            emit Event(i);
+        }
+    }
+    
     function ilegalStateTransition() public payable {
         state++;
     }

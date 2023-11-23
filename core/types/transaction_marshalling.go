@@ -51,6 +51,9 @@ type txJSON struct {
 	R                         *hexutil.Big     `json:"r"`
 	S                         *hexutil.Big     `json:"s"`
 
+	// Suave-specific fields
+	Logs []*SuaveLog `json:"logs,omitempty"`
+
 	// Only used for encoding:
 	Hash common.Hash `json:"hash"`
 }
@@ -154,7 +157,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		}
 
 		enc.RequestRecord = (*json.RawMessage)(&requestRecord)
-
+		enc.Logs = itx.Logs
 		enc.ChainID = (*hexutil.Big)(itx.ChainID)
 		enc.ConfidentialComputeResult = (*hexutil.Bytes)(&itx.ConfidentialComputeResult)
 		enc.V = (*hexutil.Big)(itx.V)
@@ -563,6 +566,9 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
 				return err
 			}
+		}
+		if dec.Logs != nil {
+			itx.Logs = dec.Logs
 		}
 
 	default:
