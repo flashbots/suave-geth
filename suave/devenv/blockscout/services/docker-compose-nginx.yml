@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  blockscout-proxy:
+    image: nginx
+    container_name: 'blockscout-proxy'
+    volumes:
+      - "../proxy:/etc/nginx/templates"
+    environment:
+      BACK_PROXY_PASS: ${BACK_PROXY_PASS:-http://blockscout-backend:4000}
+      FRONT_PROXY_PASS: ${FRONT_PROXY_PASS:-http://blockscout-frontend:3000}
+    ports:
+      - 8080:8080
+      - 8081:8081

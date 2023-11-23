@@ -34,3 +34,48 @@ services:
       - --ws
     ports:
       - 8555:8545
+
+  blockscout-db-init:
+    extends:
+      file: ./blockscout/services/docker-compose-db.yml
+      service: blockscout-db-init
+
+  blockscout-db:
+    extends:
+      file: ./blockscout/services/docker-compose-db.yml
+      service: blockscout-db
+
+  blockscout-backend:
+    depends_on:
+      - blockscout-db
+    extends:
+      file: ./blockscout/services/docker-compose-backend.yml
+      service: blockscout-backend
+    links:
+      - blockscout-db:database
+
+  blockscout-frontend:
+    depends_on:
+      - blockscout-backend
+    extends:
+      file: ./blockscout/services/docker-compose-frontend.yml
+      service: blockscout-frontend
+
+  blockscout-stats:
+    depends_on:
+      - blockscout-db
+    extends:
+      file: ./blockscout/services/docker-compose-stats.yml
+      service: blockscout-stats
+
+  blockscout-proxy:
+    depends_on:
+      - blockscout-backend
+      - blockscout-frontend
+      - blockscout-stats
+    extends:
+      file: ./blockscout/services/docker-compose-nginx.yml
+      service: blockscout-proxy
+
+volumes:
+  blockscout_db_data:

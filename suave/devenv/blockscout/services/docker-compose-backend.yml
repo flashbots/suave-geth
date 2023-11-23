@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  blockscout-backend:
+    image: blockscout/blockscout-suave:${DOCKER_TAG:-5.3.1}
+    pull_policy: always
+    restart: always
+    container_name: 'blockscout-backend'
+    command: sh -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+    env_file:
+      -  ../envs/common-blockscout.env
+    volumes:
+      - ./logs/:/app/logs/

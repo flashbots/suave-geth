@@ -54,4 +54,4 @@ devnet-up:
 	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
 
 devnet-down:
-	docker-compose -f ./suave/devenv/docker-compose.yml down
+	docker-compose -f ./suave/devenv/docker-compose.yml down -v
