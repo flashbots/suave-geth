@@ -29,8 +29,8 @@ contract ExampleEthCallSource {
         Suave.httpPost(url, body, config);
     }
 
-    function example5(string memory url, Types.Transaction memory txn) public {
-        Suavex.simulateTxn(url, txn);
+    function example5(string memory url, Types.Transaction[] memory txns) public {
+        Suavex.simulateTxn(url, txns);
     }
 }
 

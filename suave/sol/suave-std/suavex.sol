@@ -14,9 +14,17 @@ library Suavex {
         uint256 blockValue;
     }
 
-    function simulateTxn(string memory url, Types.Transaction memory txn) internal view returns (SimulateResult memory) {
-        bytes memory txnEncoded = Types.encode(txn);
-
+    function simulateTxn(string memory url, Types.Transaction[] memory txns) internal view returns (SimulateResult memory) {
+        // encode both transactions as an array
+        bytes memory txnEncoded;
+        for (uint i = 0; i < txns.length; i++) {
+            if (i == 0) {
+                txnEncoded = abi.encodePacked(Types.encode(txns[i]));
+            } else {
+                txnEncoded = abi.encodePacked(Types.encode(txns[i]), ",");
+            }
+        }
+        
         Suave.HttpConfig memory config;
         config.headers = new string[](1);
         config.headers[0] = "Content-Type:application/json";

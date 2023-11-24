@@ -4,8 +4,53 @@ import "./utils/Strings.sol";
 import "solady/src/utils/LibString.sol";
 import "solady/src/utils/JSONParserLib.sol";
 
+/*
+	BlockNumber     *big.Int      `json:"blockNumber,omitempty"` // if BlockNumber is set it must match DecryptionCondition!
+	Txs             Transactions  `json:"txs"`
+	RevertingHashes []common.Hash `json:"revertingHashes,omitempty"`
+	RefundPercent   *int          `json:"percent,omitempty"`
+*/
+
 library Types {
     using JSONParserLib for *;
+
+    struct SBundle {
+        Transaction[] txs;
+        uint64 blockNumber;
+        bytes32[] revertingHashes;
+        uint8 refundPercent;
+    }
+    
+    function encode(SBundle memory bundle) internal pure returns (bytes memory) {
+        // encoded sbundle
+        bytes memory bundleEncoded;
+
+        // dynamic fields
+        if (bundle.revertingHashes.length != 0) {
+            //bundleEncoded = abi.encodePacked(bundleEncoded, '"revertingHashes": [');
+            //for (uint i = 0; i < bundle.revertingHashes.length; i++) {
+            //    bundleEncoded = abi.encodePacked(bundleEncoded, '"', Strings.toHexString(bybundle.revertingHashes[i]), '",');
+            //}
+            //bundleEncoded = abi.encodePacked(bundleEncoded, "],");
+        }
+
+        // fixed fields
+        bundleEncoded = abi.encodePacked(
+            bundleEncoded,
+            '"blockNumber":"', LibString.toString(uint256(bundle.blockNumber)), '",'
+            '"percent":"', LibString.toString(uint256(bundle.refundPercent)), '",'
+            '"txs": ['
+        );
+
+        // txs
+        for (uint i = 0; i < bundle.txs.length; i++) {
+            bundleEncoded = abi.encodePacked(bundleEncoded, encode(bundle.txs[i]), ",");
+        }
+        bundleEncoded = abi.encodePacked(bundleEncoded, "]");
+
+        bundleEncoded = abi.encodePacked("{", bundleEncoded, "}");
+        return bundleEncoded;
+    }
 
     struct Transaction {
         address to;
@@ -50,6 +95,16 @@ library Types {
         txnEncoded = abi.encodePacked("{", txnEncoded, "}");
 
         return txnEncoded;
+    }
+
+    function encodeRLP(Transaction memory txStruct) public pure returns (bytes memory) {
+        bytes memory result;
+        // RLP encoding logic here... TODO!!
+
+        // Example: Pseudo-code to concatenate and encode struct fields
+        result = abi.encodePacked(txStruct.to, txStruct.gas, txStruct.gasPrice, txStruct.value, txStruct.nonce, txStruct.data, txStruct.chainId, txStruct.r, txStruct.s, txStruct.v);
+        
+        return result;
     }
 
     /// @dev Returns the hexadecimal representation of `value`.
