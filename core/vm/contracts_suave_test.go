@@ -3,6 +3,8 @@ package vm
 import (
 	"context"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
@@ -252,4 +254,83 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+type httpTestHandler struct{}
+
+func (h *httpTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" && r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if val := r.Header.Get("a"); val != "" {
+		w.Write([]byte(val))
+		return
+	}
+	if r.Method == "POST" {
+		w.Write([]byte("ok"))
+		return
+	}
+	w.Write([]byte("ok1"))
+}
+
+func TestSuave_HttpRequest(t *testing.T) {
+	s := &suaveRuntime{}
+
+	srv := httptest.NewServer(&httpTestHandler{})
+	defer srv.Close()
+
+	cases := []struct {
+		req  types.HttpRequest
+		err  bool
+		resp []byte
+	}{
+		{
+			// url not set
+			req: types.HttpRequest{},
+			err: true,
+		},
+		{
+			// method not supported
+			req: types.HttpRequest{Url: srv.URL},
+			err: true,
+		},
+		{
+			// incorrect header format
+			req: types.HttpRequest{Url: srv.URL, Method: "GET", Headers: []string{"a"}},
+			err: true,
+		},
+		{
+			// POST request
+			req:  types.HttpRequest{Url: srv.URL, Method: "POST"},
+			resp: []byte("ok"),
+		},
+		{
+			// GET request
+			req:  types.HttpRequest{Url: srv.URL, Method: "GET"},
+			resp: []byte("ok1"),
+		},
+		{
+			// GET request with headers
+			req:  types.HttpRequest{Url: srv.URL, Method: "GET", Headers: []string{"a:b"}},
+			resp: []byte("b"),
+		},
+		{
+			// POST request with headers
+			req:  types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"a:c"}},
+			resp: []byte("c"),
+		},
+	}
+
+	for _, c := range cases {
+		t.Run("", func(t *testing.T) {
+			resp, err := s.doHTTPRequest(c.req)
+			if c.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.resp, resp)
+			}
+		})
+	}
 }

@@ -1,7 +1,10 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -133,3 +136,42 @@ type suaveRuntime struct {
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
+	if request.Method != "GET" && request.Method != "POST" {
+		return nil, fmt.Errorf("only GET and POST methods are supported")
+	}
+	if request.Url == "" {
+		return nil, fmt.Errorf("url is empty")
+	}
+
+	var body io.Reader
+	if request.Body != nil {
+		body = bytes.NewReader(request.Body)
+	}
+
+	req, err := http.NewRequest(request.Method, request.Url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, header := range request.Headers {
+		prts := strings.Split(header, ":")
+		if len(prts) != 2 {
+			return nil, fmt.Errorf("incorrect header format")
+		}
+		req.Header.Add(prts[0], prts[1])
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}

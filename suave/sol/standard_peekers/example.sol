@@ -14,6 +14,10 @@ contract ExampleEthCallSource {
     function ilegalStateTransition() public payable {
         state++;
     }
+
+    function remoteCall(Suave.HttpRequest memory request) public {
+        Suave.doHTTPRequest(request);
+    }
 }
 
 contract ExampleEthCallTarget {

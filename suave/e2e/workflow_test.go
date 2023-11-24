@@ -1106,7 +1106,6 @@ func TestE2EKettleAddressEndpoint(t *testing.T) {
 }
 
 func TestE2EOnChainStateTransition(t *testing.T) {
-	// This end-to-end tests that the callx precompile gets called from a confidential request
 	fr := newFramework(t)
 	defer fr.Close()
 
@@ -1118,6 +1117,53 @@ func TestE2EOnChainStateTransition(t *testing.T) {
 	// a confidential request cannot make a state change
 	_, err := sourceContract.SendTransaction("ilegalStateTransition", []interface{}{}, nil)
 	require.Error(t, err)
+}
+
+func TestE2ERemoteCalls(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	t.Run("Get", func(t *testing.T) {
+		srvAddr := fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, r.Method, "GET")
+			require.Equal(t, r.Header.Get("a"), "b")
+			w.Write([]byte{0x1, 0x2, 0x3})
+		})
+
+		req := &types.HttpRequest{
+			Method:  "GET",
+			Url:     srvAddr,
+			Headers: []string{"a:b"},
+		}
+		contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+	})
+
+	t.Run("Post", func(t *testing.T) {
+		body := []byte{0x1, 0x2, 0x3}
+
+		srvAddr := fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, r.Method, "POST")
+			require.Equal(t, r.Header.Get("b"), "c")
+
+			bodyRes, _ := io.ReadAll(r.Body)
+			require.Equal(t, body, bodyRes)
+
+			w.Write([]byte{0x1, 0x2, 0x3})
+		})
+
+		req := &types.HttpRequest{
+			Method:  "POST",
+			Url:     srvAddr,
+			Headers: []string{"b:c"},
+			Body:    body,
+		}
+		contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+	})
 }
 
 type clientWrapper struct {
@@ -1246,6 +1292,24 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	}
 
 	return f
+}
+
+type handlerFunc func(http.ResponseWriter, *http.Request)
+
+type dummyRelayer struct {
+	fn handlerFunc
+}
+
+func (d *dummyRelayer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	d.fn(w, r)
+}
+
+func (f *framework) testHttpRelayer(handler handlerFunc) string {
+	httpSrv := httptest.NewServer(&dummyRelayer{fn: handler})
+	f.t.Cleanup(func() {
+		httpSrv.Close()
+	})
+	return httpSrv.URL
 }
 
 func (f *framework) NewSDKClient() *sdk.Client {
