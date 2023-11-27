@@ -70,6 +70,7 @@ contract OFAPrivate {
     }
 
     function emitMatchBidAndHint(string memory builderUrl, Suave.BidId bidId) external payable returns (bytes memory) {
+        /*
         // retrieve the bids of 'bidId' that we are going to send 
         Suave.BidId[] memory bids = abi.decode(Suave.confidentialRetrieve(bidId, "mevshare:v0:mergedBids"), (Suave.BidId[]));
 
@@ -90,6 +91,8 @@ contract OFAPrivate {
         });
 
         MevShare.sendBundle(builderUrl, mevBundle);
+        */
+        
         return abi.encodeWithSelector(this.emitMatchBidAndHintCallback.selector);
     }
 }

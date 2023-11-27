@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "./std.sol";
 
 contract TransactionTest is Test {
-    function testIncrementxxx() public {
+    function testIncrementxxx() public view {
         Types.Transaction memory t = Types.Transaction({
             to: address(0),
             gas: 0,
@@ -27,7 +27,7 @@ contract TransactionTest is Test {
         console.logBytes(rlp);
     }
 
-    function testBundle() public {
+    function testBundle() public view {
         Types.Transaction memory t = Types.Transaction({
             to: address(0),
             gas: 0,
