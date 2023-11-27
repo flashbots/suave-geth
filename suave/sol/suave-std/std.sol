@@ -1,6 +1,7 @@
 pragma solidity ^0.8.8;
 
 import "./utils/Strings.sol";
+import "./utils/RLPWriter.sol";
 import "solady/src/utils/LibString.sol";
 import "solady/src/utils/JSONParserLib.sol";
 
@@ -98,13 +99,19 @@ library Types {
     }
 
     function encodeRLP(Transaction memory txStruct) public pure returns (bytes memory) {
-        bytes memory result;
-        // RLP encoding logic here... TODO!!
+        bytes[] memory items = new bytes[](9);
 
-        // Example: Pseudo-code to concatenate and encode struct fields
-        result = abi.encodePacked(txStruct.to, txStruct.gas, txStruct.gasPrice, txStruct.value, txStruct.nonce, txStruct.data, txStruct.chainId, txStruct.r, txStruct.s, txStruct.v);
-        
-        return result;
+        items[0] = RLPWriter.writeUint(txStruct.nonce);
+        items[1] = RLPWriter.writeUint(txStruct.gasPrice);
+        items[2] = RLPWriter.writeUint(txStruct.gas);
+        items[3] = RLPWriter.writeAddress(txStruct.to);
+        items[4] = RLPWriter.writeUint(txStruct.value);
+        items[5] = RLPWriter.writeBytes(txStruct.data);
+        items[6] = RLPWriter.writeBytes(txStruct.v);
+        items[7] = RLPWriter.writeBytes(txStruct.r);
+        items[8] = RLPWriter.writeBytes(txStruct.s);
+
+        return RLPWriter.writeList(items);
     }
 
     /// @dev Returns the hexadecimal representation of `value`.

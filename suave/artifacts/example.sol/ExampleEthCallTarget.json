@@ -21,13 +21,13 @@
   },
   "deployedBytecode": {
     "object": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80636d4ce63c14602d575b600080fd5b606560405190815260200160405180910390f3fea164736f6c6343000813000a",
-    "sourceMap": "1021:110:27:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1057:72;1119:3;1057:72;;160:25:36;;;148:2;133:18;1057:72:27;;;;;;",
+    "sourceMap": "1021:110:27:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1057:72;1119:3;1057:72;;160:25:37;;;148:2;133:18;1057:72:27;;;;;;",
     "linkReferences": {}
   },
   "methodIdentifiers": {
     "get()": "6d4ce63c"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"get\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"sol/standard_peekers/example.sol\":\"ExampleEthCallTarget\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":solady/=lib/solady/\"]},\"sources\":{\"lib/solady/src/utils/JSONParserLib.sol\":{\"keccak256\":\"0x8d4aeacf0459b28b40b63c9d331dc95cf7d751ca9961c83c89c1ad73b9b3cd81\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://42cc6de802e8c17668ae82518caa4c053e82f1884329d1d924fa7b9fccf5041f\",\"dweb:/ipfs/QmPGLfqWXDCjjcZ2VEG8kRwasGFxR4u62RpLLBuLqXy9wP\"]},\"lib/solady/src/utils/LibString.sol\":{\"keccak256\":\"0x5fe22b86c56b1605d565ce9682757f09b589e4ede9c2bd5566d89d0ff29ec1f1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://937f0f5b0a5ee99905958aecb90fc90afa3e6c6ce61044e4dc504ac6910c4564\",\"dweb:/ipfs/QmfACPaLrctW61BnqGgie2m93DdfjKgSosvrFxM5kq4pui\"]},\"sol/libraries/Suave.sol\":{\"keccak256\":\"0xf2d4e0092ea1f6f01f4466b27df384751e8d611e7256e80a26941958f2b2b4b3\",\"license\":\"UNLICENSED\",\"urls\":[\"bzz-raw://84fa931e0c57a0ebd8913e7f9a20d5c3a2f8475d985d35015dea1427c9536d7d\",\"dweb:/ipfs/QmR72CqNx5RnR8pXVxAfyyTHBXtjEoTExu353HxLGVqjHz\"]},\"sol/standard_peekers/example.sol\":{\"keccak256\":\"0xbeca976f49e5d053e095c86b2acbaeca4fce8c165130f2a0ca48876934ef01d6\",\"urls\":[\"bzz-raw://f37ced75ab4d85fd12efcaa07757457df77a042b20f1b8eed33f051e09dd28e0\",\"dweb:/ipfs/QmXcqUbi8uLEHDygUd2d9usCc9gQ1ToXFxiFn49aeiC269\"]},\"sol/suave-std/std.sol\":{\"keccak256\":\"0xf4c12927daf0ad50bfa1886d54e32318b0ead160e10d3091fb05cc0da5913f68\",\"urls\":[\"bzz-raw://e4ff8d1f4f5a5443e550180581be08a7f8ccdd6e34f53a54c06d5faf4650a8aa\",\"dweb:/ipfs/QmYcP4zaNhFksooiyTN9Lj7QK43ceDxnj3nEM7brPrhs4J\"]},\"sol/suave-std/suavex.sol\":{\"keccak256\":\"0x086a91fcd386879ea4064964bab308397ba6a6cf7f2d6277ba04cd6ea7a6d5ed\",\"urls\":[\"bzz-raw://7cbc1400a5f85319449b1ee2b96993f1d5f05474da525df4d185ced803bf709c\",\"dweb:/ipfs/QmfBdjLK1m2AWxwKpuKnTTdzjxiQisSF1TLhRV2TWTzL7x\"]},\"sol/suave-std/utils/Strings.sol\":{\"keccak256\":\"0x42e2fb60d549821eee4c03b9038b34d84a05919d85c9394c667f73ea4a3f2e65\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://54d42a67e4568397a62c9c4da1849e777ef2ddbe82062d46d32f953f08a03066\",\"dweb:/ipfs/QmS2fsfTEWBexjbcLY9z1whY8rPk6waPXppLSZSvaAX1jv\"]},\"sol/suave-std/utils/math/Math.sol\":{\"keccak256\":\"0x29461c6379cfac607a75e62090b747275076c41d183dfe12fdd574c8a068bb05\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://61ac3a802a094e99f3033e6c3f36f89efac504a8844a9e9bbe02502d8a5b2357\",\"dweb:/ipfs/QmQq9aYtYDvNBZyEkuoUFZrtpvoaozNttJaWgUu1NV8NSW\"]},\"sol/suave-std/utils/math/SignedMath.sol\":{\"keccak256\":\"0x0a35d10510b93318a364df79a82828316bed577d28576dd93d445671c5ae7d2d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://abc5f26773e0a4e73de941bca33fc216aa38b47de30a96ee02faf9727f01f4d1\",\"dweb:/ipfs/QmVhHDyh539TeX2nzwYgiFknJXH83N1WaTEDZeMjrSnCij\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"get\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"sol/standard_peekers/example.sol\":\"ExampleEthCallTarget\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":solady/=lib/solady/\"]},\"sources\":{\"lib/solady/src/utils/JSONParserLib.sol\":{\"keccak256\":\"0x8d4aeacf0459b28b40b63c9d331dc95cf7d751ca9961c83c89c1ad73b9b3cd81\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://42cc6de802e8c17668ae82518caa4c053e82f1884329d1d924fa7b9fccf5041f\",\"dweb:/ipfs/QmPGLfqWXDCjjcZ2VEG8kRwasGFxR4u62RpLLBuLqXy9wP\"]},\"lib/solady/src/utils/LibString.sol\":{\"keccak256\":\"0x5fe22b86c56b1605d565ce9682757f09b589e4ede9c2bd5566d89d0ff29ec1f1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://937f0f5b0a5ee99905958aecb90fc90afa3e6c6ce61044e4dc504ac6910c4564\",\"dweb:/ipfs/QmfACPaLrctW61BnqGgie2m93DdfjKgSosvrFxM5kq4pui\"]},\"sol/libraries/Suave.sol\":{\"keccak256\":\"0xf2d4e0092ea1f6f01f4466b27df384751e8d611e7256e80a26941958f2b2b4b3\",\"license\":\"UNLICENSED\",\"urls\":[\"bzz-raw://84fa931e0c57a0ebd8913e7f9a20d5c3a2f8475d985d35015dea1427c9536d7d\",\"dweb:/ipfs/QmR72CqNx5RnR8pXVxAfyyTHBXtjEoTExu353HxLGVqjHz\"]},\"sol/standard_peekers/example.sol\":{\"keccak256\":\"0xbeca976f49e5d053e095c86b2acbaeca4fce8c165130f2a0ca48876934ef01d6\",\"urls\":[\"bzz-raw://f37ced75ab4d85fd12efcaa07757457df77a042b20f1b8eed33f051e09dd28e0\",\"dweb:/ipfs/QmXcqUbi8uLEHDygUd2d9usCc9gQ1ToXFxiFn49aeiC269\"]},\"sol/suave-std/std.sol\":{\"keccak256\":\"0xe506907829f431e2dcfe12eefe0aa573e4a4ccd9ec3569a9595bd4291663df86\",\"urls\":[\"bzz-raw://bad1692ede56fd53ca5cd0c48df736d036da1171e9fc722c7b1c4ce04788b6c9\",\"dweb:/ipfs/QmZuZ6hTqgEPCa2YdHZcApz3ec53DMnFh8sumxfLPfMH6i\"]},\"sol/suave-std/suavex.sol\":{\"keccak256\":\"0x086a91fcd386879ea4064964bab308397ba6a6cf7f2d6277ba04cd6ea7a6d5ed\",\"urls\":[\"bzz-raw://7cbc1400a5f85319449b1ee2b96993f1d5f05474da525df4d185ced803bf709c\",\"dweb:/ipfs/QmfBdjLK1m2AWxwKpuKnTTdzjxiQisSF1TLhRV2TWTzL7x\"]},\"sol/suave-std/utils/RLPWriter.sol\":{\"keccak256\":\"0xf11740ae31f2bba614306066c88e005ed8bd23700eb9e91961b0541ca4174287\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ebb43c5b405bdedc327f7a7e4d86485966985835aae8fec4920333a055676cab\",\"dweb:/ipfs/QmXYLheCtkZ2H9yzbd5R2tV9EAckEagoqBD4LmxkS1CNVF\"]},\"sol/suave-std/utils/Strings.sol\":{\"keccak256\":\"0x42e2fb60d549821eee4c03b9038b34d84a05919d85c9394c667f73ea4a3f2e65\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://54d42a67e4568397a62c9c4da1849e777ef2ddbe82062d46d32f953f08a03066\",\"dweb:/ipfs/QmS2fsfTEWBexjbcLY9z1whY8rPk6waPXppLSZSvaAX1jv\"]},\"sol/suave-std/utils/math/Math.sol\":{\"keccak256\":\"0x29461c6379cfac607a75e62090b747275076c41d183dfe12fdd574c8a068bb05\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://61ac3a802a094e99f3033e6c3f36f89efac504a8844a9e9bbe02502d8a5b2357\",\"dweb:/ipfs/QmQq9aYtYDvNBZyEkuoUFZrtpvoaozNttJaWgUu1NV8NSW\"]},\"sol/suave-std/utils/math/SignedMath.sol\":{\"keccak256\":\"0x0a35d10510b93318a364df79a82828316bed577d28576dd93d445671c5ae7d2d\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://abc5f26773e0a4e73de941bca33fc216aa38b47de30a96ee02faf9727f01f4d1\",\"dweb:/ipfs/QmVhHDyh539TeX2nzwYgiFknJXH83N1WaTEDZeMjrSnCij\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.19+commit.7dd6d404"
@@ -112,10 +112,10 @@
         "license": null
       },
       "sol/suave-std/std.sol": {
-        "keccak256": "0xf4c12927daf0ad50bfa1886d54e32318b0ead160e10d3091fb05cc0da5913f68",
+        "keccak256": "0xe506907829f431e2dcfe12eefe0aa573e4a4ccd9ec3569a9595bd4291663df86",
         "urls": [
-          "bzz-raw://e4ff8d1f4f5a5443e550180581be08a7f8ccdd6e34f53a54c06d5faf4650a8aa",
-          "dweb:/ipfs/QmYcP4zaNhFksooiyTN9Lj7QK43ceDxnj3nEM7brPrhs4J"
+          "bzz-raw://bad1692ede56fd53ca5cd0c48df736d036da1171e9fc722c7b1c4ce04788b6c9",
+          "dweb:/ipfs/QmZuZ6hTqgEPCa2YdHZcApz3ec53DMnFh8sumxfLPfMH6i"
         ],
         "license": null
       },
@@ -126,6 +126,14 @@
           "dweb:/ipfs/QmfBdjLK1m2AWxwKpuKnTTdzjxiQisSF1TLhRV2TWTzL7x"
         ],
         "license": null
+      },
+      "sol/suave-std/utils/RLPWriter.sol": {
+        "keccak256": "0xf11740ae31f2bba614306066c88e005ed8bd23700eb9e91961b0541ca4174287",
+        "urls": [
+          "bzz-raw://ebb43c5b405bdedc327f7a7e4d86485966985835aae8fec4920333a055676cab",
+          "dweb:/ipfs/QmXYLheCtkZ2H9yzbd5R2tV9EAckEagoqBD4LmxkS1CNVF"
+        ],
+        "license": "MIT"
       },
       "sol/suave-std/utils/Strings.sol": {
         "keccak256": "0x42e2fb60d549821eee4c03b9038b34d84a05919d85c9394c667f73ea4a3f2e65",
@@ -171,22 +179,25 @@
         44618
       ],
       "Math": [
-        50439
+        51067
+      ],
+      "RLPWriter": [
+        49758
       ],
       "SignedMath": [
-        50544
+        51172
       ],
       "Strings": [
-        49385
+        50013
       ],
       "Suave": [
         45462
       ],
       "Suavex": [
-        49130
+        49251
       ],
       "Types": [
-        48749
+        48857
       ]
     },
     "nodeType": "SourceUnit",
@@ -226,7 +237,7 @@
         "file": "../suave-std/std.sol",
         "nameLocation": "-1:-1:-1",
         "scope": 48352,
-        "sourceUnit": 48750,
+        "sourceUnit": 48858,
         "symbolAliases": [],
         "unitAlias": ""
       },
@@ -239,7 +250,7 @@
         "file": "../suave-std/suavex.sol",
         "nameLocation": "-1:-1:-1",
         "scope": 48352,
-        "sourceUnit": 49131,
+        "sourceUnit": 49252,
         "symbolAliases": [],
         "unitAlias": ""
       },
@@ -1656,7 +1667,7 @@
                         "referencedDeclaration": 48330,
                         "src": "1005:4:27",
                         "typeDescriptions": {
-                          "typeIdentifier": "t_array$_t_struct$_Transaction_$48518_memory_ptr_$dyn_memory_ptr",
+                          "typeIdentifier": "t_array$_t_struct$_Transaction_$48519_memory_ptr_$dyn_memory_ptr",
                           "typeString": "struct Types.Transaction memory[] memory"
                         }
                       }
@@ -1668,7 +1679,7 @@
                           "typeString": "string memory"
                         },
                         {
-                          "typeIdentifier": "t_array$_t_struct$_Transaction_$48518_memory_ptr_$dyn_memory_ptr",
+                          "typeIdentifier": "t_array$_t_struct$_Transaction_$48519_memory_ptr_$dyn_memory_ptr",
                           "typeString": "struct Types.Transaction memory[] memory"
                         }
                       ],
@@ -1677,10 +1688,10 @@
                         "name": "Suavex",
                         "nodeType": "Identifier",
                         "overloadedDeclarations": [],
-                        "referencedDeclaration": 49130,
+                        "referencedDeclaration": 49251,
                         "src": "981:6:27",
                         "typeDescriptions": {
-                          "typeIdentifier": "t_type$_t_contract$_Suavex_$49130_$",
+                          "typeIdentifier": "t_type$_t_contract$_Suavex_$49251_$",
                           "typeString": "type(library Suavex)"
                         }
                       },
@@ -1692,10 +1703,10 @@
                       "memberLocation": "988:11:27",
                       "memberName": "simulateTxn",
                       "nodeType": "MemberAccess",
-                      "referencedDeclaration": 49051,
+                      "referencedDeclaration": 49172,
                       "src": "981:18:27",
                       "typeDescriptions": {
-                        "typeIdentifier": "t_function_internal_view$_t_string_memory_ptr_$_t_array$_t_struct$_Transaction_$48518_memory_ptr_$dyn_memory_ptr_$returns$_t_struct$_SimulateResult_$48913_memory_ptr_$",
+                        "typeIdentifier": "t_function_internal_view$_t_string_memory_ptr_$_t_array$_t_struct$_Transaction_$48519_memory_ptr_$dyn_memory_ptr_$returns$_t_struct$_SimulateResult_$49034_memory_ptr_$",
                         "typeString": "function (string memory,struct Types.Transaction memory[] memory) view returns (struct Suavex.SimulateResult memory)"
                       }
                     },
@@ -1711,7 +1722,7 @@
                     "src": "981:29:27",
                     "tryCall": false,
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_SimulateResult_$48913_memory_ptr",
+                      "typeIdentifier": "t_struct$_SimulateResult_$49034_memory_ptr",
                       "typeString": "struct Suavex.SimulateResult memory"
                     }
                   },
@@ -1770,7 +1781,7 @@
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_array$_t_struct$_Transaction_$48518_memory_ptr_$dyn_memory_ptr",
+                    "typeIdentifier": "t_array$_t_struct$_Transaction_$48519_memory_ptr_$dyn_memory_ptr",
                     "typeString": "struct Types.Transaction[]"
                   },
                   "typeName": {
@@ -1785,13 +1796,13 @@
                           "937:11:27"
                         ],
                         "nodeType": "IdentifierPath",
-                        "referencedDeclaration": 48518,
+                        "referencedDeclaration": 48519,
                         "src": "931:17:27"
                       },
-                      "referencedDeclaration": 48518,
+                      "referencedDeclaration": 48519,
                       "src": "931:17:27",
                       "typeDescriptions": {
-                        "typeIdentifier": "t_struct$_Transaction_$48518_storage_ptr",
+                        "typeIdentifier": "t_struct$_Transaction_$48519_storage_ptr",
                         "typeString": "struct Types.Transaction"
                       }
                     },
@@ -1799,7 +1810,7 @@
                     "nodeType": "ArrayTypeName",
                     "src": "931:19:27",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_array$_t_struct$_Transaction_$48518_storage_$dyn_storage_ptr",
+                      "typeIdentifier": "t_array$_t_struct$_Transaction_$48519_storage_$dyn_storage_ptr",
                       "typeString": "struct Types.Transaction[]"
                     }
                   },
@@ -1834,7 +1845,7 @@
         "scope": 48352,
         "usedErrors": [
           44626,
-          49150
+          49778
         ]
       },
       {
