@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import "./mevshare.sol";
+import "./mevboost.sol";
 
-contract MevShareTest is Test {
-    function testMevShare() public {
+contract MevBoostTest is Test {
+    function testMevBoost() public {
     }
 }
