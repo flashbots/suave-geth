@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -126,11 +127,6 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 	return inoutAbi.Methods[method]
 }
 
-func formatPeekerError(format string, args ...any) ([]byte, error) {
-	err := fmt.Errorf(format, args...)
-	return []byte(err.Error()), err
-}
-
 type suaveRuntime struct {
 	suaveContext *SuaveContext
 }
@@ -163,7 +159,10 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		req.Header.Add(prts[0], prts[1])
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		Timeout: 5 * time.Second, // TODO: test
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +171,10 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode > 299 {
+		return nil, fmt.Errorf("http error: %s: %v", resp.Status, data)
 	}
 	return data, nil
 }

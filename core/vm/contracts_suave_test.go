@@ -268,6 +268,10 @@ func (h *httpTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(val))
 		return
 	}
+	if val := r.Header.Get("fail"); val != "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	if r.Method == "POST" {
 		w.Write([]byte("ok"))
 		return
@@ -320,6 +324,11 @@ func TestSuave_HttpRequest(t *testing.T) {
 			// POST request with headers
 			req:  types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"a:c"}},
 			resp: []byte("c"),
+		},
+		{
+			// POST with error
+			req: types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"fail:1"}},
+			err: true,
 		},
 	}
 
