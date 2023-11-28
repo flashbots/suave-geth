@@ -285,8 +285,8 @@ func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBidJson 
 		Url:    endpoint,
 		Body:   builderBidJson,
 		Headers: []string{
-			"Content-Type: application/json",
-			"Accept: application/json",
+			"Content-Type:application/json",
+			"Accept:application/json",
 		},
 	}
 	if _, err := b.doHTTPRequest(httpReq); err != nil {
@@ -363,9 +363,9 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 		Url:    url,
 		Body:   body,
 		Headers: []string{
-			"Content-Type: application/json",
-			"Accept: application/json",
-			"X-Flashbots-Signature: " + signature,
+			"Content-Type:application/json",
+			"Accept:application/json",
+			"X-Flashbots-Signature:" + signature,
 		},
 	}
 	if _, err := c.doHTTPRequest(httpReq); err != nil {

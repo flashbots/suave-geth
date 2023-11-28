@@ -1120,7 +1120,7 @@ func TestE2EOnChainStateTransition(t *testing.T) {
 }
 
 func TestE2ERemoteCalls(t *testing.T) {
-	fr := newFramework(t)
+	fr := newFramework(t, WithWhitelist([]string{"127.0.0.1"}))
 	defer fr.Close()
 
 	clt := fr.NewSDKClient()
@@ -1163,6 +1163,16 @@ func TestE2ERemoteCalls(t *testing.T) {
 			Body:    body,
 		}
 		contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+	})
+
+	t.Run("Not whitelisted", func(t *testing.T) {
+		req := &types.HttpRequest{
+			Method:  "POST",
+			Url:     "http://example.com",
+			Headers: []string{"b:c"},
+		}
+		_, err := contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+		require.Error(t, err)
 	})
 }
 
@@ -1221,7 +1231,9 @@ type frameworkConfig struct {
 var defaultFrameworkConfig = frameworkConfig{
 	kettleAddress:     false,
 	redisStoreBackend: false,
-	suaveConfig:       suave.Config{},
+	suaveConfig: suave.Config{
+		ExternalWhitelist: []string{"*"},
+	},
 }
 
 type frameworkOpt func(*frameworkConfig)
@@ -1259,6 +1271,12 @@ func WithBlockSigningKeyOpt(t *testing.T) (frameworkOpt, *bls.PublicKey) {
 	return func(c *frameworkConfig) {
 		c.suaveConfig.EthBlockSigningKeyHex = hexutil.Encode(bls.SecretKeyToBytes(sk))
 	}, pk
+}
+
+func WithWhitelist(whitelist []string) frameworkOpt {
+	return func(c *frameworkConfig) {
+		c.suaveConfig.ExternalWhitelist = whitelist
+	}
 }
 
 func newFramework(t *testing.T, opts ...frameworkOpt) *framework {

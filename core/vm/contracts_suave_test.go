@@ -279,8 +279,14 @@ func (h *httpTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ok1"))
 }
 
-func TestSuave_HttpRequest(t *testing.T) {
-	s := &suaveRuntime{}
+func TestSuave_HttpRequest_Basic(t *testing.T) {
+	s := &suaveRuntime{
+		suaveContext: &SuaveContext{
+			Backend: &SuaveExecutionBackend{
+				ExternalWhitelist: []string{"127.0.0.1"},
+			},
+		},
+	}
 
 	srv := httptest.NewServer(&httpTestHandler{})
 	defer srv.Close()
@@ -298,6 +304,11 @@ func TestSuave_HttpRequest(t *testing.T) {
 		{
 			// method not supported
 			req: types.HttpRequest{Url: srv.URL},
+			err: true,
+		},
+		{
+			// url not allowed
+			req: types.HttpRequest{Url: "http://example.com", Method: "GET"},
 			err: true,
 		},
 		{
@@ -324,6 +335,11 @@ func TestSuave_HttpRequest(t *testing.T) {
 			// POST request with headers
 			req:  types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"a:c"}},
 			resp: []byte("c"),
+		},
+		{
+			// POST request with headers with multiple :
+			req:  types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"a:c:d"}},
+			resp: []byte("c:d"),
 		},
 		{
 			// POST with error

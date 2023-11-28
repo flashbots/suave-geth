@@ -7,6 +7,7 @@ type Config struct {
 	PebbleDbPath                  string
 	EthBundleSigningKeyHex        string
 	EthBlockSigningKeyHex         string
+	ExternalWhitelist             []string
 }
 
 var DefaultConfig = Config{}

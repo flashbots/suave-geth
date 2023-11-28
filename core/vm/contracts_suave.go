@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -146,17 +147,34 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		body = bytes.NewReader(request.Body)
 	}
 
+	// decode the url and check if the domain is allowed
+	parsedURL, err := url.Parse(request.Url)
+	if err != nil {
+		panic(err)
+	}
+
+	var allowed bool
+	for _, allowedDomain := range s.suaveContext.Backend.ExternalWhitelist {
+		if allowedDomain == "*" || allowedDomain == parsedURL.Hostname() {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return nil, fmt.Errorf("domain %s is not allowed", parsedURL.Hostname())
+	}
+
 	req, err := http.NewRequest(request.Method, request.Url, body)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, header := range request.Headers {
-		prts := strings.Split(header, ":")
-		if len(prts) != 2 {
-			return nil, fmt.Errorf("incorrect header format")
+		indx := strings.Index(header, ":")
+		if indx == -1 {
+			return nil, fmt.Errorf("incorrect header format '%s', no ':' present", header)
 		}
-		req.Header.Add(prts[0], prts[1])
+		req.Header.Add(header[:indx], header[indx+1:])
 	}
 
 	client := &http.Client{
