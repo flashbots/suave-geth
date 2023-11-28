@@ -21,6 +21,7 @@ var (
 	suaveLibContract             = newArtifact("SuaveAbi.sol/SuaveAbi.json")
 	exampleCallSourceContract    = newArtifact("example.sol/ExampleEthCallSource.json")
 	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
+	ofaPrivateContract           = newArtifact("bids2.sol/OFAPrivate2.json")
 )
 
 func newArtifact(name string) *Artifact {

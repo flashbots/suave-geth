@@ -175,7 +175,7 @@ library MevBoost {
         return body;
     }
 
-    function submitBlock(string memory baseUrl, SubmitBlockRequest memory bundle) internal {
+    function submitBlock(string memory baseUrl, SubmitBlockRequest memory bundle) internal view {
         string memory url = string(abi.encodePacked(baseUrl, "/relay/v1/builder/blocks"));
 
         Suave.HttpConfig memory config;
@@ -188,7 +188,7 @@ library MevBoost {
     /// The output is prefixed with "0x".
     /// The output excludes leading "0" from the `toHexString` output.
     /// `0x00: "0x0", 0x01: "0x1", 0x12: "0x12", 0x123: "0x123"`.
-    function toMinimalHexString(bytes memory value) internal pure returns (string memory str) {
+    function toMinimalHexString(bytes memory value) private pure returns (string memory str) {
         str = LibString.toHexStringNoPrefix(value);
         /// @solidity memory-safe-assembly
         assembly {

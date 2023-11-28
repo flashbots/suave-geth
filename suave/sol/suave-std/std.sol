@@ -21,37 +21,6 @@ library Types {
         bytes32[] revertingHashes;
         uint8 refundPercent;
     }
-    
-    function encode(SBundle memory bundle) internal pure returns (bytes memory) {
-        // encoded sbundle
-        bytes memory bundleEncoded;
-
-        // dynamic fields
-        if (bundle.revertingHashes.length != 0) {
-            //bundleEncoded = abi.encodePacked(bundleEncoded, '"revertingHashes": [');
-            //for (uint i = 0; i < bundle.revertingHashes.length; i++) {
-            //    bundleEncoded = abi.encodePacked(bundleEncoded, '"', Strings.toHexString(bybundle.revertingHashes[i]), '",');
-            //}
-            //bundleEncoded = abi.encodePacked(bundleEncoded, "],");
-        }
-
-        // fixed fields
-        bundleEncoded = abi.encodePacked(
-            bundleEncoded,
-            '"blockNumber":"', LibString.toString(uint256(bundle.blockNumber)), '",'
-            '"percent":"', LibString.toString(uint256(bundle.refundPercent)), '",'
-            '"txs": ['
-        );
-
-        // txs
-        for (uint i = 0; i < bundle.txs.length; i++) {
-            bundleEncoded = abi.encodePacked(bundleEncoded, encode(bundle.txs[i]), ",");
-        }
-        bundleEncoded = abi.encodePacked(bundleEncoded, "]");
-
-        bundleEncoded = abi.encodePacked("{", bundleEncoded, "}");
-        return bundleEncoded;
-    }
 
     struct Transaction {
         address to;
@@ -77,7 +46,7 @@ library Types {
             txnEncoded = abi.encodePacked(txnEncoded, '"input": "0x",');
         }
         if (txn.to != address(0)) {
-            txnEncoded = abi.encodePacked(txnEncoded, '"to":', Strings.toHexString(txn.to), ",");
+            txnEncoded = abi.encodePacked(txnEncoded, '"to":"', Strings.toHexString(txn.to), '",');
         }
 
         // fixed fields
@@ -98,7 +67,7 @@ library Types {
         return txnEncoded;
     }
 
-    function encodeRLP(Transaction memory txStruct) public pure returns (bytes memory) {
+    function encodeRLP(Transaction memory txStruct) internal pure returns (bytes memory) {
         bytes[] memory items = new bytes[](9);
 
         items[0] = RLPWriter.writeUint(txStruct.nonce);

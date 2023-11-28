@@ -2,12 +2,12 @@ pragma solidity ^0.8.8;
 
 import "../libraries/Suave.sol";
 import "./utils/Strings.sol";
-import "./std.sol";
+import "./utils/RLPWriter.sol";
 import "solady/src/utils/LibString.sol";
 import "solady/src/utils/JSONParserLib.sol";
 
 library MevShare {
-    using JSONParserLib for *;
+    //using JSONParserLib for *;
 
     struct Bundle {
         string version;
@@ -18,7 +18,7 @@ library MevShare {
     }
 
     // encodes following the schema in https://github.com/flashbots/mev-share/blob/main/specs/bundles/v0.1.md#json-rpc-request-scheme
-    function encodeBundle(Bundle memory bundle) internal pure returns (bytes memory) {
+    function encodeBundle(Bundle memory bundle) internal view returns (bytes memory) {
         require(bundle.bodies.length == bundle.canRevert.length, "MevShare: bodies and canRevert length mismatch");
 
         bytes memory body = abi.encodePacked(
@@ -54,7 +54,7 @@ library MevShare {
         // -> validity
         body = abi.encodePacked(body, '"validity":{"refund":[');
 
-        for (uint i = 0; i < bundle.bodies.length; i++) {
+        for (uint i = 0; i < bundle.refundPercents.length; i++) {
             body = abi.encodePacked(
                 body,
                 '{"bodyIdx":',
@@ -64,7 +64,7 @@ library MevShare {
                 "}"
             );
 
-            if (i < bundle.bodies.length - 1) {
+            if (i < bundle.refundPercents.length - 1) {
                 body = abi.encodePacked(body, ",");
             }
         }
@@ -73,7 +73,7 @@ library MevShare {
         return body;
     }
 
-    function sendBundle(string memory url, Bundle memory bundle) internal {
+    function sendBundle(string memory url, Bundle memory bundle) internal view {
         Suave.HttpConfig memory config;
         config.headers = new string[](1);
         config.headers[0] = "Content-Type:application/json";

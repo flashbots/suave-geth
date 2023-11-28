@@ -5,9 +5,7 @@ import "../libraries/Suave.sol";
 import "../suave-std/suavex.sol";
 import "../suave-std/mevshare.sol";
 
-contract OFAPrivate {
-    address[] public addressList = [0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829];
-
+contract OFAPrivate2 {
     // Struct to hold hint-related information for an order.
     struct HintOrder {
         Suave.BidId id;
@@ -21,11 +19,14 @@ contract OFAPrivate {
 
     // Internal function to save order details and generate a hint.
     function saveOrder(string memory url, Types.SBundle memory bundle) internal view returns (HintOrder memory) {
+        address[] memory allowedList = new address[](1);
+        allowedList[0] = address(this);
+
         // Simulate the bundle and extract its score.
         uint256 egp = Suavex.simulateTxn(url, bundle.txs).blockValue;
 
         // Store the bundle and the simulation results in the confidential datastore.
-        Suave.Bid memory bid = Suave.newBid(10, addressList, addressList, "");
+        Suave.Bid memory bid = Suave.newBid(10, allowedList, allowedList, "namespace");
         Suave.confidentialStore(bid.id, "mevshare:v0:ethBundles", abi.encode(bundle));
         Suave.confidentialStore(bid.id, "mevshare:v0:ethBundleSimResults", abi.encode(egp));
 
@@ -70,7 +71,6 @@ contract OFAPrivate {
     }
 
     function emitMatchBidAndHint(string memory builderUrl, Suave.BidId bidId) external payable returns (bytes memory) {
-        /*
         // retrieve the bids of 'bidId' that we are going to send 
         Suave.BidId[] memory bids = abi.decode(Suave.confidentialRetrieve(bidId, "mevshare:v0:mergedBids"), (Suave.BidId[]));
 
@@ -82,17 +82,23 @@ contract OFAPrivate {
         bodies[0] = Types.encodeRLP(bundle1.txs[0]);
         bodies[1] = Types.encodeRLP(bundle2.txs[0]);
 
+        bool[] memory canRevert = new bool[](2);
+        canRevert[0] = false;
+        canRevert[1] = false;
+
+        uint8[] memory refundPercents = new uint8[](1);
+        refundPercents[0] = 10;
+
         // build the mev share bundle
         MevShare.Bundle memory mevBundle = MevShare.Bundle({
             version: "v0.1",
-            inclusionBlock: 0,
-            bodies: bodies
-            // TODO: refunds
+            inclusionBlock: 1000,
+            bodies: bodies,
+            canRevert: canRevert,
+            refundPercents: refundPercents
         });
 
         MevShare.sendBundle(builderUrl, mevBundle);
-        */
-        
         return abi.encodeWithSelector(this.emitMatchBidAndHintCallback.selector);
     }
 }

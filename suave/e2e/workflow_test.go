@@ -1136,60 +1136,114 @@ func TestE2E_HttpPrecompiles(t *testing.T) {
 	})
 }
 
-func TestE2E_Experiment(t *testing.T) {
+func TestE2E_SuaveSTDExperiment(t *testing.T) {
 	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
-	/*
-		This one works
-		=> {"jsonrpc":"2.0","id":1,"method":"suavex_buildEthBlock","params":[null,[{"type":"0x0","nonce":"0x0","to":"0x71562b71999873db5b286df957af199ec94617f7","gas":"0x5208","gasPrice":"0xd","maxPriorityFeePerGas":null,"maxFeePerGas":null,"value":"0x3e8","input":"0x","v":"0xa96","r":"0x1fdcfebe9cbc245ce3c099e2d124fd182a068b0a2af6a3a52f2f9916278196ca","s":"0x2bb82542ce5ac2d7a1b156531f20691b1920bdcc9ac26ddf198c3349ddf5e50d","hash":"0xc316c9c8e5afb4c4da38af97b23a9c8baa60d403fa7e7b57f6309119bfc73525"}]]}
-	*/
+	mevShareAddr := fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("==> DATA <==")
 
-	/*
-		input := `{"jsonrpc": "2.0", "method": "suavex_buildEthBlock", "params": [null, [{"gas":"0x5208","gasPrice":"0xd","nonce":"0x0","value":"0x0","chainId":"0x0", "input": "0x", "v":"0xa96","r":"0x1fdcfebe9cbc245ce3c099e2d124fd182a068b0a2af6a3a52f2f9916278196ca","s":"0x2bb82542ce5ac2d7a1b156531f20691b1920bdcc9ac26ddf198c3349ddf5e50d"}]], "id": 1}`
-
-		resp, err := http.Post(fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, "application/json", bytes.NewBuffer([]byte(input)))
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(resp)
-
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Println(string(data))
-	*/
+		body, _ := io.ReadAll(r.Body)
+		fmt.Println(string(body))
+	})
 
 	clt := fr.NewSDKClient()
 
-	signedTx, err := types.SignNewTx(testKey, signer, &types.LegacyTx{
-		Nonce:    0,
-		GasPrice: big.NewInt(1000),
-		Gas:      100000,
-	})
-	require.NoError(t, err)
+	var shareBidId, matchBidId [16]byte
 
-	v, r, s := signedTx.RawSignatureValues()
+	contract := sdk.GetContract(testAddr4, ofaPrivateContract.Abi, clt)
 
-	txxn := &Transaction{
-		Gas:      signedTx.Gas(),
-		GasPrice: signedTx.GasPrice().Uint64(),
-		Value:    signedTx.Value().Uint64(),
-		Nonce:    signedTx.Nonce(),
-		Data:     signedTx.Data(),
-		ChainId:  signedTx.ChainId().Uint64(),
-		V:        v.Bytes(),
-		R:        r.Bytes(),
-		S:        s.Bytes(),
+	{
+		signedTx, err := types.SignNewTx(testKey, signer, &types.LegacyTx{
+			Nonce:    0,
+			GasPrice: big.NewInt(1000),
+			Gas:      100000,
+		})
+		require.NoError(t, err)
+
+		v, r, s := signedTx.RawSignatureValues()
+
+		txxn := &Transaction{
+			Gas:      signedTx.Gas(),
+			GasPrice: signedTx.GasPrice().Uint64(),
+			Value:    signedTx.Value().Uint64(),
+			Nonce:    signedTx.Nonce(),
+			Data:     signedTx.Data(),
+			ChainId:  signedTx.ChainId().Uint64(),
+			V:        v.Bytes(),
+			R:        r.Bytes(),
+			S:        s.Bytes(),
+		}
+		if to := signedTx.To(); to != nil {
+			txxn.To = *to
+		}
+
+		bundle := &SBundle{
+			BlockNumber:     0,
+			Txs:             []Transaction{*txxn},
+			RevertingHashes: []common.Hash{},
+			RefundPercent:   uint8(10),
+		}
+
+		_, err = contract.SendTransaction("newOrder", []interface{}{fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, bundle}, nil)
+		require.NoError(t, err)
+
+		unpacked, err := ofaPrivateContract.Abi.Events["HintEvent"].Inputs.Unpack(fr.suethSrv.ProgressChain().Receipts[0].Logs[0].Data)
+		require.NoError(t, err)
+		shareBidId = unpacked[0].([16]byte)
 	}
-	if to := signedTx.To(); to != nil {
-		txxn.To = *to
+
+	fmt.Println("===> SEND BACKRUN <===")
+
+	{
+		backrunTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+			Nonce:    0,
+			To:       &testAddr,
+			Value:    big.NewInt(1000),
+			Gas:      21420,
+			GasPrice: big.NewInt(13),
+			Data:     []byte{},
+		}), signer, testKey2)
+		require.NoError(t, err)
+
+		v, r, s := backrunTx.RawSignatureValues()
+
+		txxn := &Transaction{
+			Gas:      backrunTx.Gas(),
+			GasPrice: backrunTx.GasPrice().Uint64(),
+			Value:    backrunTx.Value().Uint64(),
+			Nonce:    backrunTx.Nonce(),
+			Data:     backrunTx.Data(),
+			ChainId:  backrunTx.ChainId().Uint64(),
+			V:        v.Bytes(),
+			R:        r.Bytes(),
+			S:        s.Bytes(),
+		}
+		if to := backrunTx.To(); to != nil {
+			txxn.To = *to
+		}
+
+		backRunBundle := &SBundle{
+			Txs:             []Transaction{*txxn},
+			RevertingHashes: []common.Hash{},
+		}
+
+		_, err = contract.SendTransaction("newMatch", []interface{}{shareBidId, fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, backRunBundle}, nil)
+		require.NoError(t, err)
+
+		fmt.Println("_ DONE? _")
+
+		unpacked, err := ofaPrivateContract.Abi.Events["HintEvent"].Inputs.Unpack(fr.suethSrv.ProgressChain().Receipts[0].Logs[0].Data)
+		require.NoError(t, err)
+		matchBidId = unpacked[0].([16]byte)
 	}
 
-	contractAddr := common.Address{0x3}
-	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+	fmt.Println("===> SEND BUNDLE <===")
+
+	{
+		_, err := contract.SendTransaction("emitMatchBidAndHint", []interface{}{mevShareAddr, matchBidId}, nil)
+		require.NoError(t, err)
+	}
 
 	/*
 		fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
@@ -1203,14 +1257,16 @@ func TestE2E_Experiment(t *testing.T) {
 		})
 	*/
 
-	fmt.Println("_ LETS GO ! _")
-	fmt.Println(txxn)
+	/*
+		fmt.Println("_ LETS GO ! _")
+		fmt.Println(txxn)
+	*/
 
 	/*
 		contract.SendTransaction("sampleJSON", []interface{}{goerliAddr}, nil)
 	*/
 
-	contract.SendTransaction("simulateTxn", []interface{}{fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, txxn}, nil)
+	// contract.SendTransaction("simulateTxn", []interface{}{fr.cfg.suaveConfig.SuaveEthRemoteBackendEndpoint, txxn}, nil)
 }
 
 type Transaction struct {
@@ -1224,6 +1280,13 @@ type Transaction struct {
 	R        []byte
 	S        []byte
 	V        []byte
+}
+
+type SBundle struct {
+	BlockNumber     uint64
+	Txs             []Transaction
+	RevertingHashes []common.Hash
+	RefundPercent   uint8
 }
 
 func TestE2EPrecompile_Other(t *testing.T) {
@@ -1427,6 +1490,7 @@ var (
 	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
 	testAddr3 = common.Address{0x3}
+	testAddr4 = common.Address{0x4}
 
 	testBalance = big.NewInt(2e18)
 
@@ -1457,6 +1521,7 @@ var (
 			newBlockBidAddress:  {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
 			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
+			testAddr4:           {Balance: big.NewInt(0), Code: ofaPrivateContract.DeployedCode},
 		},
 	}
 
