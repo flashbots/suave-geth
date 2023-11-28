@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "./mevshare.sol";
 
 contract MevShareTest is Test {
-    function testMevShare() public {
+    function testEncodeMevShare() public {
         MevShare.Bundle memory bundle;
         bundle.version = "";
         bundle.inclusionBlock = 1;

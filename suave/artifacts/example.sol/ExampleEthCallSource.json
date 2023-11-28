@@ -454,22 +454,22 @@
         44618
       ],
       "Math": [
-        51922
+        51945
       ],
       "RLPWriter": [
-        50613
+        50636
       ],
       "SignedMath": [
-        52027
+        52050
       ],
       "Strings": [
-        50868
+        50891
       ],
       "Suave": [
         45462
       ],
       "Suavex": [
-        50106
+        50129
       ],
       "Types": [
         49802
@@ -525,7 +525,7 @@
         "file": "../suave-std/suavex.sol",
         "nameLocation": "-1:-1:-1",
         "scope": 48409,
-        "sourceUnit": 50107,
+        "sourceUnit": 50130,
         "symbolAliases": [],
         "unitAlias": ""
       },
@@ -1963,10 +1963,10 @@
                         "name": "Suavex",
                         "nodeType": "Identifier",
                         "overloadedDeclarations": [],
-                        "referencedDeclaration": 50106,
+                        "referencedDeclaration": 50129,
                         "src": "1001:6:27",
                         "typeDescriptions": {
-                          "typeIdentifier": "t_type$_t_contract$_Suavex_$50106_$",
+                          "typeIdentifier": "t_type$_t_contract$_Suavex_$50129_$",
                           "typeString": "type(library Suavex)"
                         }
                       },
@@ -1978,10 +1978,10 @@
                       "memberLocation": "1008:11:27",
                       "memberName": "simulateTxn",
                       "nodeType": "MemberAccess",
-                      "referencedDeclaration": 50027,
+                      "referencedDeclaration": 50050,
                       "src": "1001:18:27",
                       "typeDescriptions": {
-                        "typeIdentifier": "t_function_internal_view$_t_string_memory_ptr_$_t_array$_t_struct$_Transaction_$49496_memory_ptr_$dyn_memory_ptr_$returns$_t_struct$_SimulateResult_$49889_memory_ptr_$",
+                        "typeIdentifier": "t_function_internal_view$_t_string_memory_ptr_$_t_array$_t_struct$_Transaction_$49496_memory_ptr_$dyn_memory_ptr_$returns$_t_struct$_SimulateResult_$49912_memory_ptr_$",
                         "typeString": "function (string memory,struct Types.Transaction memory[] memory) view returns (struct Suavex.SimulateResult memory)"
                       }
                     },
@@ -1997,7 +1997,7 @@
                     "src": "1001:29:27",
                     "tryCall": false,
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_SimulateResult_$49889_memory_ptr",
+                      "typeIdentifier": "t_struct$_SimulateResult_$49912_memory_ptr",
                       "typeString": "struct Suavex.SimulateResult memory"
                     }
                   },
@@ -2120,7 +2120,7 @@
         "scope": 48409,
         "usedErrors": [
           44626,
-          50633
+          50656
         ]
       },
       {
