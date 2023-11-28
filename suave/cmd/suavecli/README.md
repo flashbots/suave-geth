@@ -91,7 +91,7 @@ Ensure these details for the command line tool are on hand:
 - `privKeyHex` : private key as hex (for testing)
 - `relay_url` : address of boost relay that the contract will send blocks to
 
-## Walktrhough
+## Walkthrough
 
 ### 1. Deploy Simple MEV-Share Contract 📜
 
