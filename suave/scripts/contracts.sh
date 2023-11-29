@@ -23,6 +23,9 @@ civalidate() {
 
     # Build again and check if there are any changes in the artifacts folder
     if [ "$(git status --porcelain .)" ]; then
+      # Show the changes for debugging purposes
+      git status --porcelain .
+      
       echo "Artifacts have not been generated."
       exit 1
     else
