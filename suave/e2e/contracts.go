@@ -35,7 +35,7 @@ func newArtifact(name string) *Artifact {
 
 	data, err := os.ReadFile(targetFilePath)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read artifact %s: %v", name, err))
+		panic(fmt.Sprintf("failed to read artifact %s: %v. Maybe you forgot to generate the artifacts? `cd suave && forge build`", name, err))
 	}
 
 	var artifactObj struct {
