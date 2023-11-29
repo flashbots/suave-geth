@@ -1,8 +1,1 @@
 *.sol
-
-!forge_example.sol
-!bids.sol
-!Suave.sol
-!SuaveAbi.sol
-!SuaveForge.sol
-!example.sol
