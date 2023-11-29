@@ -125,6 +125,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 		"no caller of confidentialStore (0000000000000000000000000000000042020000) is allowed on 00000000000000000000000000000000",
 		"precompile buildEthBlock (0000000000000000000000000000000042100001) not allowed on 00000000000000000000000000000000",
 		"only GET and POST methods are supported",
+		"domain  is not allowed",
 	}
 
 	expectedVariableErrors := []*regexp.Regexp{
