@@ -25,6 +25,7 @@ civalidate() {
     if [ "$(git status --porcelain .)" ]; then
       # Show the changes for debugging purposes
       git status --porcelain .
+      git diff
       
       echo "Artifacts have not been generated."
       exit 1
