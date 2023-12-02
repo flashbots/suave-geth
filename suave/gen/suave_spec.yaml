@@ -199,3 +199,12 @@ functions:
       fields:
         - name: encodedBundle
           type: bytes
+  - name: randomUint
+    address: "0x00000000000000000000000000000000F00bA777"
+    isConfidential: true
+    input:
+    output:
+      packed: false
+      fields:
+        - name: num
+          type: uint256

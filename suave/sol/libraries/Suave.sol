@@ -56,6 +56,8 @@ library Suave {
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
+    address public constant RANDOM_UINT = 0x00000000000000000000000000000000F00bA777;
+
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
@@ -167,6 +169,16 @@ library Suave {
         }
 
         return abi.decode(data, (Bid));
+    }
+
+    function randomUint() internal view returns (uint256) {
+        require(isConfidential());
+        (bool success, bytes memory data) = RANDOM_UINT.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(RANDOM_UINT, data);
+        }
+
+        return abi.decode(data, (uint256));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)

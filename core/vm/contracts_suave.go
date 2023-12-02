@@ -1,7 +1,9 @@
 package vm
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -107,6 +109,15 @@ func (b *suaveRuntime) fetchBids(targetBlock uint64, namespace string) ([]types.
 	}
 
 	return bids, nil
+}
+
+func (b *suaveRuntime) randomUint() (*big.Int, error) {
+	x := big.NewInt(0)
+	num, err := rand.Int(rand.Reader, x)
+	if err != nil {
+		return nil, err
+	}
+	return num, nil
 }
 
 func mustParseAbi(data string) abi.ABI {

@@ -101,6 +101,12 @@ library SuaveForge {
         return abi.decode(data, (Suave.Bid));
     }
 
+    function randomUint() internal view returns (uint256) {
+        bytes memory data = forgeIt("0x00000000000000000000000000000000F00bA777", abi.encode());
+
+        return abi.decode(data, (uint256));
+    }
+
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         view
