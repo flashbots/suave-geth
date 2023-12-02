@@ -112,8 +112,9 @@ func (b *suaveRuntime) fetchBids(targetBlock uint64, namespace string) ([]types.
 }
 
 func (b *suaveRuntime) randomUint() (*big.Int, error) {
-	x := big.NewInt(0)
-	num, err := rand.Int(rand.Reader, x)
+	maxU256 := new(big.Int)
+	maxU256.SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
+	num, err := rand.Int(rand.Reader, maxU256)
 	if err != nil {
 		return nil, err
 	}
