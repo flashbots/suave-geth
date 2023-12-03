@@ -16,6 +16,7 @@ library Suave {
         bytes32 random;
         Withdrawal[] withdrawals;
         bytes extra;
+        bool usePending;
     }
 
     struct DataRecord {

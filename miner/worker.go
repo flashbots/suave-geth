@@ -1272,6 +1272,11 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	if err := w.rawCommitTransactions(work, txs); err != nil {
 		return nil, nil, err
 	}
+	if args.UsePending {
+		if err := w.commitPendingTxs(work); err != nil {
+			return nil, nil, err
+		}
+	}
 
 	profitPost := work.state.GetBalance(args.FeeRecipient)
 	block, err := w.engine.FinalizeAndAssemble(w.chain, work.header, work.state, work.txs, work.unclelist(), work.receipts, params.withdrawals)
@@ -1363,6 +1368,11 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 			}
 		}
 	}
+	if args.UsePending {
+		if err := w.commitPendingTxs(work); err != nil {
+			return nil, nil, err
+		}
+	}
 
 	profitPost := work.state.GetBalance(params.coinbase)
 	proposerProfit := new(big.Int).Set(profitPost) // = post-pre-transfer_cost
@@ -1392,6 +1402,18 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 		return nil, nil, err
 	}
 	return block, proposerProfit, nil
+}
+
+func (w *worker) commitPendingTxs(work *environment) error {
+	interrupt := new(atomic.Int32)
+	timer := time.AfterFunc(w.newpayloadTimeout, func() {
+		interrupt.Store(commitInterruptTimeout)
+	})
+	defer timer.Stop()
+	if err := w.fillTransactions(nil, work); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (w *worker) rawCommitTransactions(env *environment, txs types.Transactions) error {
