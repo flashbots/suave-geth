@@ -2,6 +2,8 @@ package vm
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math/big"
 	"regexp"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -252,4 +255,48 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+func TestSTransaction(t *testing.T) {
+	toAddr := common.Address{0x1}
+
+	signer := types.NewLondonSigner(big.NewInt(101))
+	testKey, _ := crypto.GenerateKey()
+
+	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &toAddr,
+		Value:    big.NewInt(1000),
+		Gas:      21000,
+		GasPrice: big.NewInt(13),
+		Data:     []byte{},
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	fmt.Println(ethTx)
+
+	from, err := signer.Sender(ethTx)
+	require.NoError(t, err)
+
+	fmt.Println(from)
+	fmt.Println(crypto.PubkeyToAddress(testKey.PublicKey))
+
+	fmt.Println("===>")
+
+	ethTx2, err := STransactionToTransaction(TransactionToStransaction(ethTx))
+	require.NoError(t, err)
+
+	xxx, err := json.Marshal(ethTx2)
+	require.NoError(t, err)
+
+	fmt.Println(string(xxx))
+
+	yyy, err := json.Marshal(ethTx)
+	require.NoError(t, err)
+
+	fmt.Println(string(yyy))
+
+	from, err = signer.Sender(ethTx2)
+	require.NoError(t, err)
+	fmt.Println(from)
 }
