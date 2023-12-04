@@ -46,7 +46,7 @@ structs:
         type: Withdrawal[]
       - name: extra
         type: bytes
-      - name: usePending
+      - name: fillPending
         type: bool
   - name: HttpRequest
     fields:

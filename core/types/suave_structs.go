@@ -18,7 +18,7 @@ type BuildBlockArgs struct {
 	Random         common.Hash
 	Withdrawals    []*Withdrawal
 	Extra          []byte
-	UsePending     bool
+	FillPending    bool
 }
 
 type DataRecord struct {

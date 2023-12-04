@@ -1272,7 +1272,7 @@ func (w *worker) buildBlockFromTxs(ctx context.Context, args *types.BuildBlockAr
 	if err := w.rawCommitTransactions(work, txs); err != nil {
 		return nil, nil, err
 	}
-	if args.UsePending {
+	if args.FillPending {
 		if err := w.commitPendingTxs(work); err != nil {
 			return nil, nil, err
 		}
@@ -1368,7 +1368,7 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 			}
 		}
 	}
-	if args.UsePending {
+	if args.FillPending {
 		if err := w.commitPendingTxs(work); err != nil {
 			return nil, nil, err
 		}
