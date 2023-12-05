@@ -276,6 +276,25 @@ func TestTxSigningPrecompile(t *testing.T) {
 	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), sender)
 }
 
+type HintEvent struct {
+	BidId [16]uint8 `abi:"bidId"`
+	Hint  []byte    `abi:"hint"`
+}
+
+func (h *HintEvent) ParseLog(log *types.Log) error {
+	return MevShareBidContract.Abi.Events["HintEvent"].ParseLogToObject(h, log)
+}
+
+type BidEvent struct {
+	Id                  [16]uint8        `abi:"bidId"`
+	DecryptionCondition uint64           `abi:"decryptionCondition"`
+	AllowedPeekers      []common.Address `abi:"allowedPeekers"`
+}
+
+func (b *BidEvent) ParseLog(log *types.Log) error {
+	return BundleBidContract.Abi.Events["BidEvent"].ParseLogToObject(b, log)
+}
+
 func TestBundleBid(t *testing.T) {
 	// t.Fatal("not implemented")
 
@@ -328,12 +347,12 @@ func TestBundleBid(t *testing.T) {
 		require.NotNil(t, receipts[0].Logs[0])
 		require.Equal(t, newBundleBidAddress, receipts[0].Logs[0].Address)
 
-		unpacked, err = BundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[0].Data)
-		require.NoError(t, err)
+		var bidEvent BidEvent
+		require.NoError(t, bidEvent.ParseLog(receipts[0].Logs[0]))
 
-		require.Equal(t, bid.Id, unpacked[0].([16]byte))
-		require.Equal(t, bid.DecryptionCondition, unpacked[1].(uint64))
-		require.Equal(t, bid.AllowedPeekers, unpacked[2].([]common.Address))
+		require.Equal(t, bid.Id, bidEvent.Id)
+		require.Equal(t, bid.DecryptionCondition, bidEvent.DecryptionCondition)
+		require.Equal(t, bid.AllowedPeekers, bidEvent.AllowedPeekers)
 
 		_, err = fr.ConfidentialEngine().Retrieve(bid.Id, common.Address{0x41, 0x42, 0x43}, "default:v0:ethBundleSimResults")
 		require.NoError(t, err)
@@ -533,9 +552,9 @@ func TestMevShare(t *testing.T) {
 	require.NotEmpty(t, r.Logs)
 
 	// extract share BidId
-	unpacked, err := MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
-	require.NoError(t, err)
-	shareBidId := unpacked[0].([16]byte)
+	var hintEvent HintEvent
+	require.NoError(t, hintEvent.ParseLog(r.Logs[1]))
+	shareBidId := hintEvent.BidId
 
 	// ************ 2. Match Portion ************
 
@@ -585,11 +604,11 @@ func TestMevShare(t *testing.T) {
 
 		require.Equal(t, 2, len(receipts[0].Logs))
 		require.NotNil(t, receipts[0].Logs[1])
-		unpacked, err := BundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
-		require.NoError(t, err)
 
-		bidId := unpacked[0].([16]byte)
-		payloadData, err := fr.ConfidentialEngine().Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
+		var bidEvent BidEvent
+		require.NoError(t, bidEvent.ParseLog(receipts[0].Logs[1]))
+
+		payloadData, err := fr.ConfidentialEngine().Retrieve(bidEvent.Id, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
 		var payloadEnvelope engine.ExecutionPayloadEnvelope
@@ -669,9 +688,9 @@ func TestMevShareBundleSenderContract(t *testing.T) {
 		require.NotEmpty(t, receipt.Logs)
 
 		// extract share BidId
-		unpacked, err := MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(receipt.Logs[1].Data)
-		require.NoError(t, err)
-		shareBidId := unpacked[0].([16]byte)
+		var hintEvent HintEvent
+		require.NoError(t, hintEvent.ParseLog(receipt.Logs[1]))
+		shareBidId := hintEvent.BidId
 
 		// ************ 2. Match Portion ************
 
