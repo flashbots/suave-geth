@@ -592,7 +592,7 @@ func TestMevShare(t *testing.T) {
 	// Send a bundle bid
 	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, buildEthBlockAddress, mevShareAddress}
 
-	bundleBidContractI := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
+	bundleBidContractI := sdk.GetContract(mevShareAddress, BundleBidContract.Abi, clt)
 	_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}}, confidentialDataBytes)
 	requireNoRpcError(t, err)
 
