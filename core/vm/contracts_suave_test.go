@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"regexp"
 	"strings"
@@ -56,7 +57,7 @@ func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, names
 }
 
 func (m *mockSuaveBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
@@ -91,8 +92,11 @@ func TestSuavePrecompileStub(t *testing.T) {
 		},
 	})
 
+	privkey, _ := crypto.GenerateKey()
+
 	suaveContext := SuaveContext{
 		Backend: &SuaveExecutionBackend{
+			EthBundleSigningKey:    privkey,
 			ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
 			ConfidentialEthBackend: mockSuaveBackend,
 		},
@@ -110,6 +114,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	expectedErrors := []string{
 		// json error when the precompile expects to decode a json object encoded as []byte
 		// in the precompile input.
+		"not implemented",
 		"invalid character",
 		"not allowed to store",
 		"not allowed to retrieve",
