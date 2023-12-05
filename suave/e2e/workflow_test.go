@@ -581,23 +581,8 @@ func TestMevShare(t *testing.T) {
 	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
-	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-
-		fmt.Println("---- string ---")
-		fmt.Println(string(bodyBytes))
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	fakeRelayServer := httptest.NewServer(&fakeRelayHandler{t, serveHttp})
-	defer fakeRelayServer.Close()
-
 	rpc := fr.suethSrv.RPCNode()
 	clt := fr.NewSDKClient()
-
-	bundleBidContractI := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
 
 	// ************ 1. Initial mevshare transaction Portion ************
 
@@ -607,6 +592,7 @@ func TestMevShare(t *testing.T) {
 	// Send a bundle bid
 	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, buildEthBlockAddress, mevShareAddress}
 
+	bundleBidContractI := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
 	_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}}, confidentialDataBytes)
 	requireNoRpcError(t, err)
 
