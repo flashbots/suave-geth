@@ -570,7 +570,7 @@ func TestMevShare_Updated(t *testing.T) {
 	})
 }
 
-func TestMevShareXX(t *testing.T) {
+func TestMevShare(t *testing.T) {
 	// 1. craft mevshare transaction
 	//   1a. confirm submission
 	// 2. send backrun txn
@@ -594,152 +594,112 @@ func TestMevShareXX(t *testing.T) {
 	fakeRelayServer := httptest.NewServer(&fakeRelayHandler{t, serveHttp})
 	defer fakeRelayServer.Close()
 
-	// rpc := fr.suethSrv.RPCNode()
+	rpc := fr.suethSrv.RPCNode()
 	clt := fr.NewSDKClient()
 
 	bundleBidContractI := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
 
-	ethTx, _, _ := prepareMevShareBundle(t)
-	b := &Bundle{
-		Txn:    *vm.TransactionToStransaction(ethTx),
-		Refund: 10,
-	}
+	// ************ 1. Initial mevshare transaction Portion ************
 
-	fmt.Println(bundleBidContractI.SendTransaction("other", []interface{}{b}, nil))
+	ethTx, _, confidentialDataBytes := prepareMevShareBundle(t)
+	targetBlock := uint64(1)
 
+	// Send a bundle bid
+	allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, buildEthBlockAddress, mevShareAddress}
+
+	_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}}, confidentialDataBytes)
+	requireNoRpcError(t, err)
+
+	//   1a. confirm submission
 	block := fr.suethSrv.ProgressChain()
-	unpacked, err := MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(block.Receipts[0].Logs[0].Data)
+	require.Equal(t, 1, len(block.Transactions()))
+	// check txn in block went to mev share
+	require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
+
+	// 2b. check logs emitted in the transaction
+	var r *types.Receipt
+	rpc.Call(&r, "eth_getTransactionReceipt", block.Transactions()[0].Hash())
+	require.NotEmpty(t, r)
+
+	t.Log("logs", r.Logs)
+	require.NoError(t, err)
+	require.NotEmpty(t, r.Logs)
+
+	// extract share BidId
+	unpacked, err := MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
 	require.NoError(t, err)
 	shareBidId := unpacked[0].([16]byte)
 
-	fmt.Println(shareBidId)
+	// ************ 2. Match Portion ************
 
-	/// -------------------------- ///
+	backrunTx, _, confidentialDataMatchBytes := prepareMevShareBackrun(t, shareBidId)
 
-	backRunTx, _, _ := prepareMevShareBackrun(t, shareBidId)
-
-	b2 := &Bundle{
-		Txn: *vm.TransactionToStransaction(backRunTx),
-	}
-
-	fmt.Println(bundleBidContractI.SendTransaction("newMatch2", []interface{}{b2, shareBidId}, nil))
+	cc := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
+	_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}, shareBidId}, confidentialDataMatchBytes)
+	requireNoRpcError(t, err)
 
 	block = fr.suethSrv.ProgressChain()
-	unpacked, err = MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(block.Receipts[0].Logs[0].Data)
-	require.NoError(t, err)
-	matchBidId := unpacked[0].([16]byte)
+	require.Equal(t, 1, len(block.Transactions()))
+	// check txn in block went to mev share
+	require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
 
-	fmt.Println(matchBidId)
+	var r2 *types.Receipt
+	rpc.Call(&r2, "eth_getTransactionReceipt", block.Transactions()[0].Hash())
+	require.NotEmpty(t, r2)
+	require.NotEmpty(t, r.Logs)
 
-	/// ------------------------------------- ///
+	t.Log("logs", r2.Logs)
 
-	bundleBidContractI.SendTransaction("emitBundle", []interface{}{fakeRelayServer.URL, matchBidId}, nil)
+	// ************ 3. Build Share Block ************
 
-	return
+	ethHead := fr.ethSrv.CurrentBlock()
 
-	/*
-		// ************ 1. Initial mevshare transaction Portion ************
+	payloadArgsTuple := types.BuildBlockArgs{
+		Timestamp:    ethHead.Time + uint64(12),
+		FeeRecipient: common.Address{0x42},
+	}
 
-		ethTx, _, confidentialDataBytes := prepareMevShareBundle(t)
-		targetBlock := uint64(1)
+	cc = sdk.GetContract(newBlockBidAddress, buildEthBlockContract.Abi, clt)
+	_, err = cc.SendTransaction("buildMevShare", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
+	requireNoRpcError(t, err)
 
-		// Send a bundle bid
-		allowedPeekers := []common.Address{{0x41, 0x42, 0x43}, newBlockBidAddress, buildEthBlockAddress, mevShareAddress}
+	block = fr.suethSrv.ProgressChain() // block = progressChain(t, ethservice, block.Header())
+	require.Equal(t, 1, len(block.Transactions()))
 
-		_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}}, confidentialDataBytes)
-		requireNoRpcError(t, err)
+	var r3 *types.Receipt
+	requireNoRpcError(t, rpc.Call(&r3, "eth_getTransactionReceipt", block.Transactions()[0].Hash()))
+	require.NotEmpty(t, r3.Logs)
 
-		//   1a. confirm submission
-		block := fr.suethSrv.ProgressChain()
-		require.Equal(t, 1, len(block.Transactions()))
-		// check txn in block went to mev share
-		require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
+	{ // Fetch the built block id and check that the payload contains mev share trasnactions!
+		receipts := block.Receipts
+		require.Equal(t, 1, len(receipts))
+		require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
+		require.Equal(t, uint64(1), receipts[0].Status)
 
-		// 2b. check logs emitted in the transaction
-		var r *types.Receipt
-		rpc.Call(&r, "eth_getTransactionReceipt", block.Transactions()[0].Hash())
-		require.NotEmpty(t, r)
-
-		t.Log("logs", r.Logs)
+		require.Equal(t, 2, len(receipts[0].Logs))
+		require.NotNil(t, receipts[0].Logs[1])
+		unpacked, err := BundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
 		require.NoError(t, err)
-		require.NotEmpty(t, r.Logs)
 
-		// extract share BidId
-		unpacked, err := MevShareBidContract.Abi.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data)
+		bidId := unpacked[0].([16]byte)
+		payloadData, err := fr.ConfidentialEngine().Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
-		shareBidId := unpacked[0].([16]byte)
 
-		// ************ 2. Match Portion ************
+		var payloadEnvelope engine.ExecutionPayloadEnvelope
+		require.NoError(t, json.Unmarshal(payloadData, &payloadEnvelope))
+		require.Equal(t, 4, len(payloadEnvelope.ExecutionPayload.Transactions)) // users tx, backrun, user refund, proposer payment
 
-		backrunTx, _, confidentialDataMatchBytes := prepareMevShareBackrun(t, shareBidId)
+		ethBlock, err := engine.ExecutableDataToBlock(*payloadEnvelope.ExecutionPayload)
+		require.NoError(t, err)
 
-		cc := sdk.GetContract(mevShareAddress, MevShareBidContract.Abi, clt)
-		_, err = cc.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr.KettleAddress()}, shareBidId}, confidentialDataMatchBytes)
-		requireNoRpcError(t, err)
+		require.Equal(t, ethTx.Hash(), ethBlock.Transactions()[0].Hash())
+		require.Equal(t, backrunTx.Hash(), ethBlock.Transactions()[1].Hash())
 
-		block = fr.suethSrv.ProgressChain()
-		require.Equal(t, 1, len(block.Transactions()))
-		// check txn in block went to mev share
-		require.Equal(t, block.Transactions()[0].To(), &mevShareAddress)
-
-		var r2 *types.Receipt
-		rpc.Call(&r2, "eth_getTransactionReceipt", block.Transactions()[0].Hash())
-		require.NotEmpty(t, r2)
-		require.NotEmpty(t, r.Logs)
-
-		t.Log("logs", r2.Logs)
-
-		// ************ 3. Build Share Block ************
-
-		ethHead := fr.ethSrv.CurrentBlock()
-
-		payloadArgsTuple := types.BuildBlockArgs{
-			Timestamp:    ethHead.Time + uint64(12),
-			FeeRecipient: common.Address{0x42},
-		}
-
-		cc = sdk.GetContract(newBlockBidAddress, buildEthBlockContract.Abi, clt)
-		_, err = cc.SendTransaction("buildMevShare", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
-		requireNoRpcError(t, err)
-
-		block = fr.suethSrv.ProgressChain() // block = progressChain(t, ethservice, block.Header())
-		require.Equal(t, 1, len(block.Transactions()))
-
-		var r3 *types.Receipt
-		requireNoRpcError(t, rpc.Call(&r3, "eth_getTransactionReceipt", block.Transactions()[0].Hash()))
-		require.NotEmpty(t, r3.Logs)
-
-		{ // Fetch the built block id and check that the payload contains mev share trasnactions!
-			receipts := block.Receipts
-			require.Equal(t, 1, len(receipts))
-			require.Equal(t, uint8(types.SuaveTxType), receipts[0].Type)
-			require.Equal(t, uint64(1), receipts[0].Status)
-
-			require.Equal(t, 2, len(receipts[0].Logs))
-			require.NotNil(t, receipts[0].Logs[1])
-			unpacked, err := BundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(receipts[0].Logs[1].Data)
-			require.NoError(t, err)
-
-			bidId := unpacked[0].([16]byte)
-			payloadData, err := fr.ConfidentialEngine().Retrieve(bidId, newBlockBidAddress, "default:v0:builderPayload")
-			require.NoError(t, err)
-
-			var payloadEnvelope engine.ExecutionPayloadEnvelope
-			require.NoError(t, json.Unmarshal(payloadData, &payloadEnvelope))
-			require.Equal(t, 4, len(payloadEnvelope.ExecutionPayload.Transactions)) // users tx, backrun, user refund, proposer payment
-
-			ethBlock, err := engine.ExecutableDataToBlock(*payloadEnvelope.ExecutionPayload)
-			require.NoError(t, err)
-
-			require.Equal(t, ethTx.Hash(), ethBlock.Transactions()[0].Hash())
-			require.Equal(t, backrunTx.Hash(), ethBlock.Transactions()[1].Hash())
-
-			userAddr, err := signer.Sender(ethTx)
-			require.NoError(t, err)
-			require.Equal(t, userAddr, *ethBlock.Transactions()[2].To())
-			require.Equal(t, common.Address{0x42}, *ethBlock.Transactions()[3].To())
-		}
-	*/
+		userAddr, err := signer.Sender(ethTx)
+		require.NoError(t, err)
+		require.Equal(t, userAddr, *ethBlock.Transactions()[2].To())
+		require.Equal(t, common.Address{0x42}, *ethBlock.Transactions()[3].To())
+	}
 }
 
 func TestMevShareBundleSenderContract(t *testing.T) {
