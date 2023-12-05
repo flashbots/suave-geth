@@ -46,6 +46,8 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 			GasLimit:     30000000,
 			Random:       head.Root,
 			Withdrawals:  nil,
+			Extra:        []byte(""),
+			FillPending:  false,
 		}
 	}
 
@@ -67,6 +69,8 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 			GasLimit:     30000000,
 			Random:       head.Root,
 			Withdrawals:  nil,
+			Extra:        []byte(""),
+			FillPending:  false,
 		}
 	}
 
