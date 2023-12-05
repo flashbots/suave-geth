@@ -2,8 +2,6 @@ package vm
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"math/big"
 	"regexp"
 	"strings"
@@ -273,30 +271,13 @@ func TestSTransaction(t *testing.T) {
 	}), signer, testKey)
 	require.NoError(t, err)
 
-	fmt.Println(ethTx)
-
 	from, err := signer.Sender(ethTx)
 	require.NoError(t, err)
-
-	fmt.Println(from)
-	fmt.Println(crypto.PubkeyToAddress(testKey.PublicKey))
-
-	fmt.Println("===>")
 
 	ethTx2, err := STransactionToTransaction(TransactionToStransaction(ethTx))
 	require.NoError(t, err)
 
-	xxx, err := json.Marshal(ethTx2)
+	from2, err := signer.Sender(ethTx2)
 	require.NoError(t, err)
-
-	fmt.Println(string(xxx))
-
-	yyy, err := json.Marshal(ethTx)
-	require.NoError(t, err)
-
-	fmt.Println(string(yyy))
-
-	from, err = signer.Sender(ethTx2)
-	require.NoError(t, err)
-	fmt.Println(from)
+	require.Equal(t, from, from2)
 }
