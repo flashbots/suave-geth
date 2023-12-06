@@ -83,10 +83,8 @@ func TestEngineOnRedis(t *testing.T) {
 	t.Cleanup(func() { engine2.Stop() })
 
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{},
-		},
+	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRecord{
+		KettleAddress: common.Address{},
 	}), types.NewSuaveSigner(new(big.Int)), testKey)
 	require.NoError(t, err)
 

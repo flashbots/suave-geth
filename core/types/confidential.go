@@ -89,6 +89,7 @@ func (tx *ConfidentialComputeRecord) setSignatureValues(chainID, v, r, s *big.In
 	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
 
+/*
 type ConfidentialComputeRequest struct {
 	ConfidentialComputeRecord
 	ConfidentialInputs []byte
@@ -130,6 +131,7 @@ func (tx *ConfidentialComputeRequest) rawSignatureValues() (v, r, s *big.Int) {
 func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.Int) {
 	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
+*/
 
 type SuaveTransaction struct {
 	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`

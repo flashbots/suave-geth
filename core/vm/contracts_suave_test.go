@@ -82,20 +82,22 @@ func TestSuavePrecompileStub(t *testing.T) {
 	// This test ensures that the Suave precompile stubs work as expected
 	// for encoding/decoding.
 	mockSuaveBackend := &mockSuaveBackend{}
-	stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
+	//stubEngine := cstore.NewConfidentialStoreEngine(mockSuaveBackend, mockSuaveBackend, cstore.MockSigner{}, cstore.MockChainSigner{})
 
-	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{},
-		},
-	})
+	/*
+		reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				KettleAddress: common.Address{},
+			},
+		})
+	*/
 
 	suaveContext := SuaveContext{
 		Backend: &SuaveExecutionBackend{
-			ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
+			//ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
 			ConfidentialEthBackend: mockSuaveBackend,
 		},
-		ConfidentialComputeRequestTx: reqTx,
+		//ConfidentialComputeRequestTx: reqTx,
 	}
 
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
@@ -173,19 +175,21 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })
 
-	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{},
-		},
-	})
+	/*
+		reqTx := types.NewTx(&types.ConfidentialComputeRequest{
+			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
+				KettleAddress: common.Address{},
+			},
+		})
+	*/
 
 	b := &suaveRuntime{
 		suaveContext: &SuaveContext{
 			Backend: &SuaveExecutionBackend{
-				ConfidentialStore:      confEngine.NewTransactionalStore(reqTx),
+				//ConfidentialStore:      confEngine.NewTransactionalStore(reqTx),
 				ConfidentialEthBackend: &mockSuaveBackend{},
 			},
-			ConfidentialComputeRequestTx: reqTx,
+			//ConfidentialComputeRequestTx: reqTx,
 		},
 	}
 	return b

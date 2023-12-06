@@ -64,17 +64,15 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
-	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: c.client.kettleAddress,
-			Nonce:         nonce,
-			To:            &c.addr,
-			Value:         nil,
-			GasPrice:      gasPrice,
-			Gas:           1000000,
-			Data:          calldata,
-		},
-		ConfidentialInputs: confidentialDataBytes,
+	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRecord{
+		KettleAddress:          c.client.kettleAddress,
+		Nonce:                  nonce,
+		To:                     &c.addr,
+		Value:                  nil,
+		GasPrice:               gasPrice,
+		Gas:                    1000000,
+		Data:                   calldata,
+		ConfidentialInputsHash: crypto.Keccak256Hash(confidentialDataBytes),
 	}), signer, c.client.key)
 	if err != nil {
 		return nil, err
@@ -86,7 +84,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	}
 
 	var hash common.Hash
-	if err = c.client.rpc.Client().Call(&hash, "eth_sendRawTransaction", hexutil.Encode(computeRequestBytes)); err != nil {
+	if err = c.client.rpc.Client().Call(&hash, "eth_sendRawTransaction", hexutil.Encode(computeRequestBytes), hexutil.Encode(confidentialDataBytes)); err != nil {
 		return nil, err
 	}
 

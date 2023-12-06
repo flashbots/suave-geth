@@ -70,16 +70,14 @@ func TestIsConfidential(t *testing.T) {
 
 	{
 		// Verify sending computation requests and onchain transactions to isConfidentialAddress
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-				Nonce:         0,
-				To:            &isConfidentialAddress,
-				Value:         nil,
-				Gas:           1000000,
-				GasPrice:      big.NewInt(10),
-				Data:          []byte{},
-			},
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRecord{
+			KettleAddress: fr.KettleAddress(),
+			Nonce:         0,
+			To:            &isConfidentialAddress,
+			Value:         nil,
+			Gas:           1000000,
+			GasPrice:      big.NewInt(10),
+			Data:          []byte{},
 		}), signer, testKey)
 		require.NoError(t, err)
 
@@ -134,10 +132,8 @@ func TestMempool(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
-		creationTx := types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-			},
+		creationTx := types.NewTx(&types.ConfidentialComputeRecord{
+			KettleAddress: fr.KettleAddress(),
 		})
 
 		bid1, err := fr.ConfidentialEngine().InitializeBid(types.Bid{
@@ -193,16 +189,14 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, bid2.Version, bids[1].Version)
 
 		// Verify via transaction
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-				Nonce:         0,
-				To:            &fetchBidsAddress,
-				Value:         nil,
-				Gas:           1000000,
-				GasPrice:      big.NewInt(10),
-				Data:          calldata,
-			},
+		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRecord{
+			KettleAddress: fr.KettleAddress(),
+			Nonce:         0,
+			To:            &fetchBidsAddress,
+			Value:         nil,
+			Gas:           1000000,
+			GasPrice:      big.NewInt(10),
+			Data:          calldata,
 		}), signer, testKey)
 		require.NoError(t, err)
 
@@ -491,7 +485,7 @@ func prepareMevShareBackrun(t *testing.T, shareBidId types.BidId) (*types.Transa
 	return backrunTx, *backRunBundle, confidentialDataMatchBytes
 }
 
-func TestMevShare(t *testing.T) {
+func TestMevShareYY(t *testing.T) {
 	// 1. craft mevshare transaction
 	//   1a. confirm submission
 	// 2. send backrun txn
@@ -754,10 +748,8 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	{ // Test the block building precompile through eth_call
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bid) internal view returns (bytes memory, bytes memory) {
 
-		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-			},
+		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRecord{
+			KettleAddress: fr.KettleAddress(),
 		})
 		require.NoError(t, err)
 

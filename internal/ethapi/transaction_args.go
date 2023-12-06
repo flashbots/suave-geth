@@ -343,23 +343,20 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			ConfidentialComputeResult:  confResult,
 		}
 	case args.KettleAddress != nil:
-		var confidentialInputs []byte
-		if args.ConfidentialInputs != nil {
-			confidentialInputs = *args.ConfidentialInputs
-		}
+		//var confidentialInputs []byte
+		//if args.ConfidentialInputs != nil {
+		//	confidentialInputs = *args.ConfidentialInputs
+		//}
 
-		data = &types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: kettleAddress,
-				// TODO: hashme
-				To:       args.To,
-				Nonce:    uint64(*args.Nonce),
-				Gas:      uint64(*args.Gas),
-				GasPrice: (*big.Int)(args.GasPrice),
-				Value:    (*big.Int)(args.Value),
-				Data:     args.data(),
-			},
-			ConfidentialInputs: confidentialInputs,
+		data = &types.ConfidentialComputeRecord{
+			KettleAddress: kettleAddress,
+			// TODO: hashme
+			To:       args.To,
+			Nonce:    uint64(*args.Nonce),
+			Gas:      uint64(*args.Gas),
+			GasPrice: (*big.Int)(args.GasPrice),
+			Value:    (*big.Int)(args.Value),
+			Data:     args.data(),
 		}
 	default:
 		data = &types.LegacyTx{

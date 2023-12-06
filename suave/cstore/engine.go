@@ -445,7 +445,7 @@ func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error)
 		return innerExecutedTx.ConfidentialComputeRequest.KettleAddress, nil
 	}
 
-	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
+	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRecord](tx)
 	if ok {
 		return innerRequestTx.KettleAddress, nil
 	}

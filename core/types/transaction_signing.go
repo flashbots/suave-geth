@@ -102,14 +102,16 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 
 // SignTx signs the transaction using the given signer and private key.
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	if tx.Type() == ConfidentialComputeRequestTxType {
-		inner, ok := CastTxInner[*ConfidentialComputeRequest](tx)
-		if !ok {
-			return nil, errors.New("incorrect inner cast!")
+	/*
+		if tx.Type() == ConfidentialComputeRequestTxType {
+			inner, ok := CastTxInner[*ConfidentialComputeRequest](tx)
+			if !ok {
+				return nil, errors.New("incorrect inner cast!")
+			}
+			inner.ConfidentialInputsHash = crypto.Keccak256Hash(inner.ConfidentialInputs)
+			tx = NewTx(inner)
 		}
-		inner.ConfidentialInputsHash = crypto.Keccak256Hash(inner.ConfidentialInputs)
-		tx = NewTx(inner)
-	}
+	*/
 
 	h := s.Hash(tx)
 	sig, err := crypto.Sign(h[:], prv)
@@ -288,12 +290,14 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 		if recovered != ccr.KettleAddress {
 			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), ccr.KettleAddress.Hex())
 		}
-	case *ConfidentialComputeRequest:
-		ccr = &txdata.ConfidentialComputeRecord
+	/*
+		case *ConfidentialComputeRequest:
+			ccr = &txdata.ConfidentialComputeRecord
 
-		if txdata.ConfidentialInputsHash != crypto.Keccak256Hash(txdata.ConfidentialInputs) {
-			return common.Address{}, errors.New("confidential inputs hash mismatch")
-		}
+			if txdata.ConfidentialInputsHash != crypto.Keccak256Hash(txdata.ConfidentialInputs) {
+				return common.Address{}, errors.New("confidential inputs hash mismatch")
+			}
+	*/
 	case *ConfidentialComputeRecord:
 		ccr = txdata
 	default:
@@ -334,13 +338,15 @@ func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.
 		R, S, _ = decodeSignature(sig)
 		V = big.NewInt(int64(sig[64]))
 		return R, S, V, nil
-	case *ConfidentialComputeRequest:
-		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
-		}
-		R, S, _ = decodeSignature(sig)
-		V = big.NewInt(int64(sig[64]))
-		return R, S, V, nil
+	/*
+		case *ConfidentialComputeRequest:
+			if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
+				return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
+			}
+			R, S, _ = decodeSignature(sig)
+			V = big.NewInt(int64(sig[64]))
+			return R, S, V, nil
+	*/
 	default:
 		return s.londonSigner.SignatureValues(tx, sig)
 	}
@@ -357,19 +363,21 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 				s.Hash(NewTx(&txdata.ConfidentialComputeRequest)),
 				txdata.ConfidentialComputeResult,
 			})
-	case *ConfidentialComputeRequest:
-		return prefixedRlpHash(
-			ConfidentialComputeRecordTxType, // Note: this is the same as the Record so that hashes match!
-			[]interface{}{
-				txdata.KettleAddress,
-				txdata.ConfidentialInputsHash,
-				tx.Nonce(),
-				tx.GasPrice(),
-				tx.Gas(),
-				tx.To(),
-				tx.Value(),
-				tx.Data(),
-			})
+	/*
+		case *ConfidentialComputeRequest:
+			return prefixedRlpHash(
+				ConfidentialComputeRecordTxType, // Note: this is the same as the Record so that hashes match!
+				[]interface{}{
+					txdata.KettleAddress,
+					txdata.ConfidentialInputsHash,
+					tx.Nonce(),
+					tx.GasPrice(),
+					tx.Gas(),
+					tx.To(),
+					tx.Value(),
+					tx.Data(),
+				})
+	*/
 	case *ConfidentialComputeRecord:
 		return prefixedRlpHash(
 			tx.Type(),
