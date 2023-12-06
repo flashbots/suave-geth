@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"regexp"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -55,7 +57,7 @@ func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, names
 }
 
 func (m *mockSuaveBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
-	return nil, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
@@ -90,8 +92,11 @@ func TestSuavePrecompileStub(t *testing.T) {
 		},
 	})
 
+	privkey, _ := crypto.GenerateKey()
+
 	suaveContext := SuaveContext{
 		Backend: &SuaveExecutionBackend{
+			EthBundleSigningKey:    privkey,
 			ConfidentialStore:      stubEngine.NewTransactionalStore(reqTx),
 			ConfidentialEthBackend: mockSuaveBackend,
 		},
@@ -109,6 +114,7 @@ func TestSuavePrecompileStub(t *testing.T) {
 	expectedErrors := []string{
 		// json error when the precompile expects to decode a json object encoded as []byte
 		// in the precompile input.
+		"not implemented",
 		"invalid character",
 		"not allowed to store",
 		"not allowed to retrieve",
@@ -252,4 +258,31 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+func TestSTransaction(t *testing.T) {
+	toAddr := common.Address{0x1}
+
+	signer := types.NewLondonSigner(big.NewInt(101))
+	testKey, _ := crypto.GenerateKey()
+
+	ethTx, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &toAddr,
+		Value:    big.NewInt(1000),
+		Gas:      21000,
+		GasPrice: big.NewInt(13),
+		Data:     []byte{},
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	from, err := signer.Sender(ethTx)
+	require.NoError(t, err)
+
+	ethTx2, err := STransactionToTransaction(TransactionToStransaction(ethTx))
+	require.NoError(t, err)
+
+	from2, err := signer.Sender(ethTx2)
+	require.NoError(t, err)
+	require.Equal(t, from, from2)
 }

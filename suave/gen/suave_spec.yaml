@@ -46,7 +46,73 @@ structs:
         type: Withdrawal[]
       - name: extra
         type: bytes
+  - name: Bundle
+    fields:
+      - name: transactions
+        type: bytes[]
+      - name: blockNumber
+        type: uint64
+  - name: STransaction
+    fields:
+      - name: nonce
+        type: uint64
+      - name: gasPrice
+        type: uint64
+      - name: gasLimit
+        type: uint64
+      - name: to
+        type: address
+      - name: value
+        type: uint64
+      - name: data
+        type: bytes
+      - name: v
+        type: bytes
+      - name: r
+        type: bytes
+      - name: s
+        type: bytes
+  - name: MevShareBundle
+    fields:
+      - name: transactions
+        type: bytes[]
+      - name: inclusionBlock
+        type: uint64
+      - name: refundPercents
+        type: uint8[]
 functions:
+  - name: sendBundle
+    address: "0x0000000000000000000000000000000400000000"
+    input:
+      - name: url
+        type: string
+      - name: bundle
+        type: Bundle
+  - name: simulateTransactions
+    address: "0x0000000000000000000000000000000400000001"
+    input:
+      - name: txn
+        type: STransaction[]
+    output:
+      fields:
+        - name: profit
+          type: uint64
+  - name: encodeRLPTxn
+    address: "0x0000000000000000000000000000000400000002"
+    input:
+      - name: txn
+        type: STransaction
+    output:
+      fields:
+        - name: rlpTxn
+          type: bytes
+  - name: sendMevShareBundle
+    address: "0x0000000000000000000000000000000400000003"
+    input:
+      - name: url
+        type: string
+      - name: bundle
+        type: MevShareBundle
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
     output:

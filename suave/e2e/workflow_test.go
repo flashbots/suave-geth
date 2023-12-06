@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -489,6 +490,84 @@ func prepareMevShareBackrun(t *testing.T, shareBidId types.BidId) (*types.Transa
 	require.NoError(t, err)
 
 	return backrunTx, *backRunBundle, confidentialDataMatchBytes
+}
+
+type Bundle struct {
+	Txn      types.STransaction
+	Refund   uint64
+	BlockNum uint64
+}
+
+func TestMevShare_Updated(t *testing.T) {
+	// 1. craft mevshare transaction
+	//   1a. confirm submission
+	// 2. send backrun txn
+	//	 2a. confirm submission
+	// 3. build share block
+	//   3a. confirm share bundle
+
+	fr := newFramework(t, WithKettleAddress())
+	defer fr.Close()
+
+	handler := &fakeRelayHandler{t: t}
+	fakeRelayServer := httptest.NewServer(handler)
+	defer fakeRelayServer.Close()
+
+	clt := fr.NewSDKClient()
+	bundleBidContractI := sdk.GetContract(appMevShareAddr, appMevShareContract.Abi, clt)
+
+	var (
+		shareBidId, matchBidId [16]byte
+	)
+
+	t.Run("create mevshare txn", func(t *testing.T) {
+		ethTx, _, _ := prepareMevShareBundle(t)
+		b := &Bundle{
+			Txn:    *vm.TransactionToStransaction(ethTx),
+			Refund: 10,
+		}
+
+		_, err := bundleBidContractI.SendTransaction("newBid", []interface{}{b}, nil)
+		require.NoError(t, err)
+
+		block := fr.suethSrv.ProgressChain()
+		unpacked, err := appMevShareContract.Abi.Events["HintEvent"].Inputs.Unpack(block.Receipts[0].Logs[0].Data)
+		require.NoError(t, err)
+
+		shareBidId = unpacked[0].([16]byte)
+	})
+
+	t.Run("create backrun txn", func(t *testing.T) {
+		backRunTx, _, _ := prepareMevShareBackrun(t, shareBidId)
+
+		b2 := &Bundle{
+			Txn: *vm.TransactionToStransaction(backRunTx),
+		}
+
+		_, err := bundleBidContractI.SendTransaction("newMatch", []interface{}{b2, shareBidId}, nil)
+		require.NoError(t, err)
+
+		block := fr.suethSrv.ProgressChain()
+		unpacked, err := appMevShareContract.Abi.Events["HintEvent"].Inputs.Unpack(block.Receipts[0].Logs[0].Data)
+		require.NoError(t, err)
+
+		matchBidId = unpacked[0].([16]byte)
+	})
+
+	t.Run("emit bundle", func(t *testing.T) {
+		handler.serveHttp = func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			bodyBytes, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+
+			// TODO: Validate
+			fmt.Println("---- string ---")
+			fmt.Println(string(bodyBytes))
+
+			w.WriteHeader(http.StatusOK)
+		}
+
+		bundleBidContractI.SendTransaction("emitBundle", []interface{}{fakeRelayServer.URL, matchBidId}, nil)
+	})
 }
 
 func TestMevShare(t *testing.T) {
@@ -1285,7 +1364,8 @@ var (
 	// testAddr is the Ethereum address of the tester account.
 	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
-	testAddr3 = common.Address{0x3}
+	testAddr3       = common.Address{0x3}
+	appMevShareAddr = common.Address{0x4}
 
 	testBalance = big.NewInt(2e18)
 
@@ -1316,6 +1396,7 @@ var (
 			newBlockBidAddress:  {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareBidContract.DeployedCode},
 			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
+			appMevShareAddr:     {Balance: big.NewInt(0), Code: appMevShareContract.DeployedCode},
 		},
 	}
 

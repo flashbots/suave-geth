@@ -1,11 +1,16 @@
 package vm
 
 import (
+	"context"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -133,3 +138,130 @@ type suaveRuntime struct {
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+// https://docs.flashbots.net/flashbots-auction/advanced/rpc-endpoint#eth_sendbundle
+type sbundleJson struct {
+	Txs         []string `json:"txs"`
+	BlockNumber uint64   `json:"blockNumber"`
+}
+
+func (s *suaveRuntime) sendBundle(url string, bundle types.Bundle) error {
+	input := sbundleJson{
+		Txs:         []string{},
+		BlockNumber: bundle.BlockNumber,
+	}
+	for _, txn := range bundle.Transactions {
+		input.Txs = append(input.Txs, hex.EncodeToString(txn))
+	}
+
+	params, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+
+	if _, err := s.submitBundleJsonRPC(url, "eth_sendBundle", params); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *suaveRuntime) sendMevShareBundle(url string, bundle types.MevShareBundle) error {
+	shareBundle := &types.RPCMevShareBundle{
+		Version: "v0.1",
+	}
+
+	for _, tx := range bundle.Transactions {
+		shareBundle.Body = append(shareBundle.Body, struct {
+			Tx        string `json:"tx"`
+			CanRevert bool   `json:"canRevert"`
+		}{Tx: hexutil.Encode(tx)})
+	}
+	for indx, refund := range bundle.RefundPercents {
+		shareBundle.Validity.Refund = append(shareBundle.Validity.Refund, struct {
+			BodyIdx int `json:"bodyIdx"`
+			Percent int `json:"percent"`
+		}{
+			BodyIdx: indx,
+			Percent: int(refund),
+		})
+	}
+
+	params, err := json.Marshal(shareBundle)
+	if err != nil {
+		return err
+	}
+
+	if _, err := s.submitBundleJsonRPC(url, "mev_sendBundle", params); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *suaveRuntime) simulateTransactions(stxns []types.STransaction) (uint64, error) {
+	txns := types.Transactions{}
+	for _, stxn := range stxns {
+		txn, err := STransactionToTransaction(&stxn)
+		if err != nil {
+			return 0, err
+		}
+		txns = append(txns, txn)
+	}
+
+	envelope, err := s.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(context.Background(), nil, txns)
+	if err != nil {
+		return 0, err
+	}
+	if envelope.ExecutionPayload.GasUsed == 0 {
+		return 0, err
+	}
+
+	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
+	return egp.Uint64(), nil
+}
+
+func (s *suaveRuntime) encodeRLPTxn(stxn types.STransaction) ([]byte, error) {
+	txn, err := STransactionToTransaction(&stxn)
+	if err != nil {
+		return nil, err
+	}
+	return txn.MarshalBinary()
+}
+
+var zeroAddress = common.Address{}
+
+func STransactionToTransaction(stxn *types.STransaction) (*types.Transaction, error) {
+	legacyTxn := &types.LegacyTx{
+		Nonce:    stxn.Nonce,
+		GasPrice: new(big.Int).SetUint64(stxn.GasPrice),
+		Gas:      stxn.GasLimit,
+		Value:    new(big.Int).SetUint64(stxn.Value),
+		Data:     stxn.Data,
+		V:        new(big.Int).SetBytes(stxn.V),
+		R:        new(big.Int).SetBytes(stxn.R),
+		S:        new(big.Int).SetBytes(stxn.S),
+	}
+
+	if stxn.To != zeroAddress {
+		legacyTxn.To = &stxn.To
+	}
+
+	return types.NewTx(legacyTxn), nil
+}
+
+func TransactionToStransaction(ethTx *types.Transaction) *types.STransaction {
+	to := ethTx.To()
+
+	v, rr, s := ethTx.RawSignatureValues()
+
+	return &types.STransaction{
+		Nonce:    ethTx.Nonce(),
+		To:       *to,
+		Value:    ethTx.Value().Uint64(),
+		GasPrice: ethTx.GasPrice().Uint64(),
+		GasLimit: ethTx.Gas(),
+		Data:     ethTx.Data(),
+		V:        v.Bytes(),
+		R:        rr.Bytes(),
+		S:        s.Bytes(),
+	}
+}

@@ -27,6 +27,29 @@ library Suave {
         bytes extra;
     }
 
+    struct Bundle {
+        bytes[] transactions;
+        uint64 blockNumber;
+    }
+
+    struct MevShareBundle {
+        bytes[] transactions;
+        uint64 inclusionBlock;
+        uint8[] refundPercents;
+    }
+
+    struct STransaction {
+        uint64 nonce;
+        uint64 gasPrice;
+        uint64 gasLimit;
+        address to;
+        uint64 value;
+        bytes data;
+        bytes v;
+        bytes r;
+        bytes s;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -46,6 +69,8 @@ library Suave {
 
     address public constant CONFIDENTIAL_STORE = 0x0000000000000000000000000000000042020000;
 
+    address public constant ENCODE_RLPTXN = 0x0000000000000000000000000000000400000002;
+
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
@@ -56,9 +81,15 @@ library Suave {
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
+    address public constant SEND_BUNDLE = 0x0000000000000000000000000000000400000000;
+
+    address public constant SEND_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000400000003;
+
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
+
+    address public constant SIMULATE_TRANSACTIONS = 0x0000000000000000000000000000000400000001;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
@@ -116,6 +147,15 @@ library Suave {
         }
     }
 
+    function encodeRLPTxn(STransaction memory txn) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = ENCODE_RLPTXN.staticcall(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(ENCODE_RLPTXN, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         (bool success, bytes memory data) = ETHCALL.staticcall(abi.encode(contractAddr, input1));
         if (!success) {
@@ -169,6 +209,20 @@ library Suave {
         return abi.decode(data, (Bid));
     }
 
+    function sendBundle(string memory url, Bundle memory bundle) internal view {
+        (bool success, bytes memory data) = SEND_BUNDLE.staticcall(abi.encode(url, bundle));
+        if (!success) {
+            revert PeekerReverted(SEND_BUNDLE, data);
+        }
+    }
+
+    function sendMevShareBundle(string memory url, MevShareBundle memory bundle) internal view {
+        (bool success, bytes memory data) = SEND_MEV_SHARE_BUNDLE.staticcall(abi.encode(url, bundle));
+        if (!success) {
+            revert PeekerReverted(SEND_MEV_SHARE_BUNDLE, data);
+        }
+    }
+
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         view
@@ -186,6 +240,15 @@ library Suave {
         (bool success, bytes memory data) = SIMULATE_BUNDLE.staticcall(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
+        }
+
+        return abi.decode(data, (uint64));
+    }
+
+    function simulateTransactions(STransaction[] memory txn) internal view returns (uint64) {
+        (bool success, bytes memory data) = SIMULATE_TRANSACTIONS.staticcall(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(SIMULATE_TRANSACTIONS, data);
         }
 
         return abi.decode(data, (uint64));

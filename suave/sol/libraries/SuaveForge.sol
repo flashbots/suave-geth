@@ -63,6 +63,12 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(bidId, key, data1));
     }
 
+    function encodeRLPTxn(Suave.STransaction memory txn) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000400000002", abi.encode(txn));
+
+        return abi.decode(data, (bytes));
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100003", abi.encode(contractAddr, input1));
 
@@ -101,6 +107,14 @@ library SuaveForge {
         return abi.decode(data, (Suave.Bid));
     }
 
+    function sendBundle(string memory url, Suave.Bundle memory bundle) internal view {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000400000000", abi.encode(url, bundle));
+    }
+
+    function sendMevShareBundle(string memory url, Suave.MevShareBundle memory bundle) internal view {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000400000003", abi.encode(url, bundle));
+    }
+
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         view
@@ -113,6 +127,12 @@ library SuaveForge {
 
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100000", abi.encode(bundleData));
+
+        return abi.decode(data, (uint64));
+    }
+
+    function simulateTransactions(Suave.STransaction[] memory txn) internal view returns (uint64) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000400000001", abi.encode(txn));
 
         return abi.decode(data, (uint64));
     }
