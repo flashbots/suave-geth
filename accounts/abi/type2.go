@@ -27,6 +27,7 @@ func (t Type) Unpack(data []byte, obj interface{}) error {
 	return nil
 }
 
+// newTypeForTuple implements the format described in https://blog.ricmoo.com/human-readable-contract-abis-in-ethers-js-141902f4d917
 func newTypeForTuple(s string) (string, []ArgumentMarshaling, error) {
 	if !strings.HasPrefix(s, "tuple") {
 		return "", nil, fmt.Errorf("'tuple' prefix not found")
