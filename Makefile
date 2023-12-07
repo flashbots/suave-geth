@@ -54,3 +54,6 @@ devnet-up:
 
 devnet-down:
 	docker-compose -f ./suave/devenv/docker-compose.yml down
+
+fmt-contracts:
+	cd suave && forge fmt
