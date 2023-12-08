@@ -208,3 +208,44 @@ functions:
       fields:
         - name: num
           type: uint256
+  - name: secp256k1Sign
+    address: "0x9000000000000000000000000000000000000001"
+    isConfidential: true
+    input:
+      - name: _prvkey
+        type: bytes
+      - name: _hash
+        type: bytes
+    output:
+      packed: false
+      fields:
+        - name: signature
+          type: bytes
+  - name: secp256k1RecoverPubkey
+    address: "0x9000000000000000000000000000000000000002"
+    isConfidential: true
+    input:
+      - name: _msg
+        type: bytes
+      - name: _sig
+        type: bytes
+    output:
+      packed: false
+      fields:
+        - name: pubkey
+          type: bytes
+  - name: secp256k1VerifySignature
+    address: "0x9000000000000000000000000000000000000003"
+    isConfidential: true
+    input:
+      - name: _pubkey
+        type: bytes
+      - name: _msg
+        type: bytes
+      - name: signature
+        type: bytes
+    output:
+      packed: false
+      fields:
+        - name: valid
+          type: bool

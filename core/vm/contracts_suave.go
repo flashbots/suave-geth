@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -31,13 +32,13 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 
 /* Confidential store precompiles */
 
-func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []byte) error {
-	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+func (b *suaveRuntime) confidentialStore(bidID types.BidId, key string, data []byte) error {
+	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidID)
 	if err != nil {
 		return suave.ErrBidNotFound
 	}
 
-	log.Info("confStore", "bidId", bidId, "key", key)
+	log.Info("confStore", "bidId", bidID, "key", key)
 
 	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreAddr, bid)
 	if err != nil {
@@ -48,7 +49,7 @@ func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []b
 		confStorePrecompileStoreMeter.Mark(int64(len(data)))
 	}
 
-	_, err = b.suaveContext.Backend.ConfidentialStore.Store(bidId, caller, key, data)
+	_, err = b.suaveContext.Backend.ConfidentialStore.Store(bidID, caller, key, data)
 	if err != nil {
 		return err
 	}
@@ -56,8 +57,8 @@ func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []b
 	return nil
 }
 
-func (b *suaveRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]byte, error) {
-	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+func (b *suaveRuntime) confidentialRetrieve(bidID types.BidId, key string) ([]byte, error) {
+	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidID)
 	if err != nil {
 		return nil, suave.ErrBidNotFound
 	}
@@ -67,7 +68,7 @@ func (b *suaveRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]by
 		return nil, err
 	}
 
-	data, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bidId, caller, key)
+	data, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bidID, caller, key)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -119,6 +120,18 @@ func (b *suaveRuntime) randomUint() (*big.Int, error) {
 		return nil, err
 	}
 	return num, nil
+}
+
+func (b *suaveRuntime) secp256k1Sign(msg []byte, key []byte) ([]byte, error) {
+	return secp256k1.Sign(msg, key)
+}
+
+func (b *suaveRuntime) secp256k1RecoverPubkey(msg []byte, sig []byte) ([]byte, error) {
+	return secp256k1.RecoverPubkey(msg, sig)
+}
+
+func (b *suaveRuntime) secp256k1VerifySignature(pubkey, msg, sig []byte) (bool, error) {
+	return secp256k1.VerifySignature(pubkey, msg, sig), nil
 }
 
 func mustParseAbi(data string) abi.ABI {

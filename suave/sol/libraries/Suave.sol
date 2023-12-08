@@ -58,6 +58,12 @@ library Suave {
 
     address public constant RANDOM_UINT = 0x00000000000000000000000000000000F00bA777;
 
+    address public constant SECP256K1_RECOVER_PUBKEY = 0x9000000000000000000000000000000000000002;
+
+    address public constant SECP256K1_SIGN = 0x9000000000000000000000000000000000000001;
+
+    address public constant SECP256K1_VERIFY_SIGNATURE = 0x9000000000000000000000000000000000000003;
+
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
@@ -179,6 +185,40 @@ library Suave {
         }
 
         return abi.decode(data, (uint256));
+    }
+
+    function secp256k1RecoverPubkey(bytes memory _msg, bytes memory _sig) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = SECP256K1_RECOVER_PUBKEY.staticcall(abi.encode(_msg, _sig));
+        if (!success) {
+            revert PeekerReverted(SECP256K1_RECOVER_PUBKEY, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    function secp256k1Sign(bytes memory _prvkey, bytes memory _hash) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = SECP256K1_SIGN.staticcall(abi.encode(_prvkey, _hash));
+        if (!success) {
+            revert PeekerReverted(SECP256K1_SIGN, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    function secp256k1VerifySignature(bytes memory _pubkey, bytes memory _msg, bytes memory signature)
+        internal
+        view
+        returns (bool)
+    {
+        require(isConfidential());
+        (bool success, bytes memory data) = SECP256K1_VERIFY_SIGNATURE.staticcall(abi.encode(_pubkey, _msg, signature));
+        if (!success) {
+            revert PeekerReverted(SECP256K1_VERIFY_SIGNATURE, data);
+        }
+
+        return abi.decode(data, (bool));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)

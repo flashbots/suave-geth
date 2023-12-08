@@ -107,6 +107,28 @@ library SuaveForge {
         return abi.decode(data, (uint256));
     }
 
+    function secp256k1RecoverPubkey(bytes memory _msg, bytes memory _sig) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x9000000000000000000000000000000000000002", abi.encode(_msg, _sig));
+
+        return abi.decode(data, (bytes));
+    }
+
+    function secp256k1Sign(bytes memory _prvkey, bytes memory _hash) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x9000000000000000000000000000000000000001", abi.encode(_prvkey, _hash));
+
+        return abi.decode(data, (bytes));
+    }
+
+    function secp256k1VerifySignature(bytes memory _pubkey, bytes memory _msg, bytes memory signature)
+        internal
+        view
+        returns (bool)
+    {
+        bytes memory data = forgeIt("0x9000000000000000000000000000000000000003", abi.encode(_pubkey, _msg, signature));
+
+        return abi.decode(data, (bool));
+    }
+
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         view
