@@ -3,7 +3,6 @@ package vm
 import (
 	"context"
 	"encoding/hex"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -191,10 +190,7 @@ func TestSuave_secp256k1Methods(t *testing.T) {
 	require.Equal(t, expectedAddr, address)
 
 	// recovery param (v) must be removed from the signature
-	sigR := new(big.Int).SetBytes(sig[:32])
-	sigS := new(big.Int).SetBytes(sig[32:64])
-	sig = append(sigR.Bytes(), sigS.Bytes()...)
-
+	sig = sig[:64]
 	// verify that `sig` is signature of the message hash signed by pubkey
 	valid, err := b.secp256k1VerifySignature(pubkey, msgHash.Bytes(), sig)
 	require.NoError(t, err)
