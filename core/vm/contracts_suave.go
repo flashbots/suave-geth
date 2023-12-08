@@ -122,11 +122,11 @@ func (b *suaveRuntime) randomUint() (*big.Int, error) {
 	return num, nil
 }
 
-func (b *suaveRuntime) secp256k1Sign(msg []byte, key []byte) ([]byte, error) {
+func (b *suaveRuntime) secp256k1Sign(msg, key []byte) ([]byte, error) {
 	return secp256k1.Sign(msg, key)
 }
 
-func (b *suaveRuntime) secp256k1RecoverPubkey(msg []byte, sig []byte) ([]byte, error) {
+func (b *suaveRuntime) secp256k1RecoverPubkey(msg, sig []byte) ([]byte, error) {
 	return secp256k1.RecoverPubkey(msg, sig)
 }
 
