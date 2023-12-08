@@ -18,7 +18,6 @@ var (
 	MevShareBundleSenderContract = newArtifact("bids.sol/MevShareBundleSenderContract.json")
 	buildEthBlockContract        = newArtifact("bids.sol/EthBlockBidContract.json")
 	ethBlockBidSenderContract    = newArtifact("bids.sol/EthBlockBidSenderContract.json")
-	suaveLibContract             = newArtifact("SuaveAbi.sol/SuaveAbi.json")
 	exampleCallSourceContract    = newArtifact("example.sol/ExampleEthCallSource.json")
 	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
 )
@@ -35,7 +34,7 @@ func newArtifact(name string) *Artifact {
 
 	data, err := os.ReadFile(targetFilePath)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read artifact %s: %v", name, err))
+		panic(fmt.Sprintf("failed to read artifact %s: %v. Maybe you forgot to generate the artifacts? `cd suave && forge build`", name, err))
 	}
 
 	var artifactObj struct {

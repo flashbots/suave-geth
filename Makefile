@@ -47,7 +47,6 @@ devtools:
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
 
 suavedevtools:
-	./suave/scripts/contracts.sh build
 	go run ./suave/gen/main.go -write
 
 devnet-up:
@@ -55,3 +54,6 @@ devnet-up:
 
 devnet-down:
 	docker-compose -f ./suave/devenv/docker-compose.yml down
+
+fmt-contracts:
+	cd suave && forge fmt
