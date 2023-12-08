@@ -282,12 +282,12 @@ func TestSuave_secp256k1Methods(t *testing.T) {
 	require.NoError(t, err)
 
 	// convert pubkey to address
-	expectedAddr := common.HexToAddress("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 	parsedPubkey, err := crypto.UnmarshalPubkey(pubkey)
 	require.NoError(t, err)
+	address := crypto.PubkeyToAddress(*parsedPubkey)
 
 	// test address
-	address := crypto.PubkeyToAddress(*parsedPubkey)
+	expectedAddr := common.HexToAddress("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 	require.Equal(t, expectedAddr, address)
 
 	// recovery param (v) must be removed from the signature
