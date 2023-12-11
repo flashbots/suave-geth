@@ -18,7 +18,6 @@ func TestConsoleLog(t *testing.T) {
 }
 
 func emitConsoleLog(typStr string, args interface{}) []byte {
-
 	// decode the type and encode the arguments
 	typ, err := abi.NewTypeFromString(typStr[strings.Index(typStr, "("):])
 	if err != nil {
