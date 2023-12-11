@@ -1120,6 +1120,19 @@ func TestE2EOnChainStateTransition(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestE2EConsoleLog(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	_, err := sourceContract.SendTransaction("consoleLog", []interface{}{}, nil)
+	require.NoError(t, err)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
