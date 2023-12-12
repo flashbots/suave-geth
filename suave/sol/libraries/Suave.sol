@@ -4,11 +4,11 @@ pragma solidity ^0.8.8;
 library Suave {
     error PeekerReverted(address, bytes);
 
-    type BidId is bytes16;
+    type DataId is bytes16;
 
-    struct Bid {
-        BidId id;
-        BidId salt;
+    struct DataRecord {
+        DataId id;
+        DataId salt;
         uint64 decryptionCondition;
         address[] allowedPeekers;
         address[] allowedStores;
@@ -50,11 +50,11 @@ library Suave {
 
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
 
-    address public constant FETCH_BIDS = 0x0000000000000000000000000000000042030001;
+    address public constant FETCH_DATA = 0x0000000000000000000000000000000042030001;
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
-    address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
+    address public constant NEW_DATA = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
@@ -78,12 +78,12 @@ library Suave {
         }
     }
 
-    function buildEthBlock(BuildBlockArgs memory blockArgs, BidId bidId, string memory namespace)
+    function buildEthBlock(BuildBlockArgs memory blockArgs, DataId dataId, string memory namespace)
         internal
         view
         returns (bytes memory, bytes memory)
     {
-        (bool success, bytes memory data) = BUILD_ETH_BLOCK.staticcall(abi.encode(blockArgs, bidId, namespace));
+        (bool success, bytes memory data) = BUILD_ETH_BLOCK.staticcall(abi.encode(blockArgs, dataId, namespace));
         if (!success) {
             revert PeekerReverted(BUILD_ETH_BLOCK, data);
         }
@@ -100,8 +100,8 @@ library Suave {
         return data;
     }
 
-    function confidentialRetrieve(BidId bidId, string memory key) internal view returns (bytes memory) {
-        (bool success, bytes memory data) = CONFIDENTIAL_RETRIEVE.staticcall(abi.encode(bidId, key));
+    function confidentialRetrieve(DataId dataId, string memory key) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = CONFIDENTIAL_RETRIEVE.staticcall(abi.encode(dataId, key));
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_RETRIEVE, data);
         }
@@ -109,8 +109,8 @@ library Suave {
         return data;
     }
 
-    function confidentialStore(BidId bidId, string memory key, bytes memory data1) internal view {
-        (bool success, bytes memory data) = CONFIDENTIAL_STORE.staticcall(abi.encode(bidId, key, data1));
+    function confidentialStore(DataId dataId, string memory key, bytes memory data1) internal view {
+        (bool success, bytes memory data) = CONFIDENTIAL_STORE.staticcall(abi.encode(dataId, key, data1));
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_STORE, data);
         }
@@ -135,18 +135,18 @@ library Suave {
         return data;
     }
 
-    function fetchBids(uint64 cond, string memory namespace) internal view returns (Bid[] memory) {
-        (bool success, bytes memory data) = FETCH_BIDS.staticcall(abi.encode(cond, namespace));
+    function fetchData(uint64 cond, string memory namespace) internal view returns (DataRecord[] memory) {
+        (bool success, bytes memory data) = FETCH_DATA.staticcall(abi.encode(cond, namespace));
         if (!success) {
-            revert PeekerReverted(FETCH_BIDS, data);
+            revert PeekerReverted(FETCH_DATA, data);
         }
 
-        return abi.decode(data, (Bid[]));
+        return abi.decode(data, (DataRecord[]));
     }
 
-    function fillMevShareBundle(BidId bidId) internal view returns (bytes memory) {
+    function fillMevShareBundle(DataId dataId) internal view returns (bytes memory) {
         require(isConfidential());
-        (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.staticcall(abi.encode(bidId));
+        (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.staticcall(abi.encode(dataId));
         if (!success) {
             revert PeekerReverted(FILL_MEV_SHARE_BUNDLE, data);
         }
@@ -154,19 +154,19 @@ library Suave {
         return data;
     }
 
-    function newBid(
+    function newDataRecord(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,
         address[] memory allowedStores,
-        string memory bidType
-    ) internal view returns (Bid memory) {
+        string memory dataType
+    ) internal view returns (DataRecord memory) {
         (bool success, bytes memory data) =
-            NEW_BID.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, bidType));
+            NEW_DATA.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, dataType));
         if (!success) {
-            revert PeekerReverted(NEW_BID, data);
+            revert PeekerReverted(NEW_DATA, data);
         }
 
-        return abi.decode(data, (Bid));
+        return abi.decode(data, (DataRecord));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
