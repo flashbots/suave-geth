@@ -199,3 +199,15 @@ functions:
       fields:
         - name: encodedBundle
           type: bytes
+  - name: signMessage
+    address: "0x0000000000000000000000000000000040100003"
+    isConfidential: true
+    input:
+      - name: digest
+        type: bytes
+      - name: signingKey
+        type: string
+    output:
+      fields:
+        - name: output1
+          type: bytes

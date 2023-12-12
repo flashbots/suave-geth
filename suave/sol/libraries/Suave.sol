@@ -58,6 +58,8 @@ library Suave {
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
+    address public constant SIGN_MESSAGE = 0x0000000000000000000000000000000040100003;
+
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
@@ -177,6 +179,16 @@ library Suave {
         (bool success, bytes memory data) = SIGN_ETH_TRANSACTION.staticcall(abi.encode(txn, chainId, signingKey));
         if (!success) {
             revert PeekerReverted(SIGN_ETH_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    function signMessage(bytes memory digest, string memory signingKey) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = SIGN_MESSAGE.staticcall(abi.encode(digest, signingKey));
+        if (!success) {
+            revert PeekerReverted(SIGN_MESSAGE, data);
         }
 
         return abi.decode(data, (bytes));

@@ -276,6 +276,45 @@ func TestTxSigningPrecompile(t *testing.T) {
 	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), sender)
 }
 
+func TestSignMessagePrecompile(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	// Prepare the message digest and generate a signing key
+	message := "Hello, world!"
+	digest := crypto.Keccak256([]byte(message))
+
+	sk, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	skHex := hex.EncodeToString(crypto.FromECDSA(sk))
+
+	// function signMessage(bytes memory digest, string memory signingKey)
+	args, err := artifacts.SuaveAbi.Methods["signMessage"].Inputs.Pack(digest, skHex)
+	require.NoError(t, err)
+
+	gas := hexutil.Uint64(1000000)
+
+	var callResult hexutil.Bytes
+	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &signMessage,
+		Gas:            &gas,
+		IsConfidential: true,
+		Data:           (*hexutil.Bytes)(&args),
+	}), "latest")
+	requireNoRpcError(t, err)
+
+	// Unpack the call result to get the signed message
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods["signMessage"].Outputs.Unpack(callResult)
+	require.NoError(t, err)
+
+	// Assert that recovered key is correct
+	signature := unpackedCallResult[0].([]byte)
+	pubKeyRecovered, err := crypto.SigToPub(digest, signature)
+	require.NoError(t, err)
+
+	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), crypto.PubkeyToAddress(*pubKeyRecovered))
+}
+
 func TestBundleBid(t *testing.T) {
 	// t.Fatal("not implemented")
 
@@ -1295,6 +1334,7 @@ var (
 	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
 
 	signEthTransaction    = common.HexToAddress("0x40100001")
+	signMessage           = common.HexToAddress("0x40100003")
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
 
