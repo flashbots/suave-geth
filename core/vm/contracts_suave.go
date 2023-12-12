@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -107,6 +108,20 @@ func (b *suaveRuntime) fetchBids(targetBlock uint64, namespace string) ([]types.
 	}
 
 	return bids, nil
+}
+
+func (s *suaveRuntime) signMessage(digest []byte, signingKey string) ([]byte, error) {
+	key, err := crypto.HexToECDSA(signingKey)
+	if err != nil {
+		return nil, fmt.Errorf("key not formatted properly: %w", err)
+	}
+
+	signature, err := crypto.Sign(digest, key)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to sign message: %v", err)
+	}
+
+	return signature, nil
 }
 
 func mustParseAbi(data string) abi.ABI {
