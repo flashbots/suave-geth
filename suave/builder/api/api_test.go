@@ -39,8 +39,8 @@ func (n *nullSessionManager) NewSession() (string, error) {
 	return "1", nil
 }
 
-func (n *nullSessionManager) AddTransaction(sessionId string, tx *types.Transaction) error {
-	return nil
+func (n *nullSessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.Receipt, error) {
+	return nil, nil
 }
 
 func (n *nullSessionManager) Finalize(sessionId string) (*engine.ExecutionPayloadEnvelope, error) {

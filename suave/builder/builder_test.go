@@ -22,7 +22,7 @@ func TestBuilder_AddTxn_Simple(t *testing.T) {
 	mock := newMockBuilder(t)
 	txn := mock.newTransfer(t, to, big.NewInt(1))
 
-	err := mock.builder.AddTransaction(txn)
+	_, err := mock.builder.AddTransaction(txn)
 	require.NoError(t, err)
 
 	mock.expect(t, expectedResult{

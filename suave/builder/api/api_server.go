@@ -10,7 +10,7 @@ import (
 // sessionManager is the backend that manages the session state of the builder API.
 type sessionManager interface {
 	NewSession() (string, error)
-	AddTransaction(sessionId string, tx *types.Transaction) error
+	AddTransaction(sessionId string, tx *types.Transaction) (*types.Receipt, error)
 	Finalize(sessionId string) (*engine.ExecutionPayloadEnvelope, error)
 }
 
@@ -29,7 +29,7 @@ func (s *Server) NewSession(ctx context.Context) (string, error) {
 	return s.sessionMngr.NewSession()
 }
 
-func (s *Server) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) error {
+func (s *Server) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.Receipt, error) {
 	return s.sessionMngr.AddTransaction(sessionId, tx)
 }
 

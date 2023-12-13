@@ -89,10 +89,10 @@ func (s *SessionManager) getSession(sessionId string) (*builder, error) {
 	return session, nil
 }
 
-func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction) error {
+func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.Receipt, error) {
 	builder, err := s.getSession(sessionId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return builder.AddTransaction(tx)
 }

@@ -39,18 +39,18 @@ func newBuilder(config *builderConfig) *builder {
 	}
 }
 
-func (b *builder) AddTransaction(txn *types.Transaction) error {
+func (b *builder) AddTransaction(txn *types.Transaction) (*types.Receipt, error) {
 	dummyAuthor := common.Address{}
 
 	receipt, err := core.ApplyTransaction(b.config.config, b.config.context, &dummyAuthor, b.gasPool, b.state, b.config.header, txn, b.gasUsed, b.config.vmConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	b.txns = append(b.txns, txn)
 	b.receipts = append(b.receipts, receipt)
 
-	return nil
+	return receipt, nil
 }
 
 func (b *builder) Finalize() (*types.Block, error) {
