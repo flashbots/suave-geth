@@ -271,6 +271,16 @@ func main() {
 // prepare manipulates memory cache allowance and setups metric system.
 // This function should be called before launching devp2p stack.
 func prepare(ctx *cli.Context) {
+	if err := prepareSuaveDev(ctx); err != nil {
+		log.Error("failed to setup suave dev mode", "err", err)
+		os.Exit(1)
+	}
+
+	if err := prepareSuaveNetworksRemapping(ctx); err != nil {
+		log.Error("failed to setup suave networks remapping", "err", err)
+		os.Exit(1)
+	}
+
 	// If we're running a known preset, log it for convenience.
 	switch {
 	case ctx.IsSet(utils.RinkebyFlag.Name):
@@ -338,14 +348,6 @@ func prepare(ctx *cli.Context) {
 func geth(ctx *cli.Context) error {
 	if args := ctx.Args().Slice(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
-	}
-
-	if err := prepareSuaveDev(ctx); err != nil {
-		return fmt.Errorf("failed to setup suave development mode: %v", err)
-	}
-
-	if err := prepareSuaveNetworksRemapping(ctx); err != nil {
-		return err
 	}
 
 	prepare(ctx)
@@ -531,7 +533,6 @@ func prepareSuaveDev(ctx *cli.Context) error {
 		utils.DeveloperFlag.Name:         "true",
 		utils.DeveloperGasLimitFlag.Name: "30000000",
 		utils.HTTPEnabledFlag.Name:       "true",
-		utils.HTTPPortFlag.Name:          "8545",
 		utils.HTTPVirtualHostsFlag.Name:  "*",
 		utils.HTTPCORSDomainFlag.Name:    "*",
 		utils.WSEnabledFlag.Name:         "true",

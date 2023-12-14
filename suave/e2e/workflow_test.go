@@ -735,7 +735,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	require.NoError(t, err)
 
 	{ // Test the bundle simulation precompile through eth_call
-		calldata, err := suaveLibContract.Abi.Methods["simulateBundle"].Inputs.Pack(bundleBytes)
+		calldata, err := artifacts.SuaveAbi.Methods["simulateBundle"].Inputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -785,7 +785,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			FeeRecipient: common.Address{0x42},
 		}
 
-		packed, err := suaveLibContract.Abi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "")
+		packed, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, bid.Id, "")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -799,7 +799,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 
 		require.NotNil(t, simResult)
 
-		unpacked, err := suaveLibContract.Abi.Methods["buildEthBlock"].Outputs.Unpack(simResult)
+		unpacked, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Unpack(simResult)
 		require.NoError(t, err)
 
 		// TODO: test builder bid
@@ -1446,7 +1446,7 @@ func requireNoRpcError(t *testing.T, rpcErr error) {
 			require.NoError(t, rpcErr, decodedError)
 		}
 
-		unpacked, err := suaveLibContract.Abi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
+		unpacked, err := artifacts.SuaveAbi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
 		if err != nil {
 			require.NoError(t, err, rpcErr.Error())
 		} else {

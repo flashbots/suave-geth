@@ -32,6 +32,9 @@ jobs:
       - name: Lint
         run: make lint
 
+      - name: Lint contracts
+        run: cd suave && forge fmt --check
+
       - name: Build contracts
         run: cd suave && forge build
 
