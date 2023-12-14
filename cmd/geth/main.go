@@ -531,7 +531,6 @@ func prepareSuaveDev(ctx *cli.Context) error {
 		utils.DeveloperFlag.Name:         "true",
 		utils.DeveloperGasLimitFlag.Name: "30000000",
 		utils.HTTPEnabledFlag.Name:       "true",
-		utils.HTTPPortFlag.Name:          "8545",
 		utils.HTTPVirtualHostsFlag.Name:  "*",
 		utils.HTTPCORSDomainFlag.Name:    "*",
 		utils.WSEnabledFlag.Name:         "true",
