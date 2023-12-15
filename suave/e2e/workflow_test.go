@@ -141,7 +141,7 @@ func TestMempool(t *testing.T) {
 		})
 
 		bid1, err := fr.ConfidentialEngine().InitRecord(types.DataRecord{
-			Salt:                suave.RandomBidId(),
+			Salt:                suave.RandomDataRecordId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",
@@ -150,7 +150,7 @@ func TestMempool(t *testing.T) {
 		require.NoError(t, err)
 
 		bid2, err := fr.ConfidentialEngine().InitRecord(types.DataRecord{
-			Salt:                suave.RandomBidId(),
+			Salt:                suave.RandomDataRecordId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 			Version:             "default:v0:ethBundles",

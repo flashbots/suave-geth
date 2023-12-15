@@ -21,8 +21,8 @@ type ConfidentialStorageBackend interface {
 	InitRecord(record suave.DataRecord) error
 	Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error)
 	Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error)
-	FetchBidByID(suave.DataId) (suave.DataRecord, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
+	FetchRecordByID(suave.DataId) (suave.DataRecord, error)
+	FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
 	Stop() error
 }
 
@@ -92,9 +92,9 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 // NewTransactionalStore creates a new transactional store.
 func (e *CStoreEngine) NewTransactionalStore(sourceTx *types.Transaction) *TransactionalStore {
 	return &TransactionalStore{
-		sourceTx:    sourceTx,
-		engine:      e,
-		pendingBids: make(map[suave.DataId]suave.DataRecord),
+		sourceTx:       sourceTx,
+		engine:         e,
+		pendingRecords: make(map[suave.DataId]suave.DataRecord),
 	}
 }
 
@@ -177,7 +177,7 @@ func (e *CStoreEngine) InitRecord(record types.DataRecord, creationTx *types.Tra
 		return suave.DataRecord{}, errors.New("confidential engine: incorrect record id passed")
 	}
 
-	initializedBid := suave.DataRecord{
+	initializedRecord := suave.DataRecord{
 		Id:                  record.Id,
 		Salt:                record.Salt,
 		DecryptionCondition: record.DecryptionCondition,
@@ -187,7 +187,7 @@ func (e *CStoreEngine) InitRecord(record types.DataRecord, creationTx *types.Tra
 		CreationTx:          creationTx,
 	}
 
-	bidBytes, err := SerializeDataRecord(&initializedBid)
+	reocrdBytes, err := SerializeDataRecord(&initializedRecord)
 	if err != nil {
 		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not hash record for signing: %w", err)
 	}
@@ -197,46 +197,46 @@ func (e *CStoreEngine) InitRecord(record types.DataRecord, creationTx *types.Tra
 		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
 	}
 
-	initializedBid.Signature, err = e.daSigner.Sign(signingAccount, bidBytes)
+	initializedRecord.Signature, err = e.daSigner.Sign(signingAccount, reocrdBytes)
 	if err != nil {
 		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not sign initialized record: %w", err)
 	}
 
-	return initializedBid, nil
+	return initializedRecord, nil
 }
 
-// FetchBidByID retrieves a bid by its identifier.
-func (e *CStoreEngine) FetchBidByID(id suave.DataId) (suave.DataRecord, error) {
-	return e.storage.FetchBidByID(id)
+// FetchRecordByID retrieves a data record by its identifier.
+func (e *CStoreEngine) FetchRecordByID(id suave.DataId) (suave.DataRecord, error) {
+	return e.storage.FetchRecordByID(id)
 }
 
-// FetchBidsByProtocolAndBlock fetches bids based on protocol and block number.
-func (e *CStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	return e.storage.FetchBidsByProtocolAndBlock(blockNumber, namespace)
+// FetchRecordsByProtocolAndBlock fetches data records based on protocol and block number.
+func (e *CStoreEngine) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	return e.storage.FetchRecordsByProtocolAndBlock(blockNumber, namespace)
 }
 
-// Retrieve fetches data associated with a bid.
+// Retrieve fetches data associated with a record.
 func (e *CStoreEngine) Retrieve(id suave.DataId, caller common.Address, key string) ([]byte, error) {
-	bid, err := e.storage.FetchBidByID(id)
+	record, err := e.storage.FetchRecordByID(id)
 	if err != nil {
-		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", id, err)
+		return []byte{}, fmt.Errorf("confidential engine: could not fetch record %x while retrieving: %w", id, err)
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
+	if !slices.Contains(record.AllowedPeekers, caller) && !slices.Contains(record.AllowedPeekers, suave.AllowedPeekerAny) {
 		return []byte{}, fmt.Errorf("confidential engine: %x not allowed to retrieve %s on %x", caller, key, id)
 	}
 
-	return e.storage.Retrieve(bid, caller, key)
+	return e.storage.Retrieve(record, caller, key)
 }
 
 // Finalize finalizes a transaction and updates the store.
-func (e *CStoreEngine) Finalize(tx *types.Transaction, newBids map[suave.DataId]suave.DataRecord, stores []StoreWrite) error {
+func (e *CStoreEngine) Finalize(tx *types.Transaction, newRecords map[suave.DataId]suave.DataRecord, stores []StoreWrite) error {
 	//
-	for _, bid := range newBids {
-		err := e.storage.InitRecord(bid)
+	for _, record := range newRecords {
+		err := e.storage.InitRecord(record)
 		if err != nil {
 			// TODO: deinitialize!
-			return fmt.Errorf("confidential engine: store backend failed to initialize bid: %w", err)
+			return fmt.Errorf("confidential engine: store backend failed to initialize record: %w", err)
 		}
 	}
 
@@ -328,49 +328,49 @@ func (e *CStoreEngine) NewMessage(message DAMessage) error {
 			Version:             sw.DataRecord.Version,
 		})
 		if err != nil {
-			return fmt.Errorf("confidential engine: could not calculate received bids id: %w", err)
+			return fmt.Errorf("confidential engine: could not calculate received records id: %w", err)
 		}
 
 		if expectedId != sw.DataRecord.Id {
-			return fmt.Errorf("confidential engine: received bids id (%x) does not match the expected (%x)", sw.DataRecord.Id, expectedId)
+			return fmt.Errorf("confidential engine: received records id (%x) does not match the expected (%x)", sw.DataRecord.Id, expectedId)
 		}
 
-		bidBytes, err := SerializeDataRecord(&sw.DataRecord)
+		reocrdBytes, err := SerializeDataRecord(&sw.DataRecord)
 		if err != nil {
-			return fmt.Errorf("confidential engine: could not hash received bid: %w", err)
+			return fmt.Errorf("confidential engine: could not hash received record: %w", err)
 		}
-		recoveredBidSigner, err := e.daSigner.Sender(bidBytes, sw.DataRecord.Signature)
+		recoveredRecordSigner, err := e.daSigner.Sender(reocrdBytes, sw.DataRecord.Signature)
 		if err != nil {
-			return fmt.Errorf("confidential engine: incorrect bid signature: %w", err)
+			return fmt.Errorf("confidential engine: incorrect record signature: %w", err)
 		}
-		expectedBidSigner, err := KettleAddressFromTransaction(sw.DataRecord.CreationTx)
+		expectedRecordSigner, err := KettleAddressFromTransaction(sw.DataRecord.CreationTx)
 		if err != nil {
-			return fmt.Errorf("confidential engine: could not recover signer from bid: %w", err)
+			return fmt.Errorf("confidential engine: could not recover signer from record: %w", err)
 		}
-		if recoveredBidSigner != expectedBidSigner {
-			return fmt.Errorf("confidential engine: bid signer %x, expected %x", recoveredBidSigner, expectedBidSigner)
+		if recoveredRecordSigner != expectedRecordSigner {
+			return fmt.Errorf("confidential engine: record signer %x, expected %x", recoveredRecordSigner, expectedRecordSigner)
 		}
 
 		if !slices.Contains(sw.DataRecord.AllowedStores, recoveredMessageSigner) {
-			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on bid %x", recoveredMessageSigner, sw.DataRecord.Id)
+			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on record %x", recoveredMessageSigner, sw.DataRecord.Id)
 		}
 
 		if !slices.Contains(sw.DataRecord.AllowedPeekers, sw.Caller) && !slices.Contains(sw.DataRecord.AllowedPeekers, suave.AllowedPeekerAny) {
-			return fmt.Errorf("confidential engine: caller %x not allowed on bid %x", sw.Caller, sw.DataRecord.Id)
+			return fmt.Errorf("confidential engine: caller %x not allowed on record %x", sw.Caller, sw.DataRecord.Id)
 		}
 
 		// TODO: move to types.Sender()
 		_, err = e.chainSigner.Sender(sw.DataRecord.CreationTx)
 		if err != nil {
-			return fmt.Errorf("confidential engine: creation tx for bid id %x is not signed properly: %w", sw.DataRecord.Id, err)
+			return fmt.Errorf("confidential engine: creation tx for record id %x is not signed properly: %w", sw.DataRecord.Id, err)
 		}
 	}
 
 	for _, sw := range message.StoreWrites {
 		err = e.storage.InitRecord(sw.DataRecord)
 		if err != nil {
-			if !errors.Is(err, suave.ErrBidAlreadyPresent) {
-				log.Error("confidential engine: unexpected error while initializing bid from transport: %w", err)
+			if !errors.Is(err, suave.ErrRecordAlreadyPresent) {
+				log.Error("confidential engine: unexpected error while initializing record from transport: %w", err)
 				continue // Don't abandon!
 			}
 		}
@@ -435,7 +435,7 @@ func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error)
 
 var emptyId [16]byte
 
-var bidUuidSpace = uuid.UUID{0x42}
+var recordUuidSpace = uuid.UUID{0x42}
 
 func calculateRecordId(record types.DataRecord) (types.DataId, error) {
 	copy(record.Id[:], emptyId[:])
@@ -445,13 +445,13 @@ func calculateRecordId(record types.DataRecord) (types.DataId, error) {
 		return types.DataId{}, fmt.Errorf("could not marshal record to calculate its id: %w", err)
 	}
 
-	uuidv5 := uuid.NewSHA1(bidUuidSpace, body)
+	uuidv5 := uuid.NewSHA1(recordUuidSpace, body)
 	copy(record.Id[:], uuidv5[:])
 
 	return record.Id, nil
 }
 
-func RandomBidId() types.DataId {
+func RandomRecordId() types.DataId {
 	return types.DataId(uuid.New())
 }
 

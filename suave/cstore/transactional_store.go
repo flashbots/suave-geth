@@ -15,39 +15,40 @@ type TransactionalStore struct {
 	sourceTx *types.Transaction
 	engine   *CStoreEngine
 
-	pendingLock   sync.Mutex
-	pendingBids   map[suave.DataId]suave.DataRecord
-	pendingWrites []StoreWrite
+	pendingLock    sync.Mutex
+	pendingRecords map[suave.DataId]suave.DataRecord
+	pendingWrites  []StoreWrite
 }
 
-func (s *TransactionalStore) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
+// FetchRecordByID retrieves a data record by its identifier.
+func (s *TransactionalStore) FetchRecordByID(dataId suave.DataId) (suave.DataRecord, error) {
 	s.pendingLock.Lock()
-	bid, ok := s.pendingBids[dataId]
+	record, ok := s.pendingRecords[dataId]
 	s.pendingLock.Unlock()
 
 	if ok {
-		return bid, nil
+		return record, nil
 	}
 
-	return s.engine.FetchBidByID(dataId)
+	return s.engine.FetchRecordByID(dataId)
 }
 
-func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	bids := s.engine.FetchBidsByProtocolAndBlock(blockNumber, namespace)
+func (s *TransactionalStore) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	records := s.engine.FetchRecordsByProtocolAndBlock(blockNumber, namespace)
 
 	s.pendingLock.Lock()
 	defer s.pendingLock.Unlock()
-	for _, bid := range s.pendingBids {
-		if bid.Version == namespace && bid.DecryptionCondition == blockNumber {
-			bids = append(bids, bid)
+	for _, record := range s.pendingRecords {
+		if record.Version == namespace && record.DecryptionCondition == blockNumber {
+			records = append(records, record)
 		}
 	}
 
-	return bids
+	return records
 }
 
 func (s *TransactionalStore) Store(dataId suave.DataId, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
-	record, err := s.FetchBidByID(dataId)
+	record, err := s.FetchRecordByID(dataId)
 	if err != nil {
 		return suave.DataRecord{}, err
 	}
@@ -68,8 +69,9 @@ func (s *TransactionalStore) Store(dataId suave.DataId, caller common.Address, k
 	return record, nil
 }
 
+// Retrieve fetches data associated with a record.
 func (s *TransactionalStore) Retrieve(dataId suave.DataId, caller common.Address, key string) ([]byte, error) {
-	record, err := s.FetchBidByID(dataId)
+	record, err := s.FetchRecordByID(dataId)
 	if err != nil {
 		return nil, err
 	}
@@ -91,24 +93,25 @@ func (s *TransactionalStore) Retrieve(dataId suave.DataId, caller common.Address
 	return s.engine.Retrieve(dataId, caller, key)
 }
 
-func (s *TransactionalStore) InitializeBid(rawRecord types.DataRecord) (types.DataRecord, error) {
-	bid, err := s.engine.InitRecord(rawRecord, s.sourceTx)
+// InitRecord prepares a data record for storage.
+func (s *TransactionalStore) InitRecord(rawRecord types.DataRecord) (types.DataRecord, error) {
+	record, err := s.engine.InitRecord(rawRecord, s.sourceTx)
 	if err != nil {
 		return types.DataRecord{}, err
 	}
 
 	s.pendingLock.Lock()
-	_, found := s.pendingBids[bid.Id]
+	_, found := s.pendingRecords[record.Id]
 	if found {
 		s.pendingLock.Unlock()
-		return types.DataRecord{}, errors.New("bid with this id already exists")
+		return types.DataRecord{}, errors.New("record with this id already exists")
 	}
-	s.pendingBids[bid.Id] = bid
+	s.pendingRecords[record.Id] = record
 	s.pendingLock.Unlock()
 
-	return bid.ToInnerBid(), nil
+	return record.ToInnerRecord(), nil
 }
 
 func (s *TransactionalStore) Finalize() error {
-	return s.engine.Finalize(s.sourceTx, s.pendingBids, s.pendingWrites)
+	return s.engine.Finalize(s.sourceTx, s.pendingRecords, s.pendingWrites)
 }

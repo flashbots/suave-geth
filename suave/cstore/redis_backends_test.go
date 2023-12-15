@@ -153,7 +153,7 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	fetchedBid, err := redisStoreBackend2.FetchBidByID(record.Id)
+	fetchedBid, err := redisStoreBackend2.FetchRecordByID(record.Id)
 	require.NoError(t, err)
 
 	fetchedBidJson, err := json.Marshal(fetchedBid)

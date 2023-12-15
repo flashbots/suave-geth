@@ -117,7 +117,7 @@ contract MevShareBidContract is AnyBundleContract {
 		// 3. extract hint
 		bytes memory matchHint = Suave.extractHint(matchBundleData);
 		
-		Suave.DataRecord memory dataRecord = Suave.newDataRecord(decryptionCondition, dataAllowedPeekers, dataAllowedStores, "mevshare:v0:matchBids");
+		Suave.DataRecord memory dataRecord = Suave.newDataRecord(decryptionCondition, dataAllowedPeekers, dataAllowedStores, "mevshare:v0:matchDataRecords");
 		Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundles", matchBundleData);
 		Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundleSimResults", abi.encode(0));
 
@@ -183,7 +183,7 @@ contract EthBlockBidContract is AnyBundleContract {
 	function buildMevShare(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
 		require(Suave.isConfidential());
 
-		Suave.DataRecord[] memory allShareMatchDataRecords = Suave.fetchDataRecords(blockHeight, "mevshare:v0:matchBids");
+		Suave.DataRecord[] memory allShareMatchDataRecords = Suave.fetchDataRecords(blockHeight, "mevshare:v0:matchDataRecords");
 		Suave.DataRecord[] memory allShareUserDataRecords = Suave.fetchDataRecords(blockHeight, "mevshare:v0:unmatchedBundles");
 
 		if (allShareUserDataRecords.length == 0) {

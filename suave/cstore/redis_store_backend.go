@@ -74,8 +74,8 @@ func (r *RedisStoreBackend) start() error {
 	}
 	r.client = client
 
-	err = r.InitRecord(mempoolConfidentialStoreBid)
-	if err != nil && !errors.Is(err, suave.ErrBidAlreadyPresent) {
+	err = r.InitRecord(mempoolConfidentialStoreRecord)
+	if err != nil && !errors.Is(err, suave.ErrRecordAlreadyPresent) {
 		return fmt.Errorf("mempool: could not initialize: %w", err)
 	}
 
@@ -96,12 +96,13 @@ func (r *RedisStoreBackend) Stop() error {
 	return nil
 }
 
+// InitRecord prepares a data record for storage.
 func (r *RedisStoreBackend) InitRecord(record suave.DataRecord) error {
 	key := formatRecordKey(record.Id)
 
 	err := r.client.Get(r.ctx, key).Err()
 	if !errors.Is(err, redis.Nil) {
-		return suave.ErrBidAlreadyPresent
+		return suave.ErrRecordAlreadyPresent
 	}
 
 	data, err := json.Marshal(record)
@@ -114,7 +115,7 @@ func (r *RedisStoreBackend) InitRecord(record suave.DataRecord) error {
 		return err
 	}
 
-	err = r.indexBid(record)
+	err = r.indexRecord(record)
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,8 @@ func (r *RedisStoreBackend) InitRecord(record suave.DataRecord) error {
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
+// FetchRecordByID retrieves a data record by its identifier.
+func (r *RedisStoreBackend) FetchRecordByID(dataId suave.DataId) (suave.DataRecord, error) {
 	key := formatRecordKey(dataId)
 
 	data, err := r.client.Get(r.ctx, key).Bytes()
@@ -149,6 +151,7 @@ func (r *RedisStoreBackend) Store(record suave.DataRecord, caller common.Address
 	return record, nil
 }
 
+// Retrieve fetches data associated with a record.
 func (r *RedisStoreBackend) Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error) {
 	storeKey := formatRecordValueKey(record.Id, key)
 	data, err := r.client.Get(r.ctx, storeKey).Bytes()
@@ -160,29 +163,29 @@ func (r *RedisStoreBackend) Retrieve(record suave.DataRecord, caller common.Addr
 }
 
 var (
-	mempoolConfStoreId          = types.DataId{0x39}
-	mempoolConfStoreAddr        = common.HexToAddress("0x39")
-	mempoolConfidentialStoreBid = suave.DataRecord{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
+	mempoolConfStoreId             = types.DataId{0x39}
+	mempoolConfStoreAddr           = common.HexToAddress("0x39")
+	mempoolConfidentialStoreRecord = suave.DataRecord{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
 )
 
-func (r *RedisStoreBackend) indexBid(record suave.DataRecord) error {
+func (r *RedisStoreBackend) indexRecord(record suave.DataRecord) error {
 	defer log.Info("record submitted", "record", record, "store", r.Store)
 
 	var recordsByBlockAndProtocol []suave.DataId
-	recordsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition))
+	recordsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition))
 	if err == nil {
 		recordsByBlockAndProtocol = suave.MustDecode[[]suave.DataId](recordsByBlockAndProtocolBytes)
 	}
 	// store record by block number and by protocol + block number
 	recordsByBlockAndProtocol = append(recordsByBlockAndProtocol, record.Id)
 
-	r.Store(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition), suave.MustEncode(recordsByBlockAndProtocol))
+	r.Store(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition), suave.MustEncode(recordsByBlockAndProtocol))
 
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	recordsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
+func (r *RedisStoreBackend) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	recordsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
 	if err != nil {
 		return nil
 	}
@@ -191,7 +194,7 @@ func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, name
 
 	recordIDs := suave.MustDecode[[]suave.DataId](recordsByProtocolBytes)
 	for _, id := range recordIDs {
-		record, err := r.FetchBidByID(id)
+		record, err := r.FetchRecordByID(id)
 		if err != nil {
 			continue
 		}

@@ -19,11 +19,11 @@ type PebbleStoreBackend struct {
 	db     *pebble.DB
 }
 
-var bidByBlockAndProtocolIndexDbKey = func(blockNumber uint64, namespace string) []byte {
-	return []byte(fmt.Sprintf("bids-block-%d-ns-%s", blockNumber, namespace))
+var recordByBlockAndProtocolIndexDbKey = func(blockNumber uint64, namespace string) []byte {
+	return []byte(fmt.Sprintf("records-block-%d-ns-%s", blockNumber, namespace))
 }
 
-type bidByBlockAndProtocolIndexType = []types.DataId
+type recordByBlockAndProtocolIndexType = []types.DataId
 
 func NewPebbleStoreBackend(dbPath string) (*PebbleStoreBackend, error) {
 	// TODO: should we check sanity in the constructor?
@@ -63,6 +63,7 @@ func (b *PebbleStoreBackend) Stop() error {
 	return nil
 }
 
+// InitRecord prepares a data record for storage.
 func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 	key := []byte(formatRecordKey(record.Id))
 
@@ -71,7 +72,7 @@ func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 		if err == nil {
 			closer.Close()
 		}
-		return suave.ErrBidAlreadyPresent
+		return suave.ErrRecordAlreadyPresent
 	}
 
 	data, err := json.Marshal(record)
@@ -85,9 +86,9 @@ func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 	}
 
 	// index update
-	var currentValues bidByBlockAndProtocolIndexType
+	var currentValues recordByBlockAndProtocolIndexType
 
-	dbBlockProtoIndexKey := bidByBlockAndProtocolIndexDbKey(record.DecryptionCondition, record.Version)
+	dbBlockProtoIndexKey := recordByBlockAndProtocolIndexDbKey(record.DecryptionCondition, record.Version)
 	rawCurrentValues, closer, err := b.db.Get(dbBlockProtoIndexKey)
 	if err != nil {
 		if !errors.Is(err, pebble.ErrNotFound) {
@@ -110,16 +111,17 @@ func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 	return b.db.Set(dbBlockProtoIndexKey, rawUpdatedValues, nil)
 }
 
-func (b *PebbleStoreBackend) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
+// FetchRecordByID retrieves a data record by its identifier.
+func (b *PebbleStoreBackend) FetchRecordByID(dataId suave.DataId) (suave.DataRecord, error) {
 	key := []byte(formatRecordKey(dataId))
 
-	bidData, closer, err := b.db.Get(key)
+	recordData, closer, err := b.db.Get(key)
 	if err != nil {
 		return suave.DataRecord{}, fmt.Errorf("record %x not found: %w", dataId, err)
 	}
 
 	var record suave.DataRecord
-	err = json.Unmarshal(bidData, &record)
+	err = json.Unmarshal(recordData, &record)
 	closer.Close()
 	if err != nil {
 		return suave.DataRecord{}, fmt.Errorf("could not unmarshal stored record: %w", err)
@@ -133,6 +135,7 @@ func (b *PebbleStoreBackend) Store(record suave.DataRecord, caller common.Addres
 	return record, b.db.Set(storeKey, value, nil)
 }
 
+// Retrieve fetches data associated with a record.
 func (b *PebbleStoreBackend) Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error) {
 	storeKey := []byte(formatRecordValueKey(record.Id, key))
 	data, closer, err := b.db.Get(storeKey)
@@ -145,27 +148,27 @@ func (b *PebbleStoreBackend) Retrieve(record suave.DataRecord, caller common.Add
 	return ret, nil
 }
 
-func (b *PebbleStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	dbBlockProtoIndexKey := bidByBlockAndProtocolIndexDbKey(blockNumber, namespace)
+func (b *PebbleStoreBackend) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	dbBlockProtoIndexKey := recordByBlockAndProtocolIndexDbKey(blockNumber, namespace)
 	rawCurrentValues, closer, err := b.db.Get(dbBlockProtoIndexKey)
 	if err != nil {
 		return nil
 	}
 
-	var currentBidIds bidByBlockAndProtocolIndexType
-	err = json.Unmarshal(rawCurrentValues, &currentBidIds)
+	var currentRecordIds recordByBlockAndProtocolIndexType
+	err = json.Unmarshal(rawCurrentValues, &currentRecordIds)
 	closer.Close()
 	if err != nil {
 		return nil
 	}
 
-	bids := []suave.DataRecord{}
-	for _, dataId := range currentBidIds {
-		record, err := b.FetchBidByID(dataId)
+	records := []suave.DataRecord{}
+	for _, dataId := range currentRecordIds {
+		record, err := b.FetchRecordByID(dataId)
 		if err == nil {
-			bids = append(bids, record)
+			records = append(records, record)
 		}
 	}
 
-	return bids
+	return records
 }

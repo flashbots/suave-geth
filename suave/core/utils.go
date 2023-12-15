@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func RandomBidId() types.DataId {
+func RandomDataRecordId() types.DataId {
 	return types.DataId(uuid.New())
 }
 

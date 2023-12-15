@@ -27,7 +27,7 @@ type DataRecord struct {
 	Signature           []byte
 }
 
-func (b *DataRecord) ToInnerBid() types.DataRecord {
+func (b *DataRecord) ToInnerRecord() types.DataRecord {
 	return types.DataRecord{
 		Id:                  b.Id,
 		Salt:                b.Salt,
@@ -45,9 +45,9 @@ type BuildBlockArgs = types.BuildBlockArgs
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
 var (
-	ErrBidAlreadyPresent = errors.New("data record already present")
-	ErrBidNotFound       = errors.New("data record not found")
-	ErrUnsignedFinalize  = errors.New("finalize called with unsigned transaction, refusing to propagate")
+	ErrRecordAlreadyPresent = errors.New("data record already present")
+	ErrRecordNotFound       = errors.New("data record not found")
+	ErrUnsignedFinalize     = errors.New("finalize called with unsigned transaction, refusing to propagate")
 )
 
 type ConfidentialStoreBackend interface {

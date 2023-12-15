@@ -37,7 +37,7 @@ func (l *LocalConfidentialStore) InitRecord(record suave.DataRecord) error {
 
 	_, found := l.records[record.Id]
 	if found {
-		return suave.ErrBidAlreadyPresent
+		return suave.ErrRecordAlreadyPresent
 	}
 
 	l.records[record.Id] = record
@@ -74,7 +74,7 @@ func (l *LocalConfidentialStore) Retrieve(record suave.DataRecord, caller common
 	return append(make([]byte, 0, len(data)), data...), nil
 }
 
-func (l *LocalConfidentialStore) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
+func (l *LocalConfidentialStore) FetchRecordByID(dataId suave.DataId) (suave.DataRecord, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -86,7 +86,7 @@ func (l *LocalConfidentialStore) FetchBidByID(dataId suave.DataId) (suave.DataRe
 	return bid, nil
 }
 
-func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+func (l *LocalConfidentialStore) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 

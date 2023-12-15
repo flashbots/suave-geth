@@ -33,7 +33,7 @@ func (*FakeStoreBackend) Start() error { return nil }
 func (*FakeStoreBackend) Stop() error  { return nil }
 
 func (*FakeStoreBackend) InitRecord(record suave.DataRecord) error { return nil }
-func (*FakeStoreBackend) FetchBidByID(id suave.DataId) (suave.DataRecord, error) {
+func (*FakeStoreBackend) FetchRecordByID(id suave.DataId) (suave.DataRecord, error) {
 	return suave.DataRecord{}, errors.New("not implemented")
 }
 
@@ -44,11 +44,11 @@ func (*FakeStoreBackend) Retrieve(record suave.DataRecord, caller common.Address
 	return nil, errors.New("not implemented")
 }
 
-func (*FakeStoreBackend) FetchBidById(suave.DataId) (suave.DataRecord, error) {
+func (*FakeStoreBackend) FetchRecordById(suave.DataId) (suave.DataRecord, error) {
 	return suave.DataRecord{}, nil
 }
 
-func (*FakeStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+func (*FakeStoreBackend) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	return nil
 }
 
