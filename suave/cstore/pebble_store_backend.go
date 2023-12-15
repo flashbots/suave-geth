@@ -12,11 +12,6 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
-var (
-	formatPebbleBidKey      = formatRedisBidKey
-	formatPebbleBidValueKey = formatRedisBidValueKey
-)
-
 type PebbleStoreBackend struct {
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -28,7 +23,7 @@ var bidByBlockAndProtocolIndexDbKey = func(blockNumber uint64, namespace string)
 	return []byte(fmt.Sprintf("bids-block-%d-ns-%s", blockNumber, namespace))
 }
 
-type bidByBlockAndProtocolIndexType = []types.BidId
+type bidByBlockAndProtocolIndexType = []types.DataId
 
 func NewPebbleStoreBackend(dbPath string) (*PebbleStoreBackend, error) {
 	// TODO: should we check sanity in the constructor?
@@ -68,8 +63,8 @@ func (b *PebbleStoreBackend) Stop() error {
 	return nil
 }
 
-func (b *PebbleStoreBackend) InitializeBid(bid suave.Bid) error {
-	key := []byte(formatPebbleBidKey(bid.Id))
+func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
+	key := []byte(formatRecordKey(record.Id))
 
 	_, closer, err := b.db.Get(key)
 	if !errors.Is(err, pebble.ErrNotFound) {
@@ -79,7 +74,7 @@ func (b *PebbleStoreBackend) InitializeBid(bid suave.Bid) error {
 		return suave.ErrBidAlreadyPresent
 	}
 
-	data, err := json.Marshal(bid)
+	data, err := json.Marshal(record)
 	if err != nil {
 		return err
 	}
@@ -92,7 +87,7 @@ func (b *PebbleStoreBackend) InitializeBid(bid suave.Bid) error {
 	// index update
 	var currentValues bidByBlockAndProtocolIndexType
 
-	dbBlockProtoIndexKey := bidByBlockAndProtocolIndexDbKey(bid.DecryptionCondition, bid.Version)
+	dbBlockProtoIndexKey := bidByBlockAndProtocolIndexDbKey(record.DecryptionCondition, record.Version)
 	rawCurrentValues, closer, err := b.db.Get(dbBlockProtoIndexKey)
 	if err != nil {
 		if !errors.Is(err, pebble.ErrNotFound) {
@@ -106,7 +101,7 @@ func (b *PebbleStoreBackend) InitializeBid(bid suave.Bid) error {
 		}
 	}
 
-	currentValues = append(currentValues, bid.Id)
+	currentValues = append(currentValues, record.Id)
 	rawUpdatedValues, err := json.Marshal(currentValues)
 	if err != nil {
 		return err
@@ -115,34 +110,34 @@ func (b *PebbleStoreBackend) InitializeBid(bid suave.Bid) error {
 	return b.db.Set(dbBlockProtoIndexKey, rawUpdatedValues, nil)
 }
 
-func (b *PebbleStoreBackend) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
-	key := []byte(formatPebbleBidKey(bidId))
+func (b *PebbleStoreBackend) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
+	key := []byte(formatRecordKey(dataId))
 
 	bidData, closer, err := b.db.Get(key)
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("bid %x not found: %w", bidId, err)
+		return suave.DataRecord{}, fmt.Errorf("record %x not found: %w", dataId, err)
 	}
 
-	var bid suave.Bid
-	err = json.Unmarshal(bidData, &bid)
+	var record suave.DataRecord
+	err = json.Unmarshal(bidData, &record)
 	closer.Close()
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("could not unmarshal stored bid: %w", err)
+		return suave.DataRecord{}, fmt.Errorf("could not unmarshal stored record: %w", err)
 	}
 
-	return bid, nil
+	return record, nil
 }
 
-func (b *PebbleStoreBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	storeKey := []byte(formatPebbleBidValueKey(bid.Id, key))
-	return bid, b.db.Set(storeKey, value, nil)
+func (b *PebbleStoreBackend) Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
+	storeKey := []byte(formatRecordValueKey(record.Id, key))
+	return record, b.db.Set(storeKey, value, nil)
 }
 
-func (b *PebbleStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
-	storeKey := []byte(formatPebbleBidValueKey(bid.Id, key))
+func (b *PebbleStoreBackend) Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error) {
+	storeKey := []byte(formatRecordValueKey(record.Id, key))
 	data, closer, err := b.db.Get(storeKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch data for bid %x and key %s: %w", bid.Id, key, err)
+		return nil, fmt.Errorf("could not fetch data for record %x and key %s: %w", record.Id, key, err)
 	}
 	ret := make([]byte, len(data))
 	copy(ret, data)
@@ -150,7 +145,7 @@ func (b *PebbleStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key 
 	return ret, nil
 }
 
-func (b *PebbleStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (b *PebbleStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	dbBlockProtoIndexKey := bidByBlockAndProtocolIndexDbKey(blockNumber, namespace)
 	rawCurrentValues, closer, err := b.db.Get(dbBlockProtoIndexKey)
 	if err != nil {
@@ -164,11 +159,11 @@ func (b *PebbleStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, nam
 		return nil
 	}
 
-	bids := []suave.Bid{}
-	for _, bidId := range currentBidIds {
-		bid, err := b.FetchBidById(bidId)
+	bids := []suave.DataRecord{}
+	for _, dataId := range currentBidIds {
+		record, err := b.FetchBidByID(dataId)
 		if err == nil {
-			bids = append(bids, bid)
+			bids = append(bids, record)
 		}
 	}
 

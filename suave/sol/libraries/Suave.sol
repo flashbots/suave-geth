@@ -6,15 +6,6 @@ library Suave {
 
     type DataId is bytes16;
 
-    struct DataRecord {
-        DataId id;
-        DataId salt;
-        uint64 decryptionCondition;
-        address[] allowedPeekers;
-        address[] allowedStores;
-        string version;
-    }
-
     struct BuildBlockArgs {
         uint64 slot;
         bytes proposerPubkey;
@@ -25,6 +16,15 @@ library Suave {
         bytes32 random;
         Withdrawal[] withdrawals;
         bytes extra;
+    }
+
+    struct DataRecord {
+        DataId id;
+        DataId salt;
+        uint64 decryptionCondition;
+        address[] allowedPeekers;
+        address[] allowedStores;
+        string version;
     }
 
     struct Withdrawal {
@@ -50,11 +50,11 @@ library Suave {
 
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
 
-    address public constant FETCH_DATA = 0x0000000000000000000000000000000042030001;
+    address public constant FETCH_DATA_RECORDS = 0x0000000000000000000000000000000042030001;
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
-    address public constant NEW_DATA = 0x0000000000000000000000000000000042030000;
+    address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
@@ -135,10 +135,10 @@ library Suave {
         return data;
     }
 
-    function fetchData(uint64 cond, string memory namespace) internal view returns (DataRecord[] memory) {
-        (bool success, bytes memory data) = FETCH_DATA.staticcall(abi.encode(cond, namespace));
+    function fetchDataRecords(uint64 cond, string memory namespace) internal view returns (DataRecord[] memory) {
+        (bool success, bytes memory data) = FETCH_DATA_RECORDS.staticcall(abi.encode(cond, namespace));
         if (!success) {
-            revert PeekerReverted(FETCH_DATA, data);
+            revert PeekerReverted(FETCH_DATA_RECORDS, data);
         }
 
         return abi.decode(data, (DataRecord[]));
@@ -161,9 +161,9 @@ library Suave {
         string memory dataType
     ) internal view returns (DataRecord memory) {
         (bool success, bytes memory data) =
-            NEW_DATA.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, dataType));
+            NEW_DATA_RECORD.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, dataType));
         if (!success) {
-            revert PeekerReverted(NEW_DATA, data);
+            revert PeekerReverted(NEW_DATA_RECORD, data);
         }
 
         return abi.decode(data, (DataRecord));

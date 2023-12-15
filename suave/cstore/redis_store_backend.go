@@ -18,12 +18,12 @@ import (
 var _ ConfidentialStorageBackend = &RedisStoreBackend{}
 
 var (
-	formatRedisBidKey = func(bidId suave.BidId) string {
-		return fmt.Sprintf("bid-%x", bidId)
+	formatRecordKey = func(dataId suave.DataId) string {
+		return fmt.Sprintf("record-%x", dataId)
 	}
 
-	formatRedisBidValueKey = func(bidId suave.BidId, key string) string {
-		return fmt.Sprintf("bid-data-%x-%s", bidId, key)
+	formatRecordValueKey = func(dataId suave.DataId, key string) string {
+		return fmt.Sprintf("record-data-%x-%s", dataId, key)
 	}
 
 	ffStoreTTL = 24 * time.Hour
@@ -74,7 +74,7 @@ func (r *RedisStoreBackend) start() error {
 	}
 	r.client = client
 
-	err = r.InitializeBid(mempoolConfidentialStoreBid)
+	err = r.InitRecord(mempoolConfidentialStoreBid)
 	if err != nil && !errors.Is(err, suave.ErrBidAlreadyPresent) {
 		return fmt.Errorf("mempool: could not initialize: %w", err)
 	}
@@ -96,15 +96,15 @@ func (r *RedisStoreBackend) Stop() error {
 	return nil
 }
 
-func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
-	key := formatRedisBidKey(bid.Id)
+func (r *RedisStoreBackend) InitRecord(record suave.DataRecord) error {
+	key := formatRecordKey(record.Id)
 
 	err := r.client.Get(r.ctx, key).Err()
 	if !errors.Is(err, redis.Nil) {
 		return suave.ErrBidAlreadyPresent
 	}
 
-	data, err := json.Marshal(bid)
+	data, err := json.Marshal(record)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
 		return err
 	}
 
-	err = r.indexBid(bid)
+	err = r.indexBid(record)
 	if err != nil {
 		return err
 	}
@@ -122,35 +122,35 @@ func (r *RedisStoreBackend) InitializeBid(bid suave.Bid) error {
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
-	key := formatRedisBidKey(bidId)
+func (r *RedisStoreBackend) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
+	key := formatRecordKey(dataId)
 
 	data, err := r.client.Get(r.ctx, key).Bytes()
 	if err != nil {
-		return suave.Bid{}, err
+		return suave.DataRecord{}, err
 	}
 
-	var bid suave.Bid
-	err = json.Unmarshal(data, &bid)
+	var record suave.DataRecord
+	err = json.Unmarshal(data, &record)
 	if err != nil {
-		return suave.Bid{}, err
+		return suave.DataRecord{}, err
 	}
 
-	return bid, nil
+	return record, nil
 }
 
-func (r *RedisStoreBackend) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	storeKey := formatRedisBidValueKey(bid.Id, key)
+func (r *RedisStoreBackend) Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
+	storeKey := formatRecordValueKey(record.Id, key)
 	err := r.client.Set(r.ctx, storeKey, string(value), ffStoreTTL).Err()
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("unexpected redis error: %w", err)
+		return suave.DataRecord{}, fmt.Errorf("unexpected redis error: %w", err)
 	}
 
-	return bid, nil
+	return record, nil
 }
 
-func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
-	storeKey := formatRedisBidValueKey(bid.Id, key)
+func (r *RedisStoreBackend) Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error) {
+	storeKey := formatRecordValueKey(record.Id, key)
 	data, err := r.client.Get(r.ctx, storeKey).Bytes()
 	if err != nil {
 		return []byte{}, fmt.Errorf("unexpected redis error: %w, %s, %v", err, storeKey, r.client.Keys(context.TODO(), "*").String())
@@ -160,44 +160,44 @@ func (r *RedisStoreBackend) Retrieve(bid suave.Bid, caller common.Address, key s
 }
 
 var (
-	mempoolConfStoreId          = types.BidId{0x39}
+	mempoolConfStoreId          = types.DataId{0x39}
 	mempoolConfStoreAddr        = common.HexToAddress("0x39")
-	mempoolConfidentialStoreBid = suave.Bid{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
+	mempoolConfidentialStoreBid = suave.DataRecord{Id: mempoolConfStoreId, AllowedPeekers: []common.Address{mempoolConfStoreAddr}}
 )
 
-func (r *RedisStoreBackend) indexBid(bid suave.Bid) error {
-	defer log.Info("bid submitted", "bid", bid, "store", r.Store)
+func (r *RedisStoreBackend) indexBid(record suave.DataRecord) error {
+	defer log.Info("record submitted", "record", record, "store", r.Store)
 
-	var bidsByBlockAndProtocol []suave.BidId
-	bidsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition))
+	var recordsByBlockAndProtocol []suave.DataId
+	recordsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition))
 	if err == nil {
-		bidsByBlockAndProtocol = suave.MustDecode[[]suave.BidId](bidsByBlockAndProtocolBytes)
+		recordsByBlockAndProtocol = suave.MustDecode[[]suave.DataId](recordsByBlockAndProtocolBytes)
 	}
-	// store bid by block number and by protocol + block number
-	bidsByBlockAndProtocol = append(bidsByBlockAndProtocol, bid.Id)
+	// store record by block number and by protocol + block number
+	recordsByBlockAndProtocol = append(recordsByBlockAndProtocol, record.Id)
 
-	r.Store(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition), suave.MustEncode(bidsByBlockAndProtocol))
+	r.Store(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition), suave.MustEncode(recordsByBlockAndProtocol))
 
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
-	bidsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
+func (r *RedisStoreBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	recordsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreBid, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
 	if err != nil {
 		return nil
 	}
 
-	res := []suave.Bid{}
+	res := []suave.DataRecord{}
 
-	bidIDs := suave.MustDecode[[]suave.BidId](bidsByProtocolBytes)
-	for _, id := range bidIDs {
-		bid, err := r.FetchBidById(id)
+	recordIDs := suave.MustDecode[[]suave.DataId](recordsByProtocolBytes)
+	for _, id := range recordIDs {
+		record, err := r.FetchBidByID(id)
 		if err != nil {
 			continue
 		}
-		res = append(res, bid)
+		res = append(res, record)
 	}
 
-	// defer log.Info("bids fetched", "bids", string(bidsByProtocolBytes))
+	// defer log.Info("records fetched", "records", string(recordsByProtocolBytes))
 	return res
 }

@@ -18,11 +18,11 @@ import (
 // ConfidentialStorageBackend is the interface that must be implemented by a
 // storage backend for the confidential storage engine.
 type ConfidentialStorageBackend interface {
-	InitializeBid(bid suave.Bid) error
-	Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error)
-	Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error)
-	FetchBidById(suave.BidId) (suave.Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid
+	InitRecord(record suave.DataRecord) error
+	Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error)
+	Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error)
+	FetchBidByID(suave.DataId) (suave.DataRecord, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
 	Stop() error
 }
 
@@ -42,10 +42,10 @@ type DAMessage struct {
 }
 
 type StoreWrite struct {
-	Bid    suave.Bid      `json:"bid"`
-	Caller common.Address `json:"caller"`
-	Key    string         `json:"key"`
-	Value  suave.Bytes    `json:"value"`
+	DataRecord suave.DataRecord `json:"dataRecord"`
+	Caller     common.Address   `json:"caller"`
+	Key        string           `json:"key"`
+	Value      suave.Bytes      `json:"value"`
 }
 
 type DASigner interface {
@@ -58,7 +58,7 @@ type ChainSigner interface {
 	Sender(tx *types.Transaction) (common.Address, error)
 }
 
-type ConfidentialStoreEngine struct {
+type CStoreEngine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -72,13 +72,14 @@ type ConfidentialStoreEngine struct {
 	localAddresses map[common.Address]struct{}
 }
 
-func NewConfidentialStoreEngine(backend ConfidentialStorageBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) *ConfidentialStoreEngine {
+// NewEngine creates a new instance of CStoreEngine.
+func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransportTopic, daSigner DASigner, chainSigner ChainSigner) *CStoreEngine {
 	localAddresses := make(map[common.Address]struct{})
 	for _, addr := range daSigner.LocalAddresses() {
 		localAddresses[addr] = struct{}{}
 	}
 
-	return &ConfidentialStoreEngine{
+	return &CStoreEngine{
 		storage:        backend,
 		transportTopic: transportTopic,
 		daSigner:       daSigner,
@@ -88,15 +89,17 @@ func NewConfidentialStoreEngine(backend ConfidentialStorageBackend, transportTop
 	}
 }
 
-func (e *ConfidentialStoreEngine) NewTransactionalStore(sourceTx *types.Transaction) *TransactionalStore {
+// NewTransactionalStore creates a new transactional store.
+func (e *CStoreEngine) NewTransactionalStore(sourceTx *types.Transaction) *TransactionalStore {
 	return &TransactionalStore{
 		sourceTx:    sourceTx,
 		engine:      e,
-		pendingBids: make(map[suave.BidId]suave.Bid),
+		pendingBids: make(map[suave.DataId]suave.DataRecord),
 	}
 }
 
-func (e *ConfidentialStoreEngine) Start() error {
+// Start initializes the CStoreEngine.
+func (e *CStoreEngine) Start() error {
 	if err := e.transportTopic.Start(); err != nil {
 		return err
 	}
@@ -113,7 +116,8 @@ func (e *ConfidentialStoreEngine) Start() error {
 	return nil
 }
 
-func (e *ConfidentialStoreEngine) Stop() error {
+// Stop terminates the CStoreEngine.
+func (e *CStoreEngine) Stop() error {
 	if e.cancel == nil {
 		return errors.New("Confidential engine: Stop() called before Start()")
 	}
@@ -131,12 +135,13 @@ func (e *ConfidentialStoreEngine) Stop() error {
 	return nil
 }
 
-// For testing purposes!
-func (e *ConfidentialStoreEngine) Backend() ConfidentialStorageBackend {
+// Backend provides for testing purposes access to the underlying ConfidentialStorageBackend.
+func (e *CStoreEngine) Backend() ConfidentialStorageBackend {
 	return e.storage
 }
 
-func (e *ConfidentialStoreEngine) ProcessMessages() {
+// ProcessMessages handles incoming messages.
+func (e *CStoreEngine) ProcessMessages() {
 	ch, cancel := e.transportTopic.Subscribe()
 	defer cancel()
 
@@ -155,75 +160,80 @@ func (e *ConfidentialStoreEngine) ProcessMessages() {
 	}
 }
 
-func (e *ConfidentialStoreEngine) InitializeBid(bid types.Bid, creationTx *types.Transaction) (suave.Bid, error) {
+// InitRecord prepares a data record for storage.
+func (e *CStoreEngine) InitRecord(record types.DataRecord, creationTx *types.Transaction) (suave.DataRecord, error) {
 	// Share with all stores this node trusts
-	bid.AllowedStores = append(bid.AllowedStores, e.daSigner.LocalAddresses()...)
+	record.AllowedStores = append(record.AllowedStores, e.daSigner.LocalAddresses()...)
 
-	expectedId, err := calculateBidId(bid)
+	expectedId, err := calculateRecordId(record)
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("confidential engine: could not initialize new bid: %w", err)
+		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not initialize new record: %w", err)
 	}
 
-	if bid.Id == emptyId {
-		bid.Id = expectedId
-	} else if bid.Id != expectedId {
+	if isEmptyID(record.Id) {
+		record.Id = expectedId
+	} else if record.Id != expectedId {
 		// True in some tests, might be time to rewrite them
-		return suave.Bid{}, errors.New("confidential engine:incorrect bid id passed")
+		return suave.DataRecord{}, errors.New("confidential engine: incorrect record id passed")
 	}
 
-	initializedBid := suave.Bid{
-		Id:                  bid.Id,
-		Salt:                bid.Salt,
-		DecryptionCondition: bid.DecryptionCondition,
-		AllowedPeekers:      bid.AllowedPeekers,
-		AllowedStores:       bid.AllowedStores,
-		Version:             bid.Version,
+	initializedBid := suave.DataRecord{
+		Id:                  record.Id,
+		Salt:                record.Salt,
+		DecryptionCondition: record.DecryptionCondition,
+		AllowedPeekers:      record.AllowedPeekers,
+		AllowedStores:       record.AllowedStores,
+		Version:             record.Version,
 		CreationTx:          creationTx,
 	}
 
-	bidBytes, err := SerializeBidForSigning(&initializedBid)
+	bidBytes, err := SerializeDataRecord(&initializedBid)
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("confidential engine: could not hash bid for signing: %w", err)
+		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not hash record for signing: %w", err)
 	}
 
 	signingAccount, err := KettleAddressFromTransaction(creationTx)
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
+		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
 	}
 
 	initializedBid.Signature, err = e.daSigner.Sign(signingAccount, bidBytes)
 	if err != nil {
-		return suave.Bid{}, fmt.Errorf("confidential engine: could not sign initialized bid: %w", err)
+		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not sign initialized record: %w", err)
 	}
 
 	return initializedBid, nil
 }
 
-func (e *ConfidentialStoreEngine) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
-	return e.storage.FetchBidById(bidId)
+// FetchBidByID retrieves a bid by its identifier.
+func (e *CStoreEngine) FetchBidByID(id suave.DataId) (suave.DataRecord, error) {
+	return e.storage.FetchBidByID(id)
 }
 
-func (e *ConfidentialStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+// FetchBidsByProtocolAndBlock fetches bids based on protocol and block number.
+func (e *CStoreEngine) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	return e.storage.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 }
 
-func (e *ConfidentialStoreEngine) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := e.storage.FetchBidById(bidId)
+// Retrieve fetches data associated with a bid.
+func (e *CStoreEngine) Retrieve(id suave.DataId, caller common.Address, key string) ([]byte, error) {
+	bid, err := e.storage.FetchBidByID(id)
 	if err != nil {
-		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", bidId, err)
+		return []byte{}, fmt.Errorf("confidential engine: could not fetch bid %x while retrieving: %w", id, err)
 	}
 
 	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
-		return []byte{}, fmt.Errorf("confidential engine: %x not allowed to retrieve %s on %x", caller, key, bidId)
+		return []byte{}, fmt.Errorf("confidential engine: %x not allowed to retrieve %s on %x", caller, key, id)
 	}
 
 	return e.storage.Retrieve(bid, caller, key)
 }
 
-func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[suave.BidId]suave.Bid, stores []StoreWrite) error {
+// Finalize finalizes a transaction and updates the store.
+func (e *CStoreEngine) Finalize(tx *types.Transaction, newBids map[suave.DataId]suave.DataRecord, stores []StoreWrite) error {
 	//
 	for _, bid := range newBids {
-		err := e.storage.InitializeBid(bid)
+		err := e.storage.InitRecord(bid)
 		if err != nil {
 			// TODO: deinitialize!
 			return fmt.Errorf("confidential engine: store backend failed to initialize bid: %w", err)
@@ -231,7 +241,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[su
 	}
 
 	for _, sw := range stores {
-		if _, err := e.storage.Store(sw.Bid, sw.Caller, sw.Key, sw.Value); err != nil {
+		if _, err := e.storage.Store(sw.DataRecord, sw.Caller, sw.Key, sw.Value); err != nil {
 			// TODO: deinitialize and deStore!
 			return fmt.Errorf("failed to store data: %w", err)
 		}
@@ -249,7 +259,7 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[su
 		return suave.ErrUnsignedFinalize
 	}
 
-	msgBytes, err := SerializeMessageForSigning(&pwMsg)
+	msgBytes, err := SerializeDAMessage(&pwMsg)
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not hash message for signing: %w", err)
 	}
@@ -270,11 +280,12 @@ func (e *ConfidentialStoreEngine) Finalize(tx *types.Transaction, newBids map[su
 	return nil
 }
 
-func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
+// NewMessage processes a new incoming DAMessage.
+func (e *CStoreEngine) NewMessage(message DAMessage) error {
 	// Note the validation is a work in progress and not guaranteed to be correct!
 
 	// Message-level validation
-	msgBytes, err := SerializeMessageForSigning(&message)
+	msgBytes, err := SerializeDAMessage(&message)
 	if err != nil {
 		return fmt.Errorf("confidential engine: could not hash received message: %w", err)
 	}
@@ -305,34 +316,34 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 
 	// TODO: check if message.SourceTx is valid and insert it into the mempool!
 
-	// Bid level validation
+	// DataRecord level validation
 
 	for _, sw := range message.StoreWrites {
-		expectedId, err := calculateBidId(types.Bid{
-			Id:                  sw.Bid.Id,
-			Salt:                sw.Bid.Salt,
-			DecryptionCondition: sw.Bid.DecryptionCondition,
-			AllowedPeekers:      sw.Bid.AllowedPeekers,
-			AllowedStores:       sw.Bid.AllowedStores,
-			Version:             sw.Bid.Version,
+		expectedId, err := calculateRecordId(types.DataRecord{
+			Id:                  sw.DataRecord.Id,
+			Salt:                sw.DataRecord.Salt,
+			DecryptionCondition: sw.DataRecord.DecryptionCondition,
+			AllowedPeekers:      sw.DataRecord.AllowedPeekers,
+			AllowedStores:       sw.DataRecord.AllowedStores,
+			Version:             sw.DataRecord.Version,
 		})
 		if err != nil {
 			return fmt.Errorf("confidential engine: could not calculate received bids id: %w", err)
 		}
 
-		if expectedId != sw.Bid.Id {
-			return fmt.Errorf("confidential engine: received bids id (%x) does not match the expected (%x)", sw.Bid.Id, expectedId)
+		if expectedId != sw.DataRecord.Id {
+			return fmt.Errorf("confidential engine: received bids id (%x) does not match the expected (%x)", sw.DataRecord.Id, expectedId)
 		}
 
-		bidBytes, err := SerializeBidForSigning(&sw.Bid)
+		bidBytes, err := SerializeDataRecord(&sw.DataRecord)
 		if err != nil {
 			return fmt.Errorf("confidential engine: could not hash received bid: %w", err)
 		}
-		recoveredBidSigner, err := e.daSigner.Sender(bidBytes, sw.Bid.Signature)
+		recoveredBidSigner, err := e.daSigner.Sender(bidBytes, sw.DataRecord.Signature)
 		if err != nil {
 			return fmt.Errorf("confidential engine: incorrect bid signature: %w", err)
 		}
-		expectedBidSigner, err := KettleAddressFromTransaction(sw.Bid.CreationTx)
+		expectedBidSigner, err := KettleAddressFromTransaction(sw.DataRecord.CreationTx)
 		if err != nil {
 			return fmt.Errorf("confidential engine: could not recover signer from bid: %w", err)
 		}
@@ -340,23 +351,23 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 			return fmt.Errorf("confidential engine: bid signer %x, expected %x", recoveredBidSigner, expectedBidSigner)
 		}
 
-		if !slices.Contains(sw.Bid.AllowedStores, recoveredMessageSigner) {
-			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on bid %x", recoveredMessageSigner, sw.Bid.Id)
+		if !slices.Contains(sw.DataRecord.AllowedStores, recoveredMessageSigner) {
+			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on bid %x", recoveredMessageSigner, sw.DataRecord.Id)
 		}
 
-		if !slices.Contains(sw.Bid.AllowedPeekers, sw.Caller) && !slices.Contains(sw.Bid.AllowedPeekers, suave.AllowedPeekerAny) {
-			return fmt.Errorf("confidential engine: caller %x not allowed on bid %x", sw.Caller, sw.Bid.Id)
+		if !slices.Contains(sw.DataRecord.AllowedPeekers, sw.Caller) && !slices.Contains(sw.DataRecord.AllowedPeekers, suave.AllowedPeekerAny) {
+			return fmt.Errorf("confidential engine: caller %x not allowed on bid %x", sw.Caller, sw.DataRecord.Id)
 		}
 
 		// TODO: move to types.Sender()
-		_, err = e.chainSigner.Sender(sw.Bid.CreationTx)
+		_, err = e.chainSigner.Sender(sw.DataRecord.CreationTx)
 		if err != nil {
-			return fmt.Errorf("confidential engine: creation tx for bid id %x is not signed properly: %w", sw.Bid.Id, err)
+			return fmt.Errorf("confidential engine: creation tx for bid id %x is not signed properly: %w", sw.DataRecord.Id, err)
 		}
 	}
 
 	for _, sw := range message.StoreWrites {
-		err = e.storage.InitializeBid(sw.Bid)
+		err = e.storage.InitRecord(sw.DataRecord)
 		if err != nil {
 			if !errors.Is(err, suave.ErrBidAlreadyPresent) {
 				log.Error("confidential engine: unexpected error while initializing bid from transport: %w", err)
@@ -364,7 +375,7 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 			}
 		}
 
-		_, err = e.storage.Store(sw.Bid, sw.Caller, sw.Key, sw.Value)
+		_, err = e.storage.Store(sw.DataRecord, sw.Caller, sw.Key, sw.Value)
 		if err != nil {
 			log.Error("confidential engine: unexpected error while storing: %w", err)
 			continue // Don't abandon!
@@ -374,24 +385,26 @@ func (e *ConfidentialStoreEngine) NewMessage(message DAMessage) error {
 	return nil
 }
 
-func SerializeBidForSigning(bid *suave.Bid) ([]byte, error) {
-	bidBytes, err := json.Marshal(suave.Bid{
-		Id:                  bid.Id,
-		Salt:                bid.Salt,
-		DecryptionCondition: bid.DecryptionCondition,
-		AllowedPeekers:      bid.AllowedPeekers,
-		AllowedStores:       bid.AllowedStores,
-		Version:             bid.Version,
-		CreationTx:          bid.CreationTx,
+// SerializeDataRecord prepares a data record for signing.
+func SerializeDataRecord(record *suave.DataRecord) ([]byte, error) {
+	recordBytes, err := json.Marshal(suave.DataRecord{
+		Id:                  record.Id,
+		Salt:                record.Salt,
+		DecryptionCondition: record.DecryptionCondition,
+		AllowedPeekers:      record.AllowedPeekers,
+		AllowedStores:       record.AllowedStores,
+		Version:             record.Version,
+		CreationTx:          record.CreationTx,
 	})
 	if err != nil {
 		return []byte{}, err
 	}
 
-	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(bidBytes), string(bidBytes))), nil
+	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(recordBytes), string(recordBytes))), nil
 }
 
-func SerializeMessageForSigning(message *DAMessage) ([]byte, error) {
+// SerializeDAMessage prepares a DAMessage for signing.
+func SerializeDAMessage(message *DAMessage) ([]byte, error) {
 	msgBytes, err := json.Marshal(DAMessage{
 		SourceTx:    message.SourceTx,
 		StoreWrites: message.StoreWrites,
@@ -404,6 +417,50 @@ func SerializeMessageForSigning(message *DAMessage) ([]byte, error) {
 
 	return []byte(fmt.Sprintf("\x19Suave Signed Message:\n%d%s", len(msgBytes), string(msgBytes))), nil
 }
+
+// KettleAddressFromTransaction returns address of kettle that executed confidential transaction
+func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error) {
+	innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
+	if ok {
+		return innerExecutedTx.ConfidentialComputeRequest.KettleAddress, nil
+	}
+
+	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
+	if ok {
+		return innerRequestTx.KettleAddress, nil
+	}
+
+	return common.Address{}, fmt.Errorf("transaction is not of confidential type")
+}
+
+var emptyId [16]byte
+
+var bidUuidSpace = uuid.UUID{0x42}
+
+func calculateRecordId(record types.DataRecord) (types.DataId, error) {
+	copy(record.Id[:], emptyId[:])
+
+	body, err := json.Marshal(record)
+	if err != nil {
+		return types.DataId{}, fmt.Errorf("could not marshal record to calculate its id: %w", err)
+	}
+
+	uuidv5 := uuid.NewSHA1(bidUuidSpace, body)
+	copy(record.Id[:], uuidv5[:])
+
+	return record.Id, nil
+}
+
+func RandomBidId() types.DataId {
+	return types.DataId(uuid.New())
+}
+
+// isEmptyID checks if the given DataId is empty.
+func isEmptyID(id types.DataId) bool {
+	return id == emptyId
+}
+
+// Mocks
 
 type MockTransport struct{}
 
@@ -437,40 +494,4 @@ func (MockChainSigner) Sender(tx *types.Transaction) (common.Address, error) {
 	}
 
 	return types.NewSuaveSigner(tx.ChainId()).Sender(tx)
-}
-
-func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error) {
-	innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
-	if ok {
-		return innerExecutedTx.ConfidentialComputeRequest.KettleAddress, nil
-	}
-
-	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
-	if ok {
-		return innerRequestTx.KettleAddress, nil
-	}
-
-	return common.Address{}, fmt.Errorf("transaction is not of confidential type")
-}
-
-var emptyId [16]byte
-
-var bidUuidSpace = uuid.UUID{0x42}
-
-func calculateBidId(bid types.Bid) (types.BidId, error) {
-	copy(bid.Id[:], emptyId[:])
-
-	body, err := json.Marshal(bid)
-	if err != nil {
-		return types.BidId{}, fmt.Errorf("could not marshal bid to calculate its id: %w", err)
-	}
-
-	uuidv5 := uuid.NewSHA1(bidUuidSpace, body)
-	copy(bid.Id[:], uuidv5[:])
-
-	return bid.Id, nil
-}
-
-func RandomBidId() types.BidId {
-	return types.BidId(uuid.New())
 }

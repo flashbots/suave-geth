@@ -13,26 +13,26 @@ import (
 
 type TransactionalStore struct {
 	sourceTx *types.Transaction
-	engine   *ConfidentialStoreEngine
+	engine   *CStoreEngine
 
 	pendingLock   sync.Mutex
-	pendingBids   map[suave.BidId]suave.Bid
+	pendingBids   map[suave.DataId]suave.DataRecord
 	pendingWrites []StoreWrite
 }
 
-func (s *TransactionalStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+func (s *TransactionalStore) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
 	s.pendingLock.Lock()
-	bid, ok := s.pendingBids[bidId]
+	bid, ok := s.pendingBids[dataId]
 	s.pendingLock.Unlock()
 
 	if ok {
 		return bid, nil
 	}
 
-	return s.engine.FetchBidById(bidId)
+	return s.engine.FetchBidByID(dataId)
 }
 
-func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	bids := s.engine.FetchBidsByProtocolAndBlock(blockNumber, namespace)
 
 	s.pendingLock.Lock()
@@ -46,62 +46,62 @@ func (s *TransactionalStore) FetchBidsByProtocolAndBlock(blockNumber uint64, nam
 	return bids
 }
 
-func (s *TransactionalStore) Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error) {
-	bid, err := s.FetchBidById(bidId)
+func (s *TransactionalStore) Store(dataId suave.DataId, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
+	record, err := s.FetchBidByID(dataId)
 	if err != nil {
-		return suave.Bid{}, err
+		return suave.DataRecord{}, err
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
-		return suave.Bid{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, bidId)
+	if !slices.Contains(record.AllowedPeekers, caller) && !slices.Contains(record.AllowedPeekers, suave.AllowedPeekerAny) {
+		return suave.DataRecord{}, fmt.Errorf("confidential store transaction: %x not allowed to store %s on %x", caller, key, dataId)
 	}
 
 	s.pendingLock.Lock()
 	defer s.pendingLock.Unlock()
 	s.pendingWrites = append(s.pendingWrites, StoreWrite{
-		Bid:    bid,
-		Caller: caller,
-		Key:    key,
-		Value:  common.CopyBytes(value),
+		DataRecord: record,
+		Caller:     caller,
+		Key:        key,
+		Value:      common.CopyBytes(value),
 	})
 
-	return bid, nil
+	return record, nil
 }
 
-func (s *TransactionalStore) Retrieve(bidId suave.BidId, caller common.Address, key string) ([]byte, error) {
-	bid, err := s.FetchBidById(bidId)
+func (s *TransactionalStore) Retrieve(dataId suave.DataId, caller common.Address, key string) ([]byte, error) {
+	record, err := s.FetchBidByID(dataId)
 	if err != nil {
 		return nil, err
 	}
 
-	if !slices.Contains(bid.AllowedPeekers, caller) && !slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny) {
-		return nil, fmt.Errorf("confidential store transaction: %x not allowed to retrieve %s on %x", caller, key, bidId)
+	if !slices.Contains(record.AllowedPeekers, caller) && !slices.Contains(record.AllowedPeekers, suave.AllowedPeekerAny) {
+		return nil, fmt.Errorf("confidential store transaction: %x not allowed to retrieve %s on %x", caller, key, dataId)
 	}
 
 	s.pendingLock.Lock()
 
 	for _, sw := range s.pendingWrites {
-		if sw.Bid.Id == bid.Id && sw.Key == key {
+		if sw.DataRecord.Id == record.Id && sw.Key == key {
 			s.pendingLock.Unlock()
 			return common.CopyBytes(sw.Value), nil
 		}
 	}
 
 	s.pendingLock.Unlock()
-	return s.engine.Retrieve(bidId, caller, key)
+	return s.engine.Retrieve(dataId, caller, key)
 }
 
-func (s *TransactionalStore) InitializeBid(rawBid types.Bid) (types.Bid, error) {
-	bid, err := s.engine.InitializeBid(rawBid, s.sourceTx)
+func (s *TransactionalStore) InitializeBid(rawRecord types.DataRecord) (types.DataRecord, error) {
+	bid, err := s.engine.InitRecord(rawRecord, s.sourceTx)
 	if err != nil {
-		return types.Bid{}, err
+		return types.DataRecord{}, err
 	}
 
 	s.pendingLock.Lock()
 	_, found := s.pendingBids[bid.Id]
 	if found {
 		s.pendingLock.Unlock()
-		return types.Bid{}, errors.New("bid with this id already exists")
+		return types.DataRecord{}, errors.New("bid with this id already exists")
 	}
 	s.pendingBids[bid.Id] = bid
 	s.pendingLock.Unlock()

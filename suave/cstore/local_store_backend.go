@@ -14,16 +14,16 @@ var _ ConfidentialStorageBackend = &LocalConfidentialStore{}
 
 type LocalConfidentialStore struct {
 	lock    sync.Mutex
-	bids    map[suave.BidId]suave.Bid
+	records map[suave.DataId]suave.DataRecord
 	dataMap map[string][]byte
-	index   map[string][]suave.BidId
+	index   map[string][]suave.DataId
 }
 
 func NewLocalConfidentialStore() *LocalConfidentialStore {
 	return &LocalConfidentialStore{
-		bids:    make(map[suave.BidId]suave.Bid),
+		records: make(map[suave.DataId]suave.DataRecord),
 		dataMap: make(map[string][]byte),
-		index:   make(map[string][]suave.BidId),
+		index:   make(map[string][]suave.DataId),
 	}
 }
 
@@ -31,41 +31,41 @@ func (l *LocalConfidentialStore) Stop() error {
 	return nil
 }
 
-func (l *LocalConfidentialStore) InitializeBid(bid suave.Bid) error {
+func (l *LocalConfidentialStore) InitRecord(record suave.DataRecord) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	_, found := l.bids[bid.Id]
+	_, found := l.records[record.Id]
 	if found {
 		return suave.ErrBidAlreadyPresent
 	}
 
-	l.bids[bid.Id] = bid
+	l.records[record.Id] = record
 
-	// index the bid by (protocol, block number)
-	indexKey := fmt.Sprintf("protocol-%s-bn-%d", bid.Version, bid.DecryptionCondition)
-	bidIds := l.index[indexKey]
-	bidIds = append(bidIds, bid.Id)
-	l.index[indexKey] = bidIds
+	// index the record by (protocol, block number)
+	indexKey := fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition)
+	recordIds := l.index[indexKey]
+	recordIds = append(recordIds, record.Id)
+	l.index[indexKey] = recordIds
 
 	return nil
 }
 
-func (l *LocalConfidentialStore) Store(bid suave.Bid, caller common.Address, key string, value []byte) (suave.Bid, error) {
+func (l *LocalConfidentialStore) Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	l.dataMap[fmt.Sprintf("%x-%s", bid.Id, key)] = append(make([]byte, 0, len(value)), value...)
+	l.dataMap[fmt.Sprintf("%x-%s", record.Id, key)] = append(make([]byte, 0, len(value)), value...)
 
-	defer log.Trace("CSSW", "caller", caller, "key", key, "value", value, "stored", l.dataMap[fmt.Sprintf("%x-%s", bid.Id, key)])
-	return bid, nil
+	defer log.Trace("CSSW", "caller", caller, "key", key, "value", value, "stored", l.dataMap[fmt.Sprintf("%x-%s", record.Id, key)])
+	return record, nil
 }
 
-func (l *LocalConfidentialStore) Retrieve(bid suave.Bid, caller common.Address, key string) ([]byte, error) {
+func (l *LocalConfidentialStore) Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	data, found := l.dataMap[fmt.Sprintf("%x-%s", bid.Id, key)]
+	data, found := l.dataMap[fmt.Sprintf("%x-%s", record.Id, key)]
 	if !found {
 		return []byte{}, fmt.Errorf("data for key %s not found", key)
 	}
@@ -74,19 +74,19 @@ func (l *LocalConfidentialStore) Retrieve(bid suave.Bid, caller common.Address, 
 	return append(make([]byte, 0, len(data)), data...), nil
 }
 
-func (l *LocalConfidentialStore) FetchBidById(bidId suave.BidId) (suave.Bid, error) {
+func (l *LocalConfidentialStore) FetchBidByID(dataId suave.DataId) (suave.DataRecord, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
-	bid, found := l.bids[bidId]
+	bid, found := l.records[dataId]
 	if !found {
-		return suave.Bid{}, errors.New("bid not found")
+		return suave.DataRecord{}, errors.New("bid not found")
 	}
 
 	return bid, nil
 }
 
-func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid {
+func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -96,9 +96,9 @@ func (l *LocalConfidentialStore) FetchBidsByProtocolAndBlock(blockNumber uint64,
 		return nil
 	}
 
-	res := []suave.Bid{}
+	res := []suave.DataRecord{}
 	for _, id := range bidIDs {
-		bid, found := l.bids[id]
+		bid, found := l.records[id]
 		if found {
 			res = append(res, bid)
 		}

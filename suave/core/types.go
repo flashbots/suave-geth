@@ -14,11 +14,11 @@ import (
 var AllowedPeekerAny = common.HexToAddress("0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829") // "*"
 
 type Bytes = hexutil.Bytes
-type BidId = types.BidId
+type DataId = types.DataId
 
-type Bid struct {
-	Id                  types.BidId
-	Salt                types.BidId
+type DataRecord struct {
+	Id                  types.DataId
+	Salt                types.DataId
 	DecryptionCondition uint64
 	AllowedPeekers      []common.Address
 	AllowedStores       []common.Address
@@ -27,8 +27,8 @@ type Bid struct {
 	Signature           []byte
 }
 
-func (b *Bid) ToInnerBid() types.Bid {
-	return types.Bid{
+func (b *DataRecord) ToInnerBid() types.DataRecord {
+	return types.DataRecord{
 		Id:                  b.Id,
 		Salt:                b.Salt,
 		DecryptionCondition: b.DecryptionCondition,
@@ -38,26 +38,26 @@ func (b *Bid) ToInnerBid() types.Bid {
 	}
 }
 
-type MEVMBid = types.Bid
+type MEVMBid = types.DataRecord
 
 type BuildBlockArgs = types.BuildBlockArgs
 
 var ConfStoreAllowedAny common.Address = common.HexToAddress("0x42")
 
 var (
-	ErrBidAlreadyPresent = errors.New("bid already present")
-	ErrBidNotFound       = errors.New("bid not found")
+	ErrBidAlreadyPresent = errors.New("data record already present")
+	ErrBidNotFound       = errors.New("data record not found")
 	ErrUnsignedFinalize  = errors.New("finalize called with unsigned transaction, refusing to propagate")
 )
 
 type ConfidentialStoreBackend interface {
 	node.Lifecycle
 
-	InitializeBid(bid Bid) error
-	Store(bid Bid, caller common.Address, key string, value []byte) (Bid, error)
-	Retrieve(bid Bid, caller common.Address, key string) ([]byte, error)
-	FetchBidById(BidId) (Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []Bid
+	InitializeBid(record DataRecord) error
+	Store(record DataRecord, caller common.Address, key string, value []byte) (DataRecord, error)
+	Retrieve(record DataRecord, caller common.Address, key string) ([]byte, error)
+	FetchBidById(DataId) (DataRecord, error)
+	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []DataRecord
 }
 
 type ConfidentialEthBackend interface {

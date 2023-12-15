@@ -12,7 +12,7 @@ import (
 )
 
 func TestTransactionalStore(t *testing.T) {
-	engine := NewConfidentialStoreEngine(NewLocalConfidentialStore(), MockTransport{}, MockSigner{}, MockChainSigner{})
+	engine := NewEngine(NewLocalConfidentialStore(), MockTransport{}, MockSigner{}, MockChainSigner{})
 
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
@@ -24,7 +24,7 @@ func TestTransactionalStore(t *testing.T) {
 
 	tstore := engine.NewTransactionalStore(dummyCreationTx)
 
-	testBid, err := tstore.InitializeBid(types.Bid{
+	testBid, err := tstore.InitializeBid(types.DataRecord{
 		Salt:                RandomBidId(),
 		DecryptionCondition: 46,
 		AllowedStores:       []common.Address{{0x42}},
@@ -36,7 +36,7 @@ func TestTransactionalStore(t *testing.T) {
 	_, err = tstore.Store(testBid.Id, testBid.AllowedPeekers[0], "xx", []byte{0x44})
 	require.NoError(t, err)
 
-	tfetchedBid, err := tstore.FetchBidById(testBid.Id)
+	tfetchedBid, err := tstore.FetchBidByID(testBid.Id)
 	require.NoError(t, err)
 	require.Equal(t, testBid, tfetchedBid.ToInnerBid())
 
@@ -61,7 +61,7 @@ func TestTransactionalStore(t *testing.T) {
 	require.Equal(t, []byte{0x44}, tretrieved)
 
 	// Not finalized, engine should return empty
-	_, err = engine.FetchBidById(testBid.Id)
+	_, err = engine.FetchBidByID(testBid.Id)
 	require.Error(t, err)
 	require.Empty(t, engine.FetchBidsByProtocolAndBlock(46, "v0-test"))
 	_, err = engine.Retrieve(testBid.Id, testBid.AllowedPeekers[0], "xx")
@@ -69,7 +69,7 @@ func TestTransactionalStore(t *testing.T) {
 
 	require.NoError(t, tstore.Finalize())
 
-	efetchedBid, err := engine.FetchBidById(testBid.Id)
+	efetchedBid, err := engine.FetchBidByID(testBid.Id)
 	require.NoError(t, err)
 	require.Equal(t, testBid, efetchedBid.ToInnerBid())
 

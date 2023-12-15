@@ -608,6 +608,17 @@ func generateABI(out string, dd desc) error {
 		return arg
 	}
 
+	// encode PeekerReverted(address, bytes)
+	peekerReverted := &abiField{
+		Type: "error",
+		Name: "PeekerReverted",
+		Inputs: []arguments{
+			{Name: "addr", Type: "address"},
+			{Name: "err", Type: "bytes"},
+		},
+	}
+	abiEncode = append(abiEncode, peekerReverted)
+
 	for _, f := range dd.Functions {
 		field := &abiField{
 			Name:   f.Name,
@@ -666,7 +677,7 @@ func encodeTypeName(typName string, addMemory bool, addLink bool) string {
 	typ, err := abi.NewType(typName, "", nil)
 	if err != nil {
 		// not a basic type (i.e. struct or []struct)
-		if typName != "BidId" {
+		if typName != "DataId" {
 			isMemoryType = true
 		}
 		// add the link reference to Suave library if necessary

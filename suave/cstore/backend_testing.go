@@ -9,17 +9,17 @@ import (
 )
 
 func testBackendStore(t *testing.T, store ConfidentialStorageBackend) {
-	bid := suave.Bid{
+	bid := suave.DataRecord{
 		Id:                  suave.RandomBidId(),
 		DecryptionCondition: 10,
 		AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 		Version:             "default:v0:ethBundles",
 	}
 
-	err := store.InitializeBid(bid)
+	err := store.InitRecord(bid)
 	require.NoError(t, err)
 
-	bidRes, err := store.FetchBidById(bid.Id)
+	bidRes, err := store.FetchBidByID(bid.Id)
 	require.NoError(t, err)
 	require.Equal(t, bid, bidRes)
 

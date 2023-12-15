@@ -26,8 +26,8 @@ func TestRedisTransport(t *testing.T) {
 
 	daMsg := DAMessage{
 		StoreWrites: []StoreWrite{{
-			Bid: suave.Bid{
-				Id:                  suave.BidId{0x42},
+			DataRecord: suave.DataRecord{
+				Id:                  suave.DataId{0x42},
 				DecryptionCondition: uint64(13),
 				AllowedPeekers:      []common.Address{{0x41, 0x39}},
 				Version:             string("vv"),
@@ -52,7 +52,7 @@ func TestRedisTransport(t *testing.T) {
 	case <-time.After(5 * time.Millisecond):
 	}
 
-	daMsg.StoreWrites[0].Bid.Id[0] = 0x43
+	daMsg.StoreWrites[0].DataRecord.Id[0] = 0x43
 	redisPubSub.Publish(daMsg)
 
 	select {
@@ -71,14 +71,14 @@ func TestEngineOnRedis(t *testing.T) {
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend1, _ := NewRedisStoreBackend(mrStore1.Addr())
 
-	engine1 := NewConfidentialStoreEngine(redisStoreBackend1, redisPubSub1, MockSigner{}, MockChainSigner{})
+	engine1 := NewEngine(redisStoreBackend1, redisPubSub1, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
 	redisStoreBackend2, _ := NewRedisStoreBackend(mrStore2.Addr())
 
-	engine2 := NewConfidentialStoreEngine(redisStoreBackend2, redisPubSub2, MockSigner{}, MockChainSigner{})
+	engine2 := NewEngine(redisStoreBackend2, redisPubSub2, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine2.Start())
 	t.Cleanup(func() { engine2.Stop() })
 
@@ -91,7 +91,7 @@ func TestEngineOnRedis(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure a store to engine1 is propagated to endine2 through redis->miniredis transport
-	bid, err := engine1.InitializeBid(types.Bid{
+	record, err := engine1.InitRecord(types.DataRecord{
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
 		AllowedStores:       []common.Address{{}},
@@ -109,22 +109,22 @@ func TestEngineOnRedis(t *testing.T) {
 
 	// Trigger propagation
 	err = engine1.Finalize(dummyCreationTx, nil, []StoreWrite{{
-		Bid:    bid,
-		Caller: bid.AllowedPeekers[0],
-		Key:    "xx",
-		Value:  []byte{0x43, 0x14},
+		DataRecord: record,
+		Caller:     record.AllowedPeekers[0],
+		Key:        "xx",
+		Value:      []byte{0x43, 0x14},
 	}})
 	require.NoError(t, err)
 
 	time.Sleep(10 * time.Millisecond)
 
-	submittedBid := suave.Bid{
-		Id:                  bid.Id,
-		Salt:                bid.Salt,
-		DecryptionCondition: bid.DecryptionCondition,
-		AllowedPeekers:      bid.AllowedPeekers,
-		AllowedStores:       bid.AllowedStores,
-		Version:             bid.Version,
+	submittedBid := suave.DataRecord{
+		Id:                  record.Id,
+		Salt:                record.Salt,
+		DecryptionCondition: record.DecryptionCondition,
+		AllowedPeekers:      record.AllowedPeekers,
+		AllowedStores:       record.AllowedStores,
+		Version:             record.Version,
 		CreationTx:          dummyCreationTx,
 	}
 
@@ -138,22 +138,22 @@ func TestEngineOnRedis(t *testing.T) {
 
 	select {
 	case msg := <-subch:
-		rececivedBidJson, err := json.Marshal(msg.StoreWrites[0].Bid)
+		rececivedBidJson, err := json.Marshal(msg.StoreWrites[0].DataRecord)
 		require.NoError(t, err)
 
 		require.Equal(t, submittedBidJson, rececivedBidJson)
 		require.Equal(t, "xx", msg.StoreWrites[0].Key)
 		require.Equal(t, suave.Bytes{0x43, 0x14}, msg.StoreWrites[0].Value)
-		require.Equal(t, bid.AllowedPeekers[0], msg.StoreWrites[0].Caller)
+		require.Equal(t, record.AllowedPeekers[0], msg.StoreWrites[0].Caller)
 	case <-time.After(20 * time.Millisecond):
 		t.Error("did not receive expected message")
 	}
 
-	retrievedData, err := engine2.Retrieve(bid.Id, bid.AllowedPeekers[0], "xx")
+	retrievedData, err := engine2.Retrieve(record.Id, record.AllowedPeekers[0], "xx")
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	fetchedBid, err := redisStoreBackend2.FetchBidById(bid.Id)
+	fetchedBid, err := redisStoreBackend2.FetchBidByID(record.Id)
 	require.NoError(t, err)
 
 	fetchedBidJson, err := json.Marshal(fetchedBid)

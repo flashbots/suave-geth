@@ -125,19 +125,19 @@ func waitForTransactionToBeConfirmed(suaveClient *rpc.Client, txHash *common.Has
 	utils.Fatalf("did not see the receipt succeed in time. hash: %s", txHash.String())
 }
 
-func extractBidId(suaveClient *rpc.Client, txHash common.Hash) (suave.BidId, error) {
+func extractBidId(suaveClient *rpc.Client, txHash common.Hash) (suave.DataId, error) {
 	var r *types.Receipt
 	err := suaveClient.Call(&r, "eth_getTransactionReceipt", &txHash)
 	if err == nil && r != nil {
 		unpacked, err := mevShareABI.Events["HintEvent"].Inputs.Unpack(r.Logs[1].Data) // index = 1 because second hint is bid event
 		if err != nil {
-			return suave.BidId{0}, err
+			return suave.DataId{0}, err
 		}
 		shareBidId := unpacked[0].([16]byte)
 		return shareBidId, nil
 	}
 
-	return suave.BidId{0}, err
+	return suave.DataId{0}, err
 }
 
 func setUpSuaveAndGoerli(privKeyHex *string, kettleAddressHex *string, suaveRpc *string, goerliRpc *string) (*ecdsa.PrivateKey, common.Address, *rpc.Client, *rpc.Client, types.Signer, types.Signer) {

@@ -183,8 +183,8 @@ contract EthBlockBidContract is AnyBundleContract {
 	function buildMevShare(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
 		require(Suave.isConfidential());
 
-		Suave.DataRecord[] memory allShareMatchDataRecords = Suave.fetchData(blockHeight, "mevshare:v0:matchBids");
-		Suave.DataRecord[] memory allShareUserDataRecords = Suave.fetchData(blockHeight, "mevshare:v0:unmatchedBundles");
+		Suave.DataRecord[] memory allShareMatchDataRecords = Suave.fetchDataRecords(blockHeight, "mevshare:v0:matchBids");
+		Suave.DataRecord[] memory allShareUserDataRecords = Suave.fetchDataRecords(blockHeight, "mevshare:v0:unmatchedBundles");
 
 		if (allShareUserDataRecords.length == 0) {
 			revert Suave.PeekerReverted(address(this), "no bids");
@@ -196,7 +196,7 @@ contract EthBlockBidContract is AnyBundleContract {
 			Suave.DataRecord memory dataRecordToInsert = allShareUserDataRecords[i]; // will be updated with the best match if any
 			for (uint j = 0; j < allShareMatchDataRecords.length; j++) {
 				// TODO: should be done once at the start and sorted
-				Suave.DataId[] memory mergeddataIds = abi.decode(Suave.confidentialRetrieve(allShareMatchDataRecords[j].id, "mevshare:v0:mergedBids"), (Suave.DataId[]));
+				Suave.DataId[] memory mergeddataIds = abi.decode(Suave.confidentialRetrieve(allShareMatchDataRecords[j].id, "mevshare:v0:mergedDataRecords"), (Suave.DataId[]));
 				if (idsEqual(mergeddataIds[0], allShareUserDataRecords[i].id)) {
 					dataRecordToInsert = allShareMatchDataRecords[j];
 					break;
@@ -235,7 +235,7 @@ contract EthBlockBidContract is AnyBundleContract {
 	function buildFromPool(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
 		require(Suave.isConfidential());
 
-		Suave.DataRecord[] memory allBids = Suave.fetchData(blockHeight, "default:v0:ethBundles");
+		Suave.DataRecord[] memory allBids = Suave.fetchDataRecords(blockHeight, "default:v0:ethBundles");
 		if (allBids.length == 0) {
 			revert Suave.PeekerReverted(address(this), "no bids");
 		}
@@ -282,8 +282,8 @@ contract EthBlockBidContract is AnyBundleContract {
 		allowedPeekers[0] = address(this);
 		allowedPeekers[1] = Suave.BUILD_ETH_BLOCK;
 
-		Suave.DataRecord memory blockBid = Suave.newDataRecord(blockHeight, allowedPeekers, allowedPeekers, "default:v0:mergedBids");
-		Suave.confidentialStore(blockBid.id, "default:v0:mergedBids", abi.encode(bids));
+		Suave.DataRecord memory blockBid = Suave.newDataRecord(blockHeight, allowedPeekers, allowedPeekers, "default:v0:mergedDataRecords");
+		Suave.confidentialStore(blockBid.id, "default:v0:mergedDataRecords", abi.encode(bids));
 		 
 		(bytes memory builderBid, bytes memory payload) = Suave.buildEthBlock(blockArgs, blockBid.id, namespace);
 		Suave.confidentialStore(blockBid.id, "default:v0:builderPayload", payload); // only through this.unlock

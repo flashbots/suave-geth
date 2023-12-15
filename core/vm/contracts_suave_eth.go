@@ -112,10 +112,10 @@ func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byt
 	return b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
 }
 
-func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
+func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.DataId, namespace string) ([]byte, []byte, error) {
 	bidIds := [][16]byte{}
 	// first check for merged bid, else assume regular bid
-	if mergedBidsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bidId, buildEthBlockAddr, "default:v0:mergedBids"); err == nil {
+	if mergedBidsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bidId, buildEthBlockAddr, "default:v0:mergedDataRecords"); err == nil {
 		unpacked, err := bidIdsAbi.Inputs.Unpack(mergedBidsBytes)
 
 		if err != nil {
@@ -126,11 +126,11 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types
 		bidIds = append(bidIds, bidId)
 	}
 
-	var bidsToMerge = make([]types.Bid, len(bidIds))
+	var bidsToMerge = make([]types.DataRecord, len(bidIds))
 	for i, bidId := range bidIds {
 		var err error
 
-		bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+		bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidByID(bidId)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not fetch bid id %v: %w", bidId, err)
 		}
@@ -147,7 +147,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types
 		switch bid.Version {
 		case "mevshare:v0:matchBids":
 			// fetch the matched ids and merge the bundle
-			matchedBundleIdsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bid.Id, buildEthBlockAddr, "mevshare:v0:mergedBids")
+			matchedBundleIdsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bid.Id, buildEthBlockAddr, "mevshare:v0:mergedDataRecords")
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not retrieve bid ids data for bid %v, from cdas: %w", bid, err)
 			}
@@ -407,23 +407,27 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 	return nil, nil
 }
 
-func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
-	bid, err := c.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+func (c *suaveRuntime) fillMevShareBundle(bidId types.DataId) ([]byte, error) {
+	bid, err := c.suaveContext.Backend.ConfidentialStore.FetchBidByID(bidId)
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, err
 	}
 
 	if _, err := checkIsPrecompileCallAllowed(c.suaveContext, fillMevShareBundleAddr, bid); err != nil {
+		fmt.Println(err.Error())
 		return nil, err
 	}
 
-	matchedBundleIdsBytes, err := c.confidentialRetrieve(bidId, "mevshare:v0:mergedBids")
+	matchedBundleIdsBytes, err := c.confidentialRetrieve(bidId, "mevshare:v0:mergedDataRecords")
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, err
 	}
 
 	unpackedBidIds, err := bidIdsAbi.Inputs.Unpack(matchedBundleIdsBytes)
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, fmt.Errorf("could not unpack bid ids data for bid %v, from cdas: %w", bid, err)
 	}
 
@@ -431,21 +435,25 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 
 	userBundleBytes, err := c.confidentialRetrieve(matchBidIds[0], "mevshare:v0:ethBundles")
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, fmt.Errorf("could not retrieve bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
 
 	var userBundle types.SBundle
 	if err := json.Unmarshal(userBundleBytes, &userBundle); err != nil {
+		fmt.Println(err.Error())
 		return nil, fmt.Errorf("could not unmarshal user bundle data for bidId %v: %w", matchBidIds[0], err)
 	}
 
 	matchBundleBytes, err := c.confidentialRetrieve(matchBidIds[1], "mevshare:v0:ethBundles")
 	if err != nil {
+		fmt.Println(err.Error())
 		return nil, fmt.Errorf("could not retrieve match bundle data for bidId %v: %w", matchBidIds[1], err)
 	}
 
 	var matchBundle types.SBundle
 	if err := json.Unmarshal(matchBundleBytes, &matchBundle); err != nil {
+		fmt.Println(err.Error())
 		return nil, fmt.Errorf("could not unmarshal match bundle data for bidId %v: %w", matchBidIds[1], err)
 	}
 
@@ -459,6 +467,7 @@ func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
 	for _, tx := range append(userBundle.Txs, matchBundle.Txs...) {
 		txBytes, err := tx.MarshalBinary()
 		if err != nil {
+			fmt.Println(err.Error())
 			return nil, fmt.Errorf("could not marshal transaction: %w", err)
 		}
 
