@@ -17,11 +17,11 @@ import (
 // ConfidentialStore represents the API for the confidential store
 // required by Suave runtime.
 type ConfidentialStore interface {
-	InitializeBid(record types.DataRecord) (types.DataRecord, error)
+	InitRecord(record types.DataRecord) (types.DataRecord, error)
 	Store(id suave.DataId, caller common.Address, key string, value []byte) (suave.DataRecord, error)
 	Retrieve(record types.DataId, caller common.Address, key string) ([]byte, error)
-	FetchBidByID(suave.DataId) (suave.DataRecord, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
+	FetchRecordByID(suave.DataId) (suave.DataRecord, error)
+	FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
 }
 
 type SuaveContext struct {
