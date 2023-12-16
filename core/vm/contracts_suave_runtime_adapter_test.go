@@ -15,7 +15,7 @@ var _ SuaveRuntime = &mockRuntime{}
 type mockRuntime struct {
 }
 
-func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.DataId, namespace string) ([]byte, []byte, error) {
+func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string) ([]byte, []byte, error) {
 	return []byte{0x1}, []byte{0x1}, nil
 }
 
@@ -23,11 +23,11 @@ func (m *mockRuntime) confidentialInputs() ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) confidentialRetrieve(bidId types.DataId, key string) ([]byte, error) {
+func (m *mockRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) confidentialStore(bidId types.DataId, key string, data1 []byte) error {
+func (m *mockRuntime) confidentialStore(dataId types.DataId, key string, data1 []byte) error {
 	return nil
 }
 
@@ -43,11 +43,11 @@ func (m *mockRuntime) fetchDataRecords(cond uint64, namespace string) ([]types.D
 	return []types.DataRecord{{}}, nil
 }
 
-func (m *mockRuntime) fillMevShareBundle(bidId types.DataId) ([]byte, error) {
+func (m *mockRuntime) fillMevShareBundle(dataId types.DataId) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, bidType string) (types.DataRecord, error) {
+func (m *mockRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, dataType string) (types.DataRecord, error) {
 	return types.DataRecord{}, nil
 }
 

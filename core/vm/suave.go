@@ -119,7 +119,7 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 	}
 
 	// In question!
-	// For now both the precompile *and* at least one caller must be allowed to allow access to bid data
+	// For now both the precompile *and* at least one caller must be allowed to allow access to confidential data
 	// Alternative is to simply allow if any of the callers is allowed
 	isPrecompileAllowed := slices.Contains(record.AllowedPeekers, precompile)
 

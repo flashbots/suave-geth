@@ -17,7 +17,6 @@ contract AnyBundleContract {
 		return abi.decode(confidentialInputs, (bytes));
 	}
 
-	// Bids to this contract should not be trusted!
 	function emitDataRecord(Suave.DataRecord calldata dataRecord) public {
 		emit DataRecordEvent(dataRecord.id, dataRecord.decryptionCondition, dataRecord.allowedPeekers);
 	}
@@ -62,7 +61,7 @@ contract EthBundleSenderContract is BundleContract {
 	}
 }
 
-contract MevShareBidContract is AnyBundleContract {
+contract MevShareContract is AnyBundleContract {
 
 	event HintEvent(
 		Suave.DataId dataId,
@@ -121,7 +120,7 @@ contract MevShareBidContract is AnyBundleContract {
 		Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundles", matchBundleData);
 		Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundleSimResults", abi.encode(0));
 
-		//4. merge bids
+		//4. merge data records
 		Suave.DataId[] memory dataRecords = new Suave.DataId[](2);
 		dataRecords[0] = sharedataId;
 		dataRecords[1] = dataRecord.id;
@@ -138,7 +137,7 @@ contract MevShareBidContract is AnyBundleContract {
 	}
 }
 
-contract MevShareBundleSenderContract is MevShareBidContract {
+contract MevShareBundleSenderContract is MevShareContract {
 	string[] public builderUrls;
 
 	constructor(string[] memory builderUrls_) {
@@ -151,17 +150,17 @@ contract MevShareBundleSenderContract is MevShareBidContract {
 			Suave.submitBundleJsonRPC(builderUrls[i], "mev_sendBundle", bundleData);
 		}
 
-		return MevShareBidContract.emitMatchDataRecordAndHint(dataRecord, matchHint);
+		return MevShareContract.emitMatchDataRecordAndHint(dataRecord, matchHint);
 	}
 }
 
 /* Not tested or implemented on the precompile side */
-struct EgpBidPair {
+struct EgpRecordPair {
 	uint64 egp; // in wei, beware overflow
 	Suave.DataId dataId;
 }
 
-contract EthBlockBidContract is AnyBundleContract {
+contract EthBlockContract is AnyBundleContract {
 
 	event BuilderBoostBidEvent(
 		Suave.DataId dataId,
@@ -187,10 +186,10 @@ contract EthBlockBidContract is AnyBundleContract {
 		Suave.DataRecord[] memory allShareUserDataRecords = Suave.fetchDataRecords(blockHeight, "mevshare:v0:unmatchedBundles");
 
 		if (allShareUserDataRecords.length == 0) {
-			revert Suave.PeekerReverted(address(this), "no bids");
+			revert Suave.PeekerReverted(address(this), "no data records");
 		}
 
-		Suave.DataRecord[] memory allBids = new Suave.DataRecord[](allShareUserDataRecords.length);
+		Suave.DataRecord[] memory allRecords = new Suave.DataRecord[](allShareUserDataRecords.length);
 		for (uint i = 0; i < allShareUserDataRecords.length; i++) {
 			// TODO: sort matches by egp first!
 			Suave.DataRecord memory dataRecordToInsert = allShareUserDataRecords[i]; // will be updated with the best match if any
@@ -202,14 +201,14 @@ contract EthBlockBidContract is AnyBundleContract {
 					break;
 				}
 			}
-			allBids[i] = dataRecordToInsert;
+			allRecords[i] = dataRecordToInsert;
 		}
 
-		EgpBidPair[] memory bidsByEGP = new EgpBidPair[](allBids.length);
-		for (uint i = 0; i < allBids.length; i++) {
-			bytes memory simResults = Suave.confidentialRetrieve(allBids[i].id, "mevshare:v0:ethBundleSimResults");
+		EgpRecordPair[] memory bidsByEGP = new EgpRecordPair[](allRecords.length);
+		for (uint i = 0; i < allRecords.length; i++) {
+			bytes memory simResults = Suave.confidentialRetrieve(allRecords[i].id, "mevshare:v0:ethBundleSimResults");
 			uint64 egp = abi.decode(simResults, (uint64));
-			bidsByEGP[i] = EgpBidPair(egp, allBids[i].id);
+			bidsByEGP[i] = EgpRecordPair(egp, allRecords[i].id);
 		}
 
 		// Bubble sort, cause why not
@@ -217,14 +216,14 @@ contract EthBlockBidContract is AnyBundleContract {
 		for (uint i = 0; i < n - 1; i++) {
 			for (uint j = i + 1; j < n; j++) {
 				if (bidsByEGP[i].egp < bidsByEGP[j].egp) {
-					EgpBidPair memory temp = bidsByEGP[i];
+					EgpRecordPair memory temp = bidsByEGP[i];
 					bidsByEGP[i] = bidsByEGP[j];
 					bidsByEGP[j] = temp;
 				}
 			}
 		}
 
-		Suave.DataId[] memory alldataIds = new Suave.DataId[](allBids.length);
+		Suave.DataId[] memory alldataIds = new Suave.DataId[](allRecords.length);
 		for (uint i = 0; i < bidsByEGP.length; i++) {
 			alldataIds[i] = bidsByEGP[i].dataId;
 		}
@@ -235,16 +234,16 @@ contract EthBlockBidContract is AnyBundleContract {
 	function buildFromPool(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
 		require(Suave.isConfidential());
 
-		Suave.DataRecord[] memory allBids = Suave.fetchDataRecords(blockHeight, "default:v0:ethBundles");
-		if (allBids.length == 0) {
-			revert Suave.PeekerReverted(address(this), "no bids");
+		Suave.DataRecord[] memory allRecords = Suave.fetchDataRecords(blockHeight, "default:v0:ethBundles");
+		if (allRecords.length == 0) {
+			revert Suave.PeekerReverted(address(this), "no data records");
 		}
 
-		EgpBidPair[] memory bidsByEGP = new EgpBidPair[](allBids.length);
-		for (uint i = 0; i < allBids.length; i++) {
-			bytes memory simResults = Suave.confidentialRetrieve(allBids[i].id, "default:v0:ethBundleSimResults");
+		EgpRecordPair[] memory bidsByEGP = new EgpRecordPair[](allRecords.length);
+		for (uint i = 0; i < allRecords.length; i++) {
+			bytes memory simResults = Suave.confidentialRetrieve(allRecords[i].id, "default:v0:ethBundleSimResults");
 			uint64 egp = abi.decode(simResults, (uint64));
-			bidsByEGP[i] = EgpBidPair(egp, allBids[i].id);
+			bidsByEGP[i] = EgpRecordPair(egp, allRecords[i].id);
 		}
 
 		// Bubble sort, cause why not
@@ -252,14 +251,14 @@ contract EthBlockBidContract is AnyBundleContract {
 		for (uint i = 0; i < n - 1; i++) {
 			for (uint j = i + 1; j < n; j++) {
 				if (bidsByEGP[i].egp < bidsByEGP[j].egp) {
-					EgpBidPair memory temp = bidsByEGP[i];
+					EgpRecordPair memory temp = bidsByEGP[i];
 					bidsByEGP[i] = bidsByEGP[j];
 					bidsByEGP[j] = temp;
 				}
 			}
 		}
 
-		Suave.DataId[] memory alldataIds = new Suave.DataId[](allBids.length);
+		Suave.DataId[] memory alldataIds = new Suave.DataId[](allRecords.length);
 		for (uint i = 0; i < bidsByEGP.length; i++) {
 			alldataIds[i] = bidsByEGP[i].dataId;
 		}
@@ -267,23 +266,23 @@ contract EthBlockBidContract is AnyBundleContract {
 		return buildAndEmit(blockArgs, blockHeight, alldataIds, "");
 	}
 
-	function buildAndEmit(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.DataId[] memory bids, string memory namespace) public virtual returns (bytes memory) {
+	function buildAndEmit(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.DataId[] memory records, string memory namespace) public virtual returns (bytes memory) {
 		require(Suave.isConfidential());
 
-		(Suave.DataRecord memory blockBid, bytes memory builderBid) = this.doBuild(blockArgs, blockHeight, bids, namespace);
+		(Suave.DataRecord memory blockBid, bytes memory builderBid) = this.doBuild(blockArgs, blockHeight, records, namespace);
 
 		emit BuilderBoostBidEvent(blockBid.id, builderBid);
 		emit DataRecordEvent(blockBid.id, blockBid.decryptionCondition, blockBid.allowedPeekers);
 		return bytes.concat(this.emitBuilderBidAndBid.selector, abi.encode(blockBid, builderBid));
 	}
 
-	function doBuild(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.DataId[] memory bids, string memory namespace) public view returns (Suave.DataRecord memory, bytes memory) {
+	function doBuild(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight, Suave.DataId[] memory records, string memory namespace) public view returns (Suave.DataRecord memory, bytes memory) {
 		address[] memory allowedPeekers = new address[](2);
 		allowedPeekers[0] = address(this);
 		allowedPeekers[1] = Suave.BUILD_ETH_BLOCK;
 
 		Suave.DataRecord memory blockBid = Suave.newDataRecord(blockHeight, allowedPeekers, allowedPeekers, "default:v0:mergedDataRecords");
-		Suave.confidentialStore(blockBid.id, "default:v0:mergedDataRecords", abi.encode(bids));
+		Suave.confidentialStore(blockBid.id, "default:v0:mergedDataRecords", abi.encode(records));
 		 
 		(bytes memory builderBid, bytes memory payload) = Suave.buildEthBlock(blockArgs, blockBid.id, namespace);
 		Suave.confidentialStore(blockBid.id, "default:v0:builderPayload", payload); // only through this.unlock
@@ -307,7 +306,7 @@ contract EthBlockBidContract is AnyBundleContract {
 	}
 }
 
-contract EthBlockBidSenderContract is EthBlockBidContract {
+contract EthBlockBidSenderContract is EthBlockContract {
 	string boostRelayUrl;
 
 	constructor(string memory boostRelayUrl_) {

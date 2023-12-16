@@ -80,7 +80,7 @@ func (l *LocalConfidentialStore) FetchRecordByID(dataId suave.DataId) (suave.Dat
 
 	bid, found := l.records[dataId]
 	if !found {
-		return suave.DataRecord{}, errors.New("bid not found")
+		return suave.DataRecord{}, errors.New("record not found")
 	}
 
 	return bid, nil
