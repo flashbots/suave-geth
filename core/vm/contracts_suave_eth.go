@@ -355,6 +355,13 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 	}, nil
 }
 
+type SubmissionResults struct {
+	StatusCode    uint64
+	Destination   string
+	RoundTripTime *big.Int
+	Response      string
+}
+
 func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
@@ -408,19 +415,27 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 
 	elapsed := time.Since(start)
 
-	results := struct {
-		StatusCode    int           `json:"statusCode"`
-		Destination   string        `json:"destination"`
-		RoundTripTime time.Duration `json:"roundTripTime"`
-		Response      string        `json:"reponse"`
-	}{
-		StatusCode:    resp.StatusCode,
+	// Create the SubmissionResults struct
+	results := SubmissionResults{
+		StatusCode:    uint64(resp.StatusCode),
 		Destination:   url,
-		RoundTripTime: elapsed,
+		RoundTripTime: big.NewInt(int64(elapsed)),
 		Response:      string(bodyBytes),
 	}
 
-	return json.Marshal(results)
+	// Pack the data using ABI
+	arguments := abi.Arguments{
+		{Type: abi.Uint64},
+		{Type: abi.String},
+		{Type: abi.BigInt},
+		{Type: abi.String},
+	}
+	encodedData, err := arguments.Pack(results.StatusCode, results.Destination, results.RoundTripTime, results.Response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to ABI encode the data: %v", err)
+	}
+
+	return encodedData, nil
 }
 
 func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {

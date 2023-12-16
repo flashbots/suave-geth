@@ -47,9 +47,16 @@ contract BundleBidContract is AnyBidContract {
 
 contract EthBundleSenderContract is BundleBidContract {
     string[] public builderUrls;
-	bytes[] public submissionResults;
+	SubmissionResults[] public submissionResults;
 
-	event SubmissionEvent(bytes[] submissionResults);
+	event SubmissionEvent(SubmissionResults[] submissionResults);
+
+    struct SubmissionResults {
+        uint64 statusCode;
+        string destination;
+        uint256 roundTripTime;
+        string response;
+    }
 
 
     constructor(string[] memory builderUrls_) {
@@ -71,6 +78,7 @@ contract EthBundleSenderContract is BundleBidContract {
 
         for (uint256 i = 0; i < builderUrls.length; i++) {
 			submissionDetails = Suave.submitBundleJsonRPC(builderUrls[i], "eth_sendBundle", bundleData);
+            (uint64 statusCode, string memory destination, uint256 roundTripTime, string memory response) = abi.decode(submissionDetails, (uint64, string, uint256, string));
             submissionResults.push(submissionDetails);
         }
 		return bytes.concat(this.emitAndReturnWithResults.selector, abi.encode(bid,  submissionResults));
