@@ -47,9 +47,18 @@ contract BundleBidContract is AnyBidContract {
 
 contract EthBundleSenderContract is BundleBidContract {
     string[] public builderUrls;
+	bytes[] public submissionResults;
+
+	event SubmissionEvent(bytes[] submissionResults);
+
 
     constructor(string[] memory builderUrls_) {
         builderUrls = builderUrls_;
+    }
+
+	function emitAndReturnWithResults(Suave.Bid memory bid, bytes[] memory submissionResults) internal virtual returns (bytes memory) {
+        emit BidEvent(bid.id, bid.decryptionCondition, bid.allowedPeekers);
+		emit SubmissionEvent(submissionResults);
     }
 
     function emitAndReturn(Suave.Bid memory bid, bytes memory bundleData)
@@ -58,11 +67,13 @@ contract EthBundleSenderContract is BundleBidContract {
         override
         returns (bytes memory)
     {
-        for (uint256 i = 0; i < builderUrls.length; i++) {
-            Suave.submitBundleJsonRPC(builderUrls[i], "eth_sendBundle", bundleData);
-        }
+		bytes memory submissionDetails;
 
-        return BundleBidContract.emitAndReturn(bid, bundleData);
+        for (uint256 i = 0; i < builderUrls.length; i++) {
+			submissionDetails = Suave.submitBundleJsonRPC(builderUrls[i], "eth_sendBundle", bundleData);
+            submissionResults.push(submissionDetails);
+        }
+		return bytes.concat(this.emitAndReturnWithResults.selector, abi.encode(bid,  submissionResults));
     }
 }
 

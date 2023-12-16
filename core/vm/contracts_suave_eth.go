@@ -388,6 +388,7 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("X-Flashbots-Signature", signature)
 
+	start := time.Now()
 	// Execute request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -395,8 +396,9 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 	}
 	defer resp.Body.Close()
 
+	var bodyBytes []byte
 	if resp.StatusCode > 299 {
-		bodyBytes, err := io.ReadAll(resp.Body)
+		bodyBytes, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return formatPeekerError("request failed with code %d", resp.StatusCode)
 		}
@@ -404,7 +406,21 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 		return formatPeekerError("request failed with code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	return nil, nil
+	elapsed := time.Since(start)
+
+	results := struct {
+		StatusCode    int           `json:"statusCode"`
+		Destination   string        `json:"destination"`
+		RoundTripTime time.Duration `json:"roundTripTime"`
+		Response      string        `json:"reponse"`
+	}{
+		StatusCode:    resp.StatusCode,
+		Destination:   url,
+		RoundTripTime: elapsed,
+		Response:      string(bodyBytes),
+	}
+
+	return json.Marshal(results)
 }
 
 func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
