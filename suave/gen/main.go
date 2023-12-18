@@ -608,6 +608,17 @@ func generateABI(out string, dd desc) error {
 		return arg
 	}
 
+	// encode PeekerReverted(address, bytes)
+	peekerReverted := &abiField{
+		Type: "error",
+		Name: "PeekerReverted",
+		Inputs: []arguments{
+			{Name: "addr", Type: "address"},
+			{Name: "err", Type: "bytes"},
+		},
+	}
+	abiEncode = append(abiEncode, peekerReverted)
+
 	for _, f := range dd.Functions {
 		field := &abiField{
 			Name:   f.Name,
