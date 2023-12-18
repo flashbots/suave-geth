@@ -1176,6 +1176,25 @@ func TestE2ERemoteCalls(t *testing.T) {
 	})
 }
 
+func TestE2EPrecompile_Builder(t *testing.T) {
+	fr := newFramework(t, WithKettleAddress())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// TODO: We do this all the time, unify in a single function?
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	// build a txn that calls the contract 'func1' in 'ExampleEthCallTarget'
+	subTxn, _ := types.SignTx(types.NewTx(&types.LegacyTx{
+		To: &testAddr3,
+	}), signer, testKey)
+
+	subTxnBytes, _ := subTxn.MarshalBinary()
+	sourceContract.SendTransaction("sessionE2ETest", []interface{}{subTxnBytes}, nil)
+}
+
 type clientWrapper struct {
 	t *testing.T
 

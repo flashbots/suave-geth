@@ -18,10 +18,23 @@ contract ExampleEthCallSource {
     function remoteCall(Suave.HttpRequest memory request) public {
         Suave.doHTTPRequest(request);
     }
+
+    function sessionE2ETest(bytes memory subTxn) public payable {
+        string memory id = Suave.newBuilder();
+        Suave.simulateTransaction(id, subTxn);
+    }
 }
 
 contract ExampleEthCallTarget {
     function get() public view returns (uint256) {
         return 101;
+    }
+
+    event Example (
+        uint256 num
+    );
+
+    function func1() public payable {
+        emit Example(1);
     }
 }

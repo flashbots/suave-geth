@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -11,7 +10,7 @@ import (
 var _ API = (*APIClient)(nil)
 
 type APIClient struct {
-	rpc *rpc.Client
+	rpc rpcClient
 }
 
 func NewClient(endpoint string) (*APIClient, error) {
@@ -22,23 +21,22 @@ func NewClient(endpoint string) (*APIClient, error) {
 	return NewClientFromRPC(clt), nil
 }
 
-func NewClientFromRPC(rpc *rpc.Client) *APIClient {
+type rpcClient interface {
+	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
+}
+
+func NewClientFromRPC(rpc rpcClient) *APIClient {
 	return &APIClient{rpc: rpc}
 }
 
 func (a *APIClient) NewSession(ctx context.Context) (string, error) {
 	var id string
-	err := a.rpc.CallContext(ctx, &id, "builder_newSession")
+	err := a.rpc.CallContext(ctx, &id, "suavex_newSession")
 	return id, err
 }
 
-func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) error {
-	err := a.rpc.CallContext(ctx, nil, "builder_addTransaction", sessionId, tx)
-	return err
-}
-
-func (a *APIClient) Finalize(ctx context.Context, sessionId string) (*engine.ExecutionPayloadEnvelope, error) {
-	var res *engine.ExecutionPayloadEnvelope
-	err := a.rpc.CallContext(ctx, &res, "builder_finalize", sessionId)
-	return res, err
+func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.Receipt, error) {
+	var receipt *types.Receipt
+	err := a.rpc.CallContext(ctx, &receipt, "suavex_addTransaction", sessionId, tx)
+	return receipt, err
 }

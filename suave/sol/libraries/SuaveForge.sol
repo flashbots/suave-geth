@@ -107,6 +107,12 @@ library SuaveForge {
         return abi.decode(data, (Suave.Bid));
     }
 
+    function newBuilder() internal view returns (string memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000053200001", abi.encode());
+
+        return abi.decode(data, (string));
+    }
+
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         view
@@ -121,6 +127,16 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100000", abi.encode(bundleData));
 
         return abi.decode(data, (uint64));
+    }
+
+    function simulateTransaction(string memory session, bytes memory txn)
+        internal
+        view
+        returns (Suave.SimulateTransactionResult memory)
+    {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000053200002", abi.encode(session, txn));
+
+        return abi.decode(data, (Suave.SimulateTransactionResult));
     }
 
     function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)

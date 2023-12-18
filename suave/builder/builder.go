@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/trie"
 )
 
 type builder struct {
@@ -31,6 +30,8 @@ func newBuilder(config *builderConfig) *builder {
 	gp := core.GasPool(config.header.GasLimit)
 	var gasUsed uint64
 
+	config.vmConfig.NoBaseFee = true
+
 	return &builder{
 		config:  config,
 		state:   config.preState.Copy(),
@@ -51,18 +52,4 @@ func (b *builder) AddTransaction(txn *types.Transaction) (*types.Receipt, error)
 	b.receipts = append(b.receipts, receipt)
 
 	return receipt, nil
-}
-
-func (b *builder) Finalize() (*types.Block, error) {
-	root, err := b.state.Commit(true)
-	if err != nil {
-		return nil, err
-	}
-
-	header := b.config.header
-	header.Root = root
-	header.GasUsed = *b.gasUsed
-
-	block := types.NewBlock(header, b.txns, nil, b.receipts, trie.NewStackTrie(nil))
-	return block, nil
 }

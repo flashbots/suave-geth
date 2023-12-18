@@ -4,45 +4,57 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/uuid"
 )
 
 // blockchain is the minimum interface to the blockchain
 // required to build a block
 type blockchain interface {
+	core.ChainContext
+
 	// Header returns the current tip of the chain
-	Header() *types.Header
+	CurrentHeader() *types.Header
 
 	// StateAt returns the state at the given root
 	StateAt(root common.Hash) (*state.StateDB, error)
+
+	// Config returns the chain config
+	Config() *params.ChainConfig
 }
 
 type Config struct {
-	GasCeil uint64
+	GasCeil            uint64
+	SessionIdleTimeout time.Duration
 }
 
 type SessionManager struct {
-	sessions     map[string]*builder
-	sessionsLock sync.RWMutex
-	blockchain   blockchain
-	config       *Config
+	sessions      map[string]*builder
+	sessionTimers map[string]*time.Timer
+	sessionsLock  sync.RWMutex
+	blockchain    blockchain
+	config        *Config
 }
 
 func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
 	if config.GasCeil == 0 {
 		config.GasCeil = 1000000000000000000
 	}
+	if config.SessionIdleTimeout == 0 {
+		config.SessionIdleTimeout = 5 * time.Second
+	}
 
 	s := &SessionManager{
-		sessions:   make(map[string]*builder),
-		blockchain: blockchain,
-		config:     config,
+		sessions:      make(map[string]*builder),
+		sessionTimers: make(map[string]*time.Timer),
+		blockchain:    blockchain,
+		config:        config,
 	}
 	return s
 }
@@ -52,7 +64,7 @@ func (s *SessionManager) NewSession() (string, error) {
 	s.sessionsLock.Lock()
 	defer s.sessionsLock.Unlock()
 
-	parent := s.blockchain.Header()
+	parent := s.blockchain.CurrentHeader()
 
 	header := &types.Header{
 		ParentHash: parent.Hash(),
@@ -60,6 +72,7 @@ func (s *SessionManager) NewSession() (string, error) {
 		GasLimit:   core.CalcGasLimit(parent.GasLimit, s.config.GasCeil),
 		Time:       1000,             // TODO: fix this
 		Coinbase:   common.Address{}, // TODO: fix this
+		Difficulty: big.NewInt(1),
 	}
 
 	stateRef, err := s.blockchain.StateAt(parent.Root)
@@ -70,10 +83,21 @@ func (s *SessionManager) NewSession() (string, error) {
 	cfg := &builderConfig{
 		preState: stateRef,
 		header:   header,
+		config:   s.blockchain.Config(),
+		context:  s.blockchain,
 	}
 
 	id := uuid.New().String()[:7]
 	s.sessions[id] = newBuilder(cfg)
+
+	// start session timer
+	s.sessionTimers[id] = time.AfterFunc(s.config.SessionIdleTimeout, func() {
+		s.sessionsLock.Lock()
+		defer s.sessionsLock.Unlock()
+
+		delete(s.sessions, id)
+		delete(s.sessionTimers, id)
+	})
 
 	return id, nil
 }
@@ -86,6 +110,10 @@ func (s *SessionManager) getSession(sessionId string) (*builder, error) {
 	if !ok {
 		return nil, fmt.Errorf("session %s not found", sessionId)
 	}
+
+	// reset session timer
+	s.sessionTimers[sessionId].Reset(s.config.SessionIdleTimeout)
+
 	return session, nil
 }
 
@@ -95,45 +123,4 @@ func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction)
 		return nil, err
 	}
 	return builder.AddTransaction(tx)
-}
-
-func (s *SessionManager) Finalize(sessionId string) (*engine.ExecutionPayloadEnvelope, error) {
-	builder, err := s.getSession(sessionId)
-	if err != nil {
-		return nil, err
-	}
-
-	block, err := builder.Finalize()
-	if err != nil {
-		return nil, err
-	}
-	data := &engine.ExecutableData{
-		ParentHash:    block.ParentHash(),
-		Number:        block.Number().Uint64(),
-		GasLimit:      block.GasLimit(),
-		GasUsed:       block.GasUsed(),
-		LogsBloom:     block.Bloom().Bytes(),
-		ReceiptsRoot:  block.ReceiptHash(),
-		BlockHash:     block.Hash(),
-		StateRoot:     block.Root(),
-		Timestamp:     block.Time(),
-		ExtraData:     block.Extra(),
-		BaseFeePerGas: &big.Int{}, // TODO
-		Transactions:  [][]byte{},
-	}
-
-	// convert transactions to bytes
-	for _, txn := range block.Transactions() {
-		txnData, err := txn.MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-		data.Transactions = append(data.Transactions, txnData)
-	}
-
-	payload := &engine.ExecutionPayloadEnvelope{
-		BlockValue:       big.NewInt(0), // TODO
-		ExecutionPayload: data,
-	}
-	return payload, nil
 }

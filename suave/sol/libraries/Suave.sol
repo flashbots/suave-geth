@@ -34,6 +34,17 @@ library Suave {
         bytes body;
     }
 
+    struct SimulateTransactionResult {
+        uint64 egp;
+        SimulatedLog[] logs;
+    }
+
+    struct SimulatedLog {
+        bytes data;
+        address addr;
+        bytes32[] topics;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -65,9 +76,13 @@ library Suave {
 
     address public constant NEW_BID = 0x0000000000000000000000000000000042030000;
 
+    address public constant NEW_BUILDER = 0x0000000000000000000000000000000053200001;
+
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
+
+    address public constant SIMULATE_TRANSACTION = 0x0000000000000000000000000000000053200002;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
@@ -187,6 +202,15 @@ library Suave {
         return abi.decode(data, (Bid));
     }
 
+    function newBuilder() internal view returns (string memory) {
+        (bool success, bytes memory data) = NEW_BUILDER.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(NEW_BUILDER, data);
+        }
+
+        return abi.decode(data, (string));
+    }
+
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         view
@@ -207,6 +231,19 @@ library Suave {
         }
 
         return abi.decode(data, (uint64));
+    }
+
+    function simulateTransaction(string memory session, bytes memory txn)
+        internal
+        view
+        returns (SimulateTransactionResult memory)
+    {
+        (bool success, bytes memory data) = SIMULATE_TRANSACTION.staticcall(abi.encode(session, txn));
+        if (!success) {
+            revert PeekerReverted(SIMULATE_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (SimulateTransactionResult));
     }
 
     function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)

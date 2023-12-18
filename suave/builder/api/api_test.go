@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -16,7 +15,7 @@ func TestAPI(t *testing.T) {
 	srv := rpc.NewServer()
 
 	builderAPI := NewServer(&nullSessionManager{})
-	srv.RegisterName("builder", builderAPI)
+	srv.RegisterName("suavex", builderAPI)
 
 	c := NewClientFromRPC(rpc.DialInProc(srv))
 
@@ -25,12 +24,8 @@ func TestAPI(t *testing.T) {
 	require.Equal(t, res0, "1")
 
 	txn := types.NewTransaction(0, common.Address{}, big.NewInt(1), 1, big.NewInt(1), []byte{})
-	err = c.AddTransaction(context.Background(), "1", txn)
+	_, err = c.AddTransaction(context.Background(), "1", txn)
 	require.NoError(t, err)
-
-	res1, err := c.Finalize(context.Background(), "1")
-	require.NoError(t, err)
-	require.Equal(t, res1.BlockValue, big.NewInt(1))
 }
 
 type nullSessionManager struct{}
@@ -40,16 +35,5 @@ func (n *nullSessionManager) NewSession() (string, error) {
 }
 
 func (n *nullSessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.Receipt, error) {
-	return nil, nil
-}
-
-func (n *nullSessionManager) Finalize(sessionId string) (*engine.ExecutionPayloadEnvelope, error) {
-	return &engine.ExecutionPayloadEnvelope{
-		BlockValue: big.NewInt(1),
-		ExecutionPayload: &engine.ExecutableData{
-			Number:        1,
-			BaseFeePerGas: big.NewInt(1),
-			Transactions:  [][]byte{},
-		},
-	}, nil
+	return &types.Receipt{Logs: []*types.Log{}}, nil
 }
