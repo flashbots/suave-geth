@@ -12,6 +12,7 @@ import (
 
 type SBundle struct {
 	BlockNumber     *big.Int      `json:"blockNumber,omitempty"` // if BlockNumber is set it must match DecryptionCondition!
+	MaxBlock        *big.Int      `json:"maxBlock,omitempty"`
 	Txs             Transactions  `json:"txs"`
 	RevertingHashes []common.Hash `json:"revertingHashes,omitempty"`
 	RefundPercent   *int          `json:"percent,omitempty"`
@@ -19,6 +20,7 @@ type SBundle struct {
 
 type RpcSBundle struct {
 	BlockNumber     *hexutil.Big    `json:"blockNumber,omitempty"`
+	MaxBlock        *hexutil.Big    `json:"maxBlock,omitempty"`
 	Txs             []hexutil.Bytes `json:"txs"`
 	RevertingHashes []common.Hash   `json:"revertingHashes,omitempty"`
 	RefundPercent   *int            `json:"percent,omitempty"`
@@ -66,6 +68,7 @@ func (s *SBundle) UnmarshalJSON(data []byte) error {
 	}
 
 	s.BlockNumber = (*big.Int)(rpcSBundle.BlockNumber)
+	s.MaxBlock = (*big.Int)(rpcSBundle.MaxBlock)
 	s.Txs = txs
 	s.RevertingHashes = rpcSBundle.RevertingHashes
 	s.RefundPercent = rpcSBundle.RefundPercent
@@ -76,7 +79,8 @@ func (s *SBundle) UnmarshalJSON(data []byte) error {
 type RPCMevShareBundle struct {
 	Version   string `json:"version"`
 	Inclusion struct {
-		Block string `json:"block"`
+		Block    string `json:"block"`
+		MaxBlock string `json:"maxBlock"`
 	} `json:"inclusion"`
 	Body []struct {
 		Tx        string `json:"tx"`

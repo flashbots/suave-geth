@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ^1.20
+          go-version: 1.21.1
         id: go
 
       - name: Check out code into the Go module directory
@@ -31,6 +31,9 @@ jobs:
 
       - name: Lint
         run: make lint
+
+      - name: Lint contracts
+        run: cd suave && forge fmt --check
 
       - name: Build contracts
         run: cd suave && forge build
