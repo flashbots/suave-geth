@@ -1,11 +1,9 @@
 package vm
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math/big"
 	"net/http"
 	"time"
@@ -280,35 +278,19 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types
 }
 
 func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBidJson []byte) ([]byte, error) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
-	defer cancel()
-
 	endpoint := relayUrl + "/relay/v1/builder/blocks"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(builderBidJson))
-	if err != nil {
-		return formatPeekerError("could not prepare request to relay: %w", err)
+
+	httpReq := types.HttpRequest{
+		Method: http.MethodPost,
+		Url:    endpoint,
+		Body:   builderBidJson,
+		Headers: []string{
+			"Content-Type:application/json",
+			"Accept:application/json",
+		},
 	}
-
-	req.Header.Add("Content-Type", "application/json")
-
-	// Execute request
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return formatPeekerError("could not send request to relay: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNoContent {
-		return nil, nil
-	}
-
-	if resp.StatusCode > 299 {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return formatPeekerError("could not read error response body for status code %d: %w", resp.StatusCode, err)
-		}
-
-		return formatPeekerError("relay request failed with code %d: %s", resp.StatusCode, string(bodyBytes))
+	if _, err := b.doHTTPRequest(httpReq); err != nil {
+		return nil, err
 	}
 
 	return nil, nil
@@ -356,9 +338,6 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 }
 
 func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
-	defer cancel()
-
 	request := map[string]interface{}{
 		"id":      json.RawMessage([]byte("1")),
 		"jsonrpc": "2.0",
@@ -379,29 +358,18 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 
 	signature := crypto.PubkeyToAddress(c.suaveContext.Backend.EthBundleSigningKey.PublicKey).Hex() + ":" + hexutil.Encode(sig)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
-	if err != nil {
-		return formatPeekerError("could not prepare request to relay: %w", err)
+	httpReq := types.HttpRequest{
+		Method: http.MethodPost,
+		Url:    url,
+		Body:   body,
+		Headers: []string{
+			"Content-Type:application/json",
+			"Accept:application/json",
+			"X-Flashbots-Signature:" + signature,
+		},
 	}
-
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("X-Flashbots-Signature", signature)
-
-	// Execute request
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return formatPeekerError("could not send request to relay: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode > 299 {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return formatPeekerError("request failed with code %d", resp.StatusCode)
-		}
-
-		return formatPeekerError("request failed with code %d: %s", resp.StatusCode, string(bodyBytes))
+	if _, err := c.doHTTPRequest(httpReq); err != nil {
+		return nil, err
 	}
 
 	return nil, nil

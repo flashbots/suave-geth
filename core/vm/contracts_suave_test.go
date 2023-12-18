@@ -2,6 +2,8 @@ package vm
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -150,4 +152,108 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b.suaveContext.CallerStack = []*common.Address{}
 	_, err = b.confidentialRetrieve(bid.Id, "key")
 	require.Error(t, err)
+}
+
+type httpTestHandler struct{}
+
+func (h *httpTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" && r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if val := r.Header.Get("a"); val != "" {
+		w.Write([]byte(val))
+		return
+	}
+	if val := r.Header.Get("fail"); val != "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if r.Method == "POST" {
+		w.Write([]byte("ok"))
+		return
+	}
+	w.Write([]byte("ok1"))
+}
+
+func TestSuave_HttpRequest_Basic(t *testing.T) {
+	s := &suaveRuntime{
+		suaveContext: &SuaveContext{
+			Backend: &SuaveExecutionBackend{
+				ExternalWhitelist: []string{"127.0.0.1"},
+			},
+		},
+	}
+
+	srv := httptest.NewServer(&httpTestHandler{})
+	defer srv.Close()
+
+	cases := []struct {
+		req  types.HttpRequest
+		err  bool
+		resp []byte
+	}{
+		{
+			// url not set
+			req: types.HttpRequest{},
+			err: true,
+		},
+		{
+			// method not supported
+			req: types.HttpRequest{Url: srv.URL},
+			err: true,
+		},
+		{
+			// url not allowed
+			req: types.HttpRequest{Url: "http://example.com", Method: "GET"},
+			err: true,
+		},
+		{
+			// incorrect header format
+			req: types.HttpRequest{Url: srv.URL, Method: "GET", Headers: []string{"a"}},
+			err: true,
+		},
+		{
+			// POST request
+			req:  types.HttpRequest{Url: srv.URL, Method: "POST"},
+			resp: []byte("ok"),
+		},
+		{
+			// GET request
+			req:  types.HttpRequest{Url: srv.URL, Method: "GET"},
+			resp: []byte("ok1"),
+		},
+		{
+			// GET request with headers
+			req:  types.HttpRequest{Url: srv.URL, Method: "GET", Headers: []string{"a:b"}},
+			resp: []byte("b"),
+		},
+		{
+			// POST request with headers
+			req:  types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"a:c"}},
+			resp: []byte("c"),
+		},
+		{
+			// POST request with headers with multiple :
+			req:  types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"a:c:d"}},
+			resp: []byte("c:d"),
+		},
+		{
+			// POST with error
+			req: types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"fail:1"}},
+			err: true,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run("", func(t *testing.T) {
+			resp, err := s.doHTTPRequest(c.req)
+			if c.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, c.resp, resp)
+			}
+		})
+	}
 }
