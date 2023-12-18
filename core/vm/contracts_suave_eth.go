@@ -355,6 +355,13 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 	}, nil
 }
 
+type SubmissionResults struct {
+	StatusCode    uint64
+	Destination   string
+	RoundTripTime *big.Int
+	Response      string
+}
+
 func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
 	defer cancel()
@@ -388,6 +395,7 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("X-Flashbots-Signature", signature)
 
+	start := time.Now()
 	// Execute request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -395,8 +403,9 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 	}
 	defer resp.Body.Close()
 
+	var bodyBytes []byte
 	if resp.StatusCode > 299 {
-		bodyBytes, err := io.ReadAll(resp.Body)
+		bodyBytes, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return formatPeekerError("request failed with code %d", resp.StatusCode)
 		}
@@ -404,7 +413,29 @@ func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []b
 		return formatPeekerError("request failed with code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	return nil, nil
+	elapsed := time.Since(start)
+
+	// Create the SubmissionResults struct
+	results := SubmissionResults{
+		StatusCode:    uint64(resp.StatusCode),
+		Destination:   url,
+		RoundTripTime: big.NewInt(int64(elapsed)),
+		Response:      string(bodyBytes),
+	}
+
+	// Pack the data using ABI
+	arguments := abi.Arguments{
+		{Type: abi.Uint64},
+		{Type: abi.String},
+		{Type: abi.BigInt},
+		{Type: abi.String},
+	}
+	encodedData, err := arguments.Pack(results.StatusCode, results.Destination, results.RoundTripTime, results.Response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to ABI encode the data: %v", err)
+	}
+
+	return encodedData, nil
 }
 
 func (c *suaveRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
