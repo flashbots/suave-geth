@@ -18,7 +18,6 @@ var (
 	MevShareBundleSenderContract = newArtifact("bids.sol/MevShareBundleSenderContract.json")
 	buildEthBlockContract        = newArtifact("bids.sol/EthBlockBidContract.json")
 	ethBlockBidSenderContract    = newArtifact("bids.sol/EthBlockBidSenderContract.json")
-	suaveLibContract             = newArtifact("SuaveAbi.sol/SuaveAbi.json")
 	exampleCallSourceContract    = newArtifact("example.sol/ExampleEthCallSource.json")
 	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
 )

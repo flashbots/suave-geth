@@ -1,8 +1,13 @@
 package vm
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -123,13 +128,71 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 	return inoutAbi.Methods[method]
 }
 
-func formatPeekerError(format string, args ...any) ([]byte, error) {
-	err := fmt.Errorf(format, args...)
-	return []byte(err.Error()), err
-}
-
 type suaveRuntime struct {
 	suaveContext *SuaveContext
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
+	if request.Method != "GET" && request.Method != "POST" {
+		return nil, fmt.Errorf("only GET and POST methods are supported")
+	}
+	if request.Url == "" {
+		return nil, fmt.Errorf("url is empty")
+	}
+
+	var body io.Reader
+	if request.Body != nil {
+		body = bytes.NewReader(request.Body)
+	}
+
+	// decode the url and check if the domain is allowed
+	parsedURL, err := url.Parse(request.Url)
+	if err != nil {
+		panic(err)
+	}
+
+	var allowed bool
+	for _, allowedDomain := range s.suaveContext.Backend.ExternalWhitelist {
+		if allowedDomain == "*" || allowedDomain == parsedURL.Hostname() {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return nil, fmt.Errorf("domain %s is not allowed", parsedURL.Hostname())
+	}
+
+	req, err := http.NewRequest(request.Method, request.Url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, header := range request.Headers {
+		indx := strings.Index(header, ":")
+		if indx == -1 {
+			return nil, fmt.Errorf("incorrect header format '%s', no ':' present", header)
+		}
+		req.Header.Add(header[:indx], header[indx+1:])
+	}
+
+	client := &http.Client{
+		Timeout: 5 * time.Second, // TODO: test
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode > 299 {
+		return nil, fmt.Errorf("http error: %s: %v", resp.Status, data)
+	}
+	return data, nil
+}

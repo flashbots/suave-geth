@@ -35,6 +35,7 @@ type SuaveContext struct {
 type SuaveExecutionBackend struct {
 	EthBundleSigningKey    *ecdsa.PrivateKey
 	EthBlockSigningKey     *bls.SecretKey
+	ExternalWhitelist      []string
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
@@ -92,6 +93,7 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	ret, err := stub.run(p.addr, input)
 	if err != nil && ret == nil {
 		ret = []byte(err.Error())
+		err = ErrExecutionReverted
 	}
 
 	return ret, err
