@@ -92,6 +92,7 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	ret, err := stub.run(p.addr, input)
 	if err != nil && ret == nil {
 		ret = []byte(err.Error())
+		err = ErrExecutionReverted
 	}
 
 	return ret, err
