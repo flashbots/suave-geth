@@ -195,6 +195,7 @@ var (
 		utils.SuaveConfidentialStorePebbleDbPathFlag,
 		utils.SuaveEthBundleSigningKeyFlag,
 		utils.SuaveEthBlockSigningKeyFlag,
+		utils.SuaveExternalWhitelistFlag,
 		utils.SuaveDevModeFlag,
 	}
 )

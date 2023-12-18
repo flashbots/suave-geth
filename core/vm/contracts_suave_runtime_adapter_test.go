@@ -71,6 +71,10 @@ func (m *mockRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byt
 	return []byte{0x1}, nil
 }
 
+func (m *mockRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
+	return []byte{0x1}, nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},
