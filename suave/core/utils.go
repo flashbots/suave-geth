@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func RandomBidId() types.BidId {
-	return types.BidId(uuid.New())
+func RandomDataRecordId() types.DataId {
+	return types.DataId(uuid.New())
 }
 
 func MustEncode[T any](data T) []byte {

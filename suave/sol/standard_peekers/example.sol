@@ -19,6 +19,10 @@ contract ExampleEthCallSource {
     function consoleLog() public payable {
         console2.log(1, 2, 3);
     }
+
+    function remoteCall(Suave.HttpRequest memory request) public {
+        Suave.doHTTPRequest(request);
+    }
 }
 
 contract ExampleEthCallTarget {

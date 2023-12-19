@@ -9,28 +9,28 @@ import (
 )
 
 func testBackendStore(t *testing.T, store ConfidentialStorageBackend) {
-	bid := suave.Bid{
-		Id:                  suave.RandomBidId(),
+	record := suave.DataRecord{
+		Id:                  suave.RandomDataRecordId(),
 		DecryptionCondition: 10,
 		AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
 		Version:             "default:v0:ethBundles",
 	}
 
-	err := store.InitializeBid(bid)
+	err := store.InitRecord(record)
 	require.NoError(t, err)
 
-	bidRes, err := store.FetchBidById(bid.Id)
+	recordRes, err := store.FetchRecordByID(record.Id)
 	require.NoError(t, err)
-	require.Equal(t, bid, bidRes)
+	require.Equal(t, record, recordRes)
 
-	_, err = store.Store(bid, bid.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
+	_, err = store.Store(record, record.AllowedPeekers[0], "xx", []byte{0x43, 0x14})
 	require.NoError(t, err)
 
-	retrievedData, err := store.Retrieve(bid, bid.AllowedPeekers[0], "xx")
+	retrievedData, err := store.Retrieve(record, record.AllowedPeekers[0], "xx")
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	bids := store.FetchBidsByProtocolAndBlock(10, "default:v0:ethBundles")
-	require.Len(t, bids, 1)
-	require.Equal(t, bid, bids[0])
+	records := store.FetchRecordsByProtocolAndBlock(10, "default:v0:ethBundles")
+	require.Len(t, records, 1)
+	require.Equal(t, record, records[0])
 }
