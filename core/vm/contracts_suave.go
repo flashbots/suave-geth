@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/suave/consolelog"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
@@ -133,6 +134,18 @@ type suaveRuntime struct {
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
+
+type consoleLogPrecompile struct {
+}
+
+func (c *consoleLogPrecompile) RequiredGas(input []byte) uint64 {
+	return 0
+}
+
+func (c *consoleLogPrecompile) Run(input []byte) ([]byte, error) {
+	consolelog.Print(input)
+	return nil, nil
+}
 
 func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
 	if request.Method != "GET" && request.Method != "POST" {

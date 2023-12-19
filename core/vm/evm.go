@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/suave/consolelog"
 	"github.com/holiman/uint256"
 )
 
@@ -43,6 +44,11 @@ type (
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
+		// console-log precompile available in the suave context
+		if addr == consolelog.Console2ContractAddr {
+			return &consoleLogPrecompile{}, true
+		}
+
 		if isPrecompileAddr(addr) && evm.Config.IsConfidential {
 			suaveContext := NewRuntimeSuaveContext(evm, addr)
 			return NewSuavePrecompiledContractWrapper(addr, suaveContext), true

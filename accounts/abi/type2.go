@@ -21,10 +21,8 @@ func (t Type) Pack(v interface{}) ([]byte, error) {
 	return t.pack(reflect.ValueOf(v))
 }
 
-func (t Type) Unpack(data []byte, obj interface{}) error {
-	fmt.Println(toGoType(0, t, data))
-
-	return nil
+func (t Type) Unpack(data []byte) (interface{}, error) {
+	return toGoType(0, t, data)
 }
 
 // newTypeForTuple implements the format described in https://blog.ricmoo.com/human-readable-contract-abis-in-ethers-js-141902f4d917
@@ -76,6 +74,11 @@ func newTypeForTuple(s string) (string, []ArgumentMarshaling, error) {
 		}
 	}
 
+	if len(fields) == 1 && fields[0] == "" {
+		// empty tuple (i.e. tuple())
+		fields = []string{}
+	}
+
 	// trim the args of spaces
 	for i := range fields {
 		fields[i] = strings.TrimSpace(fields[i])
@@ -83,17 +86,20 @@ func newTypeForTuple(s string) (string, []ArgumentMarshaling, error) {
 
 	// decode the type of each field
 	var args []ArgumentMarshaling
-	for _, field := range fields {
+	for indx, field := range fields {
 		// anonymous fields are not supported so the first
 		// string should be the identifier of the field.
+		var name string
 
 		spacePos := strings.Index(field, " ")
 		if spacePos == -1 {
-			return "", nil, fmt.Errorf("invalid tuple field name not found '%s'", field)
+			// it has no name
+			name = fmt.Sprintf("arg%d", indx)
+		} else {
+			// it has name and field (name field)
+			name = field[:spacePos]
+			field = field[spacePos+1:]
 		}
-
-		name := field[:spacePos]
-		field = field[spacePos+1:]
 
 		if strings.HasPrefix(field, "tuple") {
 			// decode a recursive tuple
