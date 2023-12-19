@@ -56,13 +56,13 @@ type EthAPIBackend struct {
 	gpo                      *gasprice.Oracle
 	suaveEthBundleSigningKey *ecdsa.PrivateKey
 	suaveEthBlockSigningKey  *bls.SecretKey
-	suaveEngine              *cstore.ConfidentialStoreEngine
+	suaveEngine              *cstore.CStoreEngine
 	suaveEthBackend          suave.ConfidentialEthBackend
 	suaveExternalWhitelist   []string
 }
 
 // For testing purposes
-func (b *EthAPIBackend) SuaveEngine() *cstore.ConfidentialStoreEngine {
+func (b *EthAPIBackend) SuaveEngine() *cstore.CStoreEngine {
 	return b.suaveEngine
 }
 

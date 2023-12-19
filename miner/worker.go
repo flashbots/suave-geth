@@ -1340,8 +1340,8 @@ func (w *worker) buildBlockFromBundles(ctx context.Context, args *types.BuildBlo
 			currNonce := work.state.GetNonce(ephemeralAddr)
 			// HACK to include payment txn
 			// multi refund block untested
-			bidTx := bundle.Txs[0] // NOTE : assumes first txn is refund recipient
-			refundAddr, err := types.Sender(types.LatestSignerForChainID(bidTx.ChainId()), bidTx)
+			userTx := bundle.Txs[0] // NOTE : assumes first txn is refund recipient
+			refundAddr, err := types.Sender(types.LatestSignerForChainID(userTx.ChainId()), userTx)
 			if err != nil {
 				return nil, nil, err
 			}

@@ -15,7 +15,7 @@ var _ SuaveRuntime = &mockRuntime{}
 type mockRuntime struct {
 }
 
-func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, bidId types.BidId, namespace string) ([]byte, []byte, error) {
+func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string) ([]byte, []byte, error) {
 	return []byte{0x1}, []byte{0x1}, nil
 }
 
@@ -23,11 +23,11 @@ func (m *mockRuntime) confidentialInputs() ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]byte, error) {
+func (m *mockRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) confidentialStore(bidId types.BidId, key string, data1 []byte) error {
+func (m *mockRuntime) confidentialStore(dataId types.DataId, key string, data1 []byte) error {
 	return nil
 }
 
@@ -39,16 +39,16 @@ func (m *mockRuntime) extractHint(bundleData []byte) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) fetchBids(cond uint64, namespace string) ([]types.Bid, error) {
-	return []types.Bid{{}}, nil
+func (m *mockRuntime) fetchDataRecords(cond uint64, namespace string) ([]types.DataRecord, error) {
+	return []types.DataRecord{{}}, nil
 }
 
-func (m *mockRuntime) fillMevShareBundle(bidId types.BidId) ([]byte, error) {
+func (m *mockRuntime) fillMevShareBundle(dataId types.DataId) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) newBid(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, bidType string) (types.Bid, error) {
-	return types.Bid{}, nil
+func (m *mockRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, dataType string) (types.DataRecord, error) {
+	return types.DataRecord{}, nil
 }
 
 func (m *mockRuntime) signEthTransaction(txn []byte, chainId string, signingKey string) ([]byte, error) {
