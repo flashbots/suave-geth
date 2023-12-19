@@ -19,8 +19,7 @@ contract ExampleEthCallSource {
         Suave.doHTTPRequest(request);
     }
 
-    function emptyCallback() public payable {
-    }
+    function emptyCallback() public payable {}
 
     function sessionE2ETest(bytes memory subTxn, bytes memory subTxn2) public payable returns (bytes memory) {
         string memory id = Suave.newBuilder();
@@ -49,9 +48,7 @@ contract ExampleEthCallTarget {
         return 101;
     }
 
-    event Example (
-        uint256 num
-    );
+    event Example(uint256 num);
 
     function func1() public payable {
         stateCount++;
