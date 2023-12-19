@@ -40,15 +40,22 @@ func TestNewType2FromString(t *testing.T) {
 			}{A: 1, B: 2},
 		},
 		{
-			"tuple(a uint64, b tuple(c uint64), d uint64)",
+			// empty tuple
+			"tuple()",
+			"()",
+			&struct{}{},
+		},
+		{
+			// anonymous type
+			"tuple(uint64,tuple(uint64),uint64)",
 			"(uint64,(uint64),uint64)",
 			&struct {
-				A uint64
-				B struct {
-					C uint64
+				Arg0 uint64
+				Arg1 struct {
+					Arg0 uint64
 				}
-				D uint64
-			}{A: 1, B: struct{ C uint64 }{C: 2}, D: 3},
+				Arg2 uint64
+			}{Arg0: 1, Arg1: struct{ Arg0 uint64 }{Arg0: 2}, Arg2: 3},
 		},
 		{
 			"tuple(a uint64, b tuple[](x tuple(c uint64), d uint64), e tuple(f uint64, g uint64))",
