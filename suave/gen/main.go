@@ -122,6 +122,22 @@ func main() {
 		return ff.Functions[i].Name < ff.Functions[j].Name
 	})
 
+	funcsByName := make(map[string]struct{})
+	funcsByAddr := make(map[string]struct{})
+	for _, f := range ff.Functions {
+		// validate that there are no two functions with the same name
+		if _, ok := funcsByName[f.Name]; ok {
+			panic(fmt.Sprintf("duplicate function name: %s", f.Name))
+		}
+		funcsByName[f.Name] = struct{}{}
+
+		// validate that there are no two functions with the same address
+		if _, ok := funcsByAddr[f.Address]; ok {
+			panic(fmt.Sprintf("duplicate function address: %s", f.Address))
+		}
+		funcsByAddr[f.Address] = struct{}{}
+	}
+
 	if err := applyTemplate(structsTemplate, ff, "./core/types/suave_structs.go"); err != nil {
 		panic(err)
 	}
