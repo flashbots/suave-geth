@@ -35,15 +35,15 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 
 /* Confidential store precompiles */
 
-func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []byte) error {
-	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data []byte) error {
+	record, err := b.suaveContext.Backend.ConfidentialStore.FetchRecordByID(dataId)
 	if err != nil {
-		return suave.ErrBidNotFound
+		return suave.ErrRecordNotFound
 	}
 
-	log.Info("confStore", "bidId", bidId, "key", key)
+	log.Debug("confStore", "dataId", dataId, "key", key)
 
-	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreAddr, bid)
+	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreAddr, record)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []b
 		confStorePrecompileStoreMeter.Mark(int64(len(data)))
 	}
 
-	_, err = b.suaveContext.Backend.ConfidentialStore.Store(bidId, caller, key, data)
+	_, err = b.suaveContext.Backend.ConfidentialStore.Store(dataId, caller, key, data)
 	if err != nil {
 		return err
 	}
@@ -60,18 +60,18 @@ func (b *suaveRuntime) confidentialStore(bidId types.BidId, key string, data []b
 	return nil
 }
 
-func (b *suaveRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]byte, error) {
-	bid, err := b.suaveContext.Backend.ConfidentialStore.FetchBidById(bidId)
+func (b *suaveRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]byte, error) {
+	record, err := b.suaveContext.Backend.ConfidentialStore.FetchRecordByID(dataId)
 	if err != nil {
-		return nil, suave.ErrBidNotFound
+		return nil, suave.ErrRecordNotFound
 	}
 
-	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialRetrieveAddr, bid)
+	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialRetrieveAddr, record)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(bidId, caller, key)
+	data, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(dataId, caller, key)
 	if err != nil {
 		return []byte(err.Error()), err
 	}
@@ -83,36 +83,36 @@ func (b *suaveRuntime) confidentialRetrieve(bidId types.BidId, key string) ([]by
 	return data, nil
 }
 
-/* Bid precompiles */
+/* Data Record precompiles */
 
-func (b *suaveRuntime) newBid(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, BidType string) (types.Bid, error) {
+func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, RecordType string) (types.DataRecord, error) {
 	if b.suaveContext.ConfidentialComputeRequestTx == nil {
-		panic("newBid: source transaction not present")
+		panic("newRecord: source transaction not present")
 	}
 
-	bid, err := b.suaveContext.Backend.ConfidentialStore.InitializeBid(types.Bid{
-		Salt:                suave.RandomBidId(),
+	record, err := b.suaveContext.Backend.ConfidentialStore.InitRecord(types.DataRecord{
+		Salt:                suave.RandomDataRecordId(),
 		DecryptionCondition: decryptionCondition,
 		AllowedPeekers:      allowedPeekers,
 		AllowedStores:       allowedStores,
-		Version:             BidType, // TODO : make generic
+		Version:             RecordType, // TODO : make generic
 	})
 	if err != nil {
-		return types.Bid{}, err
+		return types.DataRecord{}, err
 	}
 
-	return bid, nil
+	return record, nil
 }
 
-func (b *suaveRuntime) fetchBids(targetBlock uint64, namespace string) ([]types.Bid, error) {
-	bids1 := b.suaveContext.Backend.ConfidentialStore.FetchBidsByProtocolAndBlock(targetBlock, namespace)
+func (b *suaveRuntime) fetchDataRecords(targetBlock uint64, namespace string) ([]types.DataRecord, error) {
+	records1 := b.suaveContext.Backend.ConfidentialStore.FetchRecordsByProtocolAndBlock(targetBlock, namespace)
 
-	bids := make([]types.Bid, 0, len(bids1))
-	for _, bid := range bids1 {
-		bids = append(bids, bid.ToInnerBid())
+	records := make([]types.DataRecord, 0, len(records1))
+	for _, record := range records1 {
+		records = append(records, record.ToInnerRecord())
 	}
 
-	return bids, nil
+	return records, nil
 }
 
 func (s *suaveRuntime) signMessage(digest []byte, signingKey string) ([]byte, error) {

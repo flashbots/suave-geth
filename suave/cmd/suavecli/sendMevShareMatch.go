@@ -98,7 +98,7 @@ func sendMevShareMatchTx(
 	mevShareAddr common.Address,
 	blockSenderAddr common.Address,
 	kettleAddress common.Address,
-	matchBidId types.BidId,
+	matchBidId types.DataId,
 	// account specific
 	privKey *ecdsa.PrivateKey,
 ) (*common.Hash, error) {
