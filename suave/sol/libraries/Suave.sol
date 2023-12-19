@@ -27,6 +27,13 @@ library Suave {
         string version;
     }
 
+    struct HttpRequest {
+        string url;
+        string method;
+        string[] headers;
+        bytes body;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -45,6 +52,8 @@ library Suave {
     address public constant CONFIDENTIAL_RETRIEVE = 0x0000000000000000000000000000000042020001;
 
     address public constant CONFIDENTIAL_STORE = 0x0000000000000000000000000000000042020000;
+
+    address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
 
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
@@ -114,6 +123,15 @@ library Suave {
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_STORE, data);
         }
+    }
+
+    function doHTTPRequest(HttpRequest memory request) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = DO_HTTPREQUEST.staticcall(abi.encode(request));
+        if (!success) {
+            revert PeekerReverted(DO_HTTPREQUEST, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {

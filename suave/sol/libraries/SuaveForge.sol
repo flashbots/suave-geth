@@ -63,6 +63,12 @@ library SuaveForge {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(dataId, key, data1));
     }
 
+    function doHTTPRequest(Suave.HttpRequest memory request) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043200002", abi.encode(request));
+
+        return abi.decode(data, (bytes));
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100003", abi.encode(contractAddr, input1));
 

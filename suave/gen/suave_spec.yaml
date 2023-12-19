@@ -46,6 +46,16 @@ structs:
         type: Withdrawal[]
       - name: extra
         type: bytes
+  - name: HttpRequest
+    fields:
+      - name: url
+        type: string
+      - name: method
+        type: string
+      - name: headers
+        type: string[]
+      - name: body
+        type: bytes
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
@@ -198,4 +208,13 @@ functions:
       packed: true
       fields:
         - name: encodedBundle
+          type: bytes
+  - name: doHTTPRequest
+    address: "0x0000000000000000000000000000000043200002"
+    input:
+      - name: request
+        type: HttpRequest
+    output:
+      fields:
+        - name: response
           type: bytes
