@@ -199,7 +199,6 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 }
 
 func (s *suaveRuntime) newBuilder() (string, error) {
-	fmt.Println("-- new builder --")
 	return s.suaveContext.Backend.ConfidentialEthBackend.NewSession(context.Background())
 }
 
@@ -209,21 +208,9 @@ func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte) (typ
 		return types.SimulateTransactionResult{}, err
 	}
 
-	receipt, err := s.suaveContext.Backend.ConfidentialEthBackend.AddTransaction(context.Background(), session, txn)
+	result, err := s.suaveContext.Backend.ConfidentialEthBackend.AddTransaction(context.Background(), session, txn)
 	if err != nil {
 		return types.SimulateTransactionResult{}, err
 	}
-
-	res := types.SimulateTransactionResult{
-		Logs: []*types.SimulatedLog{},
-	}
-	for _, log := range receipt.Logs {
-		res.Logs = append(res.Logs, &types.SimulatedLog{
-			Addr:   log.Address,
-			Topics: log.Topics,
-			Data:   log.Data,
-		})
-	}
-
-	return res, nil
+	return *result, nil
 }

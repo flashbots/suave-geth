@@ -24,8 +24,8 @@ func (m *mockSuaveBackend) NewSession(ctx context.Context) (string, error) {
 	return "", nil
 }
 
-func (m *mockSuaveBackend) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.Receipt, error) {
-	return &types.Receipt{}, nil
+func (m *mockSuaveBackend) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
+	return &types.SimulateTransactionResult{}, nil
 }
 
 func (m *mockSuaveBackend) InitializeBid(bid suave.Bid) error {

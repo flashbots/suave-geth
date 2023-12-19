@@ -35,8 +35,8 @@ func (a *APIClient) NewSession(ctx context.Context) (string, error) {
 	return id, err
 }
 
-func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.Receipt, error) {
-	var receipt *types.Receipt
+func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
+	var receipt *types.SimulateTransactionResult
 	err := a.rpc.CallContext(ctx, &receipt, "suavex_addTransaction", sessionId, tx)
 	return receipt, err
 }

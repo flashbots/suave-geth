@@ -37,6 +37,8 @@ library Suave {
     struct SimulateTransactionResult {
         uint64 egp;
         SimulatedLog[] logs;
+        bool success;
+        string error;
     }
 
     struct SimulatedLog {

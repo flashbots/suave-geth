@@ -8,5 +8,5 @@ import (
 
 type API interface {
 	NewSession(ctx context.Context) (string, error)
-	AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.Receipt, error)
+	AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error)
 }

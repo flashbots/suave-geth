@@ -19,13 +19,32 @@ contract ExampleEthCallSource {
         Suave.doHTTPRequest(request);
     }
 
-    function sessionE2ETest(bytes memory subTxn) public payable {
+    function emptyCallback() public payable {
+    }
+
+    function sessionE2ETest(bytes memory subTxn, bytes memory subTxn2) public payable returns (bytes memory) {
         string memory id = Suave.newBuilder();
-        Suave.simulateTransaction(id, subTxn);
+
+        Suave.SimulateTransactionResult memory sim1 = Suave.simulateTransaction(id, subTxn);
+        require(sim1.success == true);
+        require(sim1.logs.length == 1);
+
+        // simulate the same transaction again should fail because the nonce is the same
+        Suave.SimulateTransactionResult memory sim2 = Suave.simulateTransaction(id, subTxn);
+        require(sim2.success == false);
+
+        // now, simulate the transaction with the correct nonce
+        Suave.SimulateTransactionResult memory sim3 = Suave.simulateTransaction(id, subTxn2);
+        require(sim3.success == true);
+        require(sim3.logs.length == 2);
+
+        return abi.encodeWithSelector(this.emptyCallback.selector);
     }
 }
 
 contract ExampleEthCallTarget {
+    uint256 stateCount;
+
     function get() public view returns (uint256) {
         return 101;
     }
@@ -35,6 +54,10 @@ contract ExampleEthCallTarget {
     );
 
     function func1() public payable {
-        emit Example(1);
+        stateCount++;
+
+        for (uint256 i = 0; i < stateCount; i++) {
+            emit Example(1);
+        }
     }
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -66,6 +67,8 @@ func (s *SessionManager) NewSession() (string, error) {
 
 	parent := s.blockchain.CurrentHeader()
 
+	chainConfig := s.blockchain.Config()
+
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     new(big.Int).Add(parent.Number, common.Big1),
@@ -73,6 +76,15 @@ func (s *SessionManager) NewSession() (string, error) {
 		Time:       1000,             // TODO: fix this
 		Coinbase:   common.Address{}, // TODO: fix this
 		Difficulty: big.NewInt(1),
+	}
+
+	// Set baseFee and GasLimit if we are on an EIP-1559 chain
+	if chainConfig.IsLondon(header.Number) {
+		header.BaseFee = misc.CalcBaseFee(chainConfig, parent)
+		if !chainConfig.IsLondon(parent.Number) {
+			parentGasLimit := parent.GasLimit * chainConfig.ElasticityMultiplier()
+			header.GasLimit = core.CalcGasLimit(parentGasLimit, s.config.GasCeil)
+		}
 	}
 
 	stateRef, err := s.blockchain.StateAt(parent.Root)
@@ -117,7 +129,7 @@ func (s *SessionManager) getSession(sessionId string) (*builder, error) {
 	return session, nil
 }
 
-func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.Receipt, error) {
+func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
 	builder, err := s.getSession(sessionId)
 	if err != nil {
 		return nil, err

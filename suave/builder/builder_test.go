@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,7 +52,6 @@ func newMockBuilder(t *testing.T) *mockBuilder {
 		preState: stateRef,
 		config:   mState.chainConfig,
 		context:  m, // m implements ChainContext with panics
-		vmConfig: vm.Config{},
 	}
 	m.builder = newBuilder(config)
 

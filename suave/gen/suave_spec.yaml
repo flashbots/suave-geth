@@ -62,6 +62,10 @@ structs:
         type: uint64
       - name: logs
         type: SimulatedLog[]
+      - name: success
+        type: bool
+      - name: error
+        type: string
   - name: SimulatedLog
     fields:
       - name: data

@@ -1187,12 +1187,24 @@ func TestE2EPrecompile_Builder(t *testing.T) {
 	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
 
 	// build a txn that calls the contract 'func1' in 'ExampleEthCallTarget'
-	subTxn, _ := types.SignTx(types.NewTx(&types.LegacyTx{
-		To: &testAddr3,
-	}), signer, testKey)
+	var subTxns []*types.Transaction
+	for i := 0; i < 2; i++ {
+		subTxn, _ := types.SignTx(types.NewTx(&types.LegacyTx{
+			To:       &testAddr3,
+			Gas:      220000,
+			GasPrice: big.NewInt(13),
+			Nonce:    uint64(i),
+			Data:     exampleCallTargetContract.Abi.Methods["func1"].ID,
+		}), signer, testKey)
 
-	subTxnBytes, _ := subTxn.MarshalBinary()
-	sourceContract.SendTransaction("sessionE2ETest", []interface{}{subTxnBytes}, nil)
+		subTxns = append(subTxns, subTxn)
+	}
+
+	subTxnBytes1, _ := subTxns[0].MarshalBinary()
+	subTxnBytes2, _ := subTxns[1].MarshalBinary()
+
+	_, err := sourceContract.SendTransaction("sessionE2ETest", []interface{}{subTxnBytes1, subTxnBytes2}, nil)
+	require.NoError(t, err)
 }
 
 type clientWrapper struct {

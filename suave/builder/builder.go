@@ -23,14 +23,11 @@ type builderConfig struct {
 	header   *types.Header
 	config   *params.ChainConfig
 	context  core.ChainContext
-	vmConfig vm.Config
 }
 
 func newBuilder(config *builderConfig) *builder {
 	gp := core.GasPool(config.header.GasLimit)
 	var gasUsed uint64
-
-	config.vmConfig.NoBaseFee = true
 
 	return &builder{
 		config:  config,
@@ -40,16 +37,41 @@ func newBuilder(config *builderConfig) *builder {
 	}
 }
 
-func (b *builder) AddTransaction(txn *types.Transaction) (*types.Receipt, error) {
+func (b *builder) AddTransaction(txn *types.Transaction) (*types.SimulateTransactionResult, error) {
 	dummyAuthor := common.Address{}
 
-	receipt, err := core.ApplyTransaction(b.config.config, b.config.context, &dummyAuthor, b.gasPool, b.state, b.config.header, txn, b.gasUsed, b.config.vmConfig)
+	vmConfig := vm.Config{
+		NoBaseFee: true,
+	}
+
+	snap := b.state.Snapshot()
+
+	b.state.SetTxContext(txn.Hash(), len(b.txns))
+	receipt, err := core.ApplyTransaction(b.config.config, b.config.context, &dummyAuthor, b.gasPool, b.state, b.config.header, txn, b.gasUsed, vmConfig)
 	if err != nil {
-		return nil, err
+		b.state.RevertToSnapshot(snap)
+
+		result := &types.SimulateTransactionResult{
+			Success: false,
+			Error:   err.Error(),
+		}
+		return result, nil
 	}
 
 	b.txns = append(b.txns, txn)
 	b.receipts = append(b.receipts, receipt)
 
-	return receipt, nil
+	result := &types.SimulateTransactionResult{
+		Success: true,
+		Logs:    []*types.SimulatedLog{},
+	}
+	for _, log := range receipt.Logs {
+		result.Logs = append(result.Logs, &types.SimulatedLog{
+			Addr:   log.Address,
+			Topics: log.Topics,
+			Data:   log.Data,
+		})
+	}
+
+	return result, nil
 }
