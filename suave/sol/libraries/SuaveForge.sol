@@ -69,6 +69,10 @@ library SuaveForge {
         return abi.decode(data, (bytes));
     }
 
+    function ensureTxnValid(bytes memory txn) internal view {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043200004", abi.encode(txn));
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100003", abi.encode(contractAddr, input1));
 
@@ -89,6 +93,12 @@ library SuaveForge {
 
     function fillMevShareBundle(Suave.DataId dataId) internal view returns (bytes memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000043200001", abi.encode(dataId));
+
+        return data;
+    }
+
+    function getCallData(bytes memory txn) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043200003", abi.encode(txn));
 
         return data;
     }

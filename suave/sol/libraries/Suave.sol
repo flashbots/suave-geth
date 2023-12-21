@@ -55,6 +55,8 @@ library Suave {
 
     address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
 
+    address public constant ENSURE_TXN_VALID = 0x0000000000000000000000000000000043200004;
+
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
@@ -62,6 +64,8 @@ library Suave {
     address public constant FETCH_DATA_RECORDS = 0x0000000000000000000000000000000042030001;
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
+
+    address public constant GET_CALL_DATA = 0x0000000000000000000000000000000043200003;
 
     address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
 
@@ -134,6 +138,14 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    function ensureTxnValid(bytes memory txn) internal view {
+        require(isConfidential());
+        (bool success, bytes memory data) = ENSURE_TXN_VALID.staticcall(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(ENSURE_TXN_VALID, data);
+        }
+    }
+
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
         (bool success, bytes memory data) = ETHCALL.staticcall(abi.encode(contractAddr, input1));
         if (!success) {
@@ -167,6 +179,16 @@ library Suave {
         (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.staticcall(abi.encode(dataId));
         if (!success) {
             revert PeekerReverted(FILL_MEV_SHARE_BUNDLE, data);
+        }
+
+        return data;
+    }
+
+    function getCallData(bytes memory txn) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = GET_CALL_DATA.staticcall(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(GET_CALL_DATA, data);
         }
 
         return data;

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -256,4 +257,32 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnsureTxnValid(t *testing.T) {
+	t.Parallel()
+
+	bk := newTestBackend(t)
+
+	tx := types.NewTransaction(0, common.Address{}, big.NewInt(42), 1000, big.NewInt(1), []byte("hello, world!"))
+	b, err := tx.MarshalBinary()
+	require.NoError(t, err)
+	require.NotNil(t, b)
+
+	bk.ensureTxnValid(b)
+}
+
+func TestGetABIEncodedCallData(t *testing.T) {
+	t.Parallel()
+
+	bk := newTestBackend(t)
+
+	tx := types.NewTransaction(0, common.Address{}, big.NewInt(42), 1000, big.NewInt(1), []byte("hello, world!"))
+	b, err := tx.MarshalBinary()
+	require.NoError(t, err)
+	require.NotNil(t, b)
+
+	cd, err := bk.getCallData(b)
+	require.NoError(t, err)
+	require.Equal(t, "hello, world!", string(cd))
 }

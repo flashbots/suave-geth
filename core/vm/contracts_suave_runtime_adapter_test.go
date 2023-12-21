@@ -71,6 +71,16 @@ func (m *mockRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
+func (m *mockRuntime) ensureTxnValid(txn []byte) error {
+	return nil
+}
+
+func (m *mockRuntime) getCallData(txn []byte) ([]byte, error) {
+	var tx types.Transaction
+	err := tx.UnmarshalBinary(txn)
+	return tx.Data(), err
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},

@@ -75,6 +75,7 @@ func (b *suaveRuntime) simulateBundle(input []byte) (uint64, error) {
 		return 0, err
 	}
 
+	// BUG:  err == nil here, so we won't actually report an error to the caller.
 	if envelope.ExecutionPayload.GasUsed == 0 {
 		return 0, err
 	}
@@ -460,4 +461,24 @@ func (c *suaveRuntime) fillMevShareBundle(dataID types.DataId) ([]byte, error) {
 	}
 
 	return json.Marshal(shareBundle)
+}
+
+func (s *suaveRuntime) ensureTxnValid(txn []byte) error {
+	var tx types.Transaction
+	if err := tx.UnmarshalBinary(txn); err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+	defer cancel()
+
+	ts := types.Transactions{&tx}
+	_, err := s.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, ts)
+	return err
+}
+
+func (s *suaveRuntime) getCallData(txn []byte) ([]byte, error) {
+	var tx types.Transaction
+	err := tx.UnmarshalBinary(txn)
+	return tx.Data(), err
 }
