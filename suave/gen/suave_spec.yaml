@@ -218,3 +218,23 @@ functions:
       fields:
         - name: response
           type: bytes
+  - name: getCallData
+    address: "0x0000000000000000000000000000000043200003"
+    isConfidential: true
+    input:
+      - name: txn
+        type: bytes
+    output:
+      packed: true
+      fields:
+        - name: calldata
+          type: bytes
+  - name: ensureTxnValid
+    address: "0x0000000000000000000000000000000043200004"
+    isConfidential: true
+    input:
+      - name: txn
+        type: bytes
+    output:
+      packed: true
+      fields:
