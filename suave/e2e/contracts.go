@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	MevShareBidContract          = newArtifact("bids.sol/MevShareContract.json")
-	BundleBidContract            = newArtifact("bids.sol/BundleContract.json")
+	MevShareContract             = newArtifact("bids.sol/MevShareContract.json")
+	BundleContract               = newArtifact("bids.sol/BundleContract.json")
 	EthBundleSenderContract      = newArtifact("bids.sol/EthBundleSenderContract.json")
 	MevShareBundleSenderContract = newArtifact("bids.sol/MevShareBundleSenderContract.json")
 	buildEthBlockContract        = newArtifact("bids.sol/EthBlockContract.json")

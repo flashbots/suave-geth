@@ -28,8 +28,8 @@ var (
 )
 
 var (
-	bundleBidContract = e2e.BundleBidContract
-	mevShareArtifact  = e2e.MevShareBidContract
+	bundleContract   = e2e.BundleContract
+	mevShareArtifact = e2e.MevShareContract
 )
 
 func main() {
@@ -124,7 +124,7 @@ func main() {
 				targetBlock := uint64(1)
 				allowedPeekers := []common.Address{mevShareContract.Address()}
 
-				confidentialDataBytes, _ := bundleBidContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(bundleBytes)
+				confidentialDataBytes, _ := bundleContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(bundleBytes)
 
 				txnResult, err := mevShareContract.SendTransaction("newTransaction", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 				if err != nil {
@@ -163,7 +163,7 @@ func main() {
 				}
 				backRunBundleBytes, _ := json.Marshal(backRunBundle)
 
-				confidentialDataMatchBytes, _ := bundleBidContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
+				confidentialDataMatchBytes, _ := bundleContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 
 				// backrun inputs
 				targetBlock := uint64(1)
@@ -282,7 +282,7 @@ type DataRecordEvent struct {
 }
 
 func (b *DataRecordEvent) Unpack(log *types.Log) error {
-	unpacked, err := bundleBidContract.Abi.Events["DataRecordEvent"].Inputs.Unpack(log.Data)
+	unpacked, err := bundleContract.Abi.Events["DataRecordEvent"].Inputs.Unpack(log.Data)
 	if err != nil {
 		return err
 	}
