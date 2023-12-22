@@ -67,7 +67,7 @@ func (m *mockRuntime) submitBundleJsonRPC(url string, method string, params []by
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error) {
+func (m *mockRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecord []byte) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 

@@ -36,15 +36,15 @@ func (m *mockSuaveBackend) SubmitBid(types.DataRecord) error {
 	return nil
 }
 
-func (m *mockSuaveBackend) FetchEngineBidById(suave.DataId) (suave.DataRecord, error) {
+func (m *mockSuaveBackend) FetchEngineDataRecordById(suave.DataId) (suave.DataRecord, error) {
 	return suave.DataRecord{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidById(suave.DataId) (suave.DataRecord, error) {
+func (m *mockSuaveBackend) FetchDataRecordById(suave.DataId) (suave.DataRecord, error) {
 	return suave.DataRecord{}, nil
 }
 
-func (m *mockSuaveBackend) FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+func (m *mockSuaveBackend) FetchDataRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	return nil
 }
 
@@ -91,7 +91,7 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 	return b
 }
 
-func TestSuave_BidWorkflow(t *testing.T) {
+func TestSuave_DataRecordWorkflow(t *testing.T) {
 	b := newTestBackend(t)
 
 	d5, err := b.newDataRecord(5, []common.Address{{0x1}}, nil, "a")

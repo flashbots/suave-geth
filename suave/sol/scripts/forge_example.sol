@@ -10,8 +10,8 @@ contract Example is Script {
     function run() public {
         Suave.DataRecord memory record = SuaveForge.newDataRecord(0, addressList, addressList, "default:v0:ethBundles");
 
-        Suave.DataRecord[] memory allShareMatchBids = SuaveForge.fetchDataRecords(0, "default:v0:ethBundles");
-        console.log(allShareMatchBids.length);
+        Suave.DataRecord[] memory allShareMatchRecords = SuaveForge.fetchDataRecords(0, "default:v0:ethBundles");
+        console.log(allShareMatchRecords.length);
 
         SuaveForge.confidentialStore(record.id, "a", abi.encodePacked("bbbbbb"));
         bytes memory result = SuaveForge.confidentialRetrieve(record.id, "a");

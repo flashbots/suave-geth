@@ -139,7 +139,7 @@ library SuaveForge {
         return data;
     }
 
-    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)
+    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderBid)
         internal
         view
         returns (bytes memory)
