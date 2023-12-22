@@ -75,6 +75,14 @@ func (m *mockRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
+func (m *mockRuntime) newBuilder() (string, error) {
+	return "", nil
+}
+
+func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.SimulateTransactionResult, error) {
+	return types.SimulateTransactionResult{}, nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},

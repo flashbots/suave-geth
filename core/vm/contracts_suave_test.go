@@ -20,6 +20,14 @@ type mockSuaveBackend struct {
 func (m *mockSuaveBackend) Start() error { return nil }
 func (m *mockSuaveBackend) Stop() error  { return nil }
 
+func (m *mockSuaveBackend) NewSession(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+func (m *mockSuaveBackend) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
+	return &types.SimulateTransactionResult{}, nil
+}
+
 func (m *mockSuaveBackend) InitializeBid(record suave.DataRecord) error {
 	return nil
 }

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -223,4 +224,21 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		return nil, fmt.Errorf("http error: %s: %v", resp.Status, data)
 	}
 	return data, nil
+}
+
+func (s *suaveRuntime) newBuilder() (string, error) {
+	return s.suaveContext.Backend.ConfidentialEthBackend.NewSession(context.Background())
+}
+
+func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte) (types.SimulateTransactionResult, error) {
+	txn := new(types.Transaction)
+	if err := txn.UnmarshalBinary(txnBytes); err != nil {
+		return types.SimulateTransactionResult{}, err
+	}
+
+	result, err := s.suaveContext.Backend.ConfidentialEthBackend.AddTransaction(context.Background(), session, txn)
+	if err != nil {
+		return types.SimulateTransactionResult{}, err
+	}
+	return *result, nil
 }

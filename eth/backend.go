@@ -59,6 +59,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/suave/backends"
 	suave_backends "github.com/ethereum/go-ethereum/suave/backends"
+	suave_builder "github.com/ethereum/go-ethereum/suave/builder"
+	suave_builder_api "github.com/ethereum/go-ethereum/suave/builder/api"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/flashbots/go-boost-utils/bls"
@@ -349,6 +351,13 @@ func (s *Ethereum) APIs() []rpc.API {
 	apis = append(apis, rpc.API{
 		Namespace: "suavex",
 		Service:   backends.NewEthBackendServer(s.APIBackend),
+	})
+
+	sessionManager := suave_builder.NewSessionManager(s.blockchain, &suave_builder.Config{})
+
+	apis = append(apis, rpc.API{
+		Namespace: "suavex",
+		Service:   suave_builder_api.NewServer(sessionManager),
 	})
 
 	// Append any APIs exposed explicitly by the consensus engine

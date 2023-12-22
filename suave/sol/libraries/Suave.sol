@@ -34,6 +34,19 @@ library Suave {
         bytes body;
     }
 
+    struct SimulateTransactionResult {
+        uint64 egp;
+        SimulatedLog[] logs;
+        bool success;
+        string error;
+    }
+
+    struct SimulatedLog {
+        bytes data;
+        address addr;
+        bytes32[] topics;
+    }
+
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -63,6 +76,8 @@ library Suave {
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
+    address public constant NEW_BUILDER = 0x0000000000000000000000000000000053200001;
+
     address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
@@ -70,6 +85,8 @@ library Suave {
     address public constant SIGN_MESSAGE = 0x0000000000000000000000000000000040100003;
 
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
+
+    address public constant SIMULATE_TRANSACTION = 0x0000000000000000000000000000000053200002;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
@@ -174,6 +191,15 @@ library Suave {
         return data;
     }
 
+    function newBuilder() internal view returns (string memory) {
+        (bool success, bytes memory data) = NEW_BUILDER.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(NEW_BUILDER, data);
+        }
+
+        return abi.decode(data, (string));
+    }
+
     function newDataRecord(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,
@@ -219,6 +245,19 @@ library Suave {
         }
 
         return abi.decode(data, (uint64));
+    }
+
+    function simulateTransaction(string memory session, bytes memory txn)
+        internal
+        view
+        returns (SimulateTransactionResult memory)
+    {
+        (bool success, bytes memory data) = SIMULATE_TRANSACTION.staticcall(abi.encode(session, txn));
+        if (!success) {
+            revert PeekerReverted(SIMULATE_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (SimulateTransactionResult));
     }
 
     function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)
