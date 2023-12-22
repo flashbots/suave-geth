@@ -229,7 +229,8 @@ library Suave {
         returns (bytes memory)
     {
         require(isConfidential());
-        (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_TO_RELAY.staticcall(abi.encode(relayUrl, builderDataRecord));
+        (bool success, bytes memory data) =
+            SUBMIT_ETH_BLOCK_TO_RELAY.staticcall(abi.encode(relayUrl, builderDataRecord));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BLOCK_TO_RELAY, data);
         }

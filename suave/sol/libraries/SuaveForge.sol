@@ -138,7 +138,8 @@ library SuaveForge {
         view
         returns (bytes memory)
     {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderDataRecord));
+        bytes memory data =
+            forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderDataRecord));
 
         return data;
     }
