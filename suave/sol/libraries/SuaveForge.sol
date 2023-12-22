@@ -36,13 +36,13 @@ library SuaveForge {
         return string(abi.encodePacked("0x", converted));
     }
 
-    function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.BidId bidId, string memory namespace)
+    function buildEthBlock(Suave.BuildBlockArgs memory blockArgs, Suave.DataId dataId, string memory namespace)
         internal
         view
         returns (bytes memory, bytes memory)
     {
         bytes memory data =
-            forgeIt("0x0000000000000000000000000000000042100001", abi.encode(blockArgs, bidId, namespace));
+            forgeIt("0x0000000000000000000000000000000042100001", abi.encode(blockArgs, dataId, namespace));
 
         return abi.decode(data, (bytes, bytes));
     }
@@ -53,14 +53,20 @@ library SuaveForge {
         return data;
     }
 
-    function confidentialRetrieve(Suave.BidId bidId, string memory key) internal view returns (bytes memory) {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000042020001", abi.encode(bidId, key));
+    function confidentialRetrieve(Suave.DataId dataId, string memory key) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042020001", abi.encode(dataId, key));
 
         return data;
     }
 
-    function confidentialStore(Suave.BidId bidId, string memory key, bytes memory data1) internal view {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(bidId, key, data1));
+    function confidentialStore(Suave.DataId dataId, string memory key, bytes memory data1) internal view {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(dataId, key, data1));
+    }
+
+    function doHTTPRequest(Suave.HttpRequest memory request) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043200002", abi.encode(request));
+
+        return abi.decode(data, (bytes));
     }
 
     function ethcall(address contractAddr, bytes memory input1) internal view returns (bytes memory) {
@@ -75,30 +81,30 @@ library SuaveForge {
         return data;
     }
 
-    function fetchBids(uint64 cond, string memory namespace) internal view returns (Suave.Bid[] memory) {
+    function fetchDataRecords(uint64 cond, string memory namespace) internal view returns (Suave.DataRecord[] memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042030001", abi.encode(cond, namespace));
 
-        return abi.decode(data, (Suave.Bid[]));
+        return abi.decode(data, (Suave.DataRecord[]));
     }
 
-    function fillMevShareBundle(Suave.BidId bidId) internal view returns (bytes memory) {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000043200001", abi.encode(bidId));
+    function fillMevShareBundle(Suave.DataId dataId) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000043200001", abi.encode(dataId));
 
         return data;
     }
 
-    function newBid(
+    function newDataRecord(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,
         address[] memory allowedStores,
-        string memory bidType
-    ) internal view returns (Suave.Bid memory) {
+        string memory dataType
+    ) internal view returns (Suave.DataRecord memory) {
         bytes memory data = forgeIt(
             "0x0000000000000000000000000000000042030000",
-            abi.encode(decryptionCondition, allowedPeekers, allowedStores, bidType)
+            abi.encode(decryptionCondition, allowedPeekers, allowedStores, dataType)
         );
 
-        return abi.decode(data, (Suave.Bid));
+        return abi.decode(data, (Suave.DataRecord));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
@@ -127,12 +133,13 @@ library SuaveForge {
         return data;
     }
 
-    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)
+    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderDataRecord)
         internal
         view
         returns (bytes memory)
     {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderBid));
+        bytes memory data =
+            forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderDataRecord));
 
         return data;
     }

@@ -56,12 +56,13 @@ type EthAPIBackend struct {
 	gpo                      *gasprice.Oracle
 	suaveEthBundleSigningKey *ecdsa.PrivateKey
 	suaveEthBlockSigningKey  *bls.SecretKey
-	suaveEngine              *cstore.ConfidentialStoreEngine
+	suaveEngine              *cstore.CStoreEngine
 	suaveEthBackend          suave.ConfidentialEthBackend
+	suaveExternalWhitelist   []string
 }
 
 // For testing purposes
-func (b *EthAPIBackend) SuaveEngine() *cstore.ConfidentialStoreEngine {
+func (b *EthAPIBackend) SuaveEngine() *cstore.CStoreEngine {
 	return b.suaveEngine
 }
 
@@ -293,6 +294,7 @@ func (b *EthAPIBackend) GetMEVM(ctx context.Context, msg *core.Message, state *s
 	suaveCtxCopy.Backend = &vm.SuaveExecutionBackend{
 		EthBundleSigningKey:    suaveCtx.Backend.EthBundleSigningKey,
 		EthBlockSigningKey:     suaveCtx.Backend.EthBlockSigningKey,
+		ExternalWhitelist:      suaveCtx.Backend.ExternalWhitelist,
 		ConfidentialStore:      storeTransaction,
 		ConfidentialEthBackend: b.suaveEthBackend,
 	}
@@ -449,6 +451,7 @@ func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.Co
 		Backend: &vm.SuaveExecutionBackend{
 			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
 			EthBlockSigningKey:     b.suaveEthBlockSigningKey,
+			ExternalWhitelist:      b.suaveExternalWhitelist,
 			ConfidentialStore:      storeTransaction,
 			ConfidentialEthBackend: b.suaveEthBackend,
 		},

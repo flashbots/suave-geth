@@ -50,12 +50,12 @@ func TestRedisBackends(t *testing.T) {
 	{ // Send a bundle bid
 		allowedPeekers := []common.Address{newBlockBidAddress, newBundleBidAddress, buildEthBlockAddress}
 
-		confidentialDataBytes, err := BundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+		confidentialDataBytes, err := BundleContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
-		bundleBidContractI := sdk.GetContract(newBundleBidAddress, BundleBidContract.Abi, clt1)
+		BundleContractI := sdk.GetContract(newBundleBidAddress, BundleContract.Abi, clt1)
 
-		_, err = bundleBidContractI.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr1.KettleAddress(), fr2.KettleAddress()}}, confidentialDataBytes)
+		_, err = BundleContractI.SendTransaction("newBundle", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{fr1.KettleAddress(), fr2.KettleAddress()}}, confidentialDataBytes)
 		requireNoRpcError(t, err)
 	}
 
