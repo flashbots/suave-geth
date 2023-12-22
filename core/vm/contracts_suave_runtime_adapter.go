@@ -683,17 +683,17 @@ func (b *SuaveRuntimeAdapter) submitEthBlockToRelay(input []byte) (res []byte, e
 
 	var (
 		relayUrl   string
-		builderBid []byte
+		builderDataRecord []byte
 	)
 
 	relayUrl = unpacked[0].(string)
-	builderBid = unpacked[1].([]byte)
+	builderDataRecord = unpacked[1].([]byte)
 
 	var (
 		output1 []byte
 	)
 
-	if output1, err = b.impl.submitEthBlockToRelay(relayUrl, builderBid); err != nil {
+	if output1, err = b.impl.submitEthBlockToRelay(relayUrl, builderDataRecord); err != nil {
 		return
 	}
 
