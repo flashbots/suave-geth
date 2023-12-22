@@ -30,7 +30,7 @@ type SuaveRuntime interface {
 	signEthTransaction(txn []byte, chainId string, signingKey string) ([]byte, error)
 	simulateBundle(bundleData []byte) (uint64, error)
 	submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error)
-	submitEthBlockBidToRelay(relayUrl string, builderBid []byte) ([]byte, error)
+	submitEthBlockToRelay(relayUrl string, builderBid []byte) ([]byte, error)
 }
 
 var (
@@ -47,11 +47,11 @@ var (
 	signEthTransactionAddr       = common.HexToAddress("0x0000000000000000000000000000000040100001")
 	simulateBundleAddr           = common.HexToAddress("0x0000000000000000000000000000000042100000")
 	submitBundleJsonRPCAddr      = common.HexToAddress("0x0000000000000000000000000000000043000001")
-	submitEthBlockBidToRelayAddr = common.HexToAddress("0x0000000000000000000000000000000042100002")
+	submitEthBlockToRelayAddr = common.HexToAddress("0x0000000000000000000000000000000042100002")
 )
 
 var addrList = []common.Address{
-	buildEthBlockAddr, confidentialInputsAddr, confidentialRetrieveAddr, confidentialStoreAddr, doHTTPRequestAddr, ethcallAddr, extractHintAddr, fetchDataRecordsAddr, fillMevShareBundleAddr, newDataRecordAddr, signEthTransactionAddr, simulateBundleAddr, submitBundleJsonRPCAddr, submitEthBlockBidToRelayAddr,
+	buildEthBlockAddr, confidentialInputsAddr, confidentialRetrieveAddr, confidentialStoreAddr, doHTTPRequestAddr, ethcallAddr, extractHintAddr, fetchDataRecordsAddr, fillMevShareBundleAddr, newDataRecordAddr, signEthTransactionAddr, simulateBundleAddr, submitBundleJsonRPCAddr, submitEthBlockToRelayAddr,
 }
 
 type SuaveRuntimeAdapter struct {
@@ -99,8 +99,8 @@ func (b *SuaveRuntimeAdapter) run(addr common.Address, input []byte) ([]byte, er
 	case submitBundleJsonRPCAddr:
 		return b.submitBundleJsonRPC(input)
 
-	case submitEthBlockBidToRelayAddr:
-		return b.submitEthBlockBidToRelay(input)
+	case submitEthBlockToRelayAddr:
+		return b.submitEthBlockToRelay(input)
 
 	default:
 		return nil, fmt.Errorf("suave precompile not found for " + addr.String())
@@ -621,7 +621,7 @@ func (b *SuaveRuntimeAdapter) submitBundleJsonRPC(input []byte) (res []byte, err
 
 }
 
-func (b *SuaveRuntimeAdapter) submitEthBlockBidToRelay(input []byte) (res []byte, err error) {
+func (b *SuaveRuntimeAdapter) submitEthBlockToRelay(input []byte) (res []byte, err error) {
 	var (
 		unpacked []interface{}
 		result   []byte
@@ -630,7 +630,7 @@ func (b *SuaveRuntimeAdapter) submitEthBlockBidToRelay(input []byte) (res []byte
 	_ = unpacked
 	_ = result
 
-	unpacked, err = artifacts.SuaveAbi.Methods["submitEthBlockBidToRelay"].Inputs.Unpack(input)
+	unpacked, err = artifacts.SuaveAbi.Methods["submitEthBlockToRelay"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
 		return
@@ -638,17 +638,17 @@ func (b *SuaveRuntimeAdapter) submitEthBlockBidToRelay(input []byte) (res []byte
 
 	var (
 		relayUrl   string
-		builderBid []byte
+		builderDataRecord []byte
 	)
 
 	relayUrl = unpacked[0].(string)
-	builderBid = unpacked[1].([]byte)
+	builderDataRecord = unpacked[1].([]byte)
 
 	var (
 		output1 []byte
 	)
 
-	if output1, err = b.impl.submitEthBlockBidToRelay(relayUrl, builderBid); err != nil {
+	if output1, err = b.impl.submitEthBlockToRelay(relayUrl, builderDataRecord); err != nil {
 		return
 	}
 

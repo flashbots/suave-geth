@@ -277,13 +277,13 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 	return bidBytes, envelopeBytes, nil
 }
 
-func (b *suaveRuntime) submitEthBlockBidToRelay(relayUrl string, builderBidJson []byte) ([]byte, error) {
+func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJson []byte) ([]byte, error) {
 	endpoint := relayUrl + "/relay/v1/builder/blocks"
 
 	httpReq := types.HttpRequest{
 		Method: http.MethodPost,
 		Url:    endpoint,
-		Body:   builderBidJson,
+		Body:   builderDataRecordJson,
 		Headers: []string{
 			"Content-Type:application/json",
 			"Accept:application/json",

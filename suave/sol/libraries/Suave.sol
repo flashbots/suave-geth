@@ -71,7 +71,7 @@ library Suave {
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
 
-    address public constant SUBMIT_ETH_BLOCK_BID_TO_RELAY = 0x0000000000000000000000000000000042100002;
+    address public constant SUBMIT_ETH_BLOCK_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {
@@ -223,15 +223,15 @@ library Suave {
         return data;
     }
 
-    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)
+    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderDataRecord)
         internal
         view
         returns (bytes memory)
     {
         require(isConfidential());
-        (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_BID_TO_RELAY.staticcall(abi.encode(relayUrl, builderBid));
+        (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_TO_RELAY.staticcall(abi.encode(relayUrl, builderDataRecord));
         if (!success) {
-            revert PeekerReverted(SUBMIT_ETH_BLOCK_BID_TO_RELAY, data);
+            revert PeekerReverted(SUBMIT_ETH_BLOCK_TO_RELAY, data);
         }
 
         return data;

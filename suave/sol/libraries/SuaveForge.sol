@@ -133,12 +133,12 @@ library SuaveForge {
         return data;
     }
 
-    function submitEthBlockBidToRelay(string memory relayUrl, bytes memory builderBid)
+    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderDataRecord)
         internal
         view
         returns (bytes memory)
     {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderBid));
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderDataRecord));
 
         return data;
     }

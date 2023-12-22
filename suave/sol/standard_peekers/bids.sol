@@ -358,7 +358,7 @@ contract EthBlockBidSenderContract is EthBlockContract {
 
         (Suave.DataRecord memory blockDataRecord, bytes memory builderBid) =
             this.doBuild(blockArgs, blockHeight, dataRecords, namespace);
-        Suave.submitEthBlockBidToRelay(boostRelayUrl, builderBid);
+        Suave.submitEthBlockToRelay(boostRelayUrl, builderBid);
 
         emit DataRecordEvent(blockDataRecord.id, blockDataRecord.decryptionCondition, blockDataRecord.allowedPeekers);
         return bytes.concat(this.emitDataRecord.selector, abi.encode(blockDataRecord));

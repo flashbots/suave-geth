@@ -21,7 +21,7 @@ var (
 	signEthTransactionAddr       = common.HexToAddress("0x0000000000000000000000000000000040100001")
 	simulateBundleAddr           = common.HexToAddress("0x0000000000000000000000000000000042100000")
 	submitBundleJsonRPCAddr      = common.HexToAddress("0x0000000000000000000000000000000043000001")
-	submitEthBlockBidToRelayAddr = common.HexToAddress("0x0000000000000000000000000000000042100002")
+	submitEthBlockToRelayAddr    = common.HexToAddress("0x0000000000000000000000000000000042100002")
 )
 
 var SuaveMethods = map[string]common.Address{
@@ -38,7 +38,7 @@ var SuaveMethods = map[string]common.Address{
 	"signEthTransaction":       signEthTransactionAddr,
 	"simulateBundle":           simulateBundleAddr,
 	"submitBundleJsonRPC":      submitBundleJsonRPCAddr,
-	"submitEthBlockBidToRelay": submitEthBlockBidToRelayAddr,
+	"submitEthBlockToRelay":    submitEthBlockToRelayAddr,
 }
 
 func PrecompileAddressToName(addr common.Address) string {
@@ -69,8 +69,8 @@ func PrecompileAddressToName(addr common.Address) string {
 		return "simulateBundle"
 	case submitBundleJsonRPCAddr:
 		return "submitBundleJsonRPC"
-	case submitEthBlockBidToRelayAddr:
-		return "submitEthBlockBidToRelay"
+	case submitEthBlockToRelayAddr:
+		return "submitEthBlockToRelay"
 	}
 	return ""
 }
