@@ -54,7 +54,8 @@ var (
 
 var addrList = []common.Address{
 	buildEthBlockAddr, confidentialInputsAddr, confidentialRetrieveAddr, confidentialStoreAddr, doHTTPRequestAddr, ethcallAddr, extractHintAddr, fetchDataRecordsAddr, fillMevShareBundleAddr, newDataRecordAddr, signEthTransactionAddr, signMessageAddr, simulateBundleAddr, submitBundleJsonRPCAddr, submitEthBlockBidToRelayAddr,
-type SuaveRuntimeAdapter struct {
+}
+	type SuaveRuntimeAdapter struct {
 	impl SuaveRuntime
 }
 
