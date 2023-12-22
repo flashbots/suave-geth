@@ -117,6 +117,12 @@ library SuaveForge {
         return abi.decode(data, (bytes));
     }
 
+    function signMessage(bytes memory digest, string memory signingKey) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000040100003", abi.encode(digest, signingKey));
+
+        return abi.decode(data, (bytes));
+    }
+
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000042100000", abi.encode(bundleData));
 
@@ -133,13 +139,12 @@ library SuaveForge {
         return data;
     }
 
-    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderDataRecord)
+    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderBid)
         internal
         view
         returns (bytes memory)
     {
-        bytes memory data =
-            forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderDataRecord));
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042100002", abi.encode(relayUrl, builderBid));
 
         return data;
     }

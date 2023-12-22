@@ -55,6 +55,10 @@ func (m *mockRuntime) signEthTransaction(txn []byte, chainId string, signingKey 
 	return []byte{0x1}, nil
 }
 
+func (m *mockRuntime) signMessage(digest []byte, signingKey string) ([]byte, error) {
+	return []byte{0x1}, nil
+}
+
 func (m *mockRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 	return 1, nil
 }

@@ -67,6 +67,8 @@ library Suave {
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
+    address public constant SIGN_MESSAGE = 0x0000000000000000000000000000000040100003;
+
     address public constant SIMULATE_BUNDLE = 0x0000000000000000000000000000000042100000;
 
     address public constant SUBMIT_BUNDLE_JSON_RPC = 0x0000000000000000000000000000000043000001;
@@ -200,6 +202,16 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    function signMessage(bytes memory digest, string memory signingKey) internal view returns (bytes memory) {
+        require(isConfidential());
+        (bool success, bytes memory data) = SIGN_MESSAGE.staticcall(abi.encode(digest, signingKey));
+        if (!success) {
+            revert PeekerReverted(SIGN_MESSAGE, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
     function simulateBundle(bytes memory bundleData) internal view returns (uint64) {
         (bool success, bytes memory data) = SIMULATE_BUNDLE.staticcall(abi.encode(bundleData));
         if (!success) {
@@ -223,14 +235,13 @@ library Suave {
         return data;
     }
 
-    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderDataRecord)
+    function submitEthBlockToRelay(string memory relayUrl, bytes memory builderBid)
         internal
         view
         returns (bytes memory)
     {
         require(isConfidential());
-        (bool success, bytes memory data) =
-            SUBMIT_ETH_BLOCK_TO_RELAY.staticcall(abi.encode(relayUrl, builderDataRecord));
+        (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_TO_RELAY.staticcall(abi.encode(relayUrl, builderBid));
         if (!success) {
             revert PeekerReverted(SUBMIT_ETH_BLOCK_TO_RELAY, data);
         }
