@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	MevShareBidContract          = newArtifact("bids.sol/MevShareBidContract.json")
-	BundleBidContract            = newArtifact("bids.sol/BundleBidContract.json")
-	EthBundleSenderContract      = newArtifact("bids.sol/EthBundleSenderContract.json")
-	MevShareBundleSenderContract = newArtifact("bids.sol/MevShareBundleSenderContract.json")
-	buildEthBlockContract        = newArtifact("bids.sol/EthBlockBidContract.json")
-	ethBlockBidSenderContract    = newArtifact("bids.sol/EthBlockBidSenderContract.json")
+	MevShareContract             = newArtifact("bundles.sol/MevShareContract.json")
+	BundleContract               = newArtifact("bundles.sol/BundleContract.json")
+	EthBundleSenderContract      = newArtifact("bundles.sol/EthBundleSenderContract.json")
+	MevShareBundleSenderContract = newArtifact("bundles.sol/MevShareBundleSenderContract.json")
+	buildEthBlockContract        = newArtifact("bundles.sol/EthBlockContract.json")
+	ethBlockBidSenderContract    = newArtifact("bundles.sol/EthBlockBidSenderContract.json")
 	exampleCallSourceContract    = newArtifact("example.sol/ExampleEthCallSource.json")
 	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
 )

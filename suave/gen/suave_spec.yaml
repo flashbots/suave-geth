@@ -1,13 +1,13 @@
 types:
-  - name: BidId
+  - name: DataId
     type: bytes16
 structs:
-  - name: Bid
+  - name: DataRecord
     fields:
       - name: id
-        type: BidId
+        type: DataId
       - name: salt
-        type: BidId
+        type: DataId
       - name: decryptionCondition
         type: uint64
       - name: allowedPeekers
@@ -82,7 +82,7 @@ functions:
       fields:
         - name: output1
           type: bytes
-  - name: newBid
+  - name: newDataRecord
     address: "0x0000000000000000000000000000000042030000"
     input:
       - name: decryptionCondition
@@ -91,13 +91,13 @@ functions:
         type: address[]
       - name: allowedStores
         type: address[]
-      - name: bidType
+      - name: dataType
         type: string
     output:
       fields:
-        - name: bid
-          type: Bid
-  - name: fetchBids
+        - name: dataRecord
+          type: DataRecord
+  - name: fetchDataRecords
     address: "0x0000000000000000000000000000000042030001"
     input:
       - name: cond
@@ -106,13 +106,13 @@ functions:
         type: string
     output:
       fields:
-        - name: bid
-          type: Bid[]
+        - name: dataRecords
+          type: DataRecord[]
   - name: confidentialStore
     address: "0x0000000000000000000000000000000042020000"
     input:
-      - name: bidId
-        type: BidId
+      - name: dataId
+        type: DataId
       - name: key
         type: string
       - name: data1
@@ -120,8 +120,8 @@ functions:
   - name: confidentialRetrieve
     address: "0x0000000000000000000000000000000042020001"
     input:
-      - name: bidId
-        type: BidId
+      - name: dataId
+        type: DataId
       - name: key
         type: string
     output:
@@ -167,8 +167,8 @@ functions:
     input:
       - name: blockArgs
         type: BuildBlockArgs
-      - name: bidId
-        type: BidId
+      - name: dataId
+        type: DataId
       - name: namespace
         type: string
     output:
@@ -177,7 +177,7 @@ functions:
           type: bytes
         - name: output2
           type: bytes
-  - name: submitEthBlockBidToRelay
+  - name: submitEthBlockToRelay
     address: "0x0000000000000000000000000000000042100002"
     isConfidential: true
     input:
@@ -220,12 +220,24 @@ functions:
     address: "0x0000000000000000000000000000000043200001"
     isConfidential: true
     input:
-      - name: bidId
-        type: BidId
+      - name: dataId
+        type: DataId
     output:
       packed: true
       fields:
         - name: encodedBundle
+          type: bytes
+  - name: signMessage
+    address: "0x0000000000000000000000000000000040100003"
+    isConfidential: true
+    input:
+      - name: digest
+        type: bytes
+      - name: signingKey
+        type: string
+    output:
+      fields:
+        - name: output1
           type: bytes
   - name: doHTTPRequest
     address: "0x0000000000000000000000000000000043200002"

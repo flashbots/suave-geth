@@ -8,13 +8,13 @@ contract Example is Script {
     address[] public addressList = [Suave.ANYALLOWED];
 
     function run() public {
-        Suave.Bid memory bid = SuaveForge.newBid(0, addressList, addressList, "default:v0:ethBundles");
+        Suave.DataRecord memory record = SuaveForge.newDataRecord(0, addressList, addressList, "default:v0:ethBundles");
 
-        Suave.Bid[] memory allShareMatchBids = SuaveForge.fetchBids(0, "default:v0:ethBundles");
-        console.log(allShareMatchBids.length);
+        Suave.DataRecord[] memory allShareMatchRecords = SuaveForge.fetchDataRecords(0, "default:v0:ethBundles");
+        console.log(allShareMatchRecords.length);
 
-        SuaveForge.confidentialStore(bid.id, "a", abi.encodePacked("bbbbbb"));
-        bytes memory result = SuaveForge.confidentialRetrieve(bid.id, "a");
+        SuaveForge.confidentialStore(record.id, "a", abi.encodePacked("bbbbbb"));
+        bytes memory result = SuaveForge.confidentialRetrieve(record.id, "a");
         console.logBytes(result);
     }
 }
