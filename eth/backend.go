@@ -59,6 +59,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/suave/backends"
 	suave_backends "github.com/ethereum/go-ethereum/suave/backends"
+	suave_builder "github.com/ethereum/go-ethereum/suave/builder"
+	suave_builder_api "github.com/ethereum/go-ethereum/suave/builder/api"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/flashbots/go-boost-utils/bls"
@@ -285,9 +287,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	suaveDaSigner := &cstore.AccountManagerDASigner{Manager: eth.AccountManager()}
 
-	confidentialStoreEngine := cstore.NewConfidentialStoreEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
+	confidentialStoreEngine := cstore.NewEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveEthBundleSigningKey, suaveEthBlockSigningKey, confidentialStoreEngine, suaveEthBackend}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveEthBundleSigningKey, suaveEthBlockSigningKey, confidentialStoreEngine, suaveEthBackend, config.Suave.ExternalWhitelist}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}
@@ -349,6 +351,13 @@ func (s *Ethereum) APIs() []rpc.API {
 	apis = append(apis, rpc.API{
 		Namespace: "suavex",
 		Service:   backends.NewEthBackendServer(s.APIBackend),
+	})
+
+	sessionManager := suave_builder.NewSessionManager(s.blockchain, &suave_builder.Config{})
+
+	apis = append(apis, rpc.API{
+		Namespace: "suavex",
+		Service:   suave_builder_api.NewServer(sessionManager),
 	})
 
 	// Append any APIs exposed explicitly by the consensus engine

@@ -562,6 +562,13 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveExternalWhitelistFlag = &cli.StringSliceFlag{
+		Name:     "suave.eth.external-whitelist",
+		EnvVars:  []string{"SUAVE_EXTERNAL_WHITELIST"},
+		Usage:    "List of external whitelisted addresses",
+		Category: flags.SuaveCategory,
+	}
+
 	SuaveDevModeFlag = &cli.BoolFlag{
 		Name:     "suave.dev",
 		Usage:    "Dev mode for suave",
@@ -1735,6 +1742,18 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 
 	if ctx.IsSet(SuaveEthBlockSigningKeyFlag.Name) {
 		cfg.EthBlockSigningKeyHex = ctx.String(SuaveEthBlockSigningKeyFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveEthBundleSigningKeyFlag.Name) {
+		cfg.EthBundleSigningKeyHex = ctx.String(SuaveEthBundleSigningKeyFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveExternalWhitelistFlag.Name) {
+		cfg.ExternalWhitelist = ctx.StringSlice(SuaveEthBundleSigningKeyFlag.Name)
+		if len(cfg.ExternalWhitelist) == 0 {
+			// As of now, default to wildcard
+			cfg.ExternalWhitelist = []string{"*"}
+		}
 	}
 }
 

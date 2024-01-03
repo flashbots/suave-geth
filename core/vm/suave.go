@@ -17,11 +17,11 @@ import (
 // ConfidentialStore represents the API for the confidential store
 // required by Suave runtime.
 type ConfidentialStore interface {
-	InitializeBid(bid types.Bid) (types.Bid, error)
-	Store(bidId suave.BidId, caller common.Address, key string, value []byte) (suave.Bid, error)
-	Retrieve(bid types.BidId, caller common.Address, key string) ([]byte, error)
-	FetchBidById(suave.BidId) (suave.Bid, error)
-	FetchBidsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.Bid
+	InitRecord(record types.DataRecord) (types.DataRecord, error)
+	Store(id suave.DataId, caller common.Address, key string, value []byte) (suave.DataRecord, error)
+	Retrieve(record types.DataId, caller common.Address, key string) ([]byte, error)
+	FetchRecordByID(suave.DataId) (suave.DataRecord, error)
+	FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
 }
 
 type SuaveContext struct {
@@ -35,6 +35,7 @@ type SuaveContext struct {
 type SuaveExecutionBackend struct {
 	EthBundleSigningKey    *ecdsa.PrivateKey
 	EthBlockSigningKey     *bls.SecretKey
+	ExternalWhitelist      []string
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
@@ -92,6 +93,7 @@ func (p *SuavePrecompiledContractWrapper) Run(input []byte) ([]byte, error) {
 	ret, err := stub.run(p.addr, input)
 	if err != nil && ret == nil {
 		ret = []byte(err.Error())
+		err = ErrExecutionReverted
 	}
 
 	return ret, err
@@ -105,8 +107,8 @@ func isPrecompileAddr(addr common.Address) bool {
 }
 
 // Returns the caller
-func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.Address, bid suave.Bid) (common.Address, error) {
-	anyPeekerAllowed := slices.Contains(bid.AllowedPeekers, suave.AllowedPeekerAny)
+func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.Address, record suave.DataRecord) (common.Address, error) {
+	anyPeekerAllowed := slices.Contains(record.AllowedPeekers, suave.AllowedPeekerAny)
 	if anyPeekerAllowed {
 		for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
 			caller := suaveContext.CallerStack[i]
@@ -119,13 +121,13 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 	}
 
 	// In question!
-	// For now both the precompile *and* at least one caller must be allowed to allow access to bid data
+	// For now both the precompile *and* at least one caller must be allowed to allow access to confidential data
 	// Alternative is to simply allow if any of the callers is allowed
-	isPrecompileAllowed := slices.Contains(bid.AllowedPeekers, precompile)
+	isPrecompileAllowed := slices.Contains(record.AllowedPeekers, precompile)
 
 	// Special case for confStore as those are implicitly allowed
 	if !isPrecompileAllowed && precompile != confidentialStoreAddr && precompile != confidentialRetrieveAddr {
-		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
+		return common.Address{}, fmt.Errorf("precompile %s (%x) not allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, record.Id)
 	}
 
 	for i := len(suaveContext.CallerStack) - 1; i >= 0; i-- {
@@ -133,10 +135,10 @@ func checkIsPrecompileCallAllowed(suaveContext *SuaveContext, precompile common.
 		if caller == nil || *caller == precompile {
 			continue
 		}
-		if slices.Contains(bid.AllowedPeekers, *caller) {
+		if slices.Contains(record.AllowedPeekers, *caller) {
 			return *caller, nil
 		}
 	}
 
-	return common.Address{}, fmt.Errorf("no caller of %s (%x) is allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, bid.Id)
+	return common.Address{}, fmt.Errorf("no caller of %s (%x) is allowed on %x", artifacts.PrecompileAddressToName(precompile), precompile, record.Id)
 }

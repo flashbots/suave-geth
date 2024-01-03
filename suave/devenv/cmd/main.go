@@ -28,8 +28,8 @@ var (
 )
 
 var (
-	bundleBidContract = e2e.BundleBidContract
-	mevShareArtifact  = e2e.MevShareBidContract
+	bundleContract   = e2e.BundleContract
+	mevShareArtifact = e2e.MevShareContract
 )
 
 func main() {
@@ -50,7 +50,7 @@ func main() {
 	)
 
 	fundBalance := big.NewInt(100000000)
-	var bidId [16]byte
+	var DataID [16]byte
 
 	steps := []step{
 		{
@@ -110,7 +110,7 @@ func main() {
 			},
 		},
 		{
-			name: "Send bid",
+			name: "Send user transaction",
 			action: func() error {
 				refundPercent := 10
 				bundle := &types.SBundle{
@@ -120,13 +120,13 @@ func main() {
 				}
 				bundleBytes, _ := json.Marshal(bundle)
 
-				// new bid inputs
+				// new mevshare transaction inputs
 				targetBlock := uint64(1)
 				allowedPeekers := []common.Address{mevShareContract.Address()}
 
-				confidentialDataBytes, _ := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(bundleBytes)
+				confidentialDataBytes, _ := bundleContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(bundleBytes)
 
-				txnResult, err := mevShareContract.SendTransaction("newBid", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
+				txnResult, err := mevShareContract.SendTransaction("newTransaction", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}}, confidentialDataBytes)
 				if err != nil {
 					return err
 				}
@@ -135,21 +135,21 @@ func main() {
 					return err
 				}
 				if receipt.Status == 0 {
-					return fmt.Errorf("failed to send bid")
+					return fmt.Errorf("failed to send a transaction")
 				}
 
-				bidEvent := &BidEvent{}
-				if err := bidEvent.Unpack(receipt.Logs[0]); err != nil {
+				DataRecordEvent := &DataRecordEvent{}
+				if err := DataRecordEvent.Unpack(receipt.Logs[0]); err != nil {
 					return err
 				}
 				hintEvent := &HintEvent{}
 				if err := hintEvent.Unpack(receipt.Logs[1]); err != nil {
 					return err
 				}
-				bidId = bidEvent.BidId
+				DataID = DataRecordEvent.DataID
 
-				fmt.Printf("- Bid sent at txn: %s\n", receipt.TxHash.Hex())
-				fmt.Printf("- Bid id: %x\n", bidEvent.BidId)
+				fmt.Printf("- transaction sent at txn: %s\n", receipt.TxHash.Hex())
+				fmt.Printf("- Data Record id: %x\n", DataRecordEvent.DataID)
 
 				return nil
 			},
@@ -163,13 +163,13 @@ func main() {
 				}
 				backRunBundleBytes, _ := json.Marshal(backRunBundle)
 
-				confidentialDataMatchBytes, _ := bundleBidContract.Abi.Methods["fetchBidConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
+				confidentialDataMatchBytes, _ := bundleContract.Abi.Methods["fetchConfidentialBundleData"].Outputs.Pack(backRunBundleBytes)
 
 				// backrun inputs
 				targetBlock := uint64(1)
 				allowedPeekers := []common.Address{mevShareContract.Address()}
 
-				txnResult, err := mevShareContract.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}, bidId}, confidentialDataMatchBytes)
+				txnResult, err := mevShareContract.SendTransaction("newMatch", []interface{}{targetBlock + 1, allowedPeekers, []common.Address{}, DataID}, confidentialDataMatchBytes)
 				if err != nil {
 					return err
 				}
@@ -178,16 +178,16 @@ func main() {
 					return err
 				}
 				if receipt.Status == 0 {
-					return fmt.Errorf("failed to send bid")
+					return fmt.Errorf("failed to send back run")
 				}
 
-				bidEvent := &BidEvent{}
-				if err := bidEvent.Unpack(receipt.Logs[0]); err != nil {
+				DataRecordEvent := &DataRecordEvent{}
+				if err := DataRecordEvent.Unpack(receipt.Logs[0]); err != nil {
 					return err
 				}
 
 				fmt.Printf("- Backrun sent at txn: %s\n", receipt.TxHash.Hex())
-				fmt.Printf("- Backrun bid id: %x\n", bidEvent.BidId)
+				fmt.Printf("- Backrun data record id: %x\n", DataRecordEvent.DataID)
 
 				return nil
 			},
@@ -261,8 +261,8 @@ func generatePrivKey() *privKey {
 }
 
 type HintEvent struct {
-	BidId [16]byte
-	Hint  []byte
+	DataID [16]byte
+	Hint   []byte
 }
 
 func (h *HintEvent) Unpack(log *types.Log) error {
@@ -270,23 +270,23 @@ func (h *HintEvent) Unpack(log *types.Log) error {
 	if err != nil {
 		return err
 	}
-	h.BidId = unpacked[0].([16]byte)
+	h.DataID = unpacked[0].([16]byte)
 	h.Hint = unpacked[1].([]byte)
 	return nil
 }
 
-type BidEvent struct {
-	BidId               [16]byte
+type DataRecordEvent struct {
+	DataID              [16]byte
 	DecryptionCondition uint64
 	AllowedPeekers      []common.Address
 }
 
-func (b *BidEvent) Unpack(log *types.Log) error {
-	unpacked, err := bundleBidContract.Abi.Events["BidEvent"].Inputs.Unpack(log.Data)
+func (b *DataRecordEvent) Unpack(log *types.Log) error {
+	unpacked, err := bundleContract.Abi.Events["DataRecordEvent"].Inputs.Unpack(log.Data)
 	if err != nil {
 		return err
 	}
-	b.BidId = unpacked[0].([16]byte)
+	b.DataID = unpacked[0].([16]byte)
 	b.DecryptionCondition = unpacked[1].(uint64)
 	b.AllowedPeekers = unpacked[2].([]common.Address)
 	return nil
