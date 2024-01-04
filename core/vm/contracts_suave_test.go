@@ -4,11 +4,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
@@ -162,9 +164,15 @@ func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	require.Error(t, err)
 }
 
-type httpTestHandler struct{}
+type httpTestHandler struct {
+	fn func(w http.ResponseWriter, r *http.Request)
+}
 
 func (h *httpTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.fn(w, r)
+}
+
+func basicHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" && r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -193,7 +201,9 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 		},
 	}
 
-	srv := httptest.NewServer(&httpTestHandler{})
+	srv := httptest.NewServer(&httpTestHandler{
+		fn: basicHandler,
+	})
 	defer srv.Close()
 
 	cases := []struct {
@@ -264,4 +274,39 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSuave_HttpRequest_FlashbotsSignatue(t *testing.T) {
+	signingKey, _ := crypto.GenerateKey()
+	signingKeyAddr := crypto.PubkeyToAddress(signingKey.PublicKey).Hex()
+
+	s := &suaveRuntime{
+		suaveContext: &SuaveContext{
+			Backend: &SuaveExecutionBackend{
+				EthBundleSigningKey: signingKey,
+				ExternalWhitelist:   []string{"127.0.0.1"},
+			},
+		},
+	}
+
+	srv := httptest.NewServer(&httpTestHandler{
+		fn: func(w http.ResponseWriter, r *http.Request) {
+			flashbotsSignature := r.Header.Get("X-Flashbots-Signature")
+			require.NotEmpty(t, flashbotsSignature)
+
+			parts := strings.Split(flashbotsSignature, ":")
+			require.Len(t, parts, 2)
+			require.Equal(t, parts[0], signingKeyAddr)
+		},
+	})
+	defer srv.Close()
+
+	req := types.HttpRequest{
+		Body:                   []byte("body"),
+		Url:                    srv.URL,
+		Method:                 "POST",
+		WithFlashbotsSignature: true,
+	}
+	_, err := s.doHTTPRequest(req)
+	require.NoError(t, err)
 }
