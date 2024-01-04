@@ -79,6 +79,7 @@ structs:
 functions:
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
+    description: "Provides the confidential inputs associated with a confidential computation request. Outputs are in bytes format."
     output:
       packed: true
       fields:
@@ -86,6 +87,7 @@ functions:
           type: bytes
   - name: newDataRecord
     address: "0x0000000000000000000000000000000042030000"
+    description: "Initializes data records within the ConfidentialStore. `AllowedPeekers` specifies which addresses can get data. `AllowedStores` specifies which addresses can set data. Prior to storing data, all bids should undergo initialization via this precompile."
     input:
       - name: decryptionCondition
         type: uint64
@@ -101,6 +103,7 @@ functions:
           type: DataRecord
   - name: fetchDataRecords
     address: "0x0000000000000000000000000000000042030001"
+    description: "Retrieves all data records correlating with a specified decryption condition."
     input:
       - name: cond
         type: uint64
@@ -112,6 +115,7 @@ functions:
           type: DataRecord[]
   - name: confidentialStore
     address: "0x0000000000000000000000000000000042020000"
+    description: "Handles the storage of data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated bid."
     input:
       - name: dataId
         type: DataId
@@ -121,6 +125,7 @@ functions:
         type: bytes
   - name: confidentialRetrieve
     address: "0x0000000000000000000000000000000042020001"
+    description: "Retrieves data from the confidential store. Also mandates the caller's presence in the `AllowedPeekers` list."
     input:
       - name: dataId
         type: DataId
@@ -133,6 +138,7 @@ functions:
           type: bytes
   - name: signEthTransaction
     address: "0x0000000000000000000000000000000040100001"
+    description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*. `chainId` is a hex encoded string *with 0x prefix*."
     input:
       - name: txn
         type: bytes
@@ -146,6 +152,7 @@ functions:
           type: bytes
   - name: simulateBundle
     address: "0x0000000000000000000000000000000042100000"
+    description: "Performs a simulation of the bundle by building a block that includes it. Outputs indicate if the execution was successful and the Effective Gas Price of the resultant block."
     input:
       - name: bundleData
         type: bytes
@@ -155,6 +162,7 @@ functions:
           type: uint64
   - name: extractHint
     address: "0x0000000000000000000000000000000042100037"
+    description: "Interprets the bundle data and extracts hints, such as the `To` address and calldata."
     isConfidential: true
     input:
       - name: bundleData
@@ -166,6 +174,7 @@ functions:
           type: bytes
   - name: buildEthBlock
     address: "0x0000000000000000000000000000000042100001"
+    description: "Constructs an Ethereum block based on the provided `bidIds`. The construction follows the order of `bidId`s are given."
     input:
       - name: blockArgs
         type: BuildBlockArgs
@@ -181,6 +190,7 @@ functions:
           type: bytes
   - name: submitEthBlockToRelay
     address: "0x0000000000000000000000000000000042100002"
+    description: "Submits a given builderBid to a mev-boost relay. Outputs any errors that arise during submission."
     isConfidential: true
     input:
       - name: relayUrl
@@ -194,6 +204,7 @@ functions:
           type: bytes
   - name: ethcall
     address: "0x0000000000000000000000000000000042100003"
+    description: "Uses the `eth_call` JSON RPC method to let you simulate a function call and return the response."
     input:
       - name: contractAddr
         type: address
@@ -205,6 +216,7 @@ functions:
           type: bytes
   - name: submitBundleJsonRPC
     address: "0x0000000000000000000000000000000043000001"
+    description: "Submits bytes as JSONRPC message to the specified URL with the specified method. As this call is intended for bundles, it also signs the params and adds `X-Flashbots-Signature` header, as usual with bundles. Regular eth bundles don't need any processing to be sent."
     isConfidential: true
     input:
       - name: url
@@ -221,6 +233,7 @@ functions:
   - name: fillMevShareBundle
     address: "0x0000000000000000000000000000000043200001"
     isConfidential: true
+    description: "Joins the user's transaction and with the backrun, and returns encoded mev-share bundle. The bundle is ready to be sent via `SubmitBundleJsonRPC`."
     input:
       - name: dataId
         type: DataId
@@ -231,6 +244,7 @@ functions:
           type: bytes
   - name: signMessage
     address: "0x0000000000000000000000000000000040100003"
+    description: "Signs a message and returns the signature. `message` is the message to sign. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*."
     isConfidential: true
     input:
       - name: digest
@@ -243,6 +257,7 @@ functions:
           type: bytes
   - name: doHTTPRequest
     address: "0x0000000000000000000000000000000043200002"
+    description: "Performs an HTTP request and returns the response. `request` is the request to perform."
     input:
       - name: request
         type: HttpRequest
@@ -252,18 +267,20 @@ functions:
           type: bytes
   - name: newBuilder
     address: "0x0000000000000000000000000000000053200001"
+    description: "Initializes a new remote builder session"
     output:
       fields:
         - name: id
           type: string
   - name: simulateTransaction
     address: "0x0000000000000000000000000000000053200002"
+    description: "Simulates a transaction on a remote builder session"
     input:
       - name: session
         type: string
       - name: txn
         type: bytes
     output:
-       fields:
-         - name: output1
-           type: SimulateTransactionResult
+      fields:
+        - name: output1
+          type: SimulateTransactionResult
