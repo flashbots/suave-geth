@@ -58,6 +58,8 @@ structs:
         type: string[]
       - name: body
         type: bytes
+      - name: withFlashbotsSignature
+        type: bool
   - name: SimulateTransactionResult
     fields:
       - name: egp
@@ -264,6 +266,6 @@ functions:
       - name: txn
         type: bytes
     output:
-       fields:
-         - name: output1
-           type: SimulateTransactionResult
+      fields:
+        - name: output1
+          type: SimulateTransactionResult
