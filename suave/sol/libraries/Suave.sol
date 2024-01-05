@@ -138,8 +138,8 @@ library Suave {
         return data;
     }
 
-    function confidentialStore(DataId dataId, string memory key, bytes memory data1) internal view {
-        (bool success, bytes memory data) = CONFIDENTIAL_STORE.staticcall(abi.encode(dataId, key, data1));
+    function confidentialStore(DataId dataId, string memory key, bytes memory value) internal view {
+        (bool success, bytes memory data) = CONFIDENTIAL_STORE.staticcall(abi.encode(dataId, key, value));
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_STORE, data);
         }
@@ -248,12 +248,12 @@ library Suave {
         return abi.decode(data, (uint64));
     }
 
-    function simulateTransaction(string memory session, bytes memory txn)
+    function simulateTransaction(string memory sessionid, bytes memory txn)
         internal
         view
         returns (SimulateTransactionResult memory)
     {
-        (bool success, bytes memory data) = SIMULATE_TRANSACTION.staticcall(abi.encode(session, txn));
+        (bool success, bytes memory data) = SIMULATE_TRANSACTION.staticcall(abi.encode(sessionid, txn));
         if (!success) {
             revert PeekerReverted(SIMULATE_TRANSACTION, data);
         }

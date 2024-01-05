@@ -56,6 +56,20 @@ Address: `{{.Address}}`
 ```solidity
 function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}})
 ```
+
+{{ if ne (len .Input) 0 -}}
+Inputs:
+{{range .Input}}
+- `{{.Name}}` ({{.Typ}}): {{.Description}}
+{{- end }}
+{{- end }}
+
+{{ if ne (len .Output.Fields) 0 -}}
+Outputs:
+{{range .Output.Fields}}
+- `{{.Name}}` ({{.Typ}}): {{.Description}}
+{{- end}}
+{{- end }}
 {{end}}
 
 ## Precompiles Governance

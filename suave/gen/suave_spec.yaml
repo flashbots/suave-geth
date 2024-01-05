@@ -83,83 +83,104 @@ functions:
     output:
       packed: true
       fields:
-        - name: output1
+        - name: confindentialData
           type: bytes
+          description: "Confidential inputs"
   - name: newDataRecord
     address: "0x0000000000000000000000000000000042030000"
-    description: "Initializes data records within the ConfidentialStore. `AllowedPeekers` specifies which addresses can get data. `AllowedStores` specifies which addresses can set data. Prior to storing data, all bids should undergo initialization via this precompile."
+    description: "Initializes data records within the ConfidentialStore. Prior to storing data, all bids should undergo initialization via this precompile."
     input:
       - name: decryptionCondition
         type: uint64
+        description: "Up to which block this data record is valid. Used during `fillMevShareBundle` precompie."
       - name: allowedPeekers
         type: address[]
+        description: "Addresses which can get data"
       - name: allowedStores
         type: address[]
+        description: "Addresses can set data"
       - name: dataType
         type: string
+        description: "Namespace of the data"
     output:
       fields:
         - name: dataRecord
           type: DataRecord
+          description: "Data record that was created"
   - name: fetchDataRecords
     address: "0x0000000000000000000000000000000042030001"
-    description: "Retrieves all data records correlating with a specified decryption condition."
+    description: "Retrieves all data records correlating with a specified decryption condition and namespace"
     input:
       - name: cond
         type: uint64
+        description: "Filter for the decryption condition"
       - name: namespace
         type: string
+        description: "Filter for the namespace of the data records"
     output:
       fields:
         - name: dataRecords
           type: DataRecord[]
+          description: "List of data records that match the filter"
   - name: confidentialStore
     address: "0x0000000000000000000000000000000042020000"
     description: "Handles the storage of data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated bid."
     input:
       - name: dataId
         type: DataId
+        description: "ID of the data record to store"
       - name: key
         type: string
-      - name: data1
+        description: "Key slot of the data to store"
+      - name: value
         type: bytes
+        description: "Value of the data to store"
   - name: confidentialRetrieve
     address: "0x0000000000000000000000000000000042020001"
     description: "Retrieves data from the confidential store. Also mandates the caller's presence in the `AllowedPeekers` list."
     input:
       - name: dataId
         type: DataId
+        description: "ID of the data record to retrieve"
       - name: key
         type: string
+        description: "Key slot of the data to retrieve"
     output:
       packed: true
       fields:
-        - name: output1
+        - name: value
           type: bytes
+          description: "Value of the data"
   - name: signEthTransaction
     address: "0x0000000000000000000000000000000040100001"
     description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*. `chainId` is a hex encoded string *with 0x prefix*."
     input:
       - name: txn
         type: bytes
+        description: "Transaction to sign encoded in RLP"
       - name: chainId
         type: string
+        description: "Id of the chain to sign for"
       - name: signingKey
         type: string
+        description: "Hex encoded string of the ECDSA private key"
     output:
       fields:
-        - name: output1
+        - name: signedTxn
           type: bytes
+          description: "Signed transaction encoded in RLP"
   - name: simulateBundle
     address: "0x0000000000000000000000000000000042100000"
-    description: "Performs a simulation of the bundle by building a block that includes it. Outputs indicate if the execution was successful and the Effective Gas Price of the resultant block."
+    description: "Performs a simulation of the bundle by building a block that includes it."
     input:
       - name: bundleData
         type: bytes
+        description: "Bundle encoded in JSON"
     output:
       fields:
-        - name: output1
+        - name: effectiveGasPrice
           type: uint64
+          description: "Effective Gas Price of the resultant block"
   - name: extractHint
     address: "0x0000000000000000000000000000000042100037"
     description: "Interprets the bundle data and extracts hints, such as the `To` address and calldata."
@@ -167,53 +188,66 @@ functions:
     input:
       - name: bundleData
         type: bytes
+        description: "Bundle object encoded in JSON"
     output:
       packed: true
       fields:
-        - name: output1
+        - name: hints
           type: bytes
+          description: "List of hints encoded in JSON"
   - name: buildEthBlock
     address: "0x0000000000000000000000000000000042100001"
     description: "Constructs an Ethereum block based on the provided `bidIds`. The construction follows the order of `bidId`s are given."
     input:
       - name: blockArgs
         type: BuildBlockArgs
+        description: "Arguments to build the block"
       - name: dataId
         type: DataId
+        description: "ID of the data record with mev-share bundle data"
       - name: namespace
         type: string
+        description: ""
     output:
       fields:
-        - name: output1
+        - name: blockBid
           type: bytes
-        - name: output2
+          description: "Block Bid encoded in JSON"
+        - name: executionPayload
           type: bytes
+          description: "Execution payload encoded in JSON"
   - name: submitEthBlockToRelay
     address: "0x0000000000000000000000000000000042100002"
-    description: "Submits a given builderBid to a mev-boost relay. Outputs any errors that arise during submission."
+    description: "Submits a given builderBid to a mev-boost relay."
     isConfidential: true
     input:
       - name: relayUrl
         type: string
+        description: "URL of the relay to submit to"
       - name: builderBid
         type: bytes
+        description: "Block bid to submit encoded in JSON"
     output:
       packed: true
       fields:
-        - name: output1
+        - name: blockBid
           type: bytes
+          description: "Error message if any"
   - name: ethcall
     address: "0x0000000000000000000000000000000042100003"
     description: "Uses the `eth_call` JSON RPC method to let you simulate a function call and return the response."
     input:
       - name: contractAddr
         type: address
+        description: "Address of the contract to call"
       - name: input1
         type: bytes
+        description: "Data to send to the contract"
     output:
       fields:
-        - name: output1
+        - name: callOutput
           type: bytes
+          description: "Output of the contract call"
   - name: submitBundleJsonRPC
     address: "0x0000000000000000000000000000000043000001"
     description: "Submits bytes as JSONRPC message to the specified URL with the specified method. As this call is intended for bundles, it also signs the params and adds `X-Flashbots-Signature` header, as usual with bundles. Regular eth bundles don't need any processing to be sent."
@@ -221,15 +255,19 @@ functions:
     input:
       - name: url
         type: string
+        description: "URL to send the request to"
       - name: method
         type: string
+        description: "JSONRPC method to call"
       - name: params
         type: bytes
+        description: "JSONRPC input params encoded in RLP"
     output:
       packed: true
       fields:
-        - name: output1
+        - name: errorMessage
           type: bytes
+          description: "Error message if any"
   - name: fillMevShareBundle
     address: "0x0000000000000000000000000000000043200001"
     isConfidential: true
@@ -237,50 +275,61 @@ functions:
     input:
       - name: dataId
         type: DataId
+        description: "ID of the data record with mev-share bundle data"
     output:
       packed: true
       fields:
         - name: encodedBundle
           type: bytes
+          description: "Mev-Share bundle encoded in JSON"
   - name: signMessage
     address: "0x0000000000000000000000000000000040100003"
-    description: "Signs a message and returns the signature. `message` is the message to sign. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*."
+    description: "Signs a message and returns the signature."
     isConfidential: true
     input:
       - name: digest
         type: bytes
+        description: "Message to sign"
       - name: signingKey
         type: string
+        description: "Hex encoded string of the ECDSA private key"
     output:
       fields:
-        - name: output1
+        - name: signature
           type: bytes
+          description: "Signature of the message with the private key"
   - name: doHTTPRequest
     address: "0x0000000000000000000000000000000043200002"
     description: "Performs an HTTP request and returns the response. `request` is the request to perform."
     input:
       - name: request
         type: HttpRequest
+        description: "Request to perform"
     output:
       fields:
-        - name: response
+        - name: httpResponse
           type: bytes
+          description: "Body of the response"
   - name: newBuilder
     address: "0x0000000000000000000000000000000053200001"
     description: "Initializes a new remote builder session"
     output:
       fields:
-        - name: id
+        - name: sessionid
           type: string
+          description: "ID of the remote builder session"
   - name: simulateTransaction
     address: "0x0000000000000000000000000000000053200002"
     description: "Simulates a transaction on a remote builder session"
     input:
-      - name: session
+      - name: sessionid
         type: string
+        description: "ID of the remote builder session"
       - name: txn
         type: bytes
+        description: "Txn to simulate encoded in RLP"
     output:
       fields:
-        - name: output1
+        - name: simulationResult
           type: SimulateTransactionResult
+          description: "Result of the simulation"

@@ -59,8 +59,8 @@ library SuaveForge {
         return data;
     }
 
-    function confidentialStore(Suave.DataId dataId, string memory key, bytes memory data1) internal view {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(dataId, key, data1));
+    function confidentialStore(Suave.DataId dataId, string memory key, bytes memory value) internal view {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042020000", abi.encode(dataId, key, value));
     }
 
     function doHTTPRequest(Suave.HttpRequest memory request) internal view returns (bytes memory) {
@@ -135,12 +135,12 @@ library SuaveForge {
         return abi.decode(data, (uint64));
     }
 
-    function simulateTransaction(string memory session, bytes memory txn)
+    function simulateTransaction(string memory sessionid, bytes memory txn)
         internal
         view
         returns (Suave.SimulateTransactionResult memory)
     {
-        bytes memory data = forgeIt("0x0000000000000000000000000000000053200002", abi.encode(session, txn));
+        bytes memory data = forgeIt("0x0000000000000000000000000000000053200002", abi.encode(sessionid, txn));
 
         return abi.decode(data, (Suave.SimulateTransactionResult));
     }

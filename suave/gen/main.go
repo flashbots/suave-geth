@@ -501,8 +501,9 @@ type output struct {
 }
 
 type field struct {
-	Name string
-	Typ  string `yaml:"type"`
+	Name        string
+	Typ         string `yaml:"type"`
+	Description string
 }
 
 type typ struct {
