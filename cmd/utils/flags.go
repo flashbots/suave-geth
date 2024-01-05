@@ -1744,12 +1744,8 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 		cfg.EthBlockSigningKeyHex = ctx.String(SuaveEthBlockSigningKeyFlag.Name)
 	}
 
-	if ctx.IsSet(SuaveEthBundleSigningKeyFlag.Name) {
-		cfg.EthBundleSigningKeyHex = ctx.String(SuaveEthBundleSigningKeyFlag.Name)
-	}
-
 	if ctx.IsSet(SuaveExternalWhitelistFlag.Name) {
-		cfg.ExternalWhitelist = ctx.StringSlice(SuaveEthBundleSigningKeyFlag.Name)
+		cfg.ExternalWhitelist = ctx.StringSlice(SuaveExternalWhitelistFlag.Name)
 		if len(cfg.ExternalWhitelist) == 0 {
 			// As of now, default to wildcard
 			cfg.ExternalWhitelist = []string{"*"}
