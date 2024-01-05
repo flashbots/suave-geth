@@ -33,6 +33,7 @@ library Suave {
         string method;
         string[] headers;
         bytes body;
+        bool withFlashbotsSignature;
     }
 
     struct SimulateTransactionResult {

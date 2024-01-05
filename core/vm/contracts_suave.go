@@ -10,8 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -204,6 +206,18 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 			return nil, fmt.Errorf("incorrect header format '%s', no ':' present", header)
 		}
 		req.Header.Add(header[:indx], header[indx+1:])
+	}
+
+	if request.WithFlashbotsSignature {
+		// hash the body and sign it with the kettle signing key
+		hashedBody := crypto.Keccak256Hash(request.Body).Hex()
+		sig, err := crypto.Sign(accounts.TextHash([]byte(hashedBody)), s.suaveContext.Backend.EthBundleSigningKey)
+		if err != nil {
+			return nil, err
+		}
+
+		signature := crypto.PubkeyToAddress(s.suaveContext.Backend.EthBundleSigningKey.PublicKey).Hex() + ":" + hexutil.Encode(sig)
+		req.Header.Add("X-Flashbots-Signature", signature)
 	}
 
 	client := &http.Client{

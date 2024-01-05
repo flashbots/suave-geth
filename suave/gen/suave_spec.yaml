@@ -58,6 +58,8 @@ structs:
         type: string[]
       - name: body
         type: bytes
+      - name: withFlashbotsSignature
+        type: bool
   - name: SimulateTransactionResult
     fields:
       - name: egp
