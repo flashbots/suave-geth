@@ -75,7 +75,7 @@ Outputs:
 ## Precompiles Governance
 
 The governance process for adding precompiles is in it's early stages but is as follows:
-- Discuss the idea in a [forum post](https://collective.flashbots.net/)
+- Discuss the idea in a [forum post](https://collective.flashbots.net/c/suave/27)
 - Open a PR and provide implementation
 - Feedback and review
 - Possibly merge and deploy in the next network upgrade, or sooner, depending on the precompile
