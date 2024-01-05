@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -92,9 +93,14 @@ func applyTemplate(templateText string, input desc, out string) error {
 		}
 	}
 
-	if err := outputFile(out, str); err != nil {
-		return err
+	if out == "" {
+		fmt.Println(str)
+	} else {
+		if err := outputFile(out, str); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -136,6 +142,15 @@ func main() {
 			panic(fmt.Sprintf("duplicate function address: %s", f.Address))
 		}
 		funcsByAddr[f.Address] = struct{}{}
+	}
+
+	args := flag.Args()
+	if len(args) != 0 && args[0] == "docs" {
+		// generate the docs
+		if err := generateDocs(ff); err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	if err := applyTemplate(structsTemplate, ff, "./core/types/suave_structs.go"); err != nil {
@@ -477,6 +492,7 @@ type functionDef struct {
 	Input          []field
 	Output         output
 	IsConfidential bool `yaml:"isConfidential"`
+	Description    string
 }
 
 type output struct {
@@ -485,8 +501,9 @@ type output struct {
 }
 
 type field struct {
-	Name string
-	Typ  string `yaml:"type"`
+	Name        string
+	Typ         string `yaml:"type"`
+	Description string
 }
 
 type typ struct {
@@ -710,4 +727,17 @@ func encodeTypeName(typName string, addMemory bool, addLink bool) string {
 		return typName + " memory"
 	}
 	return typName
+}
+
+// --- docs generation ---
+
+//go:embed templates/docs.md.tpl
+var docsTemplate string
+
+func generateDocs(ff desc) error {
+	fmt.Println("---")
+
+	applyTemplate(docsTemplate, ff, "")
+
+	return nil
 }
