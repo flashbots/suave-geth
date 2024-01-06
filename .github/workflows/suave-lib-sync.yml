@@ -1,0 +1,23 @@
+name: SuaveLib sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - suave-geth/suave/sol/libraries/
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2.1.2
+        with:
+          token: ${{ secrets.PAT_DISPATCH_SAUVE_STD }}
+          repository: flashbots/suave-std
+          event-type: suavelib-sync
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "run": "${{ github.run_id }}"}'
