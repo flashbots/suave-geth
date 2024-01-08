@@ -89,9 +89,9 @@ dockers:
     build_flag_templates:
       - --platform=linux/amd64
     image_templates:
-      - "ghcr.io/flashbots/suave-geth:{{ .ShortCommit }}"
-      - "ghcr.io/flashbots/suave-geth:{{ .Tag }}"
-      - "ghcr.io/flashbots/suave-geth:latest"
+      - "flashbots/suave-geth:{{ .ShortCommit }}"
+      - "flashbots/suave-geth:{{ .Tag }}"
+      - "flashbots/suave-geth:latest"
 
 checksum:
   name_template: "checksums.txt"
