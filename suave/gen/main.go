@@ -169,10 +169,6 @@ func main() {
 		panic(err)
 	}
 
-	if err := applyTemplate(suaveForgeLibTemplate, ff, "./suave/sol/libraries/SuaveForge.sol"); err != nil {
-		panic(err)
-	}
-
 	if err := generateABI("./suave/artifacts/SuaveLib.json", ff); err != nil {
 		panic(err)
 	}
@@ -426,59 +422,6 @@ function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal vi
 	return data;
 	{{else}}
 	return abi.decode(data, ({{range .Output.Fields}}{{.Typ}}, {{end}}));
-	{{end}}
-}
-{{end}}
-
-}
-`
-
-var suaveForgeLibTemplate = `// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.8;
-
-import "./Suave.sol";
-
-interface Vm {
-    function ffi(string[] calldata commandInput) external view returns (bytes memory result);
-}
-
-library SuaveForge {
-    Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-    
-    function forgeIt(string memory addr, bytes memory data) internal view returns (bytes memory) {
-        string memory dataHex = iToHex(data);
-
-        string[] memory inputs = new string[](4);
-        inputs[0] = "suave";
-        inputs[1] = "forge";
-        inputs[2] = addr;
-        inputs[3] = dataHex;
-
-        bytes memory res = vm.ffi(inputs);
-        return res;
-    }
-
-    function iToHex(bytes memory buffer) public pure returns (string memory) {
-        bytes memory converted = new bytes(buffer.length * 2);
-
-        bytes memory _base = "0123456789abcdef";
-
-        for (uint256 i = 0; i < buffer.length; i++) {
-            converted[i * 2] = _base[uint8(buffer[i]) / _base.length];
-            converted[i * 2 + 1] = _base[uint8(buffer[i]) % _base.length];
-        }
-
-        return string(abi.encodePacked("0x", converted));
-    }
-
-{{range .Functions}}
-function {{.Name}}({{range .Input}}{{styp2 .Typ true}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp2 .Typ true}}, {{end}}) {
-	bytes memory data = forgeIt("{{.Address}}", abi.encode({{range .Input}}{{.Name}}, {{end}}));
-	{{ if eq (len .Output.Fields) 0 }}
-	{{else if .Output.Packed}}
-	return data;
-	{{else}}
-	return abi.decode(data, ({{range .Output.Fields}}{{styp2 .Typ false}}, {{end}}));
 	{{end}}
 }
 {{end}}
