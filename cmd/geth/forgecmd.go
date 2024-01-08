@@ -15,12 +15,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var defaultRemoteSuaveHost = "http://localhost:8545"
+
 var (
 	forgeCommand = &cli.Command{
 		Name:        "forge",
 		Usage:       "Internal command for MEVM forge commands",
 		ArgsUsage:   "",
 		Description: `Internal command used by MEVM precompiles in forge to access the MEVM API utilities.`,
+		Subcommands: []*cli.Command{
+			forgeStatusCmd,
+		},
 		Action: func(ctx *cli.Context) error {
 			args := ctx.Args()
 			if args.Len() == 0 {
@@ -50,7 +55,7 @@ var (
 				return fmt.Errorf("failed to decode input: %w", err)
 			}
 
-			rpcClient, err := rpc.Dial("http://localhost:8545")
+			rpcClient, err := rpc.Dial(defaultRemoteSuaveHost)
 			if err != nil {
 				return fmt.Errorf("failed to dial rpc: %w", err)
 			}
@@ -97,4 +102,30 @@ func setTxArgsDefaults(args ethapi.TransactionArgs) ethapi.TransactionArgs {
 	args.Value = (*hexutil.Big)(value)
 
 	return args
+}
+
+var forgeStatusCmd = &cli.Command{
+	Name:        "status",
+	Usage:       "Internal command to return whether the remote Suave node is enabled",
+	ArgsUsage:   "",
+	Description: `Internal command used by MEVM precompiles in forge to access the MEVM API utilities.`,
+	Subcommands: []*cli.Command{},
+	Action: func(ctx *cli.Context) error {
+		handleErr := func(err error) error {
+			fmt.Printf("not-ok: %s", err.Error())
+			return nil
+		}
+
+		rpcClient, err := rpc.Dial(defaultRemoteSuaveHost)
+		if err != nil {
+			return handleErr(err)
+		}
+
+		// just make any random call for an endpoint that is always enabled
+		var chainID hexutil.Big
+		if err := rpcClient.Call(&chainID, "eth_chainId"); err != nil {
+			return handleErr(err)
+		}
+		return nil
+	},
 }
