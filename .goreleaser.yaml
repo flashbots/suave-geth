@@ -95,3 +95,11 @@ dockers:
 
 checksum:
   name_template: "checksums.txt"
+
+release:
+  draft: true
+  header: |
+    # 🚀 Features
+    # 🎄 Enhancements
+    # 🐞 Notable bug fixes
+    # 🎠 Community
