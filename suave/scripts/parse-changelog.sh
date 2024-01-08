@@ -28,7 +28,7 @@ while IFS= read -r line; do
         found_version=true
         found_anything=true
         continue
-    elif [[ $line == "##"* ]]; then
+    elif [[ $line == "## "* ]]; then
         # We moved to another version, stop processing
         found_version=false
     fi
