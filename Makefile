@@ -15,9 +15,9 @@ geth:
 
 suave:
 	$(GORUN) build/ci.go install ./cmd/geth
-	cd $(GOBIN) && rm -f suave && ln -s geth suave
+	cd $(GOBIN) && rm -f suave-geth && ln -s geth suave-geth
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/suave\" to launch SUAVE."
+	@echo "Run \"$(GOBIN)/suave-geth\" to launch SUAVE."
 
 all:
 	$(GORUN) build/ci.go install
