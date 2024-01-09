@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+# https://github.com/flashbots/suave-geth
+#
+# Install latest release:   `./suaveup`
+# Install specific release: `./suaveup --version v0.2.2`
+#
+set -eo pipefail
+echo "🆙 Starting Suaveup ..."
+
+while [[ -n $1 ]]; do
+    case $1 in
+        -v | --version)
+            shift
+            VERSION=$1
+            echo "Found --version flag with value: $VERSION"
+            ;;
+    esac
+    shift
+done
+
+# https://gist.github.com/lukechilds/a83e1d7127b78fef38c2914c4ececc3c
+get_latest_release() {
+  curl --silent "https://api.github.com/repos/flashbots/suave-geth/releases/latest" |
+    sed "s/,/\n/g" |
+    grep '"tag_name":' |
+    sed -E 's/.*"([^"]+)".*/\1/'
+}
+
+# If version is not set, use the latest tag
+if [ -z "$VERSION" ]; then
+    VERSION=$(get_latest_release)
+fi
+
+echo "🔎 Downloading version: $VERSION ..."
+
+if [ "$(uname -m)" = "x86_64" ]; then
+    ARCH_STRING="linux_amd64"
+elif [ "$(uname -m)" = "arm64" -a "$(uname -s)" = "Darwin" ]; then
+    ARCH_STRING="darwin_arm64"
+elif [ "$(uname -m)" = "x86_64" -a "$(uname -s)" = "Darwin" ]; then
+    ARCH_STRING="darwin_amd64"
+elif [ "$(uname -m)" = "aarch64" -o "$(uname -m)" = "arm64" ]; then
+    ARCH_STRING="linux_arm64"
+fi
+
+# Download the release
+if command -v curl >/dev/null 2>&1; then
+    curl -sLO https://github.com/flashbots/suave-geth/releases/download/${VERSION}/suave-geth_${VERSION}_${ARCH_STRING}.zip
+elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://github.com/flashbots/suave-geth/releases/download/${VERSION}/suave-geth_${VERSION}_${ARCH_STRING}.zip
+else
+    echo "🚫 Neither curl nor wget are available. Please install one of these and try again."
+    exit 1
+fi
+
+# use tar to extract the downloaded file and move it to /usr/local/bin
+echo "Extracting suave-geth_${VERSION}_${ARCH_STRING}.zip ..."
+unzip -qq -o suave-geth_${VERSION}_${ARCH_STRING}.zip
+chmod +x suave-geth
+
+if [ ! -d "/usr/local" ]; then
+    sudo mkdir /usr/local
+fi
+if [ ! -d "/usr/local/bin" ]; then
+    sudo mkdir /usr/local/bin
+fi
+
+echo "Moving suave-geth to /usr/local/bin ..."
+sudo mv suave-geth /usr/local/bin/suave-geth
+rm suave-geth_${VERSION}_${ARCH_STRING}.zip
+
+echo "Installed suave-geth $VERSION ✅ "
+echo "You can confirm by running 'suave-geth version'"
