@@ -20,8 +20,19 @@ For a deeper dive, check out the following links:
 
 ### Starting a local devnet
 
+You can use `suave-geth` to start a local SUAVE devnet.
 
-There's two ways to start the local devnet: with Docker or directly using the suave-geth binary.
+There's multiple ways to get `suave-geth`:
+
+1. Install the latest release binary
+2. Build from source
+3. Use Docker
+
+#### Install the latest suave-geth release binary
+
+```bash
+curl -L https://suaveup.flashbots.net | bash
+```
 
 #### Building from source
 

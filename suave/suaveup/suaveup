@@ -32,7 +32,7 @@ if [ -z "$VERSION" ]; then
     VERSION=$(get_latest_release)
 fi
 
-echo "🔎 Downloading version: $VERSION ..."
+echo "🔎 Downloading suave-geth $VERSION ..."
 
 if [ "$(uname -m)" = "x86_64" ]; then
     ARCH_STRING="linux_amd64"
