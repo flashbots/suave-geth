@@ -38,7 +38,10 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -extldflags "-lc -lrt -lpthread --static"
+      - -extldflags "-Wl,-z,stack-size=0x800000 --static"
+    tags:
+      - netgo
+      - osusergo
   - id: suave-geth-linux-arm64
     binary: suave-geth
     main: ./cmd/geth
@@ -52,7 +55,10 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -extldflags "-lc -lrt -lpthread --static"
+      - -extldflags "-Wl,-z,stack-size=0x800000 --static"
+    tags:
+      - netgo
+      - osusergo
   - id: suave-geth-windows-amd64
     binary: suave-geth
     main: ./cmd/geth
