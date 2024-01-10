@@ -46,5 +46,4 @@ func TestBlockstore(t *testing.T) {
 	defer func() {
 		require.NoError(t, env.Stop(), "failed to release offchain environment")
 	}()
-
 }
