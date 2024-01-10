@@ -20,8 +20,8 @@ type IPFS struct {
 
 func (c *IPFS) init() (err error) {
 	c.once.Do(func() {
-		var api *rpc.HttpApi
 		if c.API == nil {
+			var api *rpc.HttpApi
 			if api, err = rpc.NewLocalApi(); err == nil {
 				c.API = api.Block()
 			}
