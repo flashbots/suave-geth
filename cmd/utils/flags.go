@@ -1753,6 +1753,12 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 	}
 }
 
+var (
+	// private key for mnemonic 'test test test test test test test test test test test junk'
+	// and address '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+	defaultMnemonicPrivKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+)
+
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	// Avoid conflicting network flags
@@ -1935,7 +1941,6 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		var (
 			developer  accounts.Account
 			passphrase string
-			err        error
 		)
 		if list := MakePasswordList(ctx); len(list) > 0 {
 			// Just take the first value. Although the function returns a possible multiple values and
@@ -1960,7 +1965,12 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		} else if accs := ks.Accounts(); len(accs) > 0 {
 			developer = ks.Accounts()[0]
 		} else {
-			developer, err = ks.NewAccount(passphrase)
+			// Use a deterministic address if no account is available.
+			privKey, err := crypto.HexToECDSA(defaultMnemonicPrivKey)
+			if err != nil {
+				Fatalf("Failed to parse default mnemonic private key: %v", err)
+			}
+			developer, err = ks.ImportECDSA(privKey, "")
 			if err != nil {
 				Fatalf("Failed to create developer account: %v", err)
 			}
