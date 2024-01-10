@@ -536,6 +536,7 @@ func prepareSuaveDev(ctx *cli.Context) error {
 		utils.HTTPEnabledFlag.Name:       "true",
 		utils.HTTPVirtualHostsFlag.Name:  "*",
 		utils.HTTPCORSDomainFlag.Name:    "*",
+		utils.HTTPListenAddrFlag.Name:    "0.0.0.0",
 		utils.WSEnabledFlag.Name:         "true",
 		utils.WSAllowedOriginsFlag.Name:  "*",
 		utils.WSListenAddrFlag.Name:      "0.0.0.0",
