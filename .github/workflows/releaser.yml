@@ -28,7 +28,7 @@ jobs:
       - name: Log tag name
         run: echo "Build for tag ${{ github.ref_name }}"
 
-      - name: release dry run
+      - name: Create release
         run: make release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
