@@ -63,6 +63,7 @@ import (
 	suave_builder_api "github.com/ethereum/go-ethereum/suave/builder/api"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
+	"github.com/ethereum/go-ethereum/suave/offchain"
 	"github.com/flashbots/go-boost-utils/bls"
 )
 
@@ -317,7 +318,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterAPIs(eth.APIs())
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
-	stack.RegisterLifecycle(confidentialStoreEngine)
+	stack.RegisterLifecycle(&offchain.Env{})
 
 	// Successful startup; push a marker and check previous unclean shutdowns.
 	eth.shutdownTracker.MarkStartup()
