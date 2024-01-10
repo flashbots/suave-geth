@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"runtime"
 	"sync"
 
@@ -319,7 +320,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
 	stack.RegisterLifecycle(confidentialStoreEngine)
-	stack.RegisterLifecycle(&offchain.Env{})
+
+	// TODO(lthibault):  replace this with a proper CLI flag.
+	if os.Getenv("SUAVE_EXPERIMENTAL_IPFS") != "" {
+		stack.RegisterLifecycle(&offchain.Env{})
+	}
 
 	// Successful startup; push a marker and check previous unclean shutdowns.
 	eth.shutdownTracker.MarkStartup()

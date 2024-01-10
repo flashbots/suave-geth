@@ -1,4 +1,4 @@
-package datastore
+package offchain
 
 import (
 	"context"
@@ -11,17 +11,17 @@ import (
 	"github.com/multiformats/go-multihash"
 )
 
-type IPFS struct {
-	API iface.CoreAPI
+type Blockstore struct {
+	API iface.BlockAPI
 }
 
-func (c *IPFS) Get(ctx context.Context, cid cid.Cid) (io.Reader, error) {
+func (b Blockstore) Get(ctx context.Context, cid cid.Cid) (io.Reader, error) {
 	p := path.FromCid(cid)
-	return c.API.Block().Get(ctx, p)
+	return b.API.Get(ctx, p)
 }
 
-func (c *IPFS) Put(ctx context.Context, r io.Reader) (cid.Cid, error) {
-	bs, err := c.API.Block().Put(ctx, r,
+func (b Blockstore) Put(ctx context.Context, r io.Reader) (cid.Cid, error) {
+	bs, err := b.API.Put(ctx, r,
 		// options.Block.Pin(false),  // TODO:  refcounting
 		options.Block.Hash(multihash.BLAKE3, 512))
 	if err != nil {
