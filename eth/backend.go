@@ -318,6 +318,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterAPIs(eth.APIs())
 	stack.RegisterProtocols(eth.Protocols())
 	stack.RegisterLifecycle(eth)
+	stack.RegisterLifecycle(confidentialStoreEngine)
 	stack.RegisterLifecycle(&offchain.Env{})
 
 	// Successful startup; push a marker and check previous unclean shutdowns.
