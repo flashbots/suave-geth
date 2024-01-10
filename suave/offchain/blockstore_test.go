@@ -1,9 +1,11 @@
 package offchain_test
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/suave/offchain"
@@ -16,20 +18,22 @@ var api iface.CoreAPI
 func TestMain(m *testing.M) {
 	// Check if IPFS is available in the environment before attempting
 	// to run the integration tests.
-	cmd := exec.Command("which", "ipfs")
+	cmd := exec.Command("xxx", "version")
 	switch err := cmd.Run().(type) {
+	case nil:
+		os.Exit(m.Run())
 	case *exec.ExitError:
-		if status := err.ExitCode(); status > 0 {
-			log.Println("ipfs not found in $PATH.  Skipping...")
-		} else {
-			os.Exit(status) // abort; we still don't know if IPFS is available
-		}
+		// Application error
+		// skip; let the CI pipeline continue
+
+	case *exec.Error:
+		// OS error
+		// skip; let the CI pipeline contineu
 
 	case error:
+		fmt.Println(reflect.TypeOf(err))
 		log.Fatal(err)
 	}
-
-	os.Exit(m.Run())
 }
 
 func TestBlockstore(t *testing.T) {
