@@ -167,6 +167,10 @@ func (c *Client) getSigner() (types.Signer, error) {
 	return signer, nil
 }
 
+func (c *Client) Addr() common.Address {
+	return crypto.PubkeyToAddress(c.key.PublicKey)
+}
+
 func (c *Client) SignTxn(txn *types.LegacyTx) (*types.Transaction, error) {
 	signer, err := c.getSigner()
 	if err != nil {
