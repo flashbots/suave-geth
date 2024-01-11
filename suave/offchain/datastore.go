@@ -11,17 +11,17 @@ import (
 	"github.com/multiformats/go-multihash"
 )
 
-type Blockstore struct {
+type Datastore struct {
 	API iface.BlockAPI
 }
 
-func (b Blockstore) Get(ctx context.Context, cid cid.Cid) (io.Reader, error) {
+func (d Datastore) Get(ctx context.Context, cid cid.Cid) (io.Reader, error) {
 	p := path.FromCid(cid)
-	return b.API.Get(ctx, p)
+	return d.API.Get(ctx, p)
 }
 
-func (b Blockstore) Put(ctx context.Context, r io.Reader) (cid.Cid, error) {
-	bs, err := b.API.Put(ctx, r,
+func (d Datastore) Put(ctx context.Context, r io.Reader) (cid.Cid, error) {
+	bs, err := d.API.Put(ctx, r,
 		// options.Block.Pin(false),  // TODO:  refcounting
 		options.Block.Hash(multihash.BLAKE3, 512))
 	if err != nil {
