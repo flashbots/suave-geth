@@ -93,6 +93,12 @@ library SuaveForge {
         return data;
     }
 
+    function getb(bytes memory cid, uint64 timeout) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042019001", abi.encode(cid, timeout));
+
+        return abi.decode(data, (bytes));
+    }
+
     function newBuilder() internal view returns (string memory) {
         bytes memory data = forgeIt("0x0000000000000000000000000000000053200001", abi.encode());
 
@@ -111,6 +117,12 @@ library SuaveForge {
         );
 
         return abi.decode(data, (Suave.DataRecord));
+    }
+
+    function putb(bytes memory data) internal view returns (bytes memory) {
+        bytes memory data = forgeIt("0x0000000000000000000000000000000042019002", abi.encode(data));
+
+        return abi.decode(data, (bytes));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)

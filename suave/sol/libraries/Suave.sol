@@ -78,9 +78,13 @@ library Suave {
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
+    address public constant GETB = 0x0000000000000000000000000000000042019001;
+
     address public constant NEW_BUILDER = 0x0000000000000000000000000000000053200001;
 
     address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
+
+    address public constant PUTB = 0x0000000000000000000000000000000042019002;
 
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
@@ -193,6 +197,15 @@ library Suave {
         return data;
     }
 
+    function getb(bytes memory cid, uint64 timeout) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = GETB.staticcall(abi.encode(cid, timeout));
+        if (!success) {
+            revert PeekerReverted(GETB, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
     function newBuilder() internal view returns (string memory) {
         (bool success, bytes memory data) = NEW_BUILDER.staticcall(abi.encode());
         if (!success) {
@@ -215,6 +228,15 @@ library Suave {
         }
 
         return abi.decode(data, (DataRecord));
+    }
+
+    function putb(bytes memory data) internal view returns (bytes memory) {
+        (bool success, bytes memory data) = PUTB.staticcall(abi.encode(data));
+        if (!success) {
+            revert PeekerReverted(PUTB, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)

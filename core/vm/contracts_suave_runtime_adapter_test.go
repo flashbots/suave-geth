@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -81,6 +82,13 @@ func (m *mockRuntime) newBuilder() (string, error) {
 
 func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.SimulateTransactionResult, error) {
 	return types.SimulateTransactionResult{}, nil
+}
+
+func (m *mockRuntime) getb(raw []byte, timeout uint64) ([]byte, error) {
+	return nil, errors.New("getb::NOT IMPLEMENTED")
+}
+func (m *mockRuntime) putb(p []byte) ([]byte, error) {
+	return nil, errors.New("putb::NOT IMPLEMENTED")
 }
 
 func TestRuntimeAdapter(t *testing.T) {

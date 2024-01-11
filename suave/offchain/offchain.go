@@ -19,7 +19,7 @@ func (env *Env) Stop() error {
 	return nil
 }
 
-func (env *Env) Blockstore() Blockstore {
+func (env *Env) Blocks() Blockstore {
 	return Blockstore{
 		API: env.IPFS.Block(),
 	}

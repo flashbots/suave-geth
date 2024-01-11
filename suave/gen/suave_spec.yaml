@@ -79,6 +79,33 @@ structs:
       - name: topics
         type: bytes32[]
 functions:
+  - name: getb
+    address: "0x0000000000000000000000000000000042019001"
+    description: "TODO(lthibault)"
+    input:
+      - name: cid
+        type: bytes
+        description: content identifier (CID)
+      - name: timeout
+        type: uint64
+        description: max resolution time (nanoseconds) 
+    output:
+      fields:
+        - name: data
+          type: bytes
+          description: application data
+  - name: putb
+    address: "0x0000000000000000000000000000000042019002"
+    description: "TODO(lthibault)"
+    input:
+      - name: data
+        type: bytes
+        description: application data
+    output:
+      fields:
+        - name: cid
+          type: bytes
+          description: content identifier (CID)
   - name: confidentialInputs
     address: "0x0000000000000000000000000000000042010001"
     description: "Provides the confidential inputs associated with a confidential computation request. Outputs are in bytes format."

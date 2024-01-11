@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/consolelog"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ipfs/go-cid"
 )
 
 var (
@@ -35,6 +36,31 @@ var (
 
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 	return b.suaveContext.ConfidentialInputs, nil
+}
+
+/* Blockstore precompiles */
+
+// getb is the implementation of the getb precompile.
+func (b *suaveRuntime) getb(raw []byte, timeout uint64) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout))
+	defer cancel()
+
+	c, err := cid.Cast(raw)
+	if err != nil {
+		return nil, fmt.Errorf("parse cid: %w", err)
+	}
+
+	return b.offchain.Blocks().Get(ctx, c)
+}
+
+// putb is the implementation of the putb precompile.
+func (b *suaveRuntime) putb(p []byte) ([]byte, error) {
+	c, err := b.offchain.Blocks().Put(context.TODO(), p)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Bytes(), nil
 }
 
 /* Confidential store precompiles */
@@ -149,6 +175,7 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 
 type suaveRuntime struct {
 	suaveContext *SuaveContext
+	offchain     System
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
