@@ -323,6 +323,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	// TODO(lthibault):  replace this with a proper CLI flag.
 	if os.Getenv("SUAVE_EXPERIMENTAL_IPFS") != "" {
+		log.Info("experimental content-routed datastore enabled")
 		stack.RegisterLifecycle(&offchain.Env{})
 	}
 
