@@ -21,7 +21,7 @@ Prepare documentation updates before the release is published. Only if needed.
 
 ### Publish the release
 
-- [ ] Pick the version (i.e. `v0.2.0`)
+- [ ] Pick the version (i.e. `v0.2.0-stable`)
 - [ ] Update the version number in [`params/version.go`](../params/version.go)
 - [ ] Make a commit with the version number change (i.e. `git commit -m 'bump version to v0.2.0'`)
 - [ ] Tag new version (`git tag -s v0.2.0`)
@@ -29,9 +29,10 @@ Prepare documentation updates before the release is published. Only if needed.
 - [ ] Edit the draft release on Github to prepare nice release notes
 - [ ] Publish the release (note: this will send an email to subscribers on Github)
 
-### Test the published release
+### After publishing
 
-- [ ] Download the release binary: `curl -L https://suaveup.flashbots.net | bash` and check the version with `suave-geth version`
+- [ ] Test the Release: Download the release binary: `curl -L https://suaveup.flashbots.net | bash` and check the version with `suave-geth version`
+- [ ] Increment the version number to the next patch version and `-dev` meta in [`params/version.go`](../params/version.go) and push a commit
 
 ### Announcing
 
