@@ -42,6 +42,7 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data []byte) error {
 	record, err := b.suaveContext.Backend.ConfidentialStore.FetchRecordByID(dataId)
 	if err != nil {
+		log.Info("ConfidentialStore.Store failed", "err", err)
 		return suave.ErrRecordNotFound
 	}
 
@@ -49,6 +50,7 @@ func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data [
 
 	caller, err := checkIsPrecompileCallAllowed(b.suaveContext, confidentialStoreAddr, record)
 	if err != nil {
+		log.Info("ConfidentialStore.Store failed", "err", err)
 		return err
 	}
 
@@ -58,8 +60,10 @@ func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data [
 
 	_, err = b.suaveContext.Backend.ConfidentialStore.Store(dataId, caller, key, data)
 	if err != nil {
+		log.Info("ConfidentialStore.Store failed", "err", err)
 		return err
 	}
+	log.Info("ConfidentialStore.Store success", "dataId", dataId, "key", key)
 
 	return nil
 }
@@ -102,14 +106,18 @@ func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers 
 		Version:             RecordType, // TODO : make generic
 	})
 	if err != nil {
+		log.Info("Error in newDataRecord", "err", err)
 		return types.DataRecord{}, err
 	}
+	log.Info("newDataRecord", "record", record)
 
 	return record, nil
 }
 
 func (b *suaveRuntime) fetchDataRecords(targetBlock uint64, namespace string) ([]types.DataRecord, error) {
+	log.Info("fetchDataRecords", "targetBlock", targetBlock, "namespace", namespace)
 	records1 := b.suaveContext.Backend.ConfidentialStore.FetchRecordsByProtocolAndBlock(targetBlock, namespace)
+	log.Info("fetchDataRecords", "records", records1)
 
 	records := make([]types.DataRecord, 0, len(records1))
 	for _, record := range records1 {

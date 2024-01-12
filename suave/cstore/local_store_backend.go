@@ -92,6 +92,19 @@ func (l *LocalConfidentialStore) FetchRecordsByProtocolAndBlock(blockNumber uint
 
 	indexKey := fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber)
 	bidIDs, ok := l.index[indexKey]
+
+	log.Info("Index dump")
+	for key, elem := range l.index {
+		log.Info("Index dump", "key", key, "elem", elem)
+	}
+
+	log.Info("Records dump")
+
+	for key, elem := range l.records {
+		log.Info("Records dump", "key", key, "elem", elem)
+	}
+
+	log.Info("Parameters ", "indexKey", indexKey, "bidIds", bidIDs, "ok", ok)
 	if !ok {
 		return nil
 	}
