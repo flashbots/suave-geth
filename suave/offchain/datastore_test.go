@@ -1,7 +1,10 @@
 package offchain_test
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -46,4 +49,20 @@ func TestBlockstore(t *testing.T) {
 	defer func() {
 		require.NoError(t, env.Stop(), "failed to release offchain environment")
 	}()
+
+	data := []byte("hello, world")
+
+	cid, err := env.Datastore().Put(context.TODO(), bytes.NewReader(data))
+	require.NoError(t, err)
+	require.NotZero(t, cid)
+
+	r, err := env.Datastore().Get(context.TODO(), cid)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+
+	b, err := io.ReadAll(r)
+	require.NoError(t, err)
+	require.NotNil(t, b)
+
+	require.Equal(t, data, b)
 }
