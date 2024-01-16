@@ -104,11 +104,15 @@ type TransactionResult struct {
 }
 
 func (t *TransactionResult) Wait() (*types.Receipt, error) {
+	return t.WaitWithTimeout(10 * time.Second)
+}
+
+func (t *TransactionResult) WaitWithTimeout(timeout time.Duration) (*types.Receipt, error) {
 	if t.receipt != nil {
 		return t.receipt, nil
 	}
 
-	timer := time.NewTimer(10 * time.Second)
+	timer := time.NewTimer(timeout)
 
 	var receipt *types.Receipt
 	var err error
@@ -161,6 +165,10 @@ func (c *Client) getSigner() (types.Signer, error) {
 
 	signer := types.NewSuaveSigner(chainID)
 	return signer, nil
+}
+
+func (c *Client) Addr() common.Address {
+	return crypto.PubkeyToAddress(c.key.PublicKey)
 }
 
 func (c *Client) SignTxn(txn *types.LegacyTx) (*types.Transaction, error) {
