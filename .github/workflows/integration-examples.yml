@@ -28,7 +28,7 @@ jobs:
       - name: Check out suapp-examples
         uses: actions/checkout@v2
         with:
-          repository: suapp-examples
+          repository: flashbots/suapp-examples
           path: suapp-examples
       
       - name: Build suapp-examples
