@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/beacon/engine/dencun"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"

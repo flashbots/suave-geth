@@ -56,7 +56,7 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 		return nil, err
 	}
 
-	return dencun.BlockToExecutableData(block, profit), nil
+	return dencun.BlockToExecutableData(block, profit, nil), nil
 }
 
 func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error) {
@@ -79,7 +79,7 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 		return nil, err
 	}
 
-	return dencun.BlockToExecutableData(block, profit), nil
+	return dencun.BlockToExecutableData(block, profit, nil), nil
 }
 
 func (e *EthBackendServer) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
