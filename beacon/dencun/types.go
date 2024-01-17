@@ -27,8 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 )
 
-//go:generate go run github.com/fjl/gencodec -type PayloadAttributes -field-override payloadAttributesMarshaling -out gen_blockparams.go
-
 // PayloadAttributes describes the environment context in which a block should
 // be built.
 type PayloadAttributes struct {
@@ -38,13 +36,6 @@ type PayloadAttributes struct {
 	Withdrawals           []*types.Withdrawal `json:"withdrawals"`
 	BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
 }
-
-// JSON type overrides for PayloadAttributes.
-type payloadAttributesMarshaling struct {
-	Timestamp hexutil.Uint64
-}
-
-//go:generate go run github.com/fjl/gencodec -type ExecutableData -field-override executableDataMarshaling -out gen_ed.go
 
 // ExecutableData is the data necessary to execute an EL payload.
 type ExecutableData struct {
@@ -67,22 +58,6 @@ type ExecutableData struct {
 	ExcessBlobGas *uint64             `json:"excessBlobGas"`
 }
 
-// JSON type overrides for executableData.
-type executableDataMarshaling struct {
-	Number        hexutil.Uint64
-	GasLimit      hexutil.Uint64
-	GasUsed       hexutil.Uint64
-	Timestamp     hexutil.Uint64
-	BaseFeePerGas *hexutil.Big
-	ExtraData     hexutil.Bytes
-	LogsBloom     hexutil.Bytes
-	Transactions  []hexutil.Bytes
-	BlobGasUsed   *hexutil.Uint64
-	ExcessBlobGas *hexutil.Uint64
-}
-
-//go:generate go run github.com/fjl/gencodec -type ExecutionPayloadEnvelope -field-override executionPayloadEnvelopeMarshaling -out gen_epe.go
-
 type ExecutionPayloadEnvelope struct {
 	ExecutionPayload *ExecutableData `json:"executionPayload"  gencodec:"required"`
 	BlockValue       *big.Int        `json:"blockValue"  gencodec:"required"`
@@ -94,11 +69,6 @@ type BlobsBundleV1 struct {
 	Commitments []hexutil.Bytes `json:"commitments"`
 	Proofs      []hexutil.Bytes `json:"proofs"`
 	Blobs       []hexutil.Bytes `json:"blobs"`
-}
-
-// JSON type overrides for ExecutionPayloadEnvelope.
-type executionPayloadEnvelopeMarshaling struct {
-	BlockValue *hexutil.Big
 }
 
 type PayloadStatusV1 struct {

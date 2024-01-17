@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -68,8 +67,6 @@ type DencunHeader struct {
 func (h *DencunHeader) Hash() common.Hash {
 	return rlpHash(h)
 }
-
-var dencunHeaderSize = common.StorageSize(reflect.TypeOf(DencunHeader{}).Size())
 
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
