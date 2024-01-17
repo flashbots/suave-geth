@@ -360,6 +360,12 @@ func (s *Ethereum) APIs() []rpc.API {
 		Service:   suave_builder_api.NewServer(sessionManager),
 	})
 
+	// if in devnet test mode, enable the suave dev jsonrpc endpoint
+	apis = append(apis, rpc.API{
+		Namespace: "suavey",
+		Service:   &backends.SuaveInternalBackend{Cstore: s.APIBackend.SuaveEngine()},
+	})
+
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 

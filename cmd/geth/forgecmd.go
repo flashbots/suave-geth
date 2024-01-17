@@ -25,6 +25,7 @@ var (
 		Description: `Internal command used by MEVM precompiles in forge to access the MEVM API utilities.`,
 		Subcommands: []*cli.Command{
 			forgeStatusCmd,
+			resetConfStore,
 		},
 		Action: func(ctx *cli.Context) error {
 			args := ctx.Args()
@@ -125,6 +126,21 @@ var forgeStatusCmd = &cli.Command{
 		var chainID hexutil.Big
 		if err := rpcClient.Call(&chainID, "eth_chainId"); err != nil {
 			return handleErr(err)
+		}
+		return nil
+	},
+}
+
+var resetConfStore = &cli.Command{
+	Name:  "reset-conf-store",
+	Usage: "Internal command to reset the confidential store",
+	Action: func(ctx *cli.Context) error {
+		rpcClient, err := rpc.Dial(defaultRemoteSuaveHost)
+		if err != nil {
+			return err
+		}
+		if err := rpcClient.Call(nil, "suavey_resetConfStore"); err != nil {
+			return err
 		}
 		return nil
 	},
