@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -94,6 +95,91 @@ type ConfidentialComputeRequest2 struct {
 	EIP712    *eip712.EIP712TypedData `json:"eip712"`
 	Signature []byte                  `json:"signature"`
 	Sender    common.Address          `json:"sender"`
+}
+
+func (c *ConfidentialComputeRequest2) txType() byte {
+	return 0x69
+}
+
+func (c *ConfidentialComputeRequest2) copy() TxData {
+	// lets be lazy here for now
+	raw, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+	cpy := &ConfidentialComputeRequest2{}
+	err = json.Unmarshal(raw, cpy)
+	if err != nil {
+		panic(err)
+	}
+	return cpy
+}
+
+func (c *ConfidentialComputeRequest2) getRecord() ConfidentialComputeRecord {
+	raw, err := json.Marshal(c.EIP712.Message)
+	if err != nil {
+		panic(err)
+	}
+	var record ConfidentialComputeRecord
+	if err := json.Unmarshal(raw, &record); err != nil {
+		panic(err)
+	}
+	return record
+}
+
+func (c *ConfidentialComputeRequest2) chainID() *big.Int {
+	return big.NewInt(1)
+}
+
+func (c *ConfidentialComputeRequest2) accessList() AccessList {
+	return AccessList{}
+}
+
+func (c *ConfidentialComputeRequest2) data() []byte {
+	return c.getRecord().Data
+}
+
+func (c *ConfidentialComputeRequest2) gas() uint64 {
+	return c.getRecord().Gas
+}
+
+func (c *ConfidentialComputeRequest2) gasPrice() *big.Int {
+	return c.getRecord().GasPrice
+}
+
+func (c *ConfidentialComputeRequest2) gasTipCap() *big.Int {
+	return big.NewInt(1)
+}
+func (c *ConfidentialComputeRequest2) gasFeeCap() *big.Int {
+	return big.NewInt(1)
+}
+func (c *ConfidentialComputeRequest2) value() *big.Int {
+	return c.getRecord().Value
+}
+func (c *ConfidentialComputeRequest2) nonce() uint64 {
+	return c.getRecord().Nonce
+}
+func (c *ConfidentialComputeRequest2) to() *common.Address {
+	return c.getRecord().To
+}
+func (c *ConfidentialComputeRequest2) blobGas() uint64 {
+	return 0
+}
+func (c *ConfidentialComputeRequest2) blobGasFeeCap() *big.Int {
+	return nil
+}
+func (c *ConfidentialComputeRequest2) blobHashes() []common.Hash {
+	return nil
+}
+
+func (c *ConfidentialComputeRequest2) rawSignatureValues() (v, r, s *big.Int) {
+	return nil, nil, nil
+}
+func (c *ConfidentialComputeRequest2) setSignatureValues(chainID, v, r, s *big.Int) {
+	panic("x")
+}
+func (c *ConfidentialComputeRequest2) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
+	panic("x")
 }
 
 type ConfidentialComputeRequest struct {

@@ -271,6 +271,7 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 	var ccr *ConfidentialComputeRecord
 	switch txdata := tx.inner.(type) {
 	case *SuaveTransaction:
+		fmt.Println("AAXX")
 		ccr = &txdata.ConfidentialComputeRequest
 
 		V, R, S := tx.RawSignatureValues()
@@ -289,13 +290,18 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), ccr.KettleAddress.Hex())
 		}
 	case *ConfidentialComputeRequest:
+		fmt.Println("BBXX")
 		ccr = &txdata.ConfidentialComputeRecord
 
 		if txdata.ConfidentialInputsHash != crypto.Keccak256Hash(txdata.ConfidentialInputs) {
 			return common.Address{}, errors.New("confidential inputs hash mismatch")
 		}
 	case *ConfidentialComputeRecord:
+		fmt.Println("CCXX")
 		ccr = txdata
+	case *ConfidentialComputeRequest2:
+		// BIG TODO: signature validation, forget about v, r and s, just use the signautre field?
+		return txdata.Sender, nil
 	default:
 		return s.londonSigner.Sender(tx)
 	}
@@ -701,10 +707,12 @@ func decodeSignature(sig []byte) (r, s, v *big.Int) {
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
 	if Vb.BitLen() > 8 {
+		panic("a")
 		return common.Address{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)
 	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
+		panic("b")
 		return common.Address{}, ErrInvalidSig
 	}
 	// encode the signature in uncompressed format

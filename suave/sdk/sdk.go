@@ -115,6 +115,9 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		panic(err)
 	}
 
+	fmt.Println("-- sender of the txn --", c.client.Addr())
+	fmt.Println(c.client.rpc.BalanceAt(context.Background(), c.client.Addr(), nil))
+
 	/*
 		fmt.Println(string(raw))
 
@@ -134,6 +137,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	envelope := &types.ConfidentialComputeRequest2{
 		EIP712:    typedData,
 		Signature: signedMsg,
+		Sender:    c.client.Addr(),
 	}
 
 	var hash common.Hash

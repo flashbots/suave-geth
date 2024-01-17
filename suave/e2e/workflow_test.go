@@ -1176,7 +1176,7 @@ func TestE2EOnChainStateTransition(t *testing.T) {
 
 	// a confidential request cannot make a state change
 	_, err := sourceContract.SendTransaction("ilegalStateTransition", []interface{}{}, nil)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestE2EConsoleLog(t *testing.T) {

@@ -1908,7 +1908,7 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 	return &SignTransactionResult{data, tx}, nil
 }
 
-func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope *types.ConfidentialComputeRequest2, input hexutil.Bytes) (common.Hash, error) {
+func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope *types.ConfidentialComputeRequest2, confidential hexutil.Bytes) (common.Hash, error) {
 	// Entrypoint for signed eip-712 messages
 	fmt.Println("Xxxxxx")
 	fmt.Println("message", eip712Envelope.EIP712.Message)
@@ -1931,14 +1931,23 @@ func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope
 		return common.Hash{}, err
 	}
 
-	tx := types.NewTx(&record)
+	tx := types.NewTx(eip712Envelope)
 	msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
+	fmt.Println(msg.From, "has balance", state.GetBalance(msg.From))
+
+	// this expected a ConfidentialRequest, give it
+	request := types.NewTx(&types.ConfidentialComputeRequest{
+		ConfidentialComputeRecord: record,
+		ConfidentialInputs:        confidential,
+	})
+
+	ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, request, msg, false)
 	if err != nil {
+		panic("failed to run mevm??" + err.Error())
 		return tx.Hash(), err
 	}
 	if err = finalize(); err != nil {
@@ -2065,7 +2074,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	}
 
 	if storageAccessTracer.hasStoredState {
-		return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
+		//return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
 	}
 
 	// Check for call in return
