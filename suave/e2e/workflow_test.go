@@ -1165,6 +1165,7 @@ func TestE2EKettleAddressEndpoint(t *testing.T) {
 }
 
 func TestE2EOnChainStateTransition(t *testing.T) {
+	// --- testing this ---
 	fr := newFramework(t)
 	defer fr.Close()
 

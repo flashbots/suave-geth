@@ -1908,6 +1908,50 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 	return &SignTransactionResult{data, tx}, nil
 }
 
+func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope *types.ConfidentialComputeRequest2, input hexutil.Bytes) (common.Hash, error) {
+	// Entrypoint for signed eip-712 messages
+	fmt.Println("Xxxxxx")
+	fmt.Println("message", eip712Envelope.EIP712.Message)
+
+	// TODO: change this
+	raw, err := json.Marshal(eip712Envelope.EIP712.Message)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	var record types.ConfidentialComputeRecord
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return common.Hash{}, err
+	}
+
+	fmt.Println("record", record)
+
+	// RUN IT!
+	state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return common.Hash{}, err
+	}
+
+	tx := types.NewTx(&record)
+	msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
+	if err != nil {
+		return tx.Hash(), err
+	}
+	if err = finalize(); err != nil {
+		log.Error("could not finalize confidential store", "err", err)
+		return tx.Hash(), err
+	}
+
+	fmt.Println("-- result --")
+	fmt.Println(ntx)
+
+	panic("stop")
+}
+
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {

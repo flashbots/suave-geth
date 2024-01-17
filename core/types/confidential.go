@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/suave/eip712"
 )
 
 type ConfidentialComputeRecord struct {
@@ -87,6 +88,12 @@ func (tx *ConfidentialComputeRecord) rawSignatureValues() (v, r, s *big.Int) {
 
 func (tx *ConfidentialComputeRecord) setSignatureValues(chainID, v, r, s *big.Int) {
 	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
+}
+
+type ConfidentialComputeRequest2 struct {
+	EIP712    *eip712.EIP712TypedData `json:"eip712"`
+	Signature []byte                  `json:"signature"`
+	Sender    common.Address          `json:"sender"`
 }
 
 type ConfidentialComputeRequest struct {
