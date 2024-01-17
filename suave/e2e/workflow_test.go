@@ -1045,6 +1045,22 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 		ethBlockBidSenderContractI := sdk.GetContract(ethBlockBidSenderAddr, ethBlockBidSenderContract.Abi, clt)
 		_, err = ethBlockBidSenderContractI.SendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
+		if err != nil {
+			var executionRevertedPrefix = "execution reverted: 0x"
+			// decode the PeekerReverted error
+			errMsg := err.Error()
+			if strings.HasPrefix(errMsg, executionRevertedPrefix) {
+				errMsg = errMsg[len(executionRevertedPrefix):]
+				errMsgBytes, _ := hex.DecodeString(errMsg)
+
+				unpacked, _ := artifacts.SuaveAbi.Errors["PeekerReverted"].Inputs.Unpack(errMsgBytes[4:])
+
+				addr, _ := unpacked[0].(common.Address)
+				eventErr, _ := unpacked[1].([]byte)
+				panic(fmt.Sprintf("peeker 0x%x reverted: %s", addr, eventErr))
+			}
+			panic(err)
+		}
 		require.NoError(t, err)
 
 		block = fr.suethSrv.ProgressChain()

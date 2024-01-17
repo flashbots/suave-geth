@@ -312,11 +312,7 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 		}
 	}
 
-	baseFeePerGas, success := uint256.FromBig(data.BaseFeePerGas)
-	if !success {
-		return nil, fmt.Errorf("failed to convert baseFeePerGas")
-	}
-	data.BaseFeePerGas.Uint64()
+	baseFeePerGas, _ := uint256.FromBig(data.BaseFeePerGas)
 
 	return &specDeneb.ExecutionPayload{
 		ParentHash:    [32]byte(data.ParentHash),
