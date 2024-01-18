@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
@@ -21,7 +22,7 @@ func TestSessionManager_SessionTimeout(t *testing.T) {
 		SessionIdleTimeout: 500 * time.Millisecond,
 	})
 
-	id, err := mngr.NewSession()
+	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
@@ -35,7 +36,7 @@ func TestSessionManager_SessionRefresh(t *testing.T) {
 		SessionIdleTimeout: 500 * time.Millisecond,
 	})
 
-	id, err := mngr.NewSession()
+	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
 
 	// if we query the session under the idle timeout,
@@ -60,7 +61,7 @@ func TestSessionManager_StartSession(t *testing.T) {
 	// test that the session starts and it can simulate transactions
 	mngr, bMock := newSessionManager(t, &Config{})
 
-	id, err := mngr.NewSession()
+	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
 
 	txn := bMock.state.newTransfer(t, common.Address{}, big.NewInt(1))

@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"sync"
@@ -36,6 +37,10 @@ type Config struct {
 }
 
 type SessionManager struct {
+	once                  sync.Once
+	MaxConcurrentSessions int
+	sem                   chan struct{}
+
 	sessions      map[string]*builder
 	sessionTimers map[string]*time.Timer
 	sessionsLock  sync.RWMutex
@@ -61,12 +66,25 @@ func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
 }
 
 // NewSession creates a new builder session and returns the session id
-func (s *SessionManager) NewSession() (string, error) {
-	s.sessionsLock.Lock()
-	defer s.sessionsLock.Unlock()
+func (s *SessionManager) NewSession(ctx context.Context) (string, error) {
+	s.once.Do(func() {
+		if s.MaxConcurrentSessions <= 0 {
+			s.MaxConcurrentSessions = 16 // chosen arbitrarily
+		}
+
+		s.sem = make(chan struct{}, s.MaxConcurrentSessions)
+	})
+
+	// Wait for session to become available
+	select {
+	case <-s.sem:
+		s.sessionsLock.Lock()
+		defer s.sessionsLock.Unlock()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
 
 	parent := s.blockchain.CurrentHeader()
-
 	chainConfig := s.blockchain.Config()
 
 	header := &types.Header{
@@ -109,6 +127,14 @@ func (s *SessionManager) NewSession() (string, error) {
 
 		delete(s.sessions, id)
 		delete(s.sessionTimers, id)
+
+		// Technically, we are certain that there is an open slot in the semaphore
+		// channel, but let's be defensive and panic if the invariant is violated.
+		select {
+		case s.sem <- struct{}{}:
+		default:
+			panic("released more sessions than are open") // unreachable
+		}
 	})
 
 	return id, nil
