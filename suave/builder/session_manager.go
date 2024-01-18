@@ -73,6 +73,9 @@ func (s *SessionManager) NewSession(ctx context.Context) (string, error) {
 		}
 
 		s.sem = make(chan struct{}, s.MaxConcurrentSessions)
+		for len(s.sem) < cap(s.sem) {
+			s.sem <- struct{}{} // fill 'er up
+		}
 	})
 
 	// Wait for session to become available
