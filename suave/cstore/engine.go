@@ -89,6 +89,14 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 	}
 }
 
+func (e *CStoreEngine) Reset() error {
+	if local, ok := e.storage.(*LocalConfidentialStore); ok {
+		// only allow reset for local store
+		return local.Reset()
+	}
+	return nil
+}
+
 // NewTransactionalStore creates a new transactional store.
 func (e *CStoreEngine) NewTransactionalStore(sourceTx *types.Transaction) *TransactionalStore {
 	return &TransactionalStore{
@@ -119,7 +127,7 @@ func (e *CStoreEngine) Start() error {
 // Stop terminates the CStoreEngine.
 func (e *CStoreEngine) Stop() error {
 	if e.cancel == nil {
-		return errors.New("Confidential engine: Stop() called before Start()")
+		return errors.New("confidential engine: Stop() called before Start()")
 	}
 
 	e.cancel()
