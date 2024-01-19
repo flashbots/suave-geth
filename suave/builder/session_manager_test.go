@@ -34,9 +34,11 @@ func TestSessionManager_SessionTimeout(t *testing.T) {
 func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 	t.Parallel()
 
+	const d = time.Millisecond * 10
+
 	mngr, _ := newSessionManager(t, &Config{
 		MaxConcurrentSessions: 1,
-		SessionIdleTimeout:    500 * time.Millisecond,
+		SessionIdleTimeout:    d,
 	})
 
 	t.Run("SessionAvailable", func(t *testing.T) {
@@ -52,6 +54,15 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 		sess, err := mngr.NewSession(ctx)
 		require.Zero(t, sess)
 		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("SessionExpired", func(t *testing.T) {
+		time.Sleep(d) // Wait for the session to expire.
+
+		// We should be able to open a session again.
+		sess, err := mngr.NewSession(context.TODO())
+		require.NoError(t, err)
+		require.NotZero(t, sess)
 	})
 }
 
