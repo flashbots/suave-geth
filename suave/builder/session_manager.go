@@ -32,15 +32,13 @@ type blockchain interface {
 }
 
 type Config struct {
-	GasCeil            uint64
-	SessionIdleTimeout time.Duration
+	GasCeil               uint64
+	SessionIdleTimeout    time.Duration
+	MaxConcurrentSessions int
 }
 
 type SessionManager struct {
-	once                  sync.Once
-	MaxConcurrentSessions int
-	sem                   chan struct{}
-
+	sem           chan struct{}
 	sessions      map[string]*builder
 	sessionTimers map[string]*time.Timer
 	sessionsLock  sync.RWMutex
@@ -55,8 +53,17 @@ func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
 	if config.SessionIdleTimeout == 0 {
 		config.SessionIdleTimeout = 5 * time.Second
 	}
+	if config.MaxConcurrentSessions <= 0 {
+		config.MaxConcurrentSessions = 16 // chosen arbitrarily
+	}
+
+	sem := make(chan struct{}, config.MaxConcurrentSessions)
+	for len(sem) < cap(sem) {
+		sem <- struct{}{} // fill 'er up
+	}
 
 	s := &SessionManager{
+		sem:           sem,
 		sessions:      make(map[string]*builder),
 		sessionTimers: make(map[string]*time.Timer),
 		blockchain:    blockchain,
@@ -67,17 +74,6 @@ func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
 
 // NewSession creates a new builder session and returns the session id
 func (s *SessionManager) NewSession(ctx context.Context) (string, error) {
-	s.once.Do(func() {
-		if s.MaxConcurrentSessions <= 0 {
-			s.MaxConcurrentSessions = 16 // chosen arbitrarily
-		}
-
-		s.sem = make(chan struct{}, s.MaxConcurrentSessions)
-		for len(s.sem) < cap(s.sem) {
-			s.sem <- struct{}{} // fill 'er up
-		}
-	})
-
 	// Wait for session to become available
 	select {
 	case <-s.sem:
