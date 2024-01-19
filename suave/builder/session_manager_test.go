@@ -31,6 +31,30 @@ func TestSessionManager_SessionTimeout(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
+	t.Parallel()
+
+	mngr, _ := newSessionManager(t, &Config{
+		MaxConcurrentSessions: 1,
+		SessionIdleTimeout:    500 * time.Millisecond,
+	})
+
+	t.Run("SessionAvailable", func(t *testing.T) {
+		sess, err := mngr.NewSession(context.TODO())
+		require.NoError(t, err)
+		require.NotZero(t, sess)
+	})
+
+	t.Run("ContextExpired", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		sess, err := mngr.NewSession(ctx)
+		require.Zero(t, sess)
+		require.ErrorIs(t, err, context.Canceled)
+	})
+}
+
 func TestSessionManager_SessionRefresh(t *testing.T) {
 	mngr, _ := newSessionManager(t, &Config{
 		SessionIdleTimeout: 500 * time.Millisecond,
