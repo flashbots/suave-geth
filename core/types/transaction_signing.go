@@ -272,7 +272,7 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 	var ccr *ConfidentialComputeRecord
 	switch txdata := tx.inner.(type) {
 	case *SuaveTransaction:
-		ccr := &txdata.ConfidentialComputeRequest
+		// ccr := &txdata.ConfidentialComputeRequest
 
 		V, R, S := tx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
@@ -296,7 +296,7 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 		}
 
 		// TODO-FIX: Check signature
-		return ccr.Sender, nil
+		return common.Address{}, nil
 
 	case *ConfidentialComputeRequest:
 		fmt.Println("BBXX")
@@ -310,7 +310,10 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 		ccr = txdata
 	case *ConfidentialComputeRequest2:
 		// BIG TODO: signature validation, forget about v, r and s, just use the signautre field?
-		return txdata.Sender, nil
+		inner := txdata.GetRecord()
+		sender := inner.Recover(txdata.Signature)
+
+		return sender, nil
 	default:
 		return s.londonSigner.Sender(tx)
 	}

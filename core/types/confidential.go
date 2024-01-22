@@ -5,6 +5,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/suave/apitypes"
 )
 
 type ConfidentialComputeRecord struct {
@@ -94,8 +96,7 @@ type ConfidentialComputeRequest2 struct {
 	// Message is the message we are signed with the EIP-712 envelope
 	Message json.RawMessage `json:"message"`
 	// Signature is the signature of the message with the EIP-712 envelope
-	Signature []byte         `json:"signature"`
-	Sender    common.Address `json:"sender"`
+	Signature []byte `json:"signature"`
 }
 
 func (c *ConfidentialComputeRequest2) txType() byte {
@@ -305,4 +306,56 @@ func (tx *SuaveTransaction) rawSignatureValues() (v, r, s *big.Int) {
 
 func (tx *SuaveTransaction) setSignatureValues(chainID, v, r, s *big.Int) {
 	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
+}
+
+func (msg *ConfidentialComputeRecord) Recover(signature []byte) common.Address {
+	signHash, _, err := apitypes.TypedDataAndHash(msg.BuildConfidentialRecordEIP712Envelope())
+	if err != nil {
+		panic(err)
+	}
+	result, err := crypto.Ecrecover(signHash, signature)
+	if err != nil {
+		panic(err)
+	}
+
+	// THIS WORKS!
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(result[1:])[12:])
+
+	return signer
+}
+
+func (msg *ConfidentialComputeRecord) BuildConfidentialRecordEIP712Envelope() apitypes.TypedData {
+	typ := apitypes.TypedData{
+		Types: apitypes.Types{
+			"EIP712Domain": []apitypes.Type{
+				{Name: "name", Type: "string"},
+			},
+			"ConfidentialRecord": []apitypes.Type{
+				{Name: "nonce", Type: "uint64"},
+				{Name: "gasPrice", Type: "uint256"},
+				{Name: "gas", Type: "uint64"},
+				{Name: "to", Type: "address"},
+				{Name: "value", Type: "uint256"},
+				{Name: "data", Type: "bytes"},
+				{Name: "kettleAddress", Type: "address"},
+				{Name: "confidentialInputsHash", Type: "bytes32"},
+			},
+		},
+		Domain: apitypes.TypedDataDomain{
+			Name: "ConfidentialRecord",
+		},
+		PrimaryType: "ConfidentialRecord",
+		Message: apitypes.TypedDataMessage{
+			"nonce":                  msg.Nonce,
+			"gasPrice":               msg.GasPrice,
+			"gas":                    msg.Gas,
+			"to":                     msg.To,
+			"value":                  msg.Value,
+			"data":                   msg.Data,
+			"kettleAddress":          msg.KettleAddress,
+			"confidentialInputsHash": msg.ConfidentialInputsHash,
+		},
+	}
+	return typ
 }

@@ -126,7 +126,6 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	envelope := &types.ConfidentialComputeRequest2{
 		Message:   rawRecord,
 		Signature: signedMsg,
-		Sender:    c.client.Addr(),
 	}
 
 	var hash common.Hash
