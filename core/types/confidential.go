@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/suave/eip712"
 )
 
 type ConfidentialComputeRecord struct {
@@ -92,9 +91,11 @@ func (tx *ConfidentialComputeRecord) setSignatureValues(chainID, v, r, s *big.In
 }
 
 type ConfidentialComputeRequest2 struct {
-	EIP712    *eip712.EIP712TypedData `json:"eip712"`
-	Signature []byte                  `json:"signature"`
-	Sender    common.Address          `json:"sender"`
+	// Message is the message we are signed with the EIP-712 envelope
+	Message json.RawMessage `json:"message"`
+	// Signature is the signature of the message with the EIP-712 envelope
+	Signature []byte         `json:"signature"`
+	Sender    common.Address `json:"sender"`
 }
 
 func (c *ConfidentialComputeRequest2) txType() byte {
@@ -115,13 +116,9 @@ func (c *ConfidentialComputeRequest2) copy() TxData {
 	return cpy
 }
 
-func (c *ConfidentialComputeRequest2) getRecord() ConfidentialComputeRecord {
-	raw, err := json.Marshal(c.EIP712.Message)
-	if err != nil {
-		panic(err)
-	}
+func (c *ConfidentialComputeRequest2) GetRecord() ConfidentialComputeRecord {
 	var record ConfidentialComputeRecord
-	if err := json.Unmarshal(raw, &record); err != nil {
+	if err := json.Unmarshal(c.Message, &record); err != nil {
 		panic(err)
 	}
 	return record
@@ -136,15 +133,15 @@ func (c *ConfidentialComputeRequest2) accessList() AccessList {
 }
 
 func (c *ConfidentialComputeRequest2) data() []byte {
-	return c.getRecord().Data
+	return c.GetRecord().Data
 }
 
 func (c *ConfidentialComputeRequest2) gas() uint64 {
-	return c.getRecord().Gas
+	return c.GetRecord().Gas
 }
 
 func (c *ConfidentialComputeRequest2) gasPrice() *big.Int {
-	return c.getRecord().GasPrice
+	return c.GetRecord().GasPrice
 }
 
 func (c *ConfidentialComputeRequest2) gasTipCap() *big.Int {
@@ -154,13 +151,13 @@ func (c *ConfidentialComputeRequest2) gasFeeCap() *big.Int {
 	return big.NewInt(1)
 }
 func (c *ConfidentialComputeRequest2) value() *big.Int {
-	return c.getRecord().Value
+	return c.GetRecord().Value
 }
 func (c *ConfidentialComputeRequest2) nonce() uint64 {
-	return c.getRecord().Nonce
+	return c.GetRecord().Nonce
 }
 func (c *ConfidentialComputeRequest2) to() *common.Address {
-	return c.getRecord().To
+	return c.GetRecord().To
 }
 func (c *ConfidentialComputeRequest2) blobGas() uint64 {
 	return 0

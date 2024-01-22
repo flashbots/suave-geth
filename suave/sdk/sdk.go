@@ -3,6 +3,7 @@ package sdk
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"time"
@@ -85,6 +86,11 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		S:       big.NewInt(0),
 	}
 
+	rawRecord, err := json.Marshal(record)
+	if err != nil {
+		return nil, err
+	}
+
 	/*
 		computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 			ConfidentialComputeRecord: *record,
@@ -135,7 +141,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	*/
 
 	envelope := &types.ConfidentialComputeRequest2{
-		EIP712:    typedData,
+		Message:   rawRecord,
 		Signature: signedMsg,
 		Sender:    c.client.Addr(),
 	}

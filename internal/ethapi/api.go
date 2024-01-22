@@ -1911,18 +1911,9 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope *types.ConfidentialComputeRequest2, confidential hexutil.Bytes) (common.Hash, error) {
 	// Entrypoint for signed eip-712 messages
 	fmt.Println("Xxxxxx")
-	fmt.Println("message", eip712Envelope.EIP712.Message)
+	fmt.Println("message", eip712Envelope.Message)
 
-	// TODO: change this
-	raw, err := json.Marshal(eip712Envelope.EIP712.Message)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	var record types.ConfidentialComputeRecord
-	if err := json.Unmarshal(raw, &record); err != nil {
-		return common.Hash{}, err
-	}
-
+	record := eip712Envelope.GetRecord()
 	fmt.Println("record", record)
 
 	// RUN IT!
