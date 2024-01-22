@@ -83,11 +83,7 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 	require.NoError(t, confEngine.Start())
 	t.Cleanup(func() { confEngine.Stop() })
 
-	reqTx := types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{},
-		},
-	})
+	reqTx := types.NewTx(&types.ConfidentialComputeRequest2{})
 
 	b := &suaveRuntime{
 		suaveContext: &SuaveContext{

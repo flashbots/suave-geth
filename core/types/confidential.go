@@ -180,48 +180,6 @@ func (c *ConfidentialComputeRequest2) effectiveGasPrice(dst *big.Int, baseFee *b
 	panic("x")
 }
 
-type ConfidentialComputeRequest struct {
-	ConfidentialComputeRecord
-	ConfidentialInputs []byte
-}
-
-// copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *ConfidentialComputeRequest) copy() TxData {
-	cpy := &ConfidentialComputeRequest{
-		ConfidentialComputeRecord: *(tx.ConfidentialComputeRecord.copy().(*ConfidentialComputeRecord)),
-		ConfidentialInputs:        tx.ConfidentialInputs,
-	}
-
-	return cpy
-}
-
-func (tx *ConfidentialComputeRequest) txType() byte              { return ConfidentialComputeRequestTxType }
-func (tx *ConfidentialComputeRequest) chainID() *big.Int         { return tx.ChainID }
-func (tx *ConfidentialComputeRequest) accessList() AccessList    { return nil }
-func (tx *ConfidentialComputeRequest) data() []byte              { return tx.Data }
-func (tx *ConfidentialComputeRequest) gas() uint64               { return tx.Gas }
-func (tx *ConfidentialComputeRequest) gasPrice() *big.Int        { return tx.GasPrice }
-func (tx *ConfidentialComputeRequest) gasTipCap() *big.Int       { return tx.GasPrice }
-func (tx *ConfidentialComputeRequest) gasFeeCap() *big.Int       { return tx.GasPrice }
-func (tx *ConfidentialComputeRequest) value() *big.Int           { return tx.Value }
-func (tx *ConfidentialComputeRequest) nonce() uint64             { return tx.Nonce }
-func (tx *ConfidentialComputeRequest) to() *common.Address       { return tx.To }
-func (tx *ConfidentialComputeRequest) blobGas() uint64           { return 0 }
-func (tx *ConfidentialComputeRequest) blobGasFeeCap() *big.Int   { return nil }
-func (tx *ConfidentialComputeRequest) blobHashes() []common.Hash { return nil }
-
-func (tx *ConfidentialComputeRequest) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
-	return dst.Set(tx.GasPrice)
-}
-
-func (tx *ConfidentialComputeRequest) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.V, tx.R, tx.S
-}
-
-func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.Int) {
-	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
-}
-
 type SuaveTransaction struct {
 	ConfidentialComputeRequest ConfidentialComputeRequest2 `json:"confidentialComputeRequest" gencodec:"required"`
 	ConfidentialComputeResult  []byte                      `json:"confidentialComputeResult" gencodec:"required"`

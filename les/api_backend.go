@@ -197,7 +197,7 @@ func (b *LesApiBackend) GetEVM(ctx context.Context, msg *core.Message, state *st
 	return vm.NewEVM(context, txContext, state, b.eth.chainConfig, *vmConfig), state.Error
 }
 
-func (b *LesApiBackend) SuaveContext(requestTx *types.Transaction, ccr *types.ConfidentialComputeRequest) vm.SuaveContext {
+func (b *LesApiBackend) SuaveContext(requestTx *types.Transaction, confidentialInputs []byte) vm.SuaveContext {
 	return vm.SuaveContext{}
 }
 

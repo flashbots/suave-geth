@@ -286,10 +286,6 @@ func (args *TransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int) (*
 // toTransaction converts the arguments to a transaction.
 // This assumes that setDefaults has been called.
 func (args *TransactionArgs) toTransaction() *types.Transaction {
-	var kettleAddress common.Address
-	if args.IsConfidential && args.KettleAddress != nil {
-		kettleAddress = *args.KettleAddress
-	}
 
 	var data types.TxData
 	switch {
@@ -343,24 +339,8 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			ConfidentialComputeResult:  confResult,
 		}
 	case args.KettleAddress != nil:
-		var confidentialInputs []byte
-		if args.ConfidentialInputs != nil {
-			confidentialInputs = *args.ConfidentialInputs
-		}
+		panic("REMOVED")
 
-		data = &types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: kettleAddress,
-				// TODO: hashme
-				To:       args.To,
-				Nonce:    uint64(*args.Nonce),
-				Gas:      uint64(*args.Gas),
-				GasPrice: (*big.Int)(args.GasPrice),
-				Value:    (*big.Int)(args.Value),
-				Data:     args.data(),
-			},
-			ConfidentialInputs: confidentialInputs,
-		}
 	default:
 		data = &types.LegacyTx{
 			To:       args.To,

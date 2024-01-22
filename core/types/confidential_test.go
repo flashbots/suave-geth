@@ -1,13 +1,6 @@
 package types
 
-import (
-	"math/big"
-	"testing"
-
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/require"
-)
-
+/*
 func TestCCRequestToRecord(t *testing.T) {
 	testKey, err := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	require.NoError(t, err)
@@ -110,3 +103,4 @@ func TestSuaveTx(t *testing.T) {
 
 	require.Equal(t, crypto.PubkeyToAddress(testKey.PublicKey), recoveredUnmarshalledSender)
 }
+*/

@@ -205,10 +205,6 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner BlobTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
-	case ConfidentialComputeRequestTxType:
-		var inner ConfidentialComputeRequest
-		err := rlp.DecodeBytes(b[1:], &inner)
-		return &inner, err
 	case SuaveTxType:
 		var inner SuaveTransaction
 		err := rlp.DecodeBytes(b[1:], &inner)

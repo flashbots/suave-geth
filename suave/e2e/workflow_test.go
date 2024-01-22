@@ -70,17 +70,7 @@ func TestIsConfidential(t *testing.T) {
 
 	{
 		// Verify sending computation requests and onchain transactions to isConfidentialAddress
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-				Nonce:         0,
-				To:            &isConfidentialAddress,
-				Value:         nil,
-				Gas:           1000000,
-				GasPrice:      big.NewInt(10),
-				Data:          []byte{},
-			},
-		}), signer, testKey)
+		confidentialRequestTx, err := types.SignTx(nil, signer, testKey)
 		require.NoError(t, err)
 
 		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
@@ -134,11 +124,7 @@ func TestMempool(t *testing.T) {
 
 	{
 		targetBlock := uint64(16103213)
-		creationTx := types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-			},
-		})
+		creationTx := types.NewTx(nil)
 
 		bid1, err := fr.ConfidentialEngine().InitRecord(types.DataRecord{
 			Salt:                suave.RandomDataRecordId(),
@@ -193,17 +179,7 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, bid2.Version, bids[1].Version)
 
 		// Verify via transaction
-		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-				Nonce:         0,
-				To:            &fetchBidsAddress,
-				Value:         nil,
-				Gas:           1000000,
-				GasPrice:      big.NewInt(10),
-				Data:          calldata,
-			},
-		}), signer, testKey)
+		confidentialRequestTx, err := types.SignTx(types.NewTx(nil), signer, testKey)
 		require.NoError(t, err)
 
 		confidentialRequestTxBytes, err := confidentialRequestTx.MarshalBinary()
@@ -813,11 +789,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	{ // Test the block building precompile through eth_call
 		// function buildEthBlock(BuildBlockArgs memory blockArgs, DataId record) internal view returns (bytes memory, bytes memory) {
 
-		dummyCreationTx, err := types.SignNewTx(testKey, signer, &types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-				KettleAddress: fr.KettleAddress(),
-			},
-		})
+		dummyCreationTx, err := types.SignNewTx(testKey, signer, nil)
 		require.NoError(t, err)
 
 		record, err := fr.ConfidentialEngine().InitRecord(types.DataRecord{

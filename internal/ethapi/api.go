@@ -1432,36 +1432,9 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
 		}
 	case types.ConfidentialComputeRecordTxType:
-		inner, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
-		if !ok {
-			log.Error("could not marshal rpc transaction: tx did not cast correctly")
-			return nil
-		}
-
-		result.KettleAddress = &inner.KettleAddress
-
-		// if a legacy transaction has an EIP-155 chain id, include it explicitly
-		if id := tx.ChainId(); id.Sign() != 0 {
-			result.ChainID = (*hexutil.Big)(id)
-		}
-		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
-		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		panic("REMOVED")
 	case types.ConfidentialComputeRequestTxType:
-		inner, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
-		if !ok {
-			log.Error("could not marshal rpc transaction: tx did not cast correctly")
-			return nil
-		}
-
-		result.KettleAddress = &inner.KettleAddress
-
-		// if a legacy transaction has an EIP-155 chain id, include it explicitly
-		if id := tx.ChainId(); id.Sign() != 0 {
-			result.ChainID = (*hexutil.Big)(id)
-		}
-		result.ConfidentialInputs = (*hexutil.Bytes)(&inner.ConfidentialInputs)
-		result.ConfidentialInputsHash = &inner.ConfidentialInputsHash
-		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		panic("REMOVED")
 	case types.SuaveTxType:
 		inner, ok := types.CastTxInner[*types.SuaveTransaction](tx)
 		if !ok {
@@ -1964,34 +1937,37 @@ func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
-	tx := new(types.Transaction)
-	if err := tx.UnmarshalBinary(input); err != nil {
-		return common.Hash{}, err
-	}
-
-	if _, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx); ok {
-		state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
-		if state == nil || err != nil {
+	/*
+		tx := new(types.Transaction)
+		if err := tx.UnmarshalBinary(input); err != nil {
 			return common.Hash{}, err
 		}
 
-		msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
-		if err != nil {
-			return common.Hash{}, err
+		if _, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx); ok {
+			state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+			if state == nil || err != nil {
+				return common.Hash{}, err
+			}
+
+			msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
+			if err != nil {
+				return common.Hash{}, err
+			}
+
+			ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false, nil)
+			if err != nil {
+				return tx.Hash(), err
+			}
+			if err = finalize(); err != nil {
+				log.Error("could not finalize confidential store", "err", err)
+				return tx.Hash(), err
+			}
+			tx = ntx
 		}
 
-		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false, nil)
-		if err != nil {
-			return tx.Hash(), err
-		}
-		if err = finalize(); err != nil {
-			log.Error("could not finalize confidential store", "err", err)
-			return tx.Hash(), err
-		}
-		tx = ntx
-	}
-
-	return SubmitTransaction(ctx, s.b, tx)
+		return SubmitTransaction(ctx, s.b, tx)
+	*/
+	panic("DEPRECATED?")
 }
 
 type mevmStateLogger struct {
@@ -2048,7 +2024,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	storageAccessTracer := &mevmStateLogger{}
 
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
-	suaveCtx := b.SuaveContext(tx, &types.ConfidentialComputeRequest{ConfidentialInputs: confidentialBytes}) // TODO: REMOVE this
+	suaveCtx := b.SuaveContext(tx, confidentialBytes) // TODO: REMOVE this
 	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall, Tracer: storageAccessTracer}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
