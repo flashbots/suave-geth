@@ -57,7 +57,7 @@ func (r *RedisPubSubTransport) Start() error {
 
 func (r *RedisPubSubTransport) Stop() error {
 	if r.cancel == nil || r.client == nil {
-		return errors.New("Redis pubsub: Stop() called before Start()")
+		return errors.New("redis pubsub: Stop() called before Start()")
 	}
 
 	r.cancel()

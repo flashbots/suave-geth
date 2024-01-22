@@ -289,16 +289,7 @@ func (b *EthAPIBackend) GetMEVM(ctx context.Context, msg *core.Message, state *s
 		context = core.NewEVMBlockContext(header, b.eth.BlockChain(), nil)
 	}
 
-	suaveCtxCopy := *suaveCtx
-	storeTransaction := b.suaveEngine.NewTransactionalStore(suaveCtx.ConfidentialComputeRequestTx)
-	suaveCtxCopy.Backend = &vm.SuaveExecutionBackend{
-		EthBundleSigningKey:    suaveCtx.Backend.EthBundleSigningKey,
-		EthBlockSigningKey:     suaveCtx.Backend.EthBlockSigningKey,
-		ExternalWhitelist:      suaveCtx.Backend.ExternalWhitelist,
-		ConfidentialStore:      storeTransaction,
-		ConfidentialEthBackend: b.suaveEthBackend,
-	}
-	return vm.NewConfidentialEVM(suaveCtxCopy, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), storeTransaction.Finalize, state.Error
+	return vm.NewConfidentialEVM(*suaveCtx, context, txContext, state, b.eth.blockchain.Config(), *vmConfig), suaveCtx.Backend.ConfidentialStore.Finalize, state.Error
 }
 
 func (b *EthAPIBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription {
@@ -445,9 +436,8 @@ func (b *EthAPIBackend) StartMining() error {
 func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.ConfidentialComputeRequest) vm.SuaveContext {
 	storeTransaction := b.suaveEngine.NewTransactionalStore(requestTx)
 	return vm.SuaveContext{
-		ConfidentialComputeRequestTx: requestTx,
-		ConfidentialInputs:           ccr.ConfidentialInputs,
-		CallerStack:                  []*common.Address{},
+		ConfidentialInputs: ccr.ConfidentialInputs,
+		CallerStack:        []*common.Address{},
 		Backend: &vm.SuaveExecutionBackend{
 			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
 			EthBlockSigningKey:     b.suaveEthBlockSigningKey,
