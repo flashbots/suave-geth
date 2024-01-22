@@ -79,12 +79,6 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		Gas:                    1000000,
 		Data:                   calldata,
 		ConfidentialInputsHash: crypto.Keccak256Hash(confidentialDataBytes), // ?
-
-		// initialize empty fields
-		ChainID: big.NewInt(1337), // suave chain id?
-		V:       big.NewInt(0),
-		R:       big.NewInt(0),
-		S:       big.NewInt(0),
 	}
 
 	rawRecord, err := json.Marshal(record)
