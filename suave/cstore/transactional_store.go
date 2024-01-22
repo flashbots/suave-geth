@@ -95,6 +95,10 @@ func (s *TransactionalStore) Retrieve(dataId suave.DataId, caller common.Address
 
 // InitRecord prepares a data record for storage.
 func (s *TransactionalStore) InitRecord(rawRecord types.DataRecord) (types.DataRecord, error) {
+	if s.sourceTx == nil {
+		return types.DataRecord{}, errors.New("confidential store transaction: no source transaction")
+	}
+
 	record, err := s.engine.InitRecord(rawRecord, s.sourceTx)
 	if err != nil {
 		return types.DataRecord{}, err

@@ -90,10 +90,6 @@ func (b *suaveRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]
 /* Data Record precompiles */
 
 func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, RecordType string) (types.DataRecord, error) {
-	if b.suaveContext.ConfidentialComputeRequestTx == nil {
-		panic("newRecord: source transaction not present")
-	}
-
 	record, err := b.suaveContext.Backend.ConfidentialStore.InitRecord(types.DataRecord{
 		Salt:                suave.RandomDataRecordId(),
 		DecryptionCondition: decryptionCondition,
