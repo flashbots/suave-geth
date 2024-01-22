@@ -16,7 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/suave/eip712"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
 func DeployContract(bytecode []byte, client *Client) (*TransactionResult, error) {
@@ -91,29 +92,11 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
-	/*
-		computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-			ConfidentialComputeRecord: *record,
-			ConfidentialInputs:        confidentialDataBytes,
-		}), signer, c.client.key)
-		if err != nil {
-			return nil, err
-		}
-	*/
-
-	domain := &eip712.EIP712Domain{
-		Name:              "suave?",
-		Version:           "1.0",
-		VerifyingContract: "0x0000000000000000000000000000000000000000", // ??
-		ChainId:           big.NewInt(1),                                // suave chain id?
-		Salt:              []byte{0x1, 0x2},
-	}
-	builder := eip712.NewEIP712MessageBuilder[types.ConfidentialComputeRecord](domain)
-	typedData := builder.Build(record)
-
-	typedDataHashed, err := typedData.Hash()
+	eipTypedData := suave.BuildConfidentialRecordEIP712Envelope(record)
+	typedDataHashed, _, err := apitypes.TypedDataAndHash(eipTypedData)
 	if err != nil {
-		panic(err)
+		panic("?")
+		return nil, err
 	}
 
 	signedMsg, err := c.client.Sign(typedDataHashed[:])

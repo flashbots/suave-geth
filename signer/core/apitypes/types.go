@@ -250,10 +250,12 @@ type TypedDataDomain struct {
 func TypedDataAndHash(typedData TypedData) ([]byte, string, error) {
 	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
 	if err != nil {
+		panic("first")
 		return nil, "", err
 	}
 	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	if err != nil {
+		panic(err)
 		return nil, "", err
 	}
 	rawData := fmt.Sprintf("\x19\x01%s%s", string(domainSeparator), string(typedDataHash))
@@ -472,6 +474,8 @@ func parseInteger(encType string, encValue interface{}) (*big.Int, error) {
 		} else {
 			return nil, fmt.Errorf("invalid float value %v for type %v", v, encType)
 		}
+	case uint64:
+		b = big.NewInt(int64(v))
 	}
 	if b == nil {
 		return nil, fmt.Errorf("invalid integer value %v/%v for type %v", encValue, reflect.TypeOf(encValue), encType)
@@ -504,6 +508,12 @@ func (typedData *TypedData) EncodePrimitiveValue(encType string, encValue interf
 			}
 		case [20]byte:
 			copy(retval[12:], val[:])
+			return retval, nil
+		case *common.Address:
+			copy(retval[12:], val.Bytes())
+			return retval, nil
+		case common.Address:
+			copy(retval[12:], val.Bytes())
 			return retval, nil
 		}
 		return nil, dataMismatchError(encType, encValue)

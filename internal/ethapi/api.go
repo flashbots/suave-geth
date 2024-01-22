@@ -47,6 +47,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -1910,11 +1911,20 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 
 func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope *types.ConfidentialComputeRequest2, confidential hexutil.Bytes) (common.Hash, error) {
 	// Entrypoint for signed eip-712 messages
-	fmt.Println("Xxxxxx")
-	fmt.Println("message", eip712Envelope.Message)
-
 	record := eip712Envelope.GetRecord()
-	fmt.Println("record", record)
+
+	signHash, _, err := apitypes.TypedDataAndHash(suave.BuildConfidentialRecordEIP712Envelope(&record))
+	if err != nil {
+		panic(err)
+	}
+	result, err := crypto.Ecrecover(signHash, eip712Envelope.Signature)
+	if err != nil {
+		panic(err)
+	}
+
+	// THIS WORKS!
+	var signer common.Address
+	copy(signer[:], crypto.Keccak256(result[1:])[12:])
 
 	// RUN IT!
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
