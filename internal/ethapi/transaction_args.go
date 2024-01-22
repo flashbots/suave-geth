@@ -329,8 +329,8 @@ func (args *TransactionArgs) toTransaction() *types.Transaction {
 			confResult = []byte(*args.ConfidentialResult)
 		}
 
-		var ccr types.ConfidentialComputeRecord
-		confidentialComputeRequest, ok := types.CastTxInner[*types.ConfidentialComputeRecord](requestArgs.toTransaction())
+		var ccr types.ConfidentialComputeRequest2
+		confidentialComputeRequest, ok := types.CastTxInner[*types.ConfidentialComputeRequest2](requestArgs.toTransaction())
 		if ok {
 			ccr = *confidentialComputeRequest
 		} else {

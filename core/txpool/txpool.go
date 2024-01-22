@@ -640,6 +640,7 @@ func (pool *TxPool) validateTxBasics(tx *types.Transaction, local bool) error {
 	}
 	// Make sure the transaction is signed properly.
 	if _, err := types.Sender(pool.signer, tx); err != nil {
+		panic("x")
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price or tip

@@ -18,6 +18,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -271,8 +272,7 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 	var ccr *ConfidentialComputeRecord
 	switch txdata := tx.inner.(type) {
 	case *SuaveTransaction:
-		fmt.Println("AAXX")
-		ccr = &txdata.ConfidentialComputeRequest
+		ccr := &txdata.ConfidentialComputeRequest
 
 		V, R, S := tx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
@@ -286,9 +286,18 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, err
 		}
 
-		if recovered != ccr.KettleAddress {
-			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), ccr.KettleAddress.Hex())
+		var inner *ConfidentialComputeRecord
+		if err := json.Unmarshal(txdata.ConfidentialComputeRequest.Message, &inner); err != nil {
+			return common.Address{}, err
 		}
+
+		if recovered != inner.KettleAddress {
+			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.KettleAddress.Hex())
+		}
+
+		// TODO-FIX: Check signature
+		return ccr.Sender, nil
+
 	case *ConfidentialComputeRequest:
 		fmt.Println("BBXX")
 		ccr = &txdata.ConfidentialComputeRecord

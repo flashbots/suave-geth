@@ -84,7 +84,8 @@ func TestSuaveTx(t *testing.T) {
 	}), signer, testKey)
 	require.NoError(t, err)
 
-	signedInnerCCR, ok := CastTxInner[*ConfidentialComputeRecord](signedCCR)
+	// TODO-FIX
+	signedInnerCCR, ok := CastTxInner[*ConfidentialComputeRequest2](signedCCR)
 	require.True(t, ok)
 
 	unsignedTx := NewTx(&SuaveTransaction{

@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -276,6 +278,7 @@ func (tx *Transaction) Type() uint8 {
 }
 
 func CastTxInner[T any](tx *Transaction) (T, bool) {
+	fmt.Println(reflect.TypeOf(tx.inner))
 	t, ok := tx.inner.(T)
 	return t, ok
 }

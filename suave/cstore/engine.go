@@ -195,20 +195,22 @@ func (e *CStoreEngine) InitRecord(record types.DataRecord, creationTx *types.Tra
 		CreationTx:          creationTx,
 	}
 
-	reocrdBytes, err := SerializeDataRecord(&initializedRecord)
-	if err != nil {
-		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not hash record for signing: %w", err)
-	}
+	/*
+		reocrdBytes, err := SerializeDataRecord(&initializedRecord)
+		if err != nil {
+			return suave.DataRecord{}, fmt.Errorf("confidential engine: could not hash record for signing: %w", err)
+		}
 
-	signingAccount, err := KettleAddressFromTransaction(creationTx)
-	if err != nil {
-		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
-	}
+			signingAccount, err := KettleAddressFromTransaction(creationTx)
+			if err != nil {
+				return suave.DataRecord{}, fmt.Errorf("confidential engine: could not recover execution node from creation transaction: %w", err)
+			}
 
-	initializedRecord.Signature, err = e.daSigner.Sign(signingAccount, reocrdBytes)
-	if err != nil {
-		return suave.DataRecord{}, fmt.Errorf("confidential engine: could not sign initialized record: %w", err)
-	}
+			initializedRecord.Signature, err = e.daSigner.Sign(signingAccount, reocrdBytes)
+			if err != nil {
+				return suave.DataRecord{}, fmt.Errorf("confidential engine: could not sign initialized record: %w", err)
+			}
+	*/
 
 	return initializedRecord, nil
 }
@@ -267,20 +269,22 @@ func (e *CStoreEngine) Finalize(tx *types.Transaction, newRecords map[suave.Data
 		return suave.ErrUnsignedFinalize
 	}
 
-	msgBytes, err := SerializeDAMessage(&pwMsg)
-	if err != nil {
-		return fmt.Errorf("confidential engine: could not hash message for signing: %w", err)
-	}
+	/*
+		msgBytes, err := SerializeDAMessage(&pwMsg)
+		if err != nil {
+			return fmt.Errorf("confidential engine: could not hash message for signing: %w", err)
+		}
 
-	signingAccount, err := KettleAddressFromTransaction(tx)
-	if err != nil {
-		return fmt.Errorf("confidential engine: could not recover execution node from source transaction: %w", err)
-	}
+		signingAccount, err := KettleAddressFromTransaction(tx)
+		if err != nil {
+			return fmt.Errorf("confidential engine: could not recover execution node from source transaction: %w", err)
+		}
 
-	pwMsg.Signature, err = e.daSigner.Sign(signingAccount, msgBytes)
-	if err != nil {
-		return fmt.Errorf("confidential engine: could not sign message: %w", err)
-	}
+		pwMsg.Signature, err = e.daSigner.Sign(signingAccount, msgBytes)
+		if err != nil {
+			return fmt.Errorf("confidential engine: could not sign message: %w", err)
+		}
+	*/
 
 	// TODO: avoid marshalling twice
 	go e.transportTopic.Publish(pwMsg)
@@ -293,31 +297,35 @@ func (e *CStoreEngine) NewMessage(message DAMessage) error {
 	// Note the validation is a work in progress and not guaranteed to be correct!
 
 	// Message-level validation
-	msgBytes, err := SerializeDAMessage(&message)
-	if err != nil {
-		return fmt.Errorf("confidential engine: could not hash received message: %w", err)
-	}
-	recoveredMessageSigner, err := e.daSigner.Sender(msgBytes, message.Signature)
-	if err != nil {
-		return fmt.Errorf("confidential engine: incorrect message signature: %w", err)
-	}
-	expectedMessageSigner, err := KettleAddressFromTransaction(message.SourceTx)
-	if err != nil {
-		return fmt.Errorf("confidential engine: could not recover signer from message: %w", err)
-	}
-	if recoveredMessageSigner != expectedMessageSigner {
-		return fmt.Errorf("confidential engine: message signer %x, expected %x", recoveredMessageSigner, expectedMessageSigner)
-	}
-
-	if message.StoreUUID == e.storeUUID {
-		if _, found := e.localAddresses[recoveredMessageSigner]; found {
-			return nil
+	/*
+		msgBytes, err := SerializeDAMessage(&message)
+		if err != nil {
+			return fmt.Errorf("confidential engine: could not hash received message: %w", err)
 		}
-		// Message from self!
-		log.Info("Confidential engine: message is spoofing our storeUUID, processing anyway", "message", message)
-	}
+			recoveredMessageSigner, err := e.daSigner.Sender(msgBytes, message.Signature)
+			if err != nil {
+				return fmt.Errorf("confidential engine: incorrect message signature: %w", err)
+			}
+			expectedMessageSigner, err := KettleAddressFromTransaction(message.SourceTx)
+			if err != nil {
+				return fmt.Errorf("confidential engine: could not recover signer from message: %w", err)
+			}
+			if recoveredMessageSigner != expectedMessageSigner {
+				return fmt.Errorf("confidential engine: message signer %x, expected %x", recoveredMessageSigner, expectedMessageSigner)
+			}
+	*/
 
-	_, err = e.chainSigner.Sender(message.SourceTx)
+	/*
+		if message.StoreUUID == e.storeUUID {
+			if _, found := e.localAddresses[recoveredMessageSigner]; found {
+				return nil
+			}
+			// Message from self!
+			log.Info("Confidential engine: message is spoofing our storeUUID, processing anyway", "message", message)
+		}
+	*/
+
+	_, err := e.chainSigner.Sender(message.SourceTx)
 	if err != nil {
 		return fmt.Errorf("confidential engine: source tx for message is not signed properly: %w", err)
 	}
@@ -343,29 +351,33 @@ func (e *CStoreEngine) NewMessage(message DAMessage) error {
 			return fmt.Errorf("confidential engine: received records id (%x) does not match the expected (%x)", sw.DataRecord.Id, expectedId)
 		}
 
-		reocrdBytes, err := SerializeDataRecord(&sw.DataRecord)
-		if err != nil {
-			return fmt.Errorf("confidential engine: could not hash received record: %w", err)
-		}
-		recoveredRecordSigner, err := e.daSigner.Sender(reocrdBytes, sw.DataRecord.Signature)
-		if err != nil {
-			return fmt.Errorf("confidential engine: incorrect record signature: %w", err)
-		}
-		expectedRecordSigner, err := KettleAddressFromTransaction(sw.DataRecord.CreationTx)
-		if err != nil {
-			return fmt.Errorf("confidential engine: could not recover signer from record: %w", err)
-		}
-		if recoveredRecordSigner != expectedRecordSigner {
-			return fmt.Errorf("confidential engine: record signer %x, expected %x", recoveredRecordSigner, expectedRecordSigner)
-		}
+		/*
+			reocrdBytes, err := SerializeDataRecord(&sw.DataRecord)
+			if err != nil {
+				return fmt.Errorf("confidential engine: could not hash received record: %w", err)
+			}
+			recoveredRecordSigner, err := e.daSigner.Sender(reocrdBytes, sw.DataRecord.Signature)
+			if err != nil {
+				return fmt.Errorf("confidential engine: incorrect record signature: %w", err)
+			}
+			expectedRecordSigner, err := KettleAddressFromTransaction(sw.DataRecord.CreationTx)
+			if err != nil {
+				return fmt.Errorf("confidential engine: could not recover signer from record: %w", err)
+			}
+			if recoveredRecordSigner != expectedRecordSigner {
+				return fmt.Errorf("confidential engine: record signer %x, expected %x", recoveredRecordSigner, expectedRecordSigner)
+			}
+		*/
 
-		if !slices.Contains(sw.DataRecord.AllowedStores, recoveredMessageSigner) {
-			return fmt.Errorf("confidential engine: sw signer %x not allowed to store on record %x", recoveredMessageSigner, sw.DataRecord.Id)
-		}
+		/*
+			if !slices.Contains(sw.DataRecord.AllowedStores, recoveredMessageSigner) {
+				return fmt.Errorf("confidential engine: sw signer %x not allowed to store on record %x", recoveredMessageSigner, sw.DataRecord.Id)
+			}
 
-		if !slices.Contains(sw.DataRecord.AllowedPeekers, sw.Caller) && !slices.Contains(sw.DataRecord.AllowedPeekers, suave.AllowedPeekerAny) {
-			return fmt.Errorf("confidential engine: caller %x not allowed on record %x", sw.Caller, sw.DataRecord.Id)
-		}
+			if !slices.Contains(sw.DataRecord.AllowedPeekers, sw.Caller) && !slices.Contains(sw.DataRecord.AllowedPeekers, suave.AllowedPeekerAny) {
+				return fmt.Errorf("confidential engine: caller %x not allowed on record %x", sw.Caller, sw.DataRecord.Id)
+			}
+		*/
 
 		// TODO: move to types.Sender()
 		_, err = e.chainSigner.Sender(sw.DataRecord.CreationTx)
@@ -428,17 +440,21 @@ func SerializeDAMessage(message *DAMessage) ([]byte, error) {
 
 // KettleAddressFromTransaction returns address of kettle that executed confidential transaction
 func KettleAddressFromTransaction(tx *types.Transaction) (common.Address, error) {
-	innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
-	if ok {
-		return innerExecutedTx.ConfidentialComputeRequest.KettleAddress, nil
-	}
+	panic("TODO")
 
-	innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
-	if ok {
-		return innerRequestTx.KettleAddress, nil
-	}
+	/*
+		innerExecutedTx, ok := types.CastTxInner[*types.SuaveTransaction](tx)
+		if ok {
+			return innerExecutedTx.ConfidentialComputeRequest.KettleAddress, nil
+		}
 
-	return common.Address{}, fmt.Errorf("transaction is not of confidential type")
+		innerRequestTx, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
+		if ok {
+			return innerRequestTx.KettleAddress, nil
+		}
+
+		return common.Address{}, fmt.Errorf("transaction is not of confidential type")
+	*/
 }
 
 var emptyId [16]byte

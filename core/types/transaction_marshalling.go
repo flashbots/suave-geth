@@ -531,7 +531,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			return err
 		}
 
-		ccr, ok := CastTxInner[*ConfidentialComputeRecord](&requestRecord)
+		ccr, ok := CastTxInner[*ConfidentialComputeRequest2](&requestRecord)
 		if !ok {
 			return errors.New("wrapped tx not a ConfidentialComputeRecord")
 		}

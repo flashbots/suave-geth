@@ -222,8 +222,8 @@ func (tx *ConfidentialComputeRequest) setSignatureValues(chainID, v, r, s *big.I
 }
 
 type SuaveTransaction struct {
-	ConfidentialComputeRequest ConfidentialComputeRecord `json:"confidentialComputeRequest" gencodec:"required"`
-	ConfidentialComputeResult  []byte                    `json:"confidentialComputeResult" gencodec:"required"`
+	ConfidentialComputeRequest ConfidentialComputeRequest2 `json:"confidentialComputeRequest" gencodec:"required"`
+	ConfidentialComputeResult  []byte                      `json:"confidentialComputeResult" gencodec:"required"`
 
 	// request KettleAddress's signature
 	ChainID *big.Int
