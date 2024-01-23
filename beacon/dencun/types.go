@@ -306,20 +306,6 @@ type ExecutionPayloadBodyV1 struct {
 
 // var _ = (*executableDataMarshaling)(nil)
 
-// JSON type overrides for executableData.
-type executableDataMarshaling struct {
-	Number        hexutil.Uint64
-	GasLimit      hexutil.Uint64
-	GasUsed       hexutil.Uint64
-	Timestamp     hexutil.Uint64
-	BaseFeePerGas *hexutil.Big
-	ExtraData     hexutil.Bytes
-	LogsBloom     hexutil.Bytes
-	Transactions  []hexutil.Bytes
-	BlobGasUsed   *hexutil.Uint64
-	ExcessBlobGas *hexutil.Uint64
-}
-
 // MarshalJSON marshals as JSON.
 func (e ExecutableData) MarshalJSON() ([]byte, error) {
 	fmt.Println("formatting JSON")
