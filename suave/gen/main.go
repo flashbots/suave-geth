@@ -304,17 +304,17 @@ func (b *SuaveRuntimeAdapter) {{.Name}}(input []byte) (res []byte, err error) {
 	unpacked, err = artifacts.SuaveAbi.Methods["{{.Name}}"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
 		{{range .Input}}{{.Name}} {{typ2 .Typ}}
 		{{end}})
-	
+
 	{{range $index, $item := .Input}}{{ if isComplex .Typ }}
 	if err = mapstructure.Decode(unpacked[{{$index}}], &{{.Name}}); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 	{{else}}{{.Name}} = unpacked[{{$index}}].({{typ2 .Typ}}){{end}}
 	{{end}}
@@ -322,9 +322,9 @@ func (b *SuaveRuntimeAdapter) {{.Name}}(input []byte) (res []byte, err error) {
 	var (
 		{{range .Output.Fields}}{{.Name}} {{typ2 .Typ}}
 		{{end}})
-	
+
 	if {{range .Output.Fields}}{{.Name}},{{end}} err = b.impl.{{.Name}}({{range .Input}}{{.Name}}, {{end}}); err != nil {
-		return
+		return nil, err
 	}
 
 	{{ if eq (len .Output.Fields) 0 }}
@@ -336,7 +336,7 @@ func (b *SuaveRuntimeAdapter) {{.Name}}(input []byte) (res []byte, err error) {
 	result, err = artifacts.SuaveAbi.Methods["{{.Name}}"].Outputs.Pack({{range .Output.Fields}}{{.Name}}, {{end}})
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 	{{end}}
@@ -386,7 +386,7 @@ struct {{.Name}} {
 	{{end}} }
 {{end}}
 
-address public constant ANYALLOWED = 
+address public constant ANYALLOWED =
 0xC8df3686b4Afb2BB53e60EAe97EF043FE03Fb829;
 
 address public constant IS_CONFIDENTIAL_ADDR =

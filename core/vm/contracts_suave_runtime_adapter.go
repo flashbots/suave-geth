@@ -134,7 +134,7 @@ func (b *SuaveRuntimeAdapter) buildEthBlock(input []byte) (res []byte, err error
 	unpacked, err = artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -145,12 +145,12 @@ func (b *SuaveRuntimeAdapter) buildEthBlock(input []byte) (res []byte, err error
 
 	if err = mapstructure.Decode(unpacked[0], &blockArgs); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 
 	if err = mapstructure.Decode(unpacked[1], &dataId); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 
 	namespace = unpacked[2].(string)
@@ -161,13 +161,13 @@ func (b *SuaveRuntimeAdapter) buildEthBlock(input []byte) (res []byte, err error
 	)
 
 	if blockBid, executionPayload, err = b.impl.buildEthBlock(blockArgs, dataId, namespace); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["buildEthBlock"].Outputs.Pack(blockBid, executionPayload)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -185,7 +185,7 @@ func (b *SuaveRuntimeAdapter) confidentialInputs(input []byte) (res []byte, err 
 	unpacked, err = artifacts.SuaveAbi.Methods["confidentialInputs"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var ()
@@ -195,7 +195,7 @@ func (b *SuaveRuntimeAdapter) confidentialInputs(input []byte) (res []byte, err 
 	)
 
 	if confindentialData, err = b.impl.confidentialInputs(); err != nil {
-		return
+		return nil, err
 	}
 
 	result = confindentialData
@@ -215,7 +215,7 @@ func (b *SuaveRuntimeAdapter) confidentialRetrieve(input []byte) (res []byte, er
 	unpacked, err = artifacts.SuaveAbi.Methods["confidentialRetrieve"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -225,7 +225,7 @@ func (b *SuaveRuntimeAdapter) confidentialRetrieve(input []byte) (res []byte, er
 
 	if err = mapstructure.Decode(unpacked[0], &dataId); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 
 	key = unpacked[1].(string)
@@ -235,7 +235,7 @@ func (b *SuaveRuntimeAdapter) confidentialRetrieve(input []byte) (res []byte, er
 	)
 
 	if value, err = b.impl.confidentialRetrieve(dataId, key); err != nil {
-		return
+		return nil, err
 	}
 
 	result = value
@@ -255,7 +255,7 @@ func (b *SuaveRuntimeAdapter) confidentialStore(input []byte) (res []byte, err e
 	unpacked, err = artifacts.SuaveAbi.Methods["confidentialStore"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -266,7 +266,7 @@ func (b *SuaveRuntimeAdapter) confidentialStore(input []byte) (res []byte, err e
 
 	if err = mapstructure.Decode(unpacked[0], &dataId); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 
 	key = unpacked[1].(string)
@@ -275,7 +275,7 @@ func (b *SuaveRuntimeAdapter) confidentialStore(input []byte) (res []byte, err e
 	var ()
 
 	if err = b.impl.confidentialStore(dataId, key, value); err != nil {
-		return
+		return nil, err
 	}
 
 	return nil, nil
@@ -294,7 +294,7 @@ func (b *SuaveRuntimeAdapter) doHTTPRequest(input []byte) (res []byte, err error
 	unpacked, err = artifacts.SuaveAbi.Methods["doHTTPRequest"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -303,7 +303,7 @@ func (b *SuaveRuntimeAdapter) doHTTPRequest(input []byte) (res []byte, err error
 
 	if err = mapstructure.Decode(unpacked[0], &request); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 
 	var (
@@ -311,13 +311,13 @@ func (b *SuaveRuntimeAdapter) doHTTPRequest(input []byte) (res []byte, err error
 	)
 
 	if httpResponse, err = b.impl.doHTTPRequest(request); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["doHTTPRequest"].Outputs.Pack(httpResponse)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -335,7 +335,7 @@ func (b *SuaveRuntimeAdapter) ethcall(input []byte) (res []byte, err error) {
 	unpacked, err = artifacts.SuaveAbi.Methods["ethcall"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -351,13 +351,13 @@ func (b *SuaveRuntimeAdapter) ethcall(input []byte) (res []byte, err error) {
 	)
 
 	if callOutput, err = b.impl.ethcall(contractAddr, input1); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["ethcall"].Outputs.Pack(callOutput)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -375,7 +375,7 @@ func (b *SuaveRuntimeAdapter) extractHint(input []byte) (res []byte, err error) 
 	unpacked, err = artifacts.SuaveAbi.Methods["extractHint"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -389,7 +389,7 @@ func (b *SuaveRuntimeAdapter) extractHint(input []byte) (res []byte, err error) 
 	)
 
 	if hints, err = b.impl.extractHint(bundleData); err != nil {
-		return
+		return nil, err
 	}
 
 	result = hints
@@ -409,7 +409,7 @@ func (b *SuaveRuntimeAdapter) fetchDataRecords(input []byte) (res []byte, err er
 	unpacked, err = artifacts.SuaveAbi.Methods["fetchDataRecords"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -425,13 +425,13 @@ func (b *SuaveRuntimeAdapter) fetchDataRecords(input []byte) (res []byte, err er
 	)
 
 	if dataRecords, err = b.impl.fetchDataRecords(cond, namespace); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["fetchDataRecords"].Outputs.Pack(dataRecords)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -449,7 +449,7 @@ func (b *SuaveRuntimeAdapter) fillMevShareBundle(input []byte) (res []byte, err 
 	unpacked, err = artifacts.SuaveAbi.Methods["fillMevShareBundle"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -458,7 +458,7 @@ func (b *SuaveRuntimeAdapter) fillMevShareBundle(input []byte) (res []byte, err 
 
 	if err = mapstructure.Decode(unpacked[0], &dataId); err != nil {
 		err = errFailedToDecodeField
-		return
+		return nil, err
 	}
 
 	var (
@@ -466,7 +466,7 @@ func (b *SuaveRuntimeAdapter) fillMevShareBundle(input []byte) (res []byte, err 
 	)
 
 	if encodedBundle, err = b.impl.fillMevShareBundle(dataId); err != nil {
-		return
+		return nil, err
 	}
 
 	result = encodedBundle
@@ -486,7 +486,7 @@ func (b *SuaveRuntimeAdapter) newBuilder(input []byte) (res []byte, err error) {
 	unpacked, err = artifacts.SuaveAbi.Methods["newBuilder"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var ()
@@ -496,13 +496,13 @@ func (b *SuaveRuntimeAdapter) newBuilder(input []byte) (res []byte, err error) {
 	)
 
 	if sessionid, err = b.impl.newBuilder(); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["newBuilder"].Outputs.Pack(sessionid)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -520,7 +520,7 @@ func (b *SuaveRuntimeAdapter) newDataRecord(input []byte) (res []byte, err error
 	unpacked, err = artifacts.SuaveAbi.Methods["newDataRecord"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -540,13 +540,13 @@ func (b *SuaveRuntimeAdapter) newDataRecord(input []byte) (res []byte, err error
 	)
 
 	if dataRecord, err = b.impl.newDataRecord(decryptionCondition, allowedPeekers, allowedStores, dataType); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["newDataRecord"].Outputs.Pack(dataRecord)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -564,7 +564,7 @@ func (b *SuaveRuntimeAdapter) signEthTransaction(input []byte) (res []byte, err 
 	unpacked, err = artifacts.SuaveAbi.Methods["signEthTransaction"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -582,13 +582,13 @@ func (b *SuaveRuntimeAdapter) signEthTransaction(input []byte) (res []byte, err 
 	)
 
 	if signedTxn, err = b.impl.signEthTransaction(txn, chainId, signingKey); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["signEthTransaction"].Outputs.Pack(signedTxn)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -606,7 +606,7 @@ func (b *SuaveRuntimeAdapter) signMessage(input []byte) (res []byte, err error) 
 	unpacked, err = artifacts.SuaveAbi.Methods["signMessage"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -622,13 +622,13 @@ func (b *SuaveRuntimeAdapter) signMessage(input []byte) (res []byte, err error) 
 	)
 
 	if signature, err = b.impl.signMessage(digest, signingKey); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["signMessage"].Outputs.Pack(signature)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -646,7 +646,7 @@ func (b *SuaveRuntimeAdapter) simulateBundle(input []byte) (res []byte, err erro
 	unpacked, err = artifacts.SuaveAbi.Methods["simulateBundle"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -660,13 +660,13 @@ func (b *SuaveRuntimeAdapter) simulateBundle(input []byte) (res []byte, err erro
 	)
 
 	if effectiveGasPrice, err = b.impl.simulateBundle(bundleData); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["simulateBundle"].Outputs.Pack(effectiveGasPrice)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -684,7 +684,7 @@ func (b *SuaveRuntimeAdapter) simulateTransaction(input []byte) (res []byte, err
 	unpacked, err = artifacts.SuaveAbi.Methods["simulateTransaction"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -700,13 +700,13 @@ func (b *SuaveRuntimeAdapter) simulateTransaction(input []byte) (res []byte, err
 	)
 
 	if simulationResult, err = b.impl.simulateTransaction(sessionid, txn); err != nil {
-		return
+		return nil, err
 	}
 
 	result, err = artifacts.SuaveAbi.Methods["simulateTransaction"].Outputs.Pack(simulationResult)
 	if err != nil {
 		err = errFailedToPackOutput
-		return
+		return nil, err
 	}
 	return result, nil
 
@@ -724,7 +724,7 @@ func (b *SuaveRuntimeAdapter) submitBundleJsonRPC(input []byte) (res []byte, err
 	unpacked, err = artifacts.SuaveAbi.Methods["submitBundleJsonRPC"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -742,7 +742,7 @@ func (b *SuaveRuntimeAdapter) submitBundleJsonRPC(input []byte) (res []byte, err
 	)
 
 	if errorMessage, err = b.impl.submitBundleJsonRPC(url, method, params); err != nil {
-		return
+		return nil, err
 	}
 
 	result = errorMessage
@@ -762,7 +762,7 @@ func (b *SuaveRuntimeAdapter) submitEthBlockToRelay(input []byte) (res []byte, e
 	unpacked, err = artifacts.SuaveAbi.Methods["submitEthBlockToRelay"].Inputs.Unpack(input)
 	if err != nil {
 		err = errFailedToUnpackInput
-		return
+		return nil, err
 	}
 
 	var (
@@ -778,7 +778,7 @@ func (b *SuaveRuntimeAdapter) submitEthBlockToRelay(input []byte) (res []byte, e
 	)
 
 	if blockBid, err = b.impl.submitEthBlockToRelay(relayUrl, builderBid); err != nil {
-		return
+		return nil, err
 	}
 
 	result = blockBid
