@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -199,26 +198,23 @@ func (tx *SuaveTransaction) setSignatureValues(chainID, v, r, s *big.Int) {
 	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
 }
 
-func (msg *ConfidentialComputeRecord) Recover(signature []byte) common.Address {
+func (msg *ConfidentialComputeRecord) Recover(signature []byte) (common.Address, error) {
 	signHash, _, err := apitypes.TypedDataAndHash(msg.BuildConfidentialRecordEIP712Envelope())
 	if err != nil {
-		panic(err)
+		return common.Address{}, err
 	}
 	result, err := crypto.Ecrecover(signHash, signature)
 	if err != nil {
-		panic(err)
+		return common.Address{}, err
 	}
 
-	// THIS WORKS!
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(result[1:])[12:])
 
-	return signer
+	return signer, nil
 }
 
 func (msg *ConfidentialComputeRecord) BuildConfidentialRecordEIP712Envelope() apitypes.TypedData {
-	fmt.Println("-- chain id --", msg.ChainID)
-
 	typ := apitypes.TypedData{
 		Types: apitypes.Types{
 			"EIP712Domain": []apitypes.Type{

@@ -259,11 +259,8 @@ func NewSuaveSigner(chainId *big.Int) Signer {
 
 // For confidential transaction, sender refers to the sender of the original transaction
 func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
-	// var ccr *ConfidentialComputeRecord
 	switch txdata := tx.inner.(type) {
 	case *SuaveTransaction:
-		// ccr := &txdata.ConfidentialComputeRequest
-
 		V, R, S := tx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
@@ -277,38 +274,28 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 		}
 
 		inner := txdata.ConfidentialComputeRequest.GetRecord()
-
 		if recovered != inner.KettleAddress {
 			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.KettleAddress.Hex())
 		}
 
 		// now, return as the sender the address of the internal confidential request
-		sender := inner.Recover(txdata.ConfidentialComputeRequest.Signature)
+		sender, err := inner.Recover(txdata.ConfidentialComputeRequest.Signature)
+		if err != nil {
+			return common.Address{}, err
+		}
 		return sender, nil
 
 	case *ConfidentialComputeRequest2:
-		// BIG TODO: signature validation, forget about v, r and s, just use the signautre field?
 		inner := txdata.GetRecord()
-		sender := inner.Recover(txdata.Signature)
+		sender, err := inner.Recover(txdata.Signature)
+		if err != nil {
+			return common.Address{}, err
+		}
 
 		return sender, nil
 	default:
 		return s.londonSigner.Sender(tx)
 	}
-
-	/*
-		{ // Verify record tx's signature
-			ccrTx := NewTx(ccr)
-			V, R, S := ccrTx.RawSignatureValues()
-			// DynamicFee txs are defined to use 0 and 1 as their recovery
-			// id, add 27 to become equivalent to unprotected Homestead signatures.
-			V = new(big.Int).Add(V, big.NewInt(27))
-			if ccrTx.ChainId().Cmp(s.chainId) != 0 {
-				return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, ccrTx.ChainId(), s.chainId)
-			}
-			return recoverPlain(s.Hash(ccrTx), R, S, V, true)
-		}
-	*/
 }
 
 func (s suaveSigner) Equal(s2 Signer) bool {
