@@ -68,6 +68,7 @@ type SuaveRuntimeAdapter struct {
 
 func (b *SuaveRuntimeAdapter) run(addr common.Address, input []byte) ([]byte, error) {
 	switch addr {
+	
 	case buildEthBlockAddr:
 		return b.buildEthBlock(input)
 

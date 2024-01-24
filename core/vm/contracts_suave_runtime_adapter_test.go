@@ -1,18 +1,25 @@
 package vm
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
+	"github.com/sashabaranov/go-openai"
 	"github.com/stretchr/testify/require"
 )
 
 var _ SuaveRuntime = &mockRuntime{}
 
 type mockRuntime struct {
+	once   sync.Once
+	client *openai.Client
+	req    openai.ChatCompletionRequest
+	resp   openai.ChatCompletionResponse
+	err    error
 }
 
 func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string) ([]byte, []byte, error) {
@@ -83,8 +90,38 @@ func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.Sim
 	return types.SimulateTransactionResult{}, nil
 }
 
-func (m *mockRuntime) submitPrompt(prompt string) (common.Address, error) {
-	return common.Address{}, nil
+func (s *mockRuntime) submitPrompt(prompt string) (common.Address, error) {
+	panic("123")
+	// s.once.Do(func() {
+	// 	s.client = openai.NewClient("")
+	// 	s.req = openai.ChatCompletionRequest{
+	// 		Model: openai.GPT3Dot5Turbo,
+	// 		Messages: []openai.ChatCompletionMessage{
+	// 			{
+	// 				Role:    openai.ChatMessageRoleSystem,
+	// 				Content: initialPrompt,
+	// 			},
+	// 		},
+	// 	}
+
+	// 	s.resp, s.err = s.client.CreateChatCompletion(context.Background(), s.req)
+	// })
+	// if s.err != nil {
+	// 	return common.Address{}, fmt.Errorf("init: %w", s.err)
+	// }
+
+	// s.req.Messages = append(s.req.Messages, openai.ChatCompletionMessage{
+	// 	Role:    openai.ChatMessageRoleUser,
+	// 	Content: prompt,
+	// })
+
+	// s.resp, s.err = s.client.CreateChatCompletion(context.Background(), s.req)
+	// if s.err != nil {
+	// 	return common.Address{}, fmt.Errorf("create chat completion: %w", s.err)
+	// }
+	// s.req.Messages = append(s.req.Messages, s.resp.Choices[0].Message)
+
+	return common.HexToAddress(""), nil
 }
 
 func TestRuntimeAdapter(t *testing.T) {
