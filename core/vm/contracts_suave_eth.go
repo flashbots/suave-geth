@@ -289,11 +289,12 @@ func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJ
 			"Accept:application/json",
 		},
 	}
-	if _, err := b.doHTTPRequest(httpReq); err != nil {
+
+	resp, err := b.doHTTPRequest(httpReq)
+	if err != nil {
 		return nil, err
 	}
-
-	return nil, nil
+	return resp, nil
 }
 
 func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*specCapella.ExecutionPayload, error) {
