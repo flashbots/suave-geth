@@ -525,7 +525,7 @@ var (
 
 	// Suave settings
 	SuaveEthRemoteBackendEndpointFlag = &cli.StringFlag{
-		Name:     "suave.eth.remote_endpoint",
+		Name:     "suave.eth.remote-endpoint",
 		Usage:    "Ethereum RPC endpoint to use as eth backend",
 		Category: flags.SuaveCategory,
 	}
