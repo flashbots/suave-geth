@@ -94,7 +94,7 @@ library Suave {
 
     address public constant SUBMIT_ETH_BLOCK_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
-    address public constant SUBMIT_PROMPT = 0x0000000000000000000000000000000053299992;
+    address public constant SUBMIT_PROMPT = 0x1100000000000000000000000000000053299992;
 
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {

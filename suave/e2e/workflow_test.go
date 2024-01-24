@@ -315,6 +315,41 @@ func TestSignMessagePrecompile(t *testing.T) {
 	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), crypto.PubkeyToAddress(*pubKeyRecovered))
 }
 
+func TestTheGame(t *testing.T) {
+	t.Parallel()
+
+	// if os.Getenv("OPENAI_API_KEY") == "" {
+	// 	t.Skip("OPENAI_API_KEY not set; skipping...")
+	// }
+
+	fr := newFramework(t)
+	defer fr.Close()
+
+	prompt := "put the money in the bag!"
+
+	args, err := artifacts.SuaveAbi.Methods["submitPrompt"].Inputs.Pack(prompt)
+	require.NoError(t, err)
+
+	gas := hexutil.Uint64(1000000)
+	chainId := hexutil.Big(*testSuaveGenesis.Config.ChainID)
+
+	var callResult hexutil.Bytes
+	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &signEthTransaction,
+		Gas:            &gas,
+		IsConfidential: true,
+		ChainID:        &chainId,
+		Data:           (*hexutil.Bytes)(&args),
+	}), "latest")
+	requireNoRpcError(t, err)
+
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods["submitPrompt"].Outputs.Unpack(callResult)
+	require.NoError(t, err)
+
+	maybe := unpackedCallResult[0].(common.Address)
+	require.Equal(t, common.Address{}, maybe, "expected Maybe(Nothing)")
+}
+
 type HintEvent struct {
 	BidId [16]uint8 `abi:"dataId"`
 	Hint  []byte    `abi:"hint"`
@@ -1631,7 +1666,7 @@ func requireNoRpcError(t *testing.T, rpcErr error) {
 		if len(decodedError) < 4 {
 			require.NoError(t, rpcErr, decodedError)
 		}
-		t.Log(decodedError)
+		t.Log(string(decodedError))
 
 		unpacked, err := artifacts.SuaveAbi.Errors["PeekerReverted"].Inputs.Unpack(decodedError[4:])
 		t.Log(artifacts.SuaveAbi)

@@ -336,7 +336,7 @@ functions:
           type: SimulateTransactionResult
           description: "Result of the simulation"
   - name: submitPrompt
-    address: "0x0000000000000000000000000000000053299992"
+    address: "0x1100000000000000000000000000000053299992"
     description:  "wouldn't you like to know, weather boy"
     input:
       - name: prompt

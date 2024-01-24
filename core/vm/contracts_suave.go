@@ -278,7 +278,7 @@ func (s *suaveRuntime) submitPrompt(prompt string) (common.Address, error) {
 		s.resp, s.err = s.client.CreateChatCompletion(context.Background(), s.req)
 	})
 	if s.err != nil {
-		return common.Address{}, s.err
+		return common.Address{}, fmt.Errorf("init: %w", s.err)
 	}
 
 	s.req.Messages = append(s.req.Messages, openai.ChatCompletionMessage{
@@ -288,7 +288,7 @@ func (s *suaveRuntime) submitPrompt(prompt string) (common.Address, error) {
 
 	s.resp, s.err = s.client.CreateChatCompletion(context.Background(), s.req)
 	if s.err != nil {
-		return common.Address{}, s.err
+		return common.Address{}, fmt.Errorf("create chat completion: %w", s.err)
 	}
 	s.req.Messages = append(s.req.Messages, s.resp.Choices[0].Message)
 
