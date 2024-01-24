@@ -83,6 +83,10 @@ func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.Sim
 	return types.SimulateTransactionResult{}, nil
 }
 
+func (m *mockRuntime) submitPrompt(prompt string) (common.Address, error) {
+	return common.Address{}, nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},

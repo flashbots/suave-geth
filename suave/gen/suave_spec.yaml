@@ -335,3 +335,14 @@ functions:
         - name: simulationResult
           type: SimulateTransactionResult
           description: "Result of the simulation"
+  - name: submitPrompt
+    address: "0x0000000000000000000000000000000053299992"
+    description:  "wouldn't you like to know, weather boy"
+    input:
+      - name: prompt
+        type: string
+    output:
+      fields:
+        - name: maybeHash
+          type: address
+          description: "either an adddress or nothing (0x0..0)"

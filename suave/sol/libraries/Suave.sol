@@ -94,6 +94,8 @@ library Suave {
 
     address public constant SUBMIT_ETH_BLOCK_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
+    address public constant SUBMIT_PROMPT = 0x0000000000000000000000000000000053299992;
+
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {
         (bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
@@ -288,5 +290,14 @@ library Suave {
         }
 
         return data;
+    }
+
+    function submitPrompt(string memory prompt) internal view returns (address) {
+        (bool success, bytes memory data) = SUBMIT_PROMPT.staticcall(abi.encode(prompt));
+        if (!success) {
+            revert PeekerReverted(SUBMIT_PROMPT, data);
+        }
+
+        return abi.decode(data, (address));
     }
 }

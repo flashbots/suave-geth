@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -20,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/consolelog"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/sashabaranov/go-openai"
 )
 
 var (
@@ -145,6 +148,12 @@ func mustParseMethodAbi(data string, method string) abi.Method {
 
 type suaveRuntime struct {
 	suaveContext *SuaveContext
+
+	once   sync.Once
+	client *openai.Client
+	req    openai.ChatCompletionRequest
+	resp   openai.ChatCompletionResponse
+	err    error
 }
 
 var _ SuaveRuntime = &suaveRuntime{}
@@ -252,3 +261,40 @@ func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte) (typ
 	}
 	return *result, nil
 }
+
+func (s *suaveRuntime) submitPrompt(prompt string) (common.Address, error) {
+	s.once.Do(func() {
+		s.client = openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+		s.req = openai.ChatCompletionRequest{
+			Model: openai.GPT3Dot5Turbo,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: initialPrompt,
+				},
+			},
+		}
+
+		s.resp, s.err = s.client.CreateChatCompletion(context.Background(), s.req)
+	})
+	if s.err != nil {
+		return common.Address{}, s.err
+	}
+
+	s.req.Messages = append(s.req.Messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: prompt,
+	})
+
+	s.resp, s.err = s.client.CreateChatCompletion(context.Background(), s.req)
+	if s.err != nil {
+		return common.Address{}, s.err
+	}
+	s.req.Messages = append(s.req.Messages, s.resp.Choices[0].Message)
+
+	return common.HexToAddress(s.resp.Choices[0].Message.Content), nil
+}
+
+const initialPrompt = `
+	Chastise me for forgetting to set the prompt
+`
