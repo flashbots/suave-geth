@@ -111,19 +111,12 @@ func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byt
 }
 
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID types.DataId, namespace string) ([]byte, []byte, error) {
-	dataIDs := [][16]byte{}
-	// first check for merged record, else assume regular record
-	if mergedDataRecordsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(dataID, buildEthBlockAddr, "default:v0:mergedDataRecords"); err == nil {
-		unpacked, err := dataIDsAbi.Inputs.Unpack(mergedDataRecordsBytes)
-
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not unpack merged record ids: %w", err)
-		}
-		dataIDs = unpacked[0].([][16]byte)
-	} else {
-		dataIDs = append(dataIDs, dataID)
+	mergedDataRecordsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(dataID, buildEthBlockAddr, namespace)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not unpack merged record ids: %w", err)
 	}
-
+	unpacked, err := dataIDsAbi.Inputs.Unpack(mergedDataRecordsBytes)
+	dataIDs := unpacked[0].([]types.DataId)
 	var recordsToMerge = make([]types.DataRecord, len(dataIDs))
 	for i, dataID := range dataIDs {
 		var err error
@@ -136,76 +129,21 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		if _, err := checkIsPrecompileCallAllowed(b.suaveContext, buildEthBlockAddr, record); err != nil {
 			return nil, nil, err
 		}
-
 		recordsToMerge[i] = record.ToInnerRecord()
 	}
 
 	var mergedBundles []types.SBundle
 	for _, record := range recordsToMerge {
-		switch record.Version {
-		case "mevshare:v0:matchDataRecords":
-			// fetch the matched ids and merge the bundle
-			matchedBundleIdsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(record.Id, buildEthBlockAddr, "mevshare:v0:mergedDataRecords")
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not retrieve record ids data for record %v, from cdas: %w", record, err)
-			}
-
-			unpackeddataIDs, err := dataIDsAbi.Inputs.Unpack(matchedBundleIdsBytes)
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not unpack record ids data for record %v, from cdas: %w", record, err)
-			}
-
-			matchdataIDs := unpackeddataIDs[0].([][16]byte)
-
-			userBundleBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(matchdataIDs[0], buildEthBlockAddr, "mevshare:v0:ethBundles")
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not retrieve bundle data for dataID %v: %w", matchdataIDs[0], err)
-			}
-
-			var userBundle types.SBundle
-			if err := json.Unmarshal(userBundleBytes, &userBundle); err != nil {
-				return nil, nil, fmt.Errorf("could not unmarshal user bundle data for dataID %v: %w", matchdataIDs[0], err)
-			}
-
-			matchBundleBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(matchdataIDs[1], buildEthBlockAddr, "mevshare:v0:ethBundles")
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not retrieve match bundle data for dataID %v: %w", matchdataIDs[1], err)
-			}
-
-			var matchBundle types.SBundle
-			if err := json.Unmarshal(matchBundleBytes, &matchBundle); err != nil {
-				return nil, nil, fmt.Errorf("could not unmarshal match bundle data for dataID %v: %w", matchdataIDs[1], err)
-			}
-
-			userBundle.Txs = append(userBundle.Txs, matchBundle.Txs...)
-
-			mergedBundles = append(mergedBundles, userBundle)
-
-		case "mevshare:v0:unmatchedBundles":
-			bundleBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(record.Id, buildEthBlockAddr, "mevshare:v0:ethBundles")
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not retrieve bundle data for dataID %v, from cdas: %w", record.Id, err)
-			}
-
-			var bundle types.SBundle
-			if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
-				return nil, nil, fmt.Errorf("could not unmarshal bundle data for dataID %v, from cdas: %w", record.Id, err)
-			}
-			mergedBundles = append(mergedBundles, bundle)
-		case "default:v0:ethBundles":
-			bundleBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(record.Id, buildEthBlockAddr, "default:v0:ethBundles")
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not retrieve bundle data for dataID %v, from cdas: %w", record.Id, err)
-			}
-
-			var bundle types.SBundle
-			if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
-				return nil, nil, fmt.Errorf("could not unmarshal bundle data for dataID %v, from cdas: %w", record.Id, err)
-			}
-			mergedBundles = append(mergedBundles, bundle)
-		default:
-			return nil, nil, fmt.Errorf("unknown record version %s", record.Version)
+		bundleBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(record.Id, buildEthBlockAddr, record.Version)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not retrieve bundle data for dataID %v, from cdas: %w", record.Id, err)
 		}
+
+		var bundle types.SBundle
+		if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
+			return nil, nil, fmt.Errorf("could not unmarshal bundle data for dataID %v, from cdas: %w", record.Id, err)
+		}
+		mergedBundles = append(mergedBundles, bundle)
 	}
 
 	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
