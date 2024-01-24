@@ -30,7 +30,7 @@ func TestRedisTransport(t *testing.T) {
 				Id:                  suave.DataId{0x42},
 				DecryptionCondition: uint64(13),
 				AllowedPeekers:      []common.Address{{0x41, 0x39}},
-				Version:             string("vv"),
+				Namespace:           string("vv"),
 			},
 			Value: suave.Bytes{},
 		}},
@@ -95,7 +95,7 @@ func TestEngineOnRedis(t *testing.T) {
 		DecryptionCondition: uint64(13),
 		AllowedPeekers:      []common.Address{{0x41, 0x39}},
 		AllowedStores:       []common.Address{{}},
-		Version:             string("vv"),
+		Namespace:           string("vv"),
 	}, dummyCreationTx)
 	require.NoError(t, err)
 
@@ -124,7 +124,7 @@ func TestEngineOnRedis(t *testing.T) {
 		DecryptionCondition: record.DecryptionCondition,
 		AllowedPeekers:      record.AllowedPeekers,
 		AllowedStores:       record.AllowedStores,
-		Version:             record.Version,
+		Namespace:           record.Namespace,
 		CreationTx:          dummyCreationTx,
 	}
 

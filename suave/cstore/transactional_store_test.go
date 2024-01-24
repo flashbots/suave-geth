@@ -29,7 +29,7 @@ func TestTransactionalStore(t *testing.T) {
 		DecryptionCondition: 46,
 		AllowedStores:       []common.Address{{0x42}},
 		AllowedPeekers:      []common.Address{{0x43}},
-		Version:             "v0-test",
+		Namespace:           "v0-test",
 	})
 	require.NoError(t, err)
 

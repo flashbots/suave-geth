@@ -144,7 +144,7 @@ func TestMempool(t *testing.T) {
 			Salt:                suave.RandomDataRecordId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
-			Version:             "default:v0:ethBundles",
+			Namespace:           "default:v0:ethBundles",
 		}, creationTx)
 
 		require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestMempool(t *testing.T) {
 			Salt:                suave.RandomDataRecordId(),
 			DecryptionCondition: targetBlock,
 			AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
-			Version:             "default:v0:ethBundles",
+			Namespace:           "default:v0:ethBundles",
 		}, creationTx)
 		require.NoError(t, err)
 
@@ -184,13 +184,13 @@ func TestMempool(t *testing.T) {
 		require.Equal(t, bid1.Salt, bids[0].Salt)
 		require.Equal(t, bid1.DecryptionCondition, bids[0].DecryptionCondition)
 		require.Equal(t, bid1.AllowedPeekers, bids[0].AllowedPeekers)
-		require.Equal(t, bid1.Version, bids[0].Version)
+		require.Equal(t, bid1.Namespace, bids[0].Namespace)
 
 		require.Equal(t, bid2.Id, bids[1].Id)
 		require.Equal(t, bid2.Salt, bids[1].Salt)
 		require.Equal(t, bid2.DecryptionCondition, bids[1].DecryptionCondition)
 		require.Equal(t, bid2.AllowedPeekers, bids[1].AllowedPeekers)
-		require.Equal(t, bid2.Version, bids[1].Version)
+		require.Equal(t, bid2.Namespace, bids[1].Namespace)
 
 		// Verify via transaction
 		confidentialRequestTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
@@ -824,7 +824,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			DecryptionCondition: uint64(1),
 			AllowedPeekers:      []common.Address{suave.AllowedPeekerAny},
 			AllowedStores:       []common.Address{fr.KettleAddress()},
-			Version:             "default:v0:ethBundles",
+			Namespace:           "default:v0:ethBundles",
 		}, dummyCreationTx)
 		require.NoError(t, err)
 

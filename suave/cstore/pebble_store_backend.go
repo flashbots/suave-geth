@@ -19,7 +19,7 @@ type PebbleStoreBackend struct {
 	db     *pebble.DB
 }
 
-var recordByBlockAndProtocolIndexDbKey = func(blockNumber uint64, namespace string) []byte {
+var recordByBlockAndNamespaceIndexDbKey = func(blockNumber uint64, namespace string) []byte {
 	return []byte(fmt.Sprintf("records-block-%d-ns-%s", blockNumber, namespace))
 }
 
@@ -88,7 +88,7 @@ func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 	// index update
 	var currentValues recordByBlockAndProtocolIndexType
 
-	dbBlockProtoIndexKey := recordByBlockAndProtocolIndexDbKey(record.DecryptionCondition, record.Version)
+	dbBlockProtoIndexKey := recordByBlockAndNamespaceIndexDbKey(record.DecryptionCondition, record.Namespace)
 	rawCurrentValues, closer, err := b.db.Get(dbBlockProtoIndexKey)
 	if err != nil {
 		if !errors.Is(err, pebble.ErrNotFound) {
@@ -148,8 +148,8 @@ func (b *PebbleStoreBackend) Retrieve(record suave.DataRecord, caller common.Add
 	return ret, nil
 }
 
-func (b *PebbleStoreBackend) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	dbBlockProtoIndexKey := recordByBlockAndProtocolIndexDbKey(blockNumber, namespace)
+func (b *PebbleStoreBackend) FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	dbBlockProtoIndexKey := recordByBlockAndNamespaceIndexDbKey(blockNumber, namespace)
 	rawCurrentValues, closer, err := b.db.Get(dbBlockProtoIndexKey)
 	if err != nil {
 		return nil

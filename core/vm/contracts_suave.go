@@ -89,13 +89,13 @@ func (b *suaveRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]
 
 /* Data Record precompiles */
 
-func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, RecordType string) (types.DataRecord, error) {
+func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, namespace string) (types.DataRecord, error) {
 	record, err := b.suaveContext.Backend.ConfidentialStore.InitRecord(types.DataRecord{
 		Salt:                suave.RandomDataRecordId(),
 		DecryptionCondition: decryptionCondition,
 		AllowedPeekers:      allowedPeekers,
 		AllowedStores:       allowedStores,
-		Version:             RecordType, // TODO : make generic
+		Namespace:           namespace, // TODO : make generic
 	})
 	if err != nil {
 		return types.DataRecord{}, err
@@ -105,7 +105,7 @@ func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers 
 }
 
 func (b *suaveRuntime) fetchDataRecords(targetBlock uint64, namespace string) ([]types.DataRecord, error) {
-	records1 := b.suaveContext.Backend.ConfidentialStore.FetchRecordsByProtocolAndBlock(targetBlock, namespace)
+	records1 := b.suaveContext.Backend.ConfidentialStore.FetchRecordsByNamespaceAndBlock(targetBlock, namespace)
 
 	records := make([]types.DataRecord, 0, len(records1))
 	for _, record := range records1 {

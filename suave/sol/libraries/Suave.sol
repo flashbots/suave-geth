@@ -206,10 +206,10 @@ library Suave {
         uint64 decryptionCondition,
         address[] memory allowedPeekers,
         address[] memory allowedStores,
-        string memory dataType
+        string memory namespace
     ) internal view returns (DataRecord memory) {
         (bool success, bytes memory data) =
-            NEW_DATA_RECORD.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, dataType));
+            NEW_DATA_RECORD.staticcall(abi.encode(decryptionCondition, allowedPeekers, allowedStores, namespace));
         if (!success) {
             revert PeekerReverted(NEW_DATA_RECORD, data);
         }

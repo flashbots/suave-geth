@@ -54,7 +54,7 @@ func (l *LocalConfidentialStore) InitRecord(record suave.DataRecord) error {
 	l.records[record.Id] = record
 
 	// index the record by (protocol, block number)
-	indexKey := fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition)
+	indexKey := fmt.Sprintf("protocol-%s-bn-%d", record.Namespace, record.DecryptionCondition)
 	recordIds := l.index[indexKey]
 	recordIds = append(recordIds, record.Id)
 	l.index[indexKey] = recordIds
@@ -97,7 +97,7 @@ func (l *LocalConfidentialStore) FetchRecordByID(dataId suave.DataId) (suave.Dat
 	return bid, nil
 }
 
-func (l *LocalConfidentialStore) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+func (l *LocalConfidentialStore) FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 

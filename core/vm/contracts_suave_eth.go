@@ -142,7 +142,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	var mergedBundles []types.SBundle
 	for _, record := range recordsToMerge {
-		switch record.Version {
+		switch record.Namespace {
 		case "mevshare:v0:matchDataRecords":
 			// fetch the matched ids and merge the bundle
 			matchedBundleIdsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(record.Id, buildEthBlockAddr, "mevshare:v0:mergedDataRecords")
@@ -204,7 +204,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 			}
 			mergedBundles = append(mergedBundles, bundle)
 		default:
-			return nil, nil, fmt.Errorf("unknown record version %s", record.Version)
+			return nil, nil, fmt.Errorf("unknown record version %s", record.Namespace)
 		}
 	}
 
