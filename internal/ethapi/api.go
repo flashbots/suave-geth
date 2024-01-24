@@ -47,7 +47,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
+	"github.com/ethereum/go-ethereum/suave/apitypes"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -1886,7 +1886,7 @@ func (s *TransactionAPI) SendRawTransaction2(ctx context.Context, eip712Envelope
 	// Entrypoint for signed eip-712 messages
 	record := eip712Envelope.GetRecord()
 
-	signHash, _, err := apitypes.TypedDataAndHash(suave.BuildConfidentialRecordEIP712Envelope(&record))
+	signHash, _, err := apitypes.TypedDataAndHash(record.BuildConfidentialRecordEIP712Envelope())
 	if err != nil {
 		panic(err)
 	}
@@ -2009,10 +2009,8 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		return nil, nil, nil, errors.New("invalid transaction passed")
 	}
 
-	var inner *types.ConfidentialComputeRecord
-	if err := json.Unmarshal(confidentialRequest.Message, &inner); err != nil {
-		return nil, nil, nil, err
-	}
+	inner := confidentialRequest.GetRecord()
+	inner.Recover(confidentialRequest.Signature)
 
 	// Look up the wallet containing the requested execution node
 	account := accounts.Account{Address: inner.KettleAddress}
@@ -2024,7 +2022,11 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	storageAccessTracer := &mevmStateLogger{}
 
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
-	suaveCtx := b.SuaveContext(tx, confidentialBytes) // TODO: REMOVE this
+	suaveCtx := b.SuaveContext(tx, confidentialBytes)
+
+	fmt.Println("-- from --")
+	fmt.Println(msg.From)
+
 	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall, Tracer: storageAccessTracer}, &blockCtx, &suaveCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
@@ -2075,7 +2077,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		ConfidentialComputeResult:  computeResult,
 	}
 
-	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())
+	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), inner.ChainID)
 	if err != nil {
 		return nil, nil, nil, err
 	}

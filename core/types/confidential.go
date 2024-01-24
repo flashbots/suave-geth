@@ -2,9 +2,11 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/suave/apitypes"
 )
@@ -19,6 +21,8 @@ type ConfidentialComputeRecord struct {
 
 	KettleAddress          common.Address
 	ConfidentialInputsHash common.Hash
+
+	ChainID *big.Int
 }
 
 type ConfidentialComputeRequest2 struct {
@@ -100,13 +104,13 @@ func (c *ConfidentialComputeRequest2) blobHashes() []common.Hash {
 }
 
 func (c *ConfidentialComputeRequest2) rawSignatureValues() (v, r, s *big.Int) {
-	return nil, nil, nil
+	panic("it should not happen")
 }
 func (c *ConfidentialComputeRequest2) setSignatureValues(chainID, v, r, s *big.Int) {
-	panic("x")
+	panic("it should not happen")
 }
 func (c *ConfidentialComputeRequest2) effectiveGasPrice(dst *big.Int, baseFee *big.Int) *big.Int {
-	panic("x")
+	panic("it should not happen")
 }
 
 type SuaveTransaction struct {
@@ -213,10 +217,13 @@ func (msg *ConfidentialComputeRecord) Recover(signature []byte) common.Address {
 }
 
 func (msg *ConfidentialComputeRecord) BuildConfidentialRecordEIP712Envelope() apitypes.TypedData {
+	fmt.Println("-- chain id --", msg.ChainID)
+
 	typ := apitypes.TypedData{
 		Types: apitypes.Types{
 			"EIP712Domain": []apitypes.Type{
 				{Name: "name", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
 			},
 			"ConfidentialRecord": []apitypes.Type{
 				{Name: "nonce", Type: "uint64"},
@@ -230,7 +237,8 @@ func (msg *ConfidentialComputeRecord) BuildConfidentialRecordEIP712Envelope() ap
 			},
 		},
 		Domain: apitypes.TypedDataDomain{
-			Name: "ConfidentialRecord",
+			Name:    "ConfidentialRecord",
+			ChainId: math.NewHexOrDecimal256(msg.ChainID.Int64()),
 		},
 		PrimaryType: "ConfidentialRecord",
 		Message: apitypes.TypedDataMessage{

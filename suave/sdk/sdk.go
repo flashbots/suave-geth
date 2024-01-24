@@ -16,8 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
-	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suave/apitypes"
 )
 
 func DeployContract(bytecode []byte, client *Client) (*TransactionResult, error) {
@@ -47,12 +46,10 @@ func (c *Contract) Address() common.Address {
 }
 
 func (c *Contract) SendTransaction(method string, args []interface{}, confidentialDataBytes []byte) (*TransactionResult, error) {
-	/*
-		signer, err := c.client.getSigner()
-		if err != nil {
-			return nil, err
-		}
-	*/
+	chainId, err := c.client.rpc.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	calldata, err := c.abi.Pack(method, args...)
 	if err != nil {
@@ -78,7 +75,8 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		GasPrice:               gasPrice,
 		Gas:                    1000000,
 		Data:                   calldata,
-		ConfidentialInputsHash: crypto.Keccak256Hash(confidentialDataBytes), // ?
+		ConfidentialInputsHash: crypto.Keccak256Hash(confidentialDataBytes),
+		ChainID:                chainId,
 	}
 
 	rawRecord, err := json.Marshal(record)
@@ -86,36 +84,16 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
-	eipTypedData := suave.BuildConfidentialRecordEIP712Envelope(record)
+	eipTypedData := record.BuildConfidentialRecordEIP712Envelope()
 	typedDataHashed, _, err := apitypes.TypedDataAndHash(eipTypedData)
 	if err != nil {
-		panic("?")
 		return nil, err
 	}
 
 	signedMsg, err := c.client.Sign(typedDataHashed[:])
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-
-	fmt.Println("-- sender of the txn --", c.client.Addr())
-	fmt.Println(c.client.rpc.BalanceAt(context.Background(), c.client.Addr(), nil))
-
-	/*
-		fmt.Println(string(raw))
-
-		panic("xxx")
-
-		computeRequestBytes, err := computeRequest.MarshalBinary()
-		if err != nil {
-			return nil, err
-		}
-
-		var hash common.Hash
-		if err = c.client.rpc.Client().Call(&hash, "eth_sendRawTransaction", hexutil.Encode(computeRequestBytes)); err != nil {
-			return nil, err
-		}
-	*/
 
 	envelope := &types.ConfidentialComputeRequest2{
 		Message:   rawRecord,

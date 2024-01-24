@@ -18,7 +18,6 @@ package types
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -277,17 +276,15 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, err
 		}
 
-		var inner *ConfidentialComputeRecord
-		if err := json.Unmarshal(txdata.ConfidentialComputeRequest.Message, &inner); err != nil {
-			return common.Address{}, err
-		}
+		inner := txdata.ConfidentialComputeRequest.GetRecord()
 
 		if recovered != inner.KettleAddress {
 			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.KettleAddress.Hex())
 		}
 
-		// TODO-FIX: Check signature
-		return common.Address{}, nil
+		// now, return as the sender the address of the internal confidential request
+		sender := inner.Recover(txdata.ConfidentialComputeRequest.Signature)
+		return sender, nil
 
 	case *ConfidentialComputeRequest2:
 		// BIG TODO: signature validation, forget about v, r and s, just use the signautre field?
