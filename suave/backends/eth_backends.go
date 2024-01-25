@@ -11,6 +11,7 @@ import (
 	builder "github.com/ethereum/go-ethereum/suave/builder/api"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/trie"
+	suavexSDK "github.com/flashbots/suave-execution-geth/suave/sdk"
 )
 
 var (
@@ -51,6 +52,8 @@ func NewRemoteEthBackend(endpoint string) *RemoteEthBackend {
 	r := &RemoteEthBackend{
 		endpoint: endpoint,
 	}
+
+	suavexSDK.NewClient("")
 
 	r.APIClient = builder.NewClientFromRPC(r)
 	return r
