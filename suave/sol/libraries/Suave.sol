@@ -96,7 +96,7 @@ library Suave {
 
     // Returns whether execution is off- or on-chain
     function isConfidential() internal view returns (bool b) {
-        (bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
+        (bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.call("");
         if (!success) {
             revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
         }
