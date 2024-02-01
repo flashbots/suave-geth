@@ -14,7 +14,7 @@ services:
     networks:
       - suave-net
   suave-enabled-chain:
-    build: flashbots/suave-execution-geth:latest
+    image: flashbots/suave-execution-geth:latest
     command:
       - --dev
       - --dev.gaslimit=30000000
