@@ -82,6 +82,8 @@ library Suave {
 
     address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
 
+    address public constant PRIVATE_KEY_GEN = 0x0000000000000000000000000000000053200003;
+
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIGN_MESSAGE = 0x0000000000000000000000000000000040100003;
@@ -215,6 +217,15 @@ library Suave {
         }
 
         return abi.decode(data, (DataRecord));
+    }
+
+    function privateKeyGen() internal view returns (string memory) {
+        (bool success, bytes memory data) = PRIVATE_KEY_GEN.staticcall(abi.encode());
+        if (!success) {
+            revert PeekerReverted(PRIVATE_KEY_GEN, data);
+        }
+
+        return abi.decode(data, (string));
     }
 
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)

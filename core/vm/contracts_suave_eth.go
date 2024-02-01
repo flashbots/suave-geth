@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -275,6 +276,15 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 	}
 
 	return bidBytes, envelopeBytes, nil
+}
+
+func (b *suaveRuntime) privateKeyGen() (string, error) {
+	sk, err := crypto.GenerateKey()
+	if err != nil {
+		return "", fmt.Errorf("could not generate new a private key: %w", err)
+	}
+
+	return hex.EncodeToString(crypto.FromECDSA(sk)), nil
 }
 
 func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJson []byte) ([]byte, error) {
