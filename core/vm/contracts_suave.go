@@ -157,7 +157,9 @@ func (c *consoleLogPrecompile) RequiredGas(input []byte) uint64 {
 }
 
 func (c *consoleLogPrecompile) Run(input []byte) ([]byte, error) {
-	consolelog.Print(input)
+	if err := consolelog.Print(input); err != nil {
+		log.Error("failed to console2 print", "err", err)
+	}
 	return nil, nil
 }
 
