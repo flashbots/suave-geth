@@ -105,17 +105,13 @@ func TestSessionManager_StartSession(t *testing.T) {
 	require.NotNil(t, receipt)
 }
 
-func newSessionManager(t *testing.T, cfg *Config) (*SessionManager, *blockchainMock) {
-	if cfg == nil {
-		cfg = &Config{}
-	}
-
+func newSessionManager(t *testing.T, config *Config) (*SessionManager, *blockchainMock) {
 	state := newMockState(t)
 
 	bMock := &blockchainMock{
 		state: state,
 	}
-	return NewSessionManager(bMock, cfg), bMock
+	return NewSessionManager(bMock, config), bMock
 }
 
 type blockchainMock struct {
