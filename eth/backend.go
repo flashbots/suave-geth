@@ -353,7 +353,7 @@ func (s *Ethereum) APIs() []rpc.API {
 		Service:   backends.NewEthBackendServer(s.APIBackend),
 	})
 
-	sessionManager := suave_builder.NewSessionManager(s.blockchain)
+	sessionManager := suave_builder.NewSessionManager(s.blockchain, suave_builder.NewConfigFromEnv())
 
 	apis = append(apis, rpc.API{
 		Namespace: "suavex",

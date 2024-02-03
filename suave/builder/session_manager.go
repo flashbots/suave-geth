@@ -45,13 +45,13 @@ func init() {
 	viper.AutomaticEnv()
 }
 
-func NewConfigFromEnv() *Config{
+func NewConfigFromEnv() *Config {
 	config := &Config{
-		GasCeil: viper.GetUint64("gas_ceil"),
-		SessionIdleTimeout: viper.GetDuration("session_idle_timeout"),
+		GasCeil:               viper.GetUint64("gas_ceil"),
+		SessionIdleTimeout:    viper.GetDuration("session_idle_timeout"),
 		MaxConcurrentSessions: viper.GetInt("max_concurrent_sessions"),
 	}
-	return config 
+	return config
 }
 
 type SessionManager struct {
@@ -64,6 +64,10 @@ type SessionManager struct {
 }
 
 func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
+	if config == nil {
+		panic("empty SessionManager config")
+	}
+
 	sem := make(chan struct{}, config.MaxConcurrentSessions)
 	for len(sem) < cap(sem) {
 		sem <- struct{}{} // fill 'er up
