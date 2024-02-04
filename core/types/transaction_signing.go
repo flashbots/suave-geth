@@ -102,15 +102,6 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 
 // SignTx signs the transaction using the given signer and private key.
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	if tx.Type() == ConfidentialComputeRequestTxType {
-		inner, ok := CastTxInner[*ConfidentialComputeRequest](tx)
-		if !ok {
-			return nil, errors.New("incorrect inner cast!")
-		}
-		inner.ConfidentialInputsHash = crypto.Keccak256Hash(inner.ConfidentialInputs)
-		tx = NewTx(inner)
-	}
-
 	h := s.Hash(tx)
 	sig, err := crypto.Sign(h[:], prv)
 	if err != nil {
@@ -268,11 +259,8 @@ func NewSuaveSigner(chainId *big.Int) Signer {
 
 // For confidential transaction, sender refers to the sender of the original transaction
 func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
-	var ccr *ConfidentialComputeRecord
 	switch txdata := tx.inner.(type) {
 	case *SuaveTransaction:
-		ccr = &txdata.ConfidentialComputeRequest
-
 		V, R, S := tx.RawSignatureValues()
 		// DynamicFee txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
@@ -285,31 +273,28 @@ func (s suaveSigner) Sender(tx *Transaction) (common.Address, error) {
 			return common.Address{}, err
 		}
 
-		if recovered != ccr.KettleAddress {
-			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), ccr.KettleAddress.Hex())
+		inner := txdata.ConfidentialComputeRequest.GetRecord()
+		if recovered != inner.KettleAddress {
+			return common.Address{}, fmt.Errorf("compute request %s signed by incorrect execution node %s, expected %s", tx.Hash().Hex(), recovered.Hex(), inner.KettleAddress.Hex())
 		}
-	case *ConfidentialComputeRequest:
-		ccr = &txdata.ConfidentialComputeRecord
 
-		if txdata.ConfidentialInputsHash != crypto.Keccak256Hash(txdata.ConfidentialInputs) {
-			return common.Address{}, errors.New("confidential inputs hash mismatch")
+		// now, return as the sender the address of the internal confidential request
+		sender, err := inner.Recover(txdata.ConfidentialComputeRequest.Signature)
+		if err != nil {
+			return common.Address{}, err
 		}
-	case *ConfidentialComputeRecord:
-		ccr = txdata
+		return sender, nil
+
+	case *ConfidentialComputeRequest2:
+		inner := txdata.GetRecord()
+		sender, err := inner.Recover(txdata.Signature)
+		if err != nil {
+			return common.Address{}, err
+		}
+
+		return sender, nil
 	default:
 		return s.londonSigner.Sender(tx)
-	}
-
-	{ // Verify record tx's signature
-		ccrTx := NewTx(ccr)
-		V, R, S := ccrTx.RawSignatureValues()
-		// DynamicFee txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V = new(big.Int).Add(V, big.NewInt(27))
-		if ccrTx.ChainId().Cmp(s.chainId) != 0 {
-			return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, ccrTx.ChainId(), s.chainId)
-		}
-		return recoverPlain(s.Hash(ccrTx), R, S, V, true)
 	}
 }
 
@@ -321,20 +306,6 @@ func (s suaveSigner) Equal(s2 Signer) bool {
 func (s suaveSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
 	switch txdata := tx.inner.(type) {
 	case *SuaveTransaction:
-		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
-		}
-		R, S, _ = decodeSignature(sig)
-		V = big.NewInt(int64(sig[64]))
-		return R, S, V, nil
-	case *ConfidentialComputeRecord:
-		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
-		}
-		R, S, _ = decodeSignature(sig)
-		V = big.NewInt(int64(sig[64]))
-		return R, S, V, nil
-	case *ConfidentialComputeRequest:
 		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
 			return nil, nil, nil, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, txdata.ChainID, s.chainId)
 		}
@@ -356,32 +327,6 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 			[]interface{}{
 				s.Hash(NewTx(&txdata.ConfidentialComputeRequest)),
 				txdata.ConfidentialComputeResult,
-			})
-	case *ConfidentialComputeRequest:
-		return prefixedRlpHash(
-			ConfidentialComputeRecordTxType, // Note: this is the same as the Record so that hashes match!
-			[]interface{}{
-				txdata.KettleAddress,
-				txdata.ConfidentialInputsHash,
-				tx.Nonce(),
-				tx.GasPrice(),
-				tx.Gas(),
-				tx.To(),
-				tx.Value(),
-				tx.Data(),
-			})
-	case *ConfidentialComputeRecord:
-		return prefixedRlpHash(
-			tx.Type(),
-			[]interface{}{
-				txdata.KettleAddress,
-				txdata.ConfidentialInputsHash,
-				tx.Nonce(),
-				tx.GasPrice(),
-				tx.Gas(),
-				tx.To(),
-				tx.Value(),
-				tx.Data(),
 			})
 	default:
 		return s.londonSigner.Hash(tx)
@@ -701,10 +646,12 @@ func decodeSignature(sig []byte) (r, s, v *big.Int) {
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
 	if Vb.BitLen() > 8 {
+		panic("a")
 		return common.Address{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)
 	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
+		panic("b")
 		return common.Address{}, ErrInvalidSig
 	}
 	// encode the signature in uncompressed format

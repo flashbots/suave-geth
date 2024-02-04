@@ -28,11 +28,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -96,8 +94,7 @@ type SendTxArgs struct {
 	Input *hexutil.Bytes `json:"input,omitempty"`
 
 	// For non-legacy transactions
-	AccessList *types.AccessList `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+	ChainID *hexutil.Big `json:"chainId,omitempty"`
 }
 
 func (args SendTxArgs) String() string {
@@ -108,88 +105,10 @@ func (args SendTxArgs) String() string {
 	return err.Error()
 }
 
-// ToTransaction converts the arguments to a transaction.
-func (args *SendTxArgs) ToTransaction() *types.Transaction {
-	// TODO: confidential
-	// Add the To-field, if specified
-	var to *common.Address
-	if args.To != nil {
-		dstAddr := args.To.Address()
-		to = &dstAddr
-	}
-
-	var input []byte
-	if args.Input != nil {
-		input = *args.Input
-	} else if args.Data != nil {
-		input = *args.Data
-	}
-
-	var data types.TxData
-	switch {
-	case args.MaxFeePerGas != nil:
-		al := types.AccessList{}
-		if args.AccessList != nil {
-			al = *args.AccessList
-		}
-		data = &types.DynamicFeeTx{
-			To:         to,
-			ChainID:    (*big.Int)(args.ChainID),
-			Nonce:      uint64(args.Nonce),
-			Gas:        uint64(args.Gas),
-			GasFeeCap:  (*big.Int)(args.MaxFeePerGas),
-			GasTipCap:  (*big.Int)(args.MaxPriorityFeePerGas),
-			Value:      (*big.Int)(&args.Value),
-			Data:       input,
-			AccessList: al,
-		}
-	case args.AccessList != nil:
-		data = &types.AccessListTx{
-			To:         to,
-			ChainID:    (*big.Int)(args.ChainID),
-			Nonce:      uint64(args.Nonce),
-			Gas:        uint64(args.Gas),
-			GasPrice:   (*big.Int)(args.GasPrice),
-			Value:      (*big.Int)(&args.Value),
-			Data:       input,
-			AccessList: *args.AccessList,
-		}
-	default:
-		data = &types.LegacyTx{
-			To:       to,
-			Nonce:    uint64(args.Nonce),
-			Gas:      uint64(args.Gas),
-			GasPrice: (*big.Int)(args.GasPrice),
-			Value:    (*big.Int)(&args.Value),
-			Data:     input,
-		}
-	}
-	return types.NewTx(data)
-}
-
 type SigFormat struct {
 	Mime        string
 	ByteVersion byte
 }
-
-var (
-	IntendedValidator = SigFormat{
-		accounts.MimetypeDataWithValidator,
-		0x00,
-	}
-	DataTyped = SigFormat{
-		accounts.MimetypeTypedData,
-		0x01,
-	}
-	ApplicationClique = SigFormat{
-		accounts.MimetypeClique,
-		0x02,
-	}
-	TextPlain = SigFormat{
-		accounts.MimetypeTextPlain,
-		0x45,
-	}
-)
 
 type ValidatorData struct {
 	Address common.Address

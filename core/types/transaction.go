@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
+	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -203,10 +205,6 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner BlobTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
-	case ConfidentialComputeRequestTxType:
-		var inner ConfidentialComputeRequest
-		err := rlp.DecodeBytes(b[1:], &inner)
-		return &inner, err
 	case SuaveTxType:
 		var inner SuaveTransaction
 		err := rlp.DecodeBytes(b[1:], &inner)
@@ -276,6 +274,7 @@ func (tx *Transaction) Type() uint8 {
 }
 
 func CastTxInner[T any](tx *Transaction) (T, bool) {
+	fmt.Println(reflect.TypeOf(tx.inner))
 	t, ok := tx.inner.(T)
 	return t, ok
 }

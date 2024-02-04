@@ -15,11 +15,7 @@ func TestTransactionalStore(t *testing.T) {
 	engine := NewEngine(NewLocalConfidentialStore(), MockTransport{}, MockSigner{}, MockChainSigner{})
 
 	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	dummyCreationTx, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: common.Address{0x42},
-		},
-	}), types.NewSuaveSigner(new(big.Int)), testKey)
+	dummyCreationTx, err := types.SignTx(types.NewTx(nil), types.NewSuaveSigner(new(big.Int)), testKey)
 	require.NoError(t, err)
 
 	tstore := engine.NewTransactionalStore(dummyCreationTx)

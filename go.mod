@@ -37,7 +37,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
-	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
+	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.3.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v1.3.0
@@ -134,6 +134,9 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
+	github.com/umbracle/ethgo v0.1.4-0.20240102125626-68e48cf58add // indirect
+	github.com/umbracle/fastrlp v0.0.0-20220527094140-59d5dd30e722 // indirect
+	github.com/valyala/fastjson v1.4.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	golang.org/x/mod v0.11.0 // indirect

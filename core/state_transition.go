@@ -344,6 +344,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, err
 	}
 	if st.gasRemaining < gas {
+		fmt.Println("from", msg.From)
 		return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gasRemaining, gas)
 	}
 	st.gasRemaining -= gas

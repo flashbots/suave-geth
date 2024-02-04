@@ -3,7 +3,9 @@ package sdk
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -14,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/suave/apitypes"
 )
 
 func DeployContract(bytecode []byte, client *Client) (*TransactionResult, error) {
@@ -43,7 +46,7 @@ func (c *Contract) Address() common.Address {
 }
 
 func (c *Contract) SendTransaction(method string, args []interface{}, confidentialDataBytes []byte) (*TransactionResult, error) {
-	signer, err := c.client.getSigner()
+	chainId, err := c.client.rpc.ChainID(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -64,29 +67,41 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
-	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: c.client.kettleAddress,
-			Nonce:         nonce,
-			To:            &c.addr,
-			Value:         nil,
-			GasPrice:      gasPrice,
-			Gas:           1000000,
-			Data:          calldata,
-		},
-		ConfidentialInputs: confidentialDataBytes,
-	}), signer, c.client.key)
+	record := &types.ConfidentialComputeRecord{
+		KettleAddress:          c.client.kettleAddress,
+		Nonce:                  nonce,
+		To:                     &c.addr,
+		Value:                  big.NewInt(0),
+		GasPrice:               gasPrice,
+		Gas:                    1000000,
+		Data:                   calldata,
+		ConfidentialInputsHash: crypto.Keccak256Hash(confidentialDataBytes),
+		ChainID:                chainId,
+	}
+
+	rawRecord, err := json.Marshal(record)
 	if err != nil {
 		return nil, err
 	}
 
-	computeRequestBytes, err := computeRequest.MarshalBinary()
+	eipTypedData := record.BuildConfidentialRecordEIP712Envelope()
+	typedDataHashed, _, err := apitypes.TypedDataAndHash(eipTypedData)
 	if err != nil {
 		return nil, err
+	}
+
+	signedMsg, err := c.client.Sign(typedDataHashed[:])
+	if err != nil {
+		return nil, err
+	}
+
+	envelope := &types.ConfidentialComputeRequest2{
+		Message:   rawRecord,
+		Signature: signedMsg,
 	}
 
 	var hash common.Hash
-	if err = c.client.rpc.Client().Call(&hash, "eth_sendRawTransaction", hexutil.Encode(computeRequestBytes)); err != nil {
+	if err = c.client.rpc.Client().Call(&hash, "eth_sendRawTransaction2", envelope, hexutil.Encode(confidentialDataBytes)); err != nil {
 		return nil, err
 	}
 
@@ -169,6 +184,10 @@ func (c *Client) getSigner() (types.Signer, error) {
 
 func (c *Client) Addr() common.Address {
 	return crypto.PubkeyToAddress(c.key.PublicKey)
+}
+
+func (c *Client) Sign(hash []byte) ([]byte, error) {
+	return crypto.Sign(hash, c.key)
 }
 
 func (c *Client) SignTxn(txn *types.LegacyTx) (*types.Transaction, error) {

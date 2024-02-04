@@ -309,7 +309,7 @@ func (b *backendMock) GetTd(ctx context.Context, hash common.Hash) *big.Int { re
 func (b *backendMock) GetEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext) (*vm.EVM, func() error) {
 	return nil, nil
 }
-func (b *backendMock) SuaveContext(requestTx *types.Transaction, ccr *types.ConfidentialComputeRequest) vm.SuaveContext {
+func (b *backendMock) SuaveContext(requestTx *types.Transaction, confidentialInputs []byte) vm.SuaveContext {
 	return vm.SuaveContext{}
 }
 func (b *backendMock) GetMEVM(ctx context.Context, msg *core.Message, state *state.StateDB, header *types.Header, vmConfig *vm.Config, blockCtx *vm.BlockContext, suaveCtx *vm.SuaveContext) (*vm.EVM, func() error, func() error) {
