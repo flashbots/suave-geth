@@ -21,7 +21,7 @@ type ConfidentialStore interface {
 	Store(id suave.DataId, caller common.Address, key string, value []byte) (suave.DataRecord, error)
 	Retrieve(record types.DataId, caller common.Address, key string) ([]byte, error)
 	FetchRecordByID(suave.DataId) (suave.DataRecord, error)
-	FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
+	FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
 	Finalize() error
 }
 

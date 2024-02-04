@@ -22,7 +22,7 @@ type ConfidentialStorageBackend interface {
 	Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error)
 	Retrieve(record suave.DataRecord, caller common.Address, key string) ([]byte, error)
 	FetchRecordByID(suave.DataId) (suave.DataRecord, error)
-	FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
+	FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
 	Stop() error
 }
 
@@ -191,7 +191,7 @@ func (e *CStoreEngine) InitRecord(record types.DataRecord, creationTx *types.Tra
 		DecryptionCondition: record.DecryptionCondition,
 		AllowedPeekers:      record.AllowedPeekers,
 		AllowedStores:       record.AllowedStores,
-		Version:             record.Version,
+		Namespace:           record.Namespace,
 		CreationTx:          creationTx,
 	}
 
@@ -219,8 +219,8 @@ func (e *CStoreEngine) FetchRecordByID(id suave.DataId) (suave.DataRecord, error
 }
 
 // FetchRecordsByProtocolAndBlock fetches data records based on protocol and block number.
-func (e *CStoreEngine) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	return e.storage.FetchRecordsByProtocolAndBlock(blockNumber, namespace)
+func (e *CStoreEngine) FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	return e.storage.FetchRecordsByNamespaceAndBlock(blockNumber, namespace)
 }
 
 // Retrieve fetches data associated with a record.
@@ -333,7 +333,7 @@ func (e *CStoreEngine) NewMessage(message DAMessage) error {
 			DecryptionCondition: sw.DataRecord.DecryptionCondition,
 			AllowedPeekers:      sw.DataRecord.AllowedPeekers,
 			AllowedStores:       sw.DataRecord.AllowedStores,
-			Version:             sw.DataRecord.Version,
+			Namespace:           sw.DataRecord.Namespace,
 		})
 		if err != nil {
 			return fmt.Errorf("confidential engine: could not calculate received records id: %w", err)
@@ -401,7 +401,7 @@ func SerializeDataRecord(record *suave.DataRecord) ([]byte, error) {
 		DecryptionCondition: record.DecryptionCondition,
 		AllowedPeekers:      record.AllowedPeekers,
 		AllowedStores:       record.AllowedStores,
-		Version:             record.Version,
+		Namespace:           record.Namespace,
 		CreationTx:          record.CreationTx,
 	})
 	if err != nil {

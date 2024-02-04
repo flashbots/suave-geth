@@ -172,19 +172,19 @@ func (r *RedisStoreBackend) indexRecord(record suave.DataRecord) error {
 	defer log.Info("record submitted", "record", record, "store", r.Store)
 
 	var recordsByBlockAndProtocol []suave.DataId
-	recordsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition))
+	recordsByBlockAndProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Namespace, record.DecryptionCondition))
 	if err == nil {
 		recordsByBlockAndProtocol = suave.MustDecode[[]suave.DataId](recordsByBlockAndProtocolBytes)
 	}
 	// store record by block number and by protocol + block number
 	recordsByBlockAndProtocol = append(recordsByBlockAndProtocol, record.Id)
 
-	r.Store(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Version, record.DecryptionCondition), suave.MustEncode(recordsByBlockAndProtocol))
+	r.Store(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", record.Namespace, record.DecryptionCondition), suave.MustEncode(recordsByBlockAndProtocol))
 
 	return nil
 }
 
-func (r *RedisStoreBackend) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+func (r *RedisStoreBackend) FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	recordsByProtocolBytes, err := r.Retrieve(mempoolConfidentialStoreRecord, mempoolConfStoreAddr, fmt.Sprintf("protocol-%s-bn-%d", namespace, blockNumber))
 	if err != nil {
 		return nil

@@ -101,7 +101,7 @@ functions:
       - name: allowedStores
         type: address[]
         description: "Addresses can set data"
-      - name: dataType
+      - name: namespace
         type: string
         description: "Namespace of the data"
     output:

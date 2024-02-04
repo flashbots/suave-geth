@@ -29,7 +29,7 @@ func TestTransactionalStore(t *testing.T) {
 		DecryptionCondition: 46,
 		AllowedStores:       []common.Address{{0x42}},
 		AllowedPeekers:      []common.Address{{0x43}},
-		Version:             "v0-test",
+		Namespace:           "v0-test",
 	})
 	require.NoError(t, err)
 
@@ -40,10 +40,10 @@ func TestTransactionalStore(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testBid, tfetchedBid.ToInnerRecord())
 
-	require.Empty(t, tstore.FetchRecordsByProtocolAndBlock(45, "v0-test"))
-	require.Empty(t, tstore.FetchRecordsByProtocolAndBlock(46, "v1-test"))
+	require.Empty(t, tstore.FetchRecordsByNamespaceAndBlock(45, "v0-test"))
+	require.Empty(t, tstore.FetchRecordsByNamespaceAndBlock(46, "v1-test"))
 
-	tfetchedBids := tstore.FetchRecordsByProtocolAndBlock(46, "v0-test")
+	tfetchedBids := tstore.FetchRecordsByNamespaceAndBlock(46, "v0-test")
 	require.Equal(t, 1, len(tfetchedBids))
 	require.Equal(t, testBid, tfetchedBids[0].ToInnerRecord())
 
@@ -63,7 +63,7 @@ func TestTransactionalStore(t *testing.T) {
 	// Not finalized, engine should return empty
 	_, err = engine.FetchRecordByID(testBid.Id)
 	require.Error(t, err)
-	require.Empty(t, engine.FetchRecordsByProtocolAndBlock(46, "v0-test"))
+	require.Empty(t, engine.FetchRecordsByNamespaceAndBlock(46, "v0-test"))
 	_, err = engine.Retrieve(testBid.Id, testBid.AllowedPeekers[0], "xx")
 	require.Error(t, err)
 
@@ -73,7 +73,7 @@ func TestTransactionalStore(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testBid, efetchedBid.ToInnerRecord())
 
-	efetchedBids := engine.FetchRecordsByProtocolAndBlock(46, "v0-test")
+	efetchedBids := engine.FetchRecordsByNamespaceAndBlock(46, "v0-test")
 	require.Equal(t, 1, len(efetchedBids))
 	require.Equal(t, testBid, efetchedBids[0].ToInnerRecord())
 

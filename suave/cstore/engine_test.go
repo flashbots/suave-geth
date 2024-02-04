@@ -48,7 +48,7 @@ func (*FakeStoreBackend) FetchRecordById(suave.DataId) (suave.DataRecord, error)
 	return suave.DataRecord{}, nil
 }
 
-func (*FakeStoreBackend) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+func (*FakeStoreBackend) FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
 	return nil
 }
 

@@ -13,7 +13,7 @@ func testBackendStore(t *testing.T, store ConfidentialStorageBackend) {
 		Id:                  suave.RandomDataRecordId(),
 		DecryptionCondition: 10,
 		AllowedPeekers:      []common.Address{common.HexToAddress("0x424344")},
-		Version:             "default:v0:ethBundles",
+		Namespace:           "default:v0:ethBundles",
 	}
 
 	err := store.InitRecord(record)
@@ -30,7 +30,7 @@ func testBackendStore(t *testing.T, store ConfidentialStorageBackend) {
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x43, 0x14}, retrievedData)
 
-	records := store.FetchRecordsByProtocolAndBlock(10, "default:v0:ethBundles")
+	records := store.FetchRecordsByNamespaceAndBlock(10, "default:v0:ethBundles")
 	require.Len(t, records, 1)
 	require.Equal(t, record, records[0])
 }

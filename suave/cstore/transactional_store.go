@@ -33,13 +33,13 @@ func (s *TransactionalStore) FetchRecordByID(dataId suave.DataId) (suave.DataRec
 	return s.engine.FetchRecordByID(dataId)
 }
 
-func (s *TransactionalStore) FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
-	records := s.engine.FetchRecordsByProtocolAndBlock(blockNumber, namespace)
+func (s *TransactionalStore) FetchRecordsByNamespaceAndBlock(blockNumber uint64, namespace string) []suave.DataRecord {
+	records := s.engine.FetchRecordsByNamespaceAndBlock(blockNumber, namespace)
 
 	s.pendingLock.Lock()
 	defer s.pendingLock.Unlock()
 	for _, record := range s.pendingRecords {
-		if record.Version == namespace && record.DecryptionCondition == blockNumber {
+		if record.Namespace == namespace && record.DecryptionCondition == blockNumber {
 			records = append(records, record)
 		}
 	}

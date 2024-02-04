@@ -23,7 +23,7 @@ type DataRecord struct {
 	DecryptionCondition uint64
 	AllowedPeekers      []common.Address
 	AllowedStores       []common.Address
-	Version             string
+	Namespace           string
 	CreationTx          *types.Transaction
 	Signature           []byte
 }
@@ -35,7 +35,7 @@ func (b *DataRecord) ToInnerRecord() types.DataRecord {
 		DecryptionCondition: b.DecryptionCondition,
 		AllowedPeekers:      b.AllowedPeekers,
 		AllowedStores:       b.AllowedStores,
-		Version:             b.Version,
+		Namespace:           b.Namespace,
 	}
 }
 
