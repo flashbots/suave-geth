@@ -49,3 +49,6 @@ profile.cov
 
 **/yarn-error.log
 logs/
+
+# goreleaser
+/dist
