@@ -47,8 +47,8 @@ var (
 )
 
 type suaveForgeConfig struct {
-	Whitelist  []string
-	EthBackend string
+	Whitelist  []string `toml:"whitelist"`
+	EthBackend string   `toml:"eth_backend"`
 }
 
 func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
@@ -91,7 +91,7 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	// create the suave context
 	var suaveEthBackend suave.ConfidentialEthBackend
 	if cfg.EthBackend != "" {
-		suaveEthBackend = suave_backends.NewRemoteEthBackend(ctx.String(ethBackendForgeFlag.Name))
+		suaveEthBackend = suave_backends.NewRemoteEthBackend(cfg.EthBackend)
 	} else {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
