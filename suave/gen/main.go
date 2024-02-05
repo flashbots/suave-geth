@@ -397,8 +397,8 @@ address public constant {{encodeAddrName .Name}} =
 {{end}}
 
 // Returns whether execution is off- or on-chain
-function isConfidential() internal view returns (bool b) {
-	(bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.staticcall("");
+function isConfidential() internal returns (bool b) {
+	(bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.call("");
 	if (!success) {
 		revert PeekerReverted(IS_CONFIDENTIAL_ADDR, isConfidentialBytes);
 	}
@@ -411,9 +411,9 @@ function isConfidential() internal view returns (bool b) {
 }
 
 {{range .Functions}}
-function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal view returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
+function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
 	{{if .IsConfidential}}require(isConfidential());{{end}}
-	(bool success, bytes memory data) = {{encodeAddrName .Name}}.staticcall(abi.encode({{range .Input}}{{.Name}}, {{end}}));
+	(bool success, bytes memory data) = {{encodeAddrName .Name}}.call(abi.encode({{range .Input}}{{.Name}}, {{end}}));
 	if (!success) {
 		revert PeekerReverted({{encodeAddrName .Name}}, data);
 	}
