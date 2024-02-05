@@ -23,6 +23,8 @@ func flagSet(t *testing.T, flags []cli.Flag) *flag.FlagSet {
 }
 
 func TestForgeReadConfig(t *testing.T) {
+	t.Parallel()
+
 	ctx := cli.NewContext(nil, flagSet(t, forgeCommand.Flags), nil)
 
 	// read context from config toml file

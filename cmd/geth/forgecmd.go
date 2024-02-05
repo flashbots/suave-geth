@@ -96,8 +96,14 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 		suaveEthBackend = &suave_backends.EthMock{}
 	}
 
-	ecdsaKey, _ := crypto.GenerateKey()
-	blsKey, _ := bls.GenerateRandomSecretKey()
+	ecdsaKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	blsKey, err := bls.GenerateRandomSecretKey()
+	if err != nil {
+		return nil, err
+	}
 
 	// NOTE: the confidential store precompiles are not enabled since they are stateless
 	backend := &vm.SuaveExecutionBackend{
