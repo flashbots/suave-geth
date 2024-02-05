@@ -99,6 +99,9 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	ecdsaKey, _ := crypto.GenerateKey()
 	blsKey, _ := bls.GenerateRandomSecretKey()
 
+	// NOTE: The confidential store is not enabled so any precompile that uses it will panic.
+	// This should not be an issue since this command is used by suave-std and it does not call
+	// those precompiles here.
 	backend := &vm.SuaveExecutionBackend{
 		ExternalWhitelist:      cfg.Whitelist,
 		ConfidentialEthBackend: suaveEthBackend,
