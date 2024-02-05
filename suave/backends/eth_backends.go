@@ -56,6 +56,10 @@ func NewRemoteEthBackend(endpoint string) *RemoteEthBackend {
 	return r
 }
 
+func (e *RemoteEthBackend) Endpoint() string {
+	return e.endpoint
+}
+
 func (e *RemoteEthBackend) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	if e.client == nil {
 		// should lock
