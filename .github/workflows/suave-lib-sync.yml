@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - suave-geth/suave/sol/libraries/
+      - suave/sol/libraries/**
 
 permissions: {}
 
