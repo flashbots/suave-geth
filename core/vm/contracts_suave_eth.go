@@ -220,7 +220,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	payload, err := executableDataToDenebExecutionPayload(envelope.ExecutionPayload)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not format execution payload as capella payload: %w", err)
+		return nil, nil, fmt.Errorf("could not format execution payload as deneb payload: %w", err)
 	}
 
 	blsPk, err := bls.PublicKeyFromSecretKey(b.suaveContext.Backend.EthBlockSigningKey)
