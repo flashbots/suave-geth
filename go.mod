@@ -15,9 +15,9 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/cespare/cp v0.1.0
 	github.com/cloudflare/cloudflare-go v0.14.0
-	github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811
+	github.com/cockroachdb/pebble v1.0.0
 	github.com/consensys/gnark-crypto v0.11.0
-	github.com/crate-crypto/go-kzg-4844 v0.2.0
+	github.com/crate-crypto/go-kzg-4844 v0.7.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/docker/docker v1.6.2

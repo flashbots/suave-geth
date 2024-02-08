@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -22,18 +22,18 @@ type EthMock struct {
 	*builder.MockServer
 }
 
-func (e *EthMock) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthMock) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*dencun.ExecutionPayloadEnvelope, error) {
 	block := types.NewBlock(&types.Header{GasUsed: 1000}, txs, nil, nil, trie.NewStackTrie(nil))
-	return engine.BlockToExecutableData(block, big.NewInt(11000)), nil
+	return dencun.BlockToExecutableData(block, big.NewInt(11000), nil), nil
 }
 
-func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error) {
 	var txs types.Transactions
 	for _, bundle := range bundles {
 		txs = append(txs, bundle.Txs...)
 	}
 	block := types.NewBlock(&types.Header{GasUsed: 1000}, txs, nil, nil, trie.NewStackTrie(nil))
-	return engine.BlockToExecutableData(block, big.NewInt(11000)), nil
+	return dencun.BlockToExecutableData(block, big.NewInt(11000), nil), nil
 }
 
 func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
@@ -82,15 +82,15 @@ func (e *RemoteEthBackend) CallContext(ctx context.Context, result interface{}, 
 	return nil
 }
 
-func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
-	var result engine.ExecutionPayloadEnvelope
+func (e *RemoteEthBackend) BuildEthBlock(ctx context.Context, args *suave.BuildBlockArgs, txs types.Transactions) (*dencun.ExecutionPayloadEnvelope, error) {
+	var result dencun.ExecutionPayloadEnvelope
 	err := e.CallContext(ctx, &result, "suavex_buildEthBlock", args, txs)
 
 	return &result, err
 }
 
-func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
-	var result engine.ExecutionPayloadEnvelope
+func (e *RemoteEthBackend) BuildEthBlockFromBundles(ctx context.Context, args *suave.BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error) {
+	var result dencun.ExecutionPayloadEnvelope
 	err := e.CallContext(ctx, &result, "suavex_buildEthBlockFromBundles", args, bundles)
 
 	return &result, err

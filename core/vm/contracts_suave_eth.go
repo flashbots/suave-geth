@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -308,7 +308,7 @@ func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJ
 	return resp, nil
 }
 
-func executableDataToDenebExecutionPayload(data *engine.ExecutableData) (*specDeneb.ExecutionPayload, error) {
+func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDeneb.ExecutionPayload, error) {
 	transactionData := make([]bellatrix.Transaction, len(data.Transactions))
 	for i, tx := range data.Transactions {
 		transactionData[i] = bellatrix.Transaction(tx)

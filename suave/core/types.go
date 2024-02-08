@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -62,8 +62,8 @@ type ConfidentialStoreBackend interface {
 }
 
 type ConfidentialEthBackend interface {
-	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
-	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
+	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*dencun.ExecutionPayloadEnvelope, error)
+	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 
 	builder.API

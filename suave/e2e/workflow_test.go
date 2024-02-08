@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -684,11 +685,11 @@ func TestMevShare(t *testing.T) {
 		payloadData, err := fr.ConfidentialEngine().Retrieve(bidEvent.Id, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
-		var payloadEnvelope engine.ExecutionPayloadEnvelope
+		var payloadEnvelope dencun.ExecutionPayloadEnvelope
 		require.NoError(t, json.Unmarshal(payloadData, &payloadEnvelope))
 		require.Equal(t, 4, len(payloadEnvelope.ExecutionPayload.Transactions)) // users tx, backrun, user refund, proposer payment
 
-		ethBlock, err := engine.ExecutableDataToBlock(*payloadEnvelope.ExecutionPayload)
+		ethBlock, err := dencun.ExecutableDataToBlock(*payloadEnvelope.ExecutionPayload, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, ethTx.Hash(), ethBlock.Transactions()[0].Hash())
@@ -895,7 +896,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		require.NoError(t, err)
 
 		// TODO: test builder record
-		var envelope *engine.ExecutionPayloadEnvelope
+		var envelope *dencun.ExecutionPayloadEnvelope
 		require.NoError(t, json.Unmarshal(unpacked[1].([]byte), &envelope))
 		require.Equal(t, 2, len(envelope.ExecutionPayload.Transactions))
 
@@ -1077,6 +1078,22 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 		ethBlockBidSenderContractI := sdk.GetContract(ethBlockBidSenderAddr, ethBlockBidSenderContract.Abi, clt)
 		_, err = ethBlockBidSenderContractI.SendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
+		if err != nil {
+			var executionRevertedPrefix = "execution reverted: 0x"
+			// decode the PeekerReverted error
+			errMsg := err.Error()
+			if strings.HasPrefix(errMsg, executionRevertedPrefix) {
+				errMsg = errMsg[len(executionRevertedPrefix):]
+				errMsgBytes, _ := hex.DecodeString(errMsg)
+
+				unpacked, _ := artifacts.SuaveAbi.Errors["PeekerReverted"].Inputs.Unpack(errMsgBytes[4:])
+
+				addr, _ := unpacked[0].(common.Address)
+				eventErr, _ := unpacked[1].([]byte)
+				panic(fmt.Sprintf("peeker 0x%x reverted: %s", addr, eventErr))
+			}
+			panic(err)
+		}
 		require.NoError(t, err)
 
 		block = fr.suethSrv.ProgressChain()
