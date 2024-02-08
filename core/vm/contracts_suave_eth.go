@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -219,7 +220,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	payload, err := executableDataToDenebExecutionPayload(envelope.ExecutionPayload)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not format execution payload as capella payload: %w", err)
+		return nil, nil, fmt.Errorf("could not format execution payload as deneb payload: %w", err)
 	}
 
 	blsPk, err := bls.PublicKeyFromSecretKey(b.suaveContext.Backend.EthBlockSigningKey)
@@ -323,7 +324,10 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 		}
 	}
 
-	baseFeePerGas, _ := uint256.FromBig(data.BaseFeePerGas)
+	baseFeePerGas := new(uint256.Int)
+	if baseFeePerGas.SetFromBig(data.BaseFeePerGas) {
+		return nil, errors.New("base fee per gas: overflow")
+	}
 
 	return &specDeneb.ExecutionPayload{
 		ParentHash:    [32]byte(data.ParentHash),
