@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	builderCapella "github.com/attestantio/go-builder-client/api/capella"
+	builderDeneb "github.com/attestantio/go-builder-client/api/deneb"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -979,7 +979,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	var ethBlockBidSenderAddr common.Address
 
-	var blockPayloadSentToRelay *builderCapella.SubmitBlockRequest = &builderCapella.SubmitBlockRequest{}
+	var blockPayloadSentToRelay *builderDeneb.SubmitBlockRequest = &builderDeneb.SubmitBlockRequest{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
