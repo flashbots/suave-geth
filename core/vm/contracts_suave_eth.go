@@ -264,6 +264,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		Message:          &blockBidMsg,
 		ExecutionPayload: payload,
 		Signature:        signature,
+		BlobsBundle:      &builderDeneb.BlobsBundle{},
 	}
 
 	bidBytes, err := bidRequest.MarshalJSON()
