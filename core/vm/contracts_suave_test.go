@@ -95,7 +95,6 @@ func newTestBackend(t *testing.T) *suaveRuntime {
 				ConfidentialStore:      confEngine.NewTransactionalStore(reqTx),
 				ConfidentialEthBackend: &mockSuaveBackend{},
 			},
-			ConfidentialComputeRequestTx: reqTx,
 		},
 	}
 	return b

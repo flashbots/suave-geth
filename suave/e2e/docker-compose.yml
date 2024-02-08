@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  suave-mevm:
+    build: ../..
+    command:
+      - --suave.dev
+      - --suave.eth.remote_endpoint=http://suave-enabled-chain:8545
+      - --suave.eth.external-whitelist=172.17.0.1
+    depends_on:
+      - suave-enabled-chain
+    ports:
+      - 8545:8545
+    networks:
+      - suave-net
+  suave-enabled-chain:
+    image: flashbots/suave-execution-geth:latest
+    command:
+      - --dev
+      - --dev.gaslimit=30000000
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.corsdomain=*
+      - --keystore=/keystore/keystore
+      - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
+      - --password=/keystore/password.txt
+      - --allow-insecure-unlock
+    ports:
+      - 8555:8545
+    volumes:
+      - ./suave-ex-node:/keystore
+    networks:
+      - suave-net
+networks:
+  suave-net:

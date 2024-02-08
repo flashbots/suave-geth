@@ -27,6 +27,17 @@ func NewLocalConfidentialStore() *LocalConfidentialStore {
 	}
 }
 
+func (l *LocalConfidentialStore) Reset() error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	l.records = make(map[suave.DataId]suave.DataRecord)
+	l.dataMap = make(map[string][]byte)
+	l.index = make(map[string][]suave.DataId)
+
+	return nil
+}
+
 func (l *LocalConfidentialStore) Stop() error {
 	return nil
 }

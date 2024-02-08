@@ -307,7 +307,7 @@ contract EthBlockContract is AnyBundleContract {
         uint64 blockHeight,
         Suave.DataId[] memory records,
         string memory namespace
-    ) public view returns (Suave.DataRecord memory, bytes memory) {
+    ) public returns (Suave.DataRecord memory, bytes memory) {
         address[] memory allowedPeekers = new address[](2);
         allowedPeekers[0] = address(this);
         allowedPeekers[1] = Suave.BUILD_ETH_BLOCK;
@@ -331,7 +331,7 @@ contract EthBlockContract is AnyBundleContract {
         return (dataRecord, builderBid);
     }
 
-    function unlock(Suave.DataId dataId, bytes memory signedBlindedHeader) public view returns (bytes memory) {
+    function unlock(Suave.DataId dataId, bytes memory signedBlindedHeader) public returns (bytes memory) {
         require(Suave.isConfidential());
 
         // TODO: verify the header is correct

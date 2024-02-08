@@ -316,6 +316,39 @@ func TestSignMessagePrecompile(t *testing.T) {
 	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), crypto.PubkeyToAddress(*pubKeyRecovered))
 }
 
+func TestPrivateKeyGeneratePrecompile(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	// function privateKeyGen() string
+	args, err := artifacts.SuaveAbi.Methods["privateKeyGen"].Inputs.Pack()
+	require.NoError(t, err)
+
+	gas := hexutil.Uint64(1000000)
+	var callResult hexutil.Bytes
+	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &privateKeyGen,
+		Gas:            &gas,
+		IsConfidential: true,
+		Data:           (*hexutil.Bytes)(&args),
+	}), "latest")
+	requireNoRpcError(t, err)
+
+	// Unpack the call result to get the result of privateKeyGen call
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods["privateKeyGen"].Outputs.Unpack(callResult)
+	require.NoError(t, err)
+
+	// Get the generated private key
+	skGenerated := unpackedCallResult[0].(string)
+	require.NoError(t, err)
+
+	// Some tests on key validity
+	skBytes, err := hex.DecodeString(skGenerated)
+	require.NoError(t, err)
+	_, err = crypto.ToECDSA(skBytes)
+	require.NoError(t, err)
+}
+
 type HintEvent struct {
 	BidId [16]uint8 `abi:"dataId"`
 	Hint  []byte    `abi:"hint"`
@@ -1496,10 +1529,13 @@ var (
 	fetchBidsAddress          = common.HexToAddress("0x42030001")
 	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
 
-	signEthTransaction    = common.HexToAddress("0x40100001")
-	signMessage           = common.HexToAddress("0x40100003")
+	signEthTransaction = common.HexToAddress("0x40100001")
+	signMessage        = common.HexToAddress("0x40100003")
+
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
+
+	privateKeyGen = common.HexToAddress("0x53200003")
 
 	/* contracts */
 	newBundleBidAddress = common.HexToAddress("0x642300000")

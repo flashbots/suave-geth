@@ -22,14 +22,14 @@ type ConfidentialStore interface {
 	Retrieve(record types.DataId, caller common.Address, key string) ([]byte, error)
 	FetchRecordByID(suave.DataId) (suave.DataRecord, error)
 	FetchRecordsByProtocolAndBlock(blockNumber uint64, namespace string) []suave.DataRecord
+	Finalize() error
 }
 
 type SuaveContext struct {
 	// TODO: MEVM access to Backend should be restricted to only the necessary functions!
-	Backend                      *SuaveExecutionBackend
-	ConfidentialComputeRequestTx *types.Transaction
-	ConfidentialInputs           []byte
-	CallerStack                  []*common.Address
+	Backend            *SuaveExecutionBackend
+	ConfidentialInputs []byte
+	CallerStack        []*common.Address
 }
 
 type SuaveExecutionBackend struct {
@@ -46,10 +46,9 @@ func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 	}
 
 	return &SuaveContext{
-		Backend:                      evm.SuaveContext.Backend,
-		ConfidentialComputeRequestTx: evm.SuaveContext.ConfidentialComputeRequestTx,
-		ConfidentialInputs:           evm.SuaveContext.ConfidentialInputs,
-		CallerStack:                  append(evm.SuaveContext.CallerStack, &caller),
+		Backend:            evm.SuaveContext.Backend,
+		ConfidentialInputs: evm.SuaveContext.ConfidentialInputs,
+		CallerStack:        append(evm.SuaveContext.CallerStack, &caller),
 	}
 }
 
