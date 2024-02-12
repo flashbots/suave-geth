@@ -16,6 +16,7 @@ library Suave {
         bytes32 random;
         Withdrawal[] withdrawals;
         bytes extra;
+        bytes32 beaconRoot;
         bool fillPending;
     }
 
@@ -218,8 +219,8 @@ library Suave {
         return abi.decode(data, (DataRecord));
     }
 
-    function privateKeyGen() internal view returns (string memory) {
-        (bool success, bytes memory data) = PRIVATE_KEY_GEN.staticcall(abi.encode());
+    function privateKeyGen() internal returns (string memory) {
+        (bool success, bytes memory data) = PRIVATE_KEY_GEN.call(abi.encode());
         if (!success) {
             revert PeekerReverted(PRIVATE_KEY_GEN, data);
         }

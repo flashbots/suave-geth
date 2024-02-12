@@ -47,6 +47,7 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 			Random:       head.Root,
 			Withdrawals:  nil,
 			Extra:        []byte(""),
+			BeaconRoot:   buildArgs.BeaconRoot,
 			FillPending:  false,
 		}
 	}
@@ -70,6 +71,7 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 			Random:       head.Root,
 			Withdrawals:  nil,
 			Extra:        []byte(""),
+			BeaconRoot:   buildArgs.BeaconRoot,
 			FillPending:  false,
 		}
 	}
