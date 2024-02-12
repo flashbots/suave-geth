@@ -70,6 +70,8 @@ type CStoreEngine struct {
 
 	storeUUID      uuid.UUID
 	localAddresses map[common.Address]struct{}
+
+	apiServer *apiServer
 }
 
 // NewEngine creates a new instance of CStoreEngine.
@@ -79,7 +81,7 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 		localAddresses[addr] = struct{}{}
 	}
 
-	return &CStoreEngine{
+	engine := &CStoreEngine{
 		storage:        backend,
 		transportTopic: transportTopic,
 		daSigner:       daSigner,
@@ -87,6 +89,11 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 		storeUUID:      uuid.New(),
 		localAddresses: localAddresses,
 	}
+
+	apiServer := newApiServer(engine)
+	engine.apiServer = apiServer
+
+	return engine
 }
 
 func (e *CStoreEngine) Reset() error {
@@ -109,6 +116,9 @@ func (e *CStoreEngine) NewTransactionalStore(sourceTx *types.Transaction) *Trans
 // Start initializes the CStoreEngine.
 func (e *CStoreEngine) Start() error {
 	if err := e.transportTopic.Start(); err != nil {
+		return err
+	}
+	if err := e.apiServer.Start(); err != nil {
 		return err
 	}
 
@@ -138,6 +148,10 @@ func (e *CStoreEngine) Stop() error {
 
 	if err := e.storage.Stop(); err != nil {
 		log.Warn("Confidential engine: error while stopping transport", "err", err)
+	}
+
+	if err := e.apiServer.Stop(); err != nil {
+		log.Warn("Confidential engine: error while stopping API server", "err", err)
 	}
 
 	return nil
