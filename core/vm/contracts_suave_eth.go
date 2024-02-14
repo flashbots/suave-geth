@@ -356,7 +356,6 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 	}
 
 	return payload, nil
-
 }
 
 func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
