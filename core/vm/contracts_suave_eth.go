@@ -330,7 +330,7 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 		return nil, errors.New("base fee per gas: overflow")
 	}
 
-	return &specDeneb.ExecutionPayload{
+	payload := &specDeneb.ExecutionPayload{
 		ParentHash:    [32]byte(data.ParentHash),
 		FeeRecipient:  [20]byte(data.FeeRecipient),
 		StateRoot:     [32]byte(data.StateRoot),
@@ -346,7 +346,16 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 		BlockHash:     [32]byte(data.BlockHash),
 		Transactions:  transactionData,
 		Withdrawals:   withdrawalData,
-	}, nil
+	}
+
+	if data.BlobGasUsed != nil {
+		payload.BlobGasUsed = *data.BlobGasUsed
+	}
+	if data.ExcessBlobGas != nil {
+		payload.ExcessBlobGas = *data.ExcessBlobGas
+	}
+
+	return payload, nil
 }
 
 func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
