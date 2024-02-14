@@ -79,7 +79,7 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 		localAddresses[addr] = struct{}{}
 	}
 
-	engine := &CStoreEngine{
+	return &CStoreEngine{
 		storage:        backend,
 		transportTopic: transportTopic,
 		daSigner:       daSigner,
@@ -87,8 +87,6 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 		storeUUID:      uuid.New(),
 		localAddresses: localAddresses,
 	}
-
-	return engine
 }
 
 func (e *CStoreEngine) Reset() error {
