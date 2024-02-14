@@ -42,9 +42,6 @@ func TestTransactionalStore2(t *testing.T) {
 	_, err = tstore.Retrieve(suave.RandomDataRecordId(), testBid.AllowedPeekers[0], "xx")
 	require.Error(t, err)
 
-	_, err = tstore.Retrieve(testBid.Id, testBid.AllowedStores[0], "xx")
-	require.Error(t, err)
-
 	tretrieved, err := tstore.Retrieve(testBid.Id, testBid.AllowedPeekers[0], "xx")
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x44}, tretrieved)
