@@ -346,6 +346,8 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 		BlockHash:     [32]byte(data.BlockHash),
 		Transactions:  transactionData,
 		Withdrawals:   withdrawalData,
+		BlobGasUsed:   *data.BlobGasUsed,
+		ExcessBlobGas: *data.ExcessBlobGas,
 	}, nil
 }
 
