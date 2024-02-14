@@ -2,6 +2,7 @@ package cstore
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,18 +19,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type apiServer struct {
-	cstore *CStoreEngine
-	server *http.Server
+type Engine2 struct {
+	storage ConfidentialStorageBackend
+	server  *http.Server
 
-	sessions     map[string]*TransactionalStore
+	sessions     map[string]*TransactionalStore2
 	sessionsLock sync.Mutex
 }
 
-func newApiServer(cstore *CStoreEngine) *apiServer {
-	a := &apiServer{
-		cstore:   cstore,
-		sessions: make(map[string]*TransactionalStore),
+func NewEngine2(storage ConfidentialStorageBackend) *Engine2 {
+	a := &Engine2{
+		storage:  storage,
+		sessions: make(map[string]*TransactionalStore2),
 	}
 
 	r := mux.NewRouter()
@@ -38,12 +39,13 @@ func newApiServer(cstore *CStoreEngine) *apiServer {
 		http.Error(w, "Not found", http.StatusNotFound)
 	})
 
-	r.HandleFunc("/cstore/new", a.handleNewStore).Methods("POST")
+	r.HandleFunc("/cstore/new", a.handleNewSession).Methods("POST")
 	r.HandleFunc("/cstore/{id}/record", a.handleNewRecord).Methods("POST")
-	r.HandleFunc("/cstore/{id}/record/{dataid}/{key}", a.handleRecordStorePut).Methods("POST")
+	r.HandleFunc("/cstore/{id}/record/{dataid}/{key}", a.handleRecordStorePost).Methods("POST")
 	r.HandleFunc("/cstore/{id}/record/{dataid}/{key}", a.handleRecordStoreGet).Methods("GET")
 	r.HandleFunc("/cstore/{id}/record/{dataid}", a.handleRecordGet).Methods("GET")
 	r.HandleFunc("/cstore/{id}/fetchByBlock", a.handleFetchByBlock).Methods("GET")
+	r.HandleFunc("/cstore/{id}/finalize", a.handleFinalizeSession).Methods("POST")
 
 	a.server = &http.Server{
 		Addr:    ":8080",
@@ -53,7 +55,7 @@ func newApiServer(cstore *CStoreEngine) *apiServer {
 	return a
 }
 
-func (a *apiServer) Start() error {
+func (a *Engine2) Start() error {
 	log.Info("Server started on :8080")
 
 	go func() {
@@ -65,7 +67,7 @@ func (a *apiServer) Start() error {
 	return nil
 }
 
-func (a *apiServer) Stop() error {
+func (a *Engine2) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := a.server.Shutdown(ctx); err != nil {
@@ -75,15 +77,34 @@ func (a *apiServer) Stop() error {
 	return nil
 }
 
-func (a *apiServer) getSession(id string) *TransactionalStore {
+func (a *Engine2) finalize(store *TransactionalStore2) error {
+	for _, record := range store.pendingRecords {
+		err := a.storage.InitRecord(record)
+		if err != nil {
+			// TODO: deinitialize!
+			return fmt.Errorf("confidential engine: store backend failed to initialize record: %w", err)
+		}
+	}
+
+	for _, sw := range store.pendingWrites {
+		if _, err := a.storage.Store(sw.DataRecord, sw.Caller, sw.Key, sw.Value); err != nil {
+			// TODO: deinitialize and deStore!
+			return fmt.Errorf("failed to store data: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (a *Engine2) getSession(id string) *TransactionalStore2 {
 	a.sessionsLock.Lock()
 	defer a.sessionsLock.Unlock()
 	return a.sessions[id]
 }
 
-func (a *apiServer) handleNewStore(w http.ResponseWriter, r *http.Request) {
+func (a *Engine2) handleNewSession(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New().String()[:7]
-	store := a.cstore.NewTransactionalStore()
+	store := NewTransactionalStore2(a.storage)
 
 	a.sessionsLock.Lock()
 	a.sessions[id] = store
@@ -92,7 +113,7 @@ func (a *apiServer) handleNewStore(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, id)
 }
 
-func (a *apiServer) handleNewRecord(w http.ResponseWriter, r *http.Request) {
+func (a *Engine2) handleNewRecord(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	session := a.getSession(id)
@@ -130,9 +151,11 @@ func (a *apiServer) handleNewRecord(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to init record: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	fmt.Fprintf(w, "%s", hex.EncodeToString(record.Id[:]))
 }
 
-func (a *apiServer) handleRecordStorePut(w http.ResponseWriter, r *http.Request) {
+func (a *Engine2) handleRecordStorePost(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	key := mux.Vars(r)["key"]
 	dataId := decodeDataId(r)
@@ -147,7 +170,7 @@ func (a *apiServer) handleRecordStorePut(w http.ResponseWriter, r *http.Request)
 	session.Store(dataId, common.Address{}, key, value)
 }
 
-func (a *apiServer) handleRecordStoreGet(w http.ResponseWriter, r *http.Request) {
+func (a *Engine2) handleRecordStoreGet(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	key := mux.Vars(r)["key"]
 	dataId := decodeDataId(r)
@@ -167,7 +190,7 @@ func (a *apiServer) handleRecordStoreGet(w http.ResponseWriter, r *http.Request)
 	w.Write(val)
 }
 
-func (a *apiServer) handleRecordGet(w http.ResponseWriter, r *http.Request) {
+func (a *Engine2) handleRecordGet(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	dataId := decodeDataId(r)
 
@@ -192,7 +215,7 @@ func (a *apiServer) handleRecordGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(recordJson)
 }
 
-func (a *apiServer) handleFetchByBlock(w http.ResponseWriter, r *http.Request) {
+func (a *Engine2) handleFetchByBlock(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	session := a.getSession(id)
@@ -231,10 +254,30 @@ func (a *apiServer) handleFetchByBlock(w http.ResponseWriter, r *http.Request) {
 	w.Write(recordsJson)
 }
 
+func (a *Engine2) handleFinalizeSession(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	session := a.getSession(id)
+	if session == nil {
+		http.Error(w, "session not found", http.StatusNotFound)
+		return
+	}
+
+	if err := a.finalize(session); err != nil {
+		http.Error(w, fmt.Sprintf("failed to finalize: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
 func decodeDataId(r *http.Request) types.DataId {
 	dataIdStr := mux.Vars(r)["dataid"]
 
+	buf, err := hex.DecodeString(dataIdStr)
+	if err != nil {
+		panic(err)
+	}
+
 	var dataId types.DataId
-	copy(dataId[:], []byte(dataIdStr))
+	copy(dataId[:], buf)
 	return dataId
 }
