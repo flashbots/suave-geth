@@ -46,6 +46,8 @@ structs:
         type: Withdrawal[]
       - name: extra
         type: bytes
+      - name: beaconRoot
+        type: bytes32
       - name: fillPending
         type: bool
   - name: HttpRequest
