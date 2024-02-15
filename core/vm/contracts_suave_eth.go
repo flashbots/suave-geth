@@ -277,6 +277,13 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
 	}
 
+	// TODO: remove
+	res, err := b.submitEthBlockToRelay("https://0xafa4c6985aa049fb79dd37010438cfebeb0f2bd42b115b89dd678dab0670c1de38da0c4e9138c9290a398ecd9a0b3110@boost-relay-goerli.flashbots.net", bidBytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not submit block to relay: %w", err)
+	}
+	log.Info("submitted block to relay", "response", string(res))
+
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not marshal payload envelope: %w", err)
