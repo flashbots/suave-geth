@@ -260,11 +260,27 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		return nil, nil, fmt.Errorf("could not sign builder record: %w", err)
 	}
 
+	log.Info("built block from bundles", "blobs", len(envelope.BlobsBundle.Blobs), "commitments", len(envelope.BlobsBundle.Commitments), "proofs", len(envelope.BlobsBundle.Proofs))
+	blobsBundle := &builderDeneb.BlobsBundle{}
+	for i, blob := range envelope.BlobsBundle.Blobs {
+		blobFixed, err := convertToFixedArray(blob)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not convert blob to fixed array: %w", err)
+		}
+		blobsBundle.Blobs = append(blobsBundle.Blobs, blobFixed)
+
+		committerFixed, err := convertToFixedArray2(envelope.BlobsBundle.Commitments[i])
+		blobsBundle.Commitments = append(blobsBundle.Commitments, committerFixed)
+
+		proofFixed, err := convertToFixedArray2(envelope.BlobsBundle.Proofs[i])
+		blobsBundle.Proofs = append(blobsBundle.Proofs, proofFixed)
+	}
+
 	bidRequest := builderDeneb.SubmitBlockRequest{
 		Message:          &blockBidMsg,
 		ExecutionPayload: payload,
 		Signature:        signature,
-		BlobsBundle:      &builderDeneb.BlobsBundle{},
+		BlobsBundle:      blobsBundle,
 	}
 
 	bidBytes, err := bidRequest.MarshalJSON()
@@ -272,12 +288,46 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
 	}
 
+	res, err := b.submitEthBlockToRelay("https://0xafa4c6985aa049fb79dd37010438cfebeb0f2bd42b115b89dd678dab0670c1de38da0c4e9138c9290a398ecd9a0b3110@boost-relay-goerli.flashbots.net", bidBytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not submit block to relay: %w", err)
+	}
+	log.Info("submitted block to relay", "response", string(res))
+
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not marshal payload envelope: %w", err)
 	}
 
 	return bidBytes, envelopeBytes, nil
+}
+
+func convertToFixedArray(src hexutil.Bytes) ([131072]byte, error) {
+	var dst [131072]byte // Declare a fixed-size array
+
+	// Check if the source slice exceeds the size of the destination array
+	if len(src) > len(dst) {
+		return dst, fmt.Errorf("source slice is too large: %d bytes", len(src))
+	}
+
+	// Copy the source slice data into the destination array
+	copy(dst[:], src)
+
+	return dst, nil
+}
+
+func convertToFixedArray2(src hexutil.Bytes) ([48]byte, error) {
+	var dst [48]byte // Declare a fixed-size array
+
+	// Check if the source slice exceeds the size of the destination array
+	if len(src) > len(dst) {
+		return dst, fmt.Errorf("source slice is too large: %d bytes", len(src))
+	}
+
+	// Copy the source slice data into the destination array
+	copy(dst[:], src)
+
+	return dst, nil
 }
 
 func (b *suaveRuntime) privateKeyGen() (string, error) {
