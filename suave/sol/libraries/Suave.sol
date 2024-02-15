@@ -110,11 +110,13 @@ library Suave {
         }
     }
 
-    function buildEthBlock(BuildBlockArgs memory blockArgs, DataId dataId, string memory namespace)
-        internal
-        returns (bytes memory, bytes memory)
-    {
-        (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, namespace));
+    function buildEthBlock(
+        BuildBlockArgs memory blockArgs,
+        DataId dataId,
+        string memory namespace,
+        string memory chainId
+    ) internal returns (bytes memory, bytes memory) {
+        (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, namespace, chainId));
         if (!success) {
             revert PeekerReverted(BUILD_ETH_BLOCK, data);
         }
@@ -156,8 +158,11 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function ethcall(address contractAddr, bytes memory input1) internal returns (bytes memory) {
-        (bool success, bytes memory data) = ETHCALL.call(abi.encode(contractAddr, input1));
+    function ethcall(address contractAddr, bytes memory input1, string memory chainId)
+        internal
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = ETHCALL.call(abi.encode(contractAddr, input1, chainId));
         if (!success) {
             revert PeekerReverted(ETHCALL, data);
         }
@@ -218,8 +223,8 @@ library Suave {
         return abi.decode(data, (DataRecord));
     }
 
-    function privateKeyGen() internal view returns (string memory) {
-        (bool success, bytes memory data) = PRIVATE_KEY_GEN.staticcall(abi.encode());
+    function privateKeyGen() internal returns (string memory) {
+        (bool success, bytes memory data) = PRIVATE_KEY_GEN.call(abi.encode());
         if (!success) {
             revert PeekerReverted(PRIVATE_KEY_GEN, data);
         }
@@ -249,8 +254,8 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function simulateBundle(bytes memory bundleData) internal returns (uint64) {
-        (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(bundleData));
+    function simulateBundle(bytes memory bundleData, string memory chainId) internal returns (uint64) {
+        (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(bundleData, chainId));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
         }

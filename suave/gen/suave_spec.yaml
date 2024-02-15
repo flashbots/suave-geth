@@ -178,6 +178,9 @@ functions:
       - name: bundleData
         type: bytes
         description: "Bundle encoded in JSON"
+      - name: chainId
+        type: string
+        description: "Id of the chain to simulate bundle for"
     output:
       fields:
         - name: effectiveGasPrice
@@ -210,6 +213,9 @@ functions:
       - name: namespace
         type: string
         description: ""
+      - name: chainId
+        type: string
+        description: "Id of the chain to build block"
     output:
       fields:
         - name: blockBid
@@ -245,6 +251,9 @@ functions:
       - name: input1
         type: bytes
         description: "Data to send to the contract"
+      - name: chainId
+        type: string
+        description: "Id of the chain to call"
     output:
       fields:
         - name: callOutput
