@@ -113,7 +113,6 @@ func (b *suaveRuntime) extractHint(bundleBytes []byte) ([]byte, error) {
 }
 
 func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte, chainId string) ([]byte, error) {
-
 	backend, err := b.suaveContext.Backend.GetConfidentialEthBackend(chainId)
 	if err != nil {
 		return nil, fmt.Errorf("could not get eth backend: %w", err)
