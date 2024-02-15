@@ -526,7 +526,13 @@ var (
 	// Suave settings
 	SuaveEthRemoteBackendEndpointFlag = &cli.StringFlag{
 		Name:     "suave.eth.remote_endpoint",
-		Usage:    "Ethereum RPC endpoint to use as eth backend",
+		Usage:    "Ethereum RPC endpoint to use as eth backend (deprecated: use --suave.eth.remote-endpoint)",
+		Category: flags.SuaveCategory,
+	}
+
+	SuaveEthRemoteBackendEndpointFlagV2 = &cli.StringSliceFlag{
+		Name:     "suave.eth.remote-endpoint",
+		Usage:    "Ethereum RPC endpoint to use as eth backend. Format chain_id=rpc_url",
 		Category: flags.SuaveCategory,
 	}
 
@@ -1722,6 +1728,23 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 	CheckExclusive(ctx, SuaveConfidentialStoreRedisEndpointFlag, SuaveConfidentialStorePebbleDbPathFlag)
 	if ctx.IsSet(SuaveEthRemoteBackendEndpointFlag.Name) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveEthRemoteBackendEndpointFlagV2.Name) {
+		chainToEndpoints := make(map[string]string)
+		for _, endpoint := range ctx.StringSlice(SuaveEthRemoteBackendEndpointFlagV2.Name) {
+			parts := strings.Split(endpoint, "=")
+			if len(parts) != 2 {
+				Fatalf("invalid value for remote backend endpoint: %s", endpoint)
+			}
+			chainId := new(big.Int)
+			if _, ok := chainId.SetString(parts[0], 10); !ok {
+				Fatalf("invalid chain id: %s", parts[0])
+			}
+			rpcUrl := parts[1]
+			chainToEndpoints[chainId.String()] = rpcUrl
+		}
+		cfg.SuaveEthRemoteBackendEndpoints = chainToEndpoints
 	}
 
 	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {

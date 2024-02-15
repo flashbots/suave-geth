@@ -258,11 +258,19 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		confidentialStoreTransport = cstore.MockTransport{}
 	}
 
-	var suaveEthBackend suave.ConfidentialEthBackend
+	var suaveBackend suave.ConfidentialEthBackend
 	if config.Suave.SuaveEthRemoteBackendEndpoint != "" {
-		suaveEthBackend = suave_backends.NewRemoteEthBackend(config.Suave.SuaveEthRemoteBackendEndpoint)
+		suaveBackend = suave_backends.NewRemoteEthBackend(config.Suave.SuaveEthRemoteBackendEndpoint)
 	} else {
-		suaveEthBackend = &suave_backends.EthMock{}
+		suaveBackend = &suave_backends.EthMock{}
+	}
+
+	suaveEthBackendsByChainId := make(map[string]suave.ConfidentialEthBackend)
+	if len(config.Suave.SuaveEthRemoteBackendEndpoints) > 0 {
+		for chainId, endpoint := range config.Suave.SuaveEthRemoteBackendEndpoints {
+			log.Info("Using endpoint:", "chainId", chainId, "endpoint", endpoint)
+			suaveEthBackendsByChainId[chainId] = suave_backends.NewRemoteEthBackend(endpoint)
+		}
 	}
 
 	var suaveEthBundleSigningKey *ecdsa.PrivateKey
@@ -289,7 +297,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	confidentialStoreEngine := cstore.NewEngine(confidentialStoreBackend, confidentialStoreTransport, suaveDaSigner, types.LatestSigner(chainConfig))
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil, suaveEthBundleSigningKey, suaveEthBlockSigningKey, confidentialStoreEngine, suaveEthBackend, config.Suave.ExternalWhitelist}
+	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil,
+		suaveEthBundleSigningKey, suaveEthBlockSigningKey, confidentialStoreEngine, suaveBackend, suaveEthBackendsByChainId, config.Suave.ExternalWhitelist}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}
