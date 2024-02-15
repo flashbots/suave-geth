@@ -22,7 +22,7 @@ func TestTransactionalStore2(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = tstore.Store(testBid.Id, testBid.AllowedPeekers[0], "xx", []byte{0x44})
+	_, err = tstore.Store(testBid.Id, "xx", []byte{0x44})
 	require.NoError(t, err)
 
 	tfetchedBid, err := tstore.FetchRecordByID(testBid.Id)
@@ -36,13 +36,13 @@ func TestTransactionalStore2(t *testing.T) {
 	require.Equal(t, 1, len(tfetchedBids))
 	require.Equal(t, testBid, tfetchedBids[0].ToInnerRecord())
 
-	_, err = tstore.Retrieve(testBid.Id, testBid.AllowedPeekers[0], "xy")
+	_, err = tstore.Retrieve(testBid.Id, "xy")
 	require.Error(t, err)
 
-	_, err = tstore.Retrieve(suave.RandomDataRecordId(), testBid.AllowedPeekers[0], "xx")
+	_, err = tstore.Retrieve(suave.RandomDataRecordId(), "xx")
 	require.Error(t, err)
 
-	tretrieved, err := tstore.Retrieve(testBid.Id, testBid.AllowedPeekers[0], "xx")
+	tretrieved, err := tstore.Retrieve(testBid.Id, "xx")
 	require.NoError(t, err)
 	require.Equal(t, []byte{0x44}, tretrieved)
 

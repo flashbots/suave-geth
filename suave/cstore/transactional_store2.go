@@ -10,6 +10,9 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 )
 
+// TransactionalStore2 introduces a transactional layer on top of a ConfidentialStorageBackend
+// Unlike TransactionalStore, it does not require a transaction to be started, and it does
+// not do any caller authentication for the data.
 type TransactionalStore2 struct {
 	storage ConfidentialStorageBackend
 
@@ -51,7 +54,7 @@ func (s *TransactionalStore2) FetchRecordsByProtocolAndBlock(blockNumber uint64,
 	return records
 }
 
-func (s *TransactionalStore2) Store(dataId suave.DataId, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
+func (s *TransactionalStore2) Store(dataId suave.DataId, key string, value []byte) (suave.DataRecord, error) {
 	record, err := s.FetchRecordByID(dataId)
 	if err != nil {
 		return suave.DataRecord{}, err
@@ -61,7 +64,7 @@ func (s *TransactionalStore2) Store(dataId suave.DataId, caller common.Address, 
 	defer s.pendingLock.Unlock()
 	s.pendingWrites = append(s.pendingWrites, StoreWrite{
 		DataRecord: record,
-		Caller:     caller,
+		Caller:     common.Address{},
 		Key:        key,
 		Value:      common.CopyBytes(value),
 	})
@@ -70,7 +73,7 @@ func (s *TransactionalStore2) Store(dataId suave.DataId, caller common.Address, 
 }
 
 // Retrieve fetches data associated with a record.
-func (s *TransactionalStore2) Retrieve(dataId suave.DataId, caller common.Address, key string) ([]byte, error) {
+func (s *TransactionalStore2) Retrieve(dataId suave.DataId, key string) ([]byte, error) {
 	record, err := s.FetchRecordByID(dataId)
 	if err != nil {
 		return nil, err
@@ -86,7 +89,7 @@ func (s *TransactionalStore2) Retrieve(dataId suave.DataId, caller common.Addres
 	}
 
 	s.pendingLock.Unlock()
-	return s.storage.Retrieve(suave.DataRecord{Id: dataId}, caller, key)
+	return s.storage.Retrieve(suave.DataRecord{Id: dataId}, common.Address{}, key)
 }
 
 // InitRecord prepares a data record for storage.

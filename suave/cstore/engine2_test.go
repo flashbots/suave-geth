@@ -13,7 +13,7 @@ import (
 )
 
 func TestAPI_NewSession(t *testing.T) {
-	engine := NewEngine2(NewLocalConfidentialStore())
+	engine := NewNonAuthenticatedEngine(NewLocalConfidentialStore())
 	require.NoError(t, engine.Start())
 
 	clt := apiClient{url: "http://localhost:8080"}

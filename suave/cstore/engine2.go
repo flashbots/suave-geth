@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -19,7 +18,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type Engine2 struct {
+// NonAuthenticatedEngine is a confidential store engine that does not do any validation
+// of the caller. The validation must be done on the application layer.
+// It is accessed via and HTTP API.
+type NonAuthenticatedEngine struct {
 	storage ConfidentialStorageBackend
 	server  *http.Server
 
@@ -27,8 +29,8 @@ type Engine2 struct {
 	sessionsLock sync.Mutex
 }
 
-func NewEngine2(storage ConfidentialStorageBackend) *Engine2 {
-	a := &Engine2{
+func NewNonAuthenticatedEngine(storage ConfidentialStorageBackend) *NonAuthenticatedEngine {
+	a := &NonAuthenticatedEngine{
 		storage:  storage,
 		sessions: make(map[string]*TransactionalStore2),
 	}
@@ -55,7 +57,7 @@ func NewEngine2(storage ConfidentialStorageBackend) *Engine2 {
 	return a
 }
 
-func (a *Engine2) Start() error {
+func (a *NonAuthenticatedEngine) Start() error {
 	log.Info("Server started on :8080")
 
 	go func() {
@@ -67,7 +69,7 @@ func (a *Engine2) Start() error {
 	return nil
 }
 
-func (a *Engine2) Stop() error {
+func (a *NonAuthenticatedEngine) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := a.server.Shutdown(ctx); err != nil {
@@ -77,7 +79,7 @@ func (a *Engine2) Stop() error {
 	return nil
 }
 
-func (a *Engine2) finalize(store *TransactionalStore2) error {
+func (a *NonAuthenticatedEngine) finalize(store *TransactionalStore2) error {
 	for _, record := range store.pendingRecords {
 		err := a.storage.InitRecord(record)
 		if err != nil {
@@ -96,13 +98,13 @@ func (a *Engine2) finalize(store *TransactionalStore2) error {
 	return nil
 }
 
-func (a *Engine2) getSession(id string) *TransactionalStore2 {
+func (a *NonAuthenticatedEngine) getSession(id string) *TransactionalStore2 {
 	a.sessionsLock.Lock()
 	defer a.sessionsLock.Unlock()
 	return a.sessions[id]
 }
 
-func (a *Engine2) handleNewSession(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleNewSession(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New().String()[:7]
 	store := NewTransactionalStore2(a.storage)
 
@@ -113,7 +115,7 @@ func (a *Engine2) handleNewSession(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, id)
 }
 
-func (a *Engine2) handleNewRecord(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleNewRecord(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	session := a.getSession(id)
@@ -155,7 +157,7 @@ func (a *Engine2) handleNewRecord(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", hex.EncodeToString(record.Id[:]))
 }
 
-func (a *Engine2) handleRecordStorePost(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleRecordStorePost(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	key := mux.Vars(r)["key"]
 	dataId := decodeDataId(r)
@@ -167,10 +169,10 @@ func (a *Engine2) handleRecordStorePost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	value := []byte(r.URL.Query().Get("value"))
-	session.Store(dataId, common.Address{}, key, value)
+	session.Store(dataId, key, value)
 }
 
-func (a *Engine2) handleRecordStoreGet(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleRecordStoreGet(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	key := mux.Vars(r)["key"]
 	dataId := decodeDataId(r)
@@ -181,7 +183,7 @@ func (a *Engine2) handleRecordStoreGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	val, err := session.Retrieve(dataId, common.Address{}, key)
+	val, err := session.Retrieve(dataId, key)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to retrieve: %v", err), http.StatusBadRequest)
 		return
@@ -190,7 +192,7 @@ func (a *Engine2) handleRecordStoreGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(val)
 }
 
-func (a *Engine2) handleRecordGet(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleRecordGet(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	dataId := decodeDataId(r)
 
@@ -215,7 +217,7 @@ func (a *Engine2) handleRecordGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(recordJson)
 }
 
-func (a *Engine2) handleFetchByBlock(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleFetchByBlock(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	session := a.getSession(id)
@@ -254,7 +256,7 @@ func (a *Engine2) handleFetchByBlock(w http.ResponseWriter, r *http.Request) {
 	w.Write(recordsJson)
 }
 
-func (a *Engine2) handleFinalizeSession(w http.ResponseWriter, r *http.Request) {
+func (a *NonAuthenticatedEngine) handleFinalizeSession(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	session := a.getSession(id)
