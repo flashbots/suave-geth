@@ -7,7 +7,7 @@ contract ExampleEthCallSource {
     uint64 state;
 
     function callTarget(address target, uint256 expected) public {
-        bytes memory output = Suave.ethcall(target, abi.encodeWithSignature("get()"));
+        bytes memory output = Suave.ethcall(target, abi.encodeWithSignature("get()"), "");
         (uint256 num) = abi.decode(output, (uint64));
         require(num == expected);
     }
