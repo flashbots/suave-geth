@@ -258,13 +258,17 @@ func (s *suaveRuntime) newBuilder() (string, error) {
 	return s.suaveContext.Backend.ConfidentialEthBackend.NewSession(context.Background())
 }
 
-func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte) (types.SimulateTransactionResult, error) {
+func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte, chainId string) (types.SimulateTransactionResult, error) {
 	txn := new(types.Transaction)
 	if err := txn.UnmarshalBinary(txnBytes); err != nil {
 		return types.SimulateTransactionResult{}, err
 	}
 
-	result, err := s.suaveContext.Backend.ConfidentialEthBackend.AddTransaction(context.Background(), session, txn)
+	backend, err := s.suaveContext.Backend.GetConfidentialEthBackend(chainId)
+	if err != nil {
+		return types.SimulateTransactionResult{}, fmt.Errorf("failed to get backend: %w", err)
+	}
+	result, err := backend.AddTransaction(context.Background(), session, txn)
 	if err != nil {
 		return types.SimulateTransactionResult{}, err
 	}

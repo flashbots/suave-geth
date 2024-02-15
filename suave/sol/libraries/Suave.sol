@@ -264,11 +264,11 @@ library Suave {
         return abi.decode(data, (uint64));
     }
 
-    function simulateTransaction(string memory sessionid, bytes memory txn)
+    function simulateTransaction(string memory sessionid, bytes memory txn, string memory chainId)
         internal
         returns (SimulateTransactionResult memory)
     {
-        (bool success, bytes memory data) = SIMULATE_TRANSACTION.call(abi.encode(sessionid, txn));
+        (bool success, bytes memory data) = SIMULATE_TRANSACTION.call(abi.encode(sessionid, txn, chainId));
         if (!success) {
             revert PeekerReverted(SIMULATE_TRANSACTION, data);
         }

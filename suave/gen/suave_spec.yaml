@@ -341,6 +341,9 @@ functions:
       - name: txn
         type: bytes
         description: "Txn to simulate encoded in RLP"
+      - name: chainId
+        type: string
+        description: "Id of the chain to simulate transaction"
     output:
       fields:
         - name: simulationResult

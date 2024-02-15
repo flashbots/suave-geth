@@ -15,7 +15,7 @@ var _ SuaveRuntime = &mockRuntime{}
 type mockRuntime struct {
 }
 
-func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string) ([]byte, []byte, error) {
+func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string, chainId string) ([]byte, []byte, error) {
 	return []byte{0x1}, []byte{0x1}, nil
 }
 
@@ -31,7 +31,7 @@ func (m *mockRuntime) confidentialStore(dataId types.DataId, key string, data1 [
 	return nil
 }
 
-func (m *mockRuntime) ethcall(contractAddr common.Address, input1 []byte) ([]byte, error) {
+func (m *mockRuntime) ethcall(contractAddr common.Address, input1 []byte, chainId string) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
