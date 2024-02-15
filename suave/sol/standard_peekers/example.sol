@@ -29,16 +29,16 @@ contract ExampleEthCallSource {
     function sessionE2ETest(bytes memory subTxn, bytes memory subTxn2) public payable returns (bytes memory) {
         string memory id = Suave.newBuilder();
 
-        Suave.SimulateTransactionResult memory sim1 = Suave.simulateTransaction(id, subTxn);
+        Suave.SimulateTransactionResult memory sim1 = Suave.simulateTransaction(id, subTxn, "");
         require(sim1.success == true);
         require(sim1.logs.length == 1);
 
         // simulate the same transaction again should fail because the nonce is the same
-        Suave.SimulateTransactionResult memory sim2 = Suave.simulateTransaction(id, subTxn);
+        Suave.SimulateTransactionResult memory sim2 = Suave.simulateTransaction(id, subTxn, "");
         require(sim2.success == false);
 
         // now, simulate the transaction with the correct nonce
-        Suave.SimulateTransactionResult memory sim3 = Suave.simulateTransaction(id, subTxn2);
+        Suave.SimulateTransactionResult memory sim3 = Suave.simulateTransaction(id, subTxn2, "");
         require(sim3.success == true);
         require(sim3.logs.length == 2);
 

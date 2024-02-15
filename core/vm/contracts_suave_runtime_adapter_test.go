@@ -59,7 +59,7 @@ func (m *mockRuntime) signMessage(digest []byte, signingKey string) ([]byte, err
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) simulateBundle(bundleData []byte) (uint64, error) {
+func (m *mockRuntime) simulateBundle(bundleData []byte, chainId string) (uint64, error) {
 	return 1, nil
 }
 
@@ -79,7 +79,7 @@ func (m *mockRuntime) newBuilder() (string, error) {
 	return "", nil
 }
 
-func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.SimulateTransactionResult, error) {
+func (m *mockRuntime) simulateTransaction(session string, txn []byte, chainId string) (types.SimulateTransactionResult, error) {
 	return types.SimulateTransactionResult{}, nil
 }
 
