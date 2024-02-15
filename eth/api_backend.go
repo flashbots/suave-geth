@@ -58,7 +58,6 @@ type EthAPIBackend struct {
 	suaveEthBlockSigningKey  *bls.SecretKey
 	suaveEngine              *cstore.CStoreEngine
 	suaveEthBackend          suave.ConfidentialEthBackend
-	suaveEthBackendByChainID map[string]suave.ConfidentialEthBackend
 	suaveExternalWhitelist   []string
 }
 
@@ -440,12 +439,11 @@ func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.Co
 		ConfidentialInputs: ccr.ConfidentialInputs,
 		CallerStack:        []*common.Address{},
 		Backend: &vm.SuaveExecutionBackend{
-			EthBundleSigningKey:              b.suaveEthBundleSigningKey,
-			EthBlockSigningKey:               b.suaveEthBlockSigningKey,
-			ExternalWhitelist:                b.suaveExternalWhitelist,
-			ConfidentialStore:                storeTransaction,
-			ConfidentialEthBackend:           b.suaveEthBackend,
-			ConfidentialEthBackendsByChainID: b.suaveEthBackendByChainID,
+			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
+			EthBlockSigningKey:     b.suaveEthBlockSigningKey,
+			ExternalWhitelist:      b.suaveExternalWhitelist,
+			ConfidentialStore:      storeTransaction,
+			ConfidentialEthBackend: b.suaveEthBackend,
 		},
 	}
 }

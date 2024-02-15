@@ -33,12 +33,11 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
-	EthBundleSigningKey              *ecdsa.PrivateKey
-	EthBlockSigningKey               *bls.SecretKey
-	ExternalWhitelist                []string
-	ConfidentialStore                ConfidentialStore
-	ConfidentialEthBackend           suave.ConfidentialEthBackend
-	ConfidentialEthBackendsByChainID map[string]suave.ConfidentialEthBackend
+	EthBundleSigningKey    *ecdsa.PrivateKey
+	EthBlockSigningKey     *bls.SecretKey
+	ExternalWhitelist      []string
+	ConfidentialStore      ConfidentialStore
+	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
 
 func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
