@@ -18,7 +18,7 @@ require (
 	github.com/cockroachdb/pebble v1.0.0
 	github.com/consensys/gnark-crypto v0.11.0
 	github.com/crate-crypto/go-kzg-4844 v0.7.0
-	github.com/davecgh/go-spew v1.1.1
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/docker/docker v1.6.2
 	github.com/dop251/goja v0.0.0-20230122112309-96b1610dd4f7
@@ -37,13 +37,8 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/golang/protobuf v1.5.3
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
-<<<<<<< HEAD
-	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
-	github.com/google/uuid v1.4.0
-=======
 	github.com/google/gofuzz v1.2.0
-	github.com/google/uuid v1.3.1
->>>>>>> 83a7be370b04b8db2702165f64aa0da3cea9cf04
+	github.com/google/uuid v1.4.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/graph-gophers/graphql-go v1.3.0
 	github.com/hashicorp/go-bexpr v0.1.10
@@ -74,13 +69,13 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/umbracle/ethgo v0.1.3
 	github.com/urfave/cli/v2 v2.17.2-0.20221006022127-8f469abc00aa
-	golang.org/x/crypto v0.14.0
-	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad
-	golang.org/x/sync v0.2.0
-	golang.org/x/sys v0.13.0
-	golang.org/x/text v0.13.0
-	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af
-	golang.org/x/tools v0.7.0
+	golang.org/x/crypto v0.16.0
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	golang.org/x/sync v0.5.0
+	golang.org/x/sys v0.15.0
+	golang.org/x/text v0.14.0
+	golang.org/x/time v0.5.0
+	golang.org/x/tools v0.13.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/yaml.v3 v3.0.1
@@ -120,7 +115,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
 	github.com/kilic/bls12-381 v0.1.0 // indirect
-	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -134,7 +129,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
@@ -155,10 +150,12 @@ require (
 	github.com/valyala/fastjson v1.4.1 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
-	golang.org/x/mod v0.11.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
