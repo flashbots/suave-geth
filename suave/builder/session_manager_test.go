@@ -18,9 +18,9 @@ import (
 )
 
 func TestSessionManager_SessionTimeout(t *testing.T) {
-	mngr, _ := newSessionManager(t, &Config{
-		SessionIdleTimeout: 500 * time.Millisecond,
-	})
+	config := NewConfigFromEnv()
+	config.SessionIdleTimeout = 500 * time.Millisecond
+	mngr, _ := newSessionManager(t, config)
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
@@ -36,10 +36,10 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 
 	const d = time.Millisecond * 10
 
-	mngr, _ := newSessionManager(t, &Config{
-		MaxConcurrentSessions: 1,
-		SessionIdleTimeout:    d,
-	})
+	config := NewConfigFromEnv()
+	config.MaxConcurrentSessions = 1
+	config.SessionIdleTimeout = d
+	mngr, _ := newSessionManager(t, config)
 
 	t.Run("SessionAvailable", func(t *testing.T) {
 		sess, err := mngr.NewSession(context.TODO())
@@ -67,9 +67,9 @@ func TestSessionManager_MaxConcurrentSessions(t *testing.T) {
 }
 
 func TestSessionManager_SessionRefresh(t *testing.T) {
-	mngr, _ := newSessionManager(t, &Config{
-		SessionIdleTimeout: 500 * time.Millisecond,
-	})
+	config := NewConfigFromEnv()
+	config.SessionIdleTimeout = 500 * time.Millisecond
+	mngr, _ := newSessionManager(t, config)
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
@@ -80,6 +80,7 @@ func TestSessionManager_SessionRefresh(t *testing.T) {
 		time.Sleep(250 * time.Millisecond)
 
 		_, err = mngr.getSession(id)
+
 		require.NoError(t, err)
 	}
 
@@ -93,8 +94,7 @@ func TestSessionManager_SessionRefresh(t *testing.T) {
 }
 
 func TestSessionManager_StartSession(t *testing.T) {
-	// test that the session starts and it can simulate transactions
-	mngr, bMock := newSessionManager(t, &Config{})
+	mngr, bMock := newSessionManager(t, NewConfigFromEnv())
 
 	id, err := mngr.NewSession(context.TODO())
 	require.NoError(t, err)
