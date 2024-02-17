@@ -40,6 +40,10 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 /* Confidential store precompiles */
 
 func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data []byte) error {
+	if b.suaveContext.Backend.ConfidentialStore == nil {
+		return fmt.Errorf("confidential store is not enabled")
+	}
+
 	record, err := b.suaveContext.Backend.ConfidentialStore.FetchRecordByID(dataId)
 	if err != nil {
 		return suave.ErrRecordNotFound
@@ -65,6 +69,10 @@ func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data [
 }
 
 func (b *suaveRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]byte, error) {
+	if b.suaveContext.Backend.ConfidentialStore == nil {
+		return nil, fmt.Errorf("confidential store is not enabled")
+	}
+
 	record, err := b.suaveContext.Backend.ConfidentialStore.FetchRecordByID(dataId)
 	if err != nil {
 		return nil, suave.ErrRecordNotFound
@@ -90,6 +98,10 @@ func (b *suaveRuntime) confidentialRetrieve(dataId types.DataId, key string) ([]
 /* Data Record precompiles */
 
 func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers []common.Address, allowedStores []common.Address, RecordType string) (types.DataRecord, error) {
+	if b.suaveContext.Backend.ConfidentialStore == nil {
+		return types.DataRecord{}, fmt.Errorf("confidential store is not enabled")
+	}
+
 	record, err := b.suaveContext.Backend.ConfidentialStore.InitRecord(types.DataRecord{
 		Salt:                suave.RandomDataRecordId(),
 		DecryptionCondition: decryptionCondition,
@@ -105,6 +117,10 @@ func (b *suaveRuntime) newDataRecord(decryptionCondition uint64, allowedPeekers 
 }
 
 func (b *suaveRuntime) fetchDataRecords(targetBlock uint64, namespace string) ([]types.DataRecord, error) {
+	if b.suaveContext.Backend.ConfidentialStore == nil {
+		return nil, fmt.Errorf("confidential store is not enabled")
+	}
+
 	records1 := b.suaveContext.Backend.ConfidentialStore.FetchRecordsByProtocolAndBlock(targetBlock, namespace)
 
 	records := make([]types.DataRecord, 0, len(records1))
@@ -157,7 +173,9 @@ func (c *consoleLogPrecompile) RequiredGas(input []byte) uint64 {
 }
 
 func (c *consoleLogPrecompile) Run(input []byte) ([]byte, error) {
-	consolelog.Print(input)
+	if err := consolelog.Print(input); err != nil {
+		log.Error("failed to console2 print", "err", err)
+	}
 	return nil, nil
 }
 

@@ -2,14 +2,16 @@ package vm
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -19,12 +21,12 @@ import (
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/holiman/uint256"
 
-	builderCapella "github.com/attestantio/go-builder-client/api/capella"
+	builderDeneb "github.com/attestantio/go-builder-client/api/deneb"
 	builderV1 "github.com/attestantio/go-builder-client/api/v1"
 	"github.com/attestantio/go-eth2-client/spec/bellatrix"
 	specCapella "github.com/attestantio/go-eth2-client/spec/capella"
+	specDeneb "github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
-	boostTypes "github.com/flashbots/go-boost-utils/types"
 	boostUtils "github.com/flashbots/go-boost-utils/utils"
 )
 
@@ -216,9 +218,9 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	log.Info("built block from bundles", "payload", *envelope.ExecutionPayload)
 
-	payload, err := executableDataToCapellaExecutionPayload(envelope.ExecutionPayload)
+	payload, err := executableDataToDenebExecutionPayload(envelope.ExecutionPayload)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not format execution payload as capella payload: %w", err)
+		return nil, nil, fmt.Errorf("could not format execution payload as deneb payload: %w", err)
 	}
 
 	blsPk, err := bls.PublicKeyFromSecretKey(b.suaveContext.Backend.EthBlockSigningKey)
@@ -258,10 +260,11 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		return nil, nil, fmt.Errorf("could not sign builder record: %w", err)
 	}
 
-	bidRequest := builderCapella.SubmitBlockRequest{
+	bidRequest := builderDeneb.SubmitBlockRequest{
 		Message:          &blockBidMsg,
 		ExecutionPayload: payload,
 		Signature:        signature,
+		BlobsBundle:      &builderDeneb.BlobsBundle{},
 	}
 
 	bidBytes, err := bidRequest.MarshalJSON()
@@ -275,6 +278,15 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 	}
 
 	return bidBytes, envelopeBytes, nil
+}
+
+func (b *suaveRuntime) privateKeyGen() (string, error) {
+	sk, err := crypto.GenerateKey()
+	if err != nil {
+		return "", fmt.Errorf("could not generate new a private key: %w", err)
+	}
+
+	return hex.EncodeToString(crypto.FromECDSA(sk)), nil
 }
 
 func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJson []byte) ([]byte, error) {
@@ -297,7 +309,7 @@ func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJ
 	return resp, nil
 }
 
-func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*specCapella.ExecutionPayload, error) {
+func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDeneb.ExecutionPayload, error) {
 	transactionData := make([]bellatrix.Transaction, len(data.Transactions))
 	for i, tx := range data.Transactions {
 		transactionData[i] = bellatrix.Transaction(tx)
@@ -313,13 +325,12 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 		}
 	}
 
-	baseFeePerGas := new(boostTypes.U256Str)
-	err := baseFeePerGas.FromBig(data.BaseFeePerGas)
-	if err != nil {
-		return nil, err
+	baseFeePerGas := new(uint256.Int)
+	if baseFeePerGas.SetFromBig(data.BaseFeePerGas) {
+		return nil, errors.New("base fee per gas: overflow")
 	}
 
-	return &specCapella.ExecutionPayload{
+	payload := &specDeneb.ExecutionPayload{
 		ParentHash:    [32]byte(data.ParentHash),
 		FeeRecipient:  [20]byte(data.FeeRecipient),
 		StateRoot:     [32]byte(data.StateRoot),
@@ -331,11 +342,20 @@ func executableDataToCapellaExecutionPayload(data *engine.ExecutableData) (*spec
 		GasUsed:       data.GasUsed,
 		Timestamp:     data.Timestamp,
 		ExtraData:     data.ExtraData,
-		BaseFeePerGas: *baseFeePerGas,
+		BaseFeePerGas: baseFeePerGas,
 		BlockHash:     [32]byte(data.BlockHash),
 		Transactions:  transactionData,
 		Withdrawals:   withdrawalData,
-	}, nil
+	}
+
+	if data.BlobGasUsed != nil {
+		payload.BlobGasUsed = *data.BlobGasUsed
+	}
+	if data.ExcessBlobGas != nil {
+		payload.ExcessBlobGas = *data.ExcessBlobGas
+	}
+
+	return payload, nil
 }
 
 func (c *suaveRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {

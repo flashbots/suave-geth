@@ -15,12 +15,13 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	builderCapella "github.com/attestantio/go-builder-client/api/capella"
+	builderDeneb "github.com/attestantio/go-builder-client/api/deneb"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -313,6 +314,39 @@ func TestSignMessagePrecompile(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), crypto.PubkeyToAddress(*pubKeyRecovered))
+}
+
+func TestPrivateKeyGeneratePrecompile(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	// function privateKeyGen() string
+	args, err := artifacts.SuaveAbi.Methods["privateKeyGen"].Inputs.Pack()
+	require.NoError(t, err)
+
+	gas := hexutil.Uint64(1000000)
+	var callResult hexutil.Bytes
+	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &privateKeyGen,
+		Gas:            &gas,
+		IsConfidential: true,
+		Data:           (*hexutil.Bytes)(&args),
+	}), "latest")
+	requireNoRpcError(t, err)
+
+	// Unpack the call result to get the result of privateKeyGen call
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods["privateKeyGen"].Outputs.Unpack(callResult)
+	require.NoError(t, err)
+
+	// Get the generated private key
+	skGenerated := unpackedCallResult[0].(string)
+	require.NoError(t, err)
+
+	// Some tests on key validity
+	skBytes, err := hex.DecodeString(skGenerated)
+	require.NoError(t, err)
+	_, err = crypto.ToECDSA(skBytes)
+	require.NoError(t, err)
 }
 
 type HintEvent struct {
@@ -651,11 +685,11 @@ func TestMevShare(t *testing.T) {
 		payloadData, err := fr.ConfidentialEngine().Retrieve(bidEvent.Id, newBlockBidAddress, "default:v0:builderPayload")
 		require.NoError(t, err)
 
-		var payloadEnvelope engine.ExecutionPayloadEnvelope
+		var payloadEnvelope dencun.ExecutionPayloadEnvelope
 		require.NoError(t, json.Unmarshal(payloadData, &payloadEnvelope))
 		require.Equal(t, 4, len(payloadEnvelope.ExecutionPayload.Transactions)) // users tx, backrun, user refund, proposer payment
 
-		ethBlock, err := engine.ExecutableDataToBlock(*payloadEnvelope.ExecutionPayload)
+		ethBlock, err := dencun.ExecutableDataToBlock(*payloadEnvelope.ExecutionPayload, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, ethTx.Hash(), ethBlock.Transactions()[0].Hash())
@@ -862,7 +896,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 		require.NoError(t, err)
 
 		// TODO: test builder record
-		var envelope *engine.ExecutionPayloadEnvelope
+		var envelope *dencun.ExecutionPayloadEnvelope
 		require.NoError(t, json.Unmarshal(unpacked[1].([]byte), &envelope))
 		require.Equal(t, 2, len(envelope.ExecutionPayload.Transactions))
 
@@ -945,7 +979,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	var ethBlockBidSenderAddr common.Address
 
-	var blockPayloadSentToRelay *builderCapella.SubmitBlockRequest = &builderCapella.SubmitBlockRequest{}
+	var blockPayloadSentToRelay *builderDeneb.SubmitBlockRequest = &builderDeneb.SubmitBlockRequest{}
 	serveHttp := func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
@@ -1044,6 +1078,22 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 		ethBlockBidSenderContractI := sdk.GetContract(ethBlockBidSenderAddr, ethBlockBidSenderContract.Abi, clt)
 		_, err = ethBlockBidSenderContractI.SendTransaction("buildFromPool", []interface{}{payloadArgsTuple, targetBlock + 1}, nil)
+		if err != nil {
+			var executionRevertedPrefix = "execution reverted: 0x"
+			// decode the PeekerReverted error
+			errMsg := err.Error()
+			if strings.HasPrefix(errMsg, executionRevertedPrefix) {
+				errMsg = errMsg[len(executionRevertedPrefix):]
+				errMsgBytes, _ := hex.DecodeString(errMsg)
+
+				unpacked, _ := artifacts.SuaveAbi.Errors["PeekerReverted"].Inputs.Unpack(errMsgBytes[4:])
+
+				addr, _ := unpacked[0].(common.Address)
+				eventErr, _ := unpacked[1].([]byte)
+				panic(fmt.Sprintf("peeker 0x%x reverted: %s", addr, eventErr))
+			}
+			panic(err)
+		}
 		require.NoError(t, err)
 
 		block = fr.suethSrv.ProgressChain()
@@ -1479,10 +1529,13 @@ var (
 	fetchBidsAddress          = common.HexToAddress("0x42030001")
 	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
 
-	signEthTransaction    = common.HexToAddress("0x40100001")
-	signMessage           = common.HexToAddress("0x40100003")
+	signEthTransaction = common.HexToAddress("0x40100001")
+	signMessage        = common.HexToAddress("0x40100003")
+
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
+
+	privateKeyGen = common.HexToAddress("0x53200003")
 
 	/* contracts */
 	newBundleBidAddress = common.HexToAddress("0x642300000")

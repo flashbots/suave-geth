@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	suave "github.com/ethereum/go-ethereum/suave/core"
@@ -12,8 +12,8 @@ import (
 
 // EthBackend is the set of functions exposed from the SUAVE-enabled node
 type EthBackend interface {
-	BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error)
-	BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error)
+	BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*dencun.ExecutionPayloadEnvelope, error)
+	BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
 }
 
@@ -36,7 +36,7 @@ func NewEthBackendServer(b EthBackendServerBackend) *EthBackendServer {
 	return &EthBackendServer{b}
 }
 
-func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.BuildBlockArgs, txs types.Transactions) (*dencun.ExecutionPayloadEnvelope, error) {
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
 		buildArgs = &types.BuildBlockArgs{
@@ -56,10 +56,10 @@ func (e *EthBackendServer) BuildEthBlock(ctx context.Context, buildArgs *types.B
 		return nil, err
 	}
 
-	return engine.BlockToExecutableData(block, profit), nil
+	return dencun.BlockToExecutableData(block, profit, nil), nil
 }
 
-func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*engine.ExecutionPayloadEnvelope, error) {
+func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildArgs *types.BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error) {
 	if buildArgs == nil {
 		head := e.b.CurrentHeader()
 		buildArgs = &types.BuildBlockArgs{
@@ -79,7 +79,7 @@ func (e *EthBackendServer) BuildEthBlockFromBundles(ctx context.Context, buildAr
 		return nil, err
 	}
 
-	return engine.BlockToExecutableData(block, profit), nil
+	return dencun.BlockToExecutableData(block, profit, nil), nil
 }
 
 func (e *EthBackendServer) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
