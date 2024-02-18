@@ -338,10 +338,22 @@ functions:
           type: SimulateTransactionResult
           description: "Result of the simulation"
   - name: privateKeyGen
-    address: '0x0000000000000000000000000000000053200003'
+    address: "0x0000000000000000000000000000000053200003"
     description: "Generates a private key in ECDA secp256k1 format"
     output:
       fields:
         - name: privateKey
           type: string
           description: "Hex encoded string of the ECDSA private key. Exactly as a signMessage precompile wants."
+  - name: contextGet
+    address: "0x0000000000000000000000000000000053300003"
+    description: "Retrieves a value from the context"
+    input:
+      - name: key
+        type: string
+        description: "Key of the value to retrieve"
+    output:
+      fields:
+        - name: value
+          type: bytes
+          description: "Value of the key"

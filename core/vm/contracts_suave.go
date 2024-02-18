@@ -34,7 +34,7 @@ var (
 /* General utility precompiles */
 
 func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
-	return b.suaveContext.ConfidentialInputs, nil
+	return b.contextGet("confidentialInputs")
 }
 
 /* Confidential store precompiles */
@@ -269,4 +269,12 @@ func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte) (typ
 		return types.SimulateTransactionResult{}, err
 	}
 	return *result, nil
+}
+
+func (s *suaveRuntime) contextGet(key string) ([]byte, error) {
+	val, ok := s.suaveContext.Context[key]
+	if !ok {
+		return nil, fmt.Errorf("value not found")
+	}
+	return val, nil
 }
