@@ -153,7 +153,6 @@ func (s *suaveRuntime) signMessage(digest []byte, cryptoType types.CryptoSignatu
 			return nil, fmt.Errorf("failed to sign message: %v", err)
 		}
 		return signature, nil
-
 	} else if cryptoType == types.CryptoSignature_BLS {
 		suaveEthBlockSigningKey, err := bls.SecretKeyFromBytes(signingKeyBuf)
 		if err != nil {

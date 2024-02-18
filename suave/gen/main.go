@@ -689,7 +689,7 @@ func encodeTypeName(typName string, addMemory bool, addLink bool) string {
 	typ, err := abi.NewType(typName, "", nil)
 	if err != nil {
 		// not a basic type (i.e. struct or []struct)
-		if typName != "DataId" && typName != "Crypto" {
+		if typName != "DataId" && typName != "CryptoSignature" {
 			isMemoryType = true
 		}
 		// add the link reference to Suave library if necessary
