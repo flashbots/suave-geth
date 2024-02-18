@@ -224,7 +224,7 @@ library Suave {
         return abi.decode(data, (DataRecord));
     }
 
-    function privateKeyGen(CryptoSignature memory crypto) internal returns (string memory) {
+    function privateKeyGen(CryptoSignature crypto) internal returns (string memory) {
         (bool success, bytes memory data) = PRIVATE_KEY_GEN.call(abi.encode(crypto));
         if (!success) {
             revert PeekerReverted(PRIVATE_KEY_GEN, data);
@@ -245,7 +245,7 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function signMessage(bytes memory digest, CryptoSignature memory crypto, string memory signingKey)
+    function signMessage(bytes memory digest, CryptoSignature crypto, string memory signingKey)
         internal
         returns (bytes memory)
     {
