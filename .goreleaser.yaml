@@ -126,16 +126,16 @@ docker_manifests:
     image_templates:
       - "flashbots/suave-geth:{{ .Tag }}-amd64"
       - "flashbots/suave-geth:{{ .Tag }}-arm64"
-  {{- if not .IsNightly }}
-  - name_template: "flashbots/suave-geth:latest"
-    image_templates:
-       - "flashbots/suave-geth:latest-amd64"
-       - "flashbots/suave-geth:latest-arm64"
-  {{ else }}
+  {{- if .IsNightly }}
   - name_template: "flashbots/suave-geth:latest-nightly"
     image_templates:
        - "flashbots/suave-geth:latest-nightly-amd64"
        - "flashbots/suave-geth:latest-nightly-arm64"
+  {{ else }}
+  - name_template: "flashbots/suave-geth:latest"
+    image_templates:
+       - "flashbots/suave-geth:latest-amd64"
+       - "flashbots/suave-geth:latest-arm64"
   {{- end }}
 
 nightly:
