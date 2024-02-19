@@ -97,7 +97,11 @@ dockers:
     image_templates:
       - "flashbots/suave-geth:{{ .ShortCommit }}-amd64"
       - "flashbots/suave-geth:v{{ .Version }}-amd64"
-      - "{{ if not .IsNightly }}flashbots/suave-geth:latest-amd64{{ end }}"
+      {{- if not .IsNightly }}
+      - flashbots/suave-geth:latest-amd64
+      {{ else }}
+      - flashbots/suave-geth:latest-nightly-amd64
+      {{- end }}
   - dockerfile: ./Dockerfile.suave
     use: buildx
     goarch: arm64
@@ -107,7 +111,11 @@ dockers:
     image_templates:
       - "flashbots/suave-geth:{{ .ShortCommit }}-arm64"
       - "flashbots/suave-geth:v{{ .Version }}-arm64"
-      - "{{ if not .IsNightly }}flashbots/suave-geth:latest-arm64{{ end }}"
+      {{- if not .IsNightly }}
+      - flashbots/suave-geth:latest-arm64
+      {{ else }}
+      - flashbots/suave-geth:latest-nightly-arm64
+      {{- end }}
 
 docker_manifests:
   - name_template: "flashbots/suave-geth:{{ .ShortCommit }}"
@@ -118,14 +126,21 @@ docker_manifests:
     image_templates:
       - "flashbots/suave-geth:{{ .Tag }}-amd64"
       - "flashbots/suave-geth:{{ .Tag }}-arm64"
+  {{- if not .IsNightly }}
   - name_template: "flashbots/suave-geth:latest"
     image_templates:
-      - "flashbots/suave-geth:latest-amd64"
-      - "flashbots/suave-geth:latest-arm64"
+       - "flashbots/suave-geth:latest-amd64"
+       - "flashbots/suave-geth:latest-arm64"
+  {{ else }}
+  - name_template: "flashbots/suave-geth:latest-nightly"
+    image_templates:
+       - "flashbots/suave-geth:latest-nightly-amd64"
+       - "flashbots/suave-geth:latest-nightly-arm64"
+  {{- end }}
 
 nightly:
   name_template: "{{ incpatch .Version }}-nightly"
-  tag_name: nightly
+  tag_name: latest-nightly
   publish_release: true
   keep_single_release: true
 
