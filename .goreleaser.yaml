@@ -96,8 +96,8 @@ dockers:
       - --platform=linux/amd64
     image_templates:
       - "flashbots/suave-geth:{{ .ShortCommit }}-amd64"
-      - "flashbots/suave-geth:{{ .Tag }}-amd64"
-      - "flashbots/suave-geth:latest-amd64"
+      - "flashbots/suave-geth:v{{ .Version }}-amd64"
+      - "{{ if not .IsNightly }}flashbots/suave-geth:latest-amd64{{ end }}"
   - dockerfile: ./Dockerfile.suave
     use: buildx
     goarch: arm64
@@ -106,8 +106,8 @@ dockers:
       - --platform=linux/arm64
     image_templates:
       - "flashbots/suave-geth:{{ .ShortCommit }}-arm64"
-      - "flashbots/suave-geth:{{ .Tag }}-arm64"
-      - "flashbots/suave-geth:latest-arm64"
+      - "flashbots/suave-geth:v{{ .Version }}-arm64"
+      - "{{ if not .IsNightly }}flashbots/suave-geth:latest-arm64{{ end }}"
 
 docker_manifests:
   - name_template: "flashbots/suave-geth:{{ .ShortCommit }}"
@@ -122,6 +122,12 @@ docker_manifests:
     image_templates:
       - "flashbots/suave-geth:latest-amd64"
       - "flashbots/suave-geth:latest-arm64"
+
+nightly:
+  name_template: "{{ incpatch .Version }}-nightly"
+  tag_name: nightly
+  publish_release: true
+  keep_single_release: true
 
 checksum:
   name_template: "checksums.txt"
