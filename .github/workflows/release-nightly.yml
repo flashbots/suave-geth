@@ -1,5 +1,5 @@
 # .github/workflows/release.yml
-name: release
+name: release-nightly
 
 on:
   workflow_dispatch:
