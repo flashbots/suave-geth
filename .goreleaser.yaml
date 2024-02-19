@@ -97,10 +97,10 @@ dockers:
     image_templates:
       - "flashbots/suave-geth:{{ .ShortCommit }}-amd64"
       - "flashbots/suave-geth:v{{ .Version }}-amd64"
-      {{- if not .IsNightly }}
-      - flashbots/suave-geth:latest-amd64
-      {{ else }}
+      {{- if .IsNightly }}
       - flashbots/suave-geth:latest-nightly-amd64
+      {{ else }}
+      - flashbots/suave-geth:latest-amd64
       {{- end }}
   - dockerfile: ./Dockerfile.suave
     use: buildx
@@ -111,10 +111,10 @@ dockers:
     image_templates:
       - "flashbots/suave-geth:{{ .ShortCommit }}-arm64"
       - "flashbots/suave-geth:v{{ .Version }}-arm64"
-      {{- if not .IsNightly }}
-      - flashbots/suave-geth:latest-arm64
-      {{ else }}
+      {{- if .IsNightly }}
       - flashbots/suave-geth:latest-nightly-arm64
+      {{ else }}
+      - flashbots/suave-geth:latest-arm64
       {{- end }}
 
 docker_manifests:
