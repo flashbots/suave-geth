@@ -27,9 +27,9 @@ type ConfidentialStore interface {
 
 type SuaveContext struct {
 	// TODO: MEVM access to Backend should be restricted to only the necessary functions!
-	Backend            *SuaveExecutionBackend
-	ConfidentialInputs []byte
-	CallerStack        []*common.Address
+	Backend     *SuaveExecutionBackend
+	Context     map[string][]byte
+	CallerStack []*common.Address
 }
 
 type SuaveExecutionBackend struct {
@@ -46,9 +46,9 @@ func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {
 	}
 
 	return &SuaveContext{
-		Backend:            evm.SuaveContext.Backend,
-		ConfidentialInputs: evm.SuaveContext.ConfidentialInputs,
-		CallerStack:        append(evm.SuaveContext.CallerStack, &caller),
+		Backend:     evm.SuaveContext.Backend,
+		Context:     evm.SuaveContext.Context,
+		CallerStack: append(evm.SuaveContext.CallerStack, &caller),
 	}
 }
 

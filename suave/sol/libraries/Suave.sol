@@ -69,6 +69,8 @@ library Suave {
 
     address public constant CONFIDENTIAL_STORE = 0x0000000000000000000000000000000042020000;
 
+    address public constant CONTEXT_GET = 0x0000000000000000000000000000000053300003;
+
     address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
 
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
@@ -146,6 +148,15 @@ library Suave {
         if (!success) {
             revert PeekerReverted(CONFIDENTIAL_STORE, data);
         }
+    }
+
+    function contextGet(string memory key) internal returns (bytes memory) {
+        (bool success, bytes memory data) = CONTEXT_GET.call(abi.encode(key));
+        if (!success) {
+            revert PeekerReverted(CONTEXT_GET, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     function doHTTPRequest(HttpRequest memory request) internal returns (bytes memory) {
