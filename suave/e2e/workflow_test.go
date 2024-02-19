@@ -277,78 +277,6 @@ func TestTxSigningPrecompile(t *testing.T) {
 	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), sender)
 }
 
-func TestSignMessagePrecompile(t *testing.T) {
-	fr := newFramework(t)
-	defer fr.Close()
-
-	// Prepare the message digest and generate a signing key
-	message := "Hello, world!"
-	digest := crypto.Keccak256([]byte(message))
-
-	sk, err := crypto.GenerateKey()
-	require.NoError(t, err)
-	skHex := hex.EncodeToString(crypto.FromECDSA(sk))
-
-	// function signMessage(bytes memory digest, string memory signingKey)
-	args, err := artifacts.SuaveAbi.Methods["signMessage"].Inputs.Pack(digest, skHex)
-	require.NoError(t, err)
-
-	gas := hexutil.Uint64(1000000)
-
-	var callResult hexutil.Bytes
-	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
-		To:             &signMessage,
-		Gas:            &gas,
-		IsConfidential: true,
-		Data:           (*hexutil.Bytes)(&args),
-	}), "latest")
-	requireNoRpcError(t, err)
-
-	// Unpack the call result to get the signed message
-	unpackedCallResult, err := artifacts.SuaveAbi.Methods["signMessage"].Outputs.Unpack(callResult)
-	require.NoError(t, err)
-
-	// Assert that recovered key is correct
-	signature := unpackedCallResult[0].([]byte)
-	pubKeyRecovered, err := crypto.SigToPub(digest, signature)
-	require.NoError(t, err)
-
-	require.Equal(t, crypto.PubkeyToAddress(sk.PublicKey), crypto.PubkeyToAddress(*pubKeyRecovered))
-}
-
-func TestPrivateKeyGeneratePrecompile(t *testing.T) {
-	fr := newFramework(t)
-	defer fr.Close()
-
-	// function privateKeyGen() string
-	args, err := artifacts.SuaveAbi.Methods["privateKeyGen"].Inputs.Pack()
-	require.NoError(t, err)
-
-	gas := hexutil.Uint64(1000000)
-	var callResult hexutil.Bytes
-	err = fr.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
-		To:             &privateKeyGen,
-		Gas:            &gas,
-		IsConfidential: true,
-		Data:           (*hexutil.Bytes)(&args),
-	}), "latest")
-	requireNoRpcError(t, err)
-
-	// Unpack the call result to get the result of privateKeyGen call
-	unpackedCallResult, err := artifacts.SuaveAbi.Methods["privateKeyGen"].Outputs.Unpack(callResult)
-	require.NoError(t, err)
-
-	// Get the generated private key
-	skGenerated := unpackedCallResult[0].(string)
-	require.NoError(t, err)
-
-	// Some tests on key validity
-	skBytes, err := hex.DecodeString(skGenerated)
-	require.NoError(t, err)
-	_, err = crypto.ToECDSA(skBytes)
-	require.NoError(t, err)
-}
-
 type HintEvent struct {
 	BidId [16]uint8 `abi:"dataId"`
 	Hint  []byte    `abi:"hint"`
@@ -1329,6 +1257,52 @@ func TestE2EPrecompile_Builder(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestE2E_Precompile_CryptoSECP256(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	message := "Hello, world!"
+	digest := crypto.Keccak256([]byte(message))
+
+	// generate an ecdsa key
+	res0 := fr.callPrecompile("privateKeyGen", []interface{}{types.CryptoSignature_SECP256})
+	ecdsaKey := res0[0].(string)
+
+	// sign a message with the key
+	res1 := fr.callPrecompile("signMessage", []interface{}{digest, types.CryptoSignature_SECP256, ecdsaKey})
+	signature := res1[0].([]byte)
+
+	// verify the signature
+	priv, err := crypto.HexToECDSA(ecdsaKey)
+	require.NoError(t, err)
+
+	pub2, err := crypto.SigToPub(digest, signature)
+	require.NoError(t, err)
+	require.Equal(t, crypto.PubkeyToAddress(priv.PublicKey), crypto.PubkeyToAddress(*pub2))
+}
+
+func TestE2E_Precompile_CryptoBLS(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	message := "Hello, world!"
+	digest := crypto.Keccak256([]byte(message))
+
+	// generate a bls key
+	res0 := fr.callPrecompile("privateKeyGen", []interface{}{types.CryptoSignature_BLS})
+	blsKey := res0[0].(string)
+
+	// sign a message with the key
+	res1 := fr.callPrecompile("signMessage", []interface{}{digest, types.CryptoSignature_BLS, blsKey})
+	signature := res1[0].([]byte)
+
+	// verify the signature
+	priv, _ := bls.SecretKeyFromBytes(hexutil.MustDecode("0x" + blsKey))
+	pub, _ := bls.PublicKeyFromSecretKey(priv)
+	valid, _ := bls.VerifySignatureBytes(digest, signature, bls.PublicKeyToBytes(pub))
+	require.True(t, valid)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
@@ -1506,6 +1480,29 @@ func (f *framework) Close() {
 	f.suethSrv.Close()
 }
 
+func (f *framework) callPrecompile(name string, args []interface{}) []interface{} {
+	input, err := artifacts.SuaveAbi.Methods[name].Inputs.Pack(args...)
+	require.NoError(f.t, err)
+
+	addr := artifacts.SuaveMethods[name]
+
+	gas := hexutil.Uint64(1000000)
+	var callResult hexutil.Bytes
+	err = f.suethSrv.RPCNode().Call(&callResult, "eth_call", setTxArgsDefaults(ethapi.TransactionArgs{
+		To:             &addr,
+		Gas:            &gas,
+		IsConfidential: true,
+		Data:           (*hexutil.Bytes)(&input),
+	}), "latest")
+	requireNoRpcError(f.t, err)
+
+	// Unpack the call result
+	unpackedCallResult, err := artifacts.SuaveAbi.Methods[name].Outputs.Unpack(callResult)
+	require.NoError(f.t, err)
+
+	return unpackedCallResult
+}
+
 // Utilities
 
 var (
@@ -1530,12 +1527,9 @@ var (
 	fillMevShareBundleAddress = common.HexToAddress("0x43200001")
 
 	signEthTransaction = common.HexToAddress("0x40100001")
-	signMessage        = common.HexToAddress("0x40100003")
 
 	simulateBundleAddress = common.HexToAddress("0x42100000")
 	buildEthBlockAddress  = common.HexToAddress("0x42100001")
-
-	privateKeyGen = common.HexToAddress("0x53200003")
 
 	/* contracts */
 	newBundleBidAddress = common.HexToAddress("0x642300000")

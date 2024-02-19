@@ -280,13 +280,22 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 	return bidBytes, envelopeBytes, nil
 }
 
-func (b *suaveRuntime) privateKeyGen() (string, error) {
-	sk, err := crypto.GenerateKey()
-	if err != nil {
-		return "", fmt.Errorf("could not generate new a private key: %w", err)
+func (b *suaveRuntime) privateKeyGen(cryptoType types.CryptoSignature) (string, error) {
+	if cryptoType == types.CryptoSignature_SECP256 {
+		sk, err := crypto.GenerateKey()
+		if err != nil {
+			return "", fmt.Errorf("could not generate new a private key: %w", err)
+		}
+		return hex.EncodeToString(crypto.FromECDSA(sk)), nil
+	} else if cryptoType == types.CryptoSignature_BLS {
+		sk, err := bls.GenerateRandomSecretKey()
+		if err != nil {
+			return "", fmt.Errorf("could not generate new a private key: %w", err)
+		}
+		return hex.EncodeToString(sk.Marshal()), nil
 	}
 
-	return hex.EncodeToString(crypto.FromECDSA(sk)), nil
+	return "", fmt.Errorf("unsupported crypto type %v", cryptoType)
 }
 
 func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJson []byte) ([]byte, error) {

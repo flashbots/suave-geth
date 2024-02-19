@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/suave/consolelog"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/flashbots/go-boost-utils/bls"
 )
 
 var (
@@ -131,18 +132,38 @@ func (b *suaveRuntime) fetchDataRecords(targetBlock uint64, namespace string) ([
 	return records, nil
 }
 
-func (s *suaveRuntime) signMessage(digest []byte, signingKey string) ([]byte, error) {
-	key, err := crypto.HexToECDSA(signingKey)
+func (s *suaveRuntime) signMessage(digest []byte, cryptoType types.CryptoSignature, signingKey string) ([]byte, error) {
+	if !strings.HasPrefix(signingKey, "0x") {
+		// we need to prefix with 0x if not present because the 'hexutil.Decode' fails to decode if there is no '0x' prefix
+		signingKey = "0x" + signingKey
+	}
+	signingKeyBuf, err := hexutil.Decode(signingKey)
 	if err != nil {
 		return nil, fmt.Errorf("key not formatted properly: %w", err)
 	}
 
-	signature, err := crypto.Sign(digest, key)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to sign message: %v", err)
+	if cryptoType == types.CryptoSignature_SECP256 {
+		key, err := crypto.ToECDSA(signingKeyBuf)
+		if err != nil {
+			return nil, fmt.Errorf("key not formatted properly: %w", err)
+		}
+
+		signature, err := crypto.Sign(digest, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign message: %v", err)
+		}
+		return signature, nil
+	} else if cryptoType == types.CryptoSignature_BLS {
+		suaveEthBlockSigningKey, err := bls.SecretKeyFromBytes(signingKeyBuf)
+		if err != nil {
+			fmt.Println("_B!", err)
+			return nil, fmt.Errorf("failed to sign message: %v", err)
+		}
+		signature := bls.Sign(suaveEthBlockSigningKey, digest).Bytes()
+		return signature[:], nil
 	}
 
-	return signature, nil
+	return nil, fmt.Errorf("unsupported crypto type")
 }
 
 func mustParseAbi(data string) abi.ABI {

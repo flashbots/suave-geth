@@ -1,6 +1,9 @@
 types:
   - name: DataId
     type: bytes16
+enums:
+  - name: CryptoSignature
+    values: ["SECP256", "BLS"]
 structs:
   - name: DataRecord
     fields:
@@ -294,6 +297,9 @@ functions:
       - name: digest
         type: bytes
         description: "Message to sign"
+      - name: crypto
+        type: CryptoSignature
+        description: "Type of the private key to generate"
       - name: signingKey
         type: string
         description: "Hex encoded string of the ECDSA private key"
@@ -340,6 +346,10 @@ functions:
   - name: privateKeyGen
     address: "0x0000000000000000000000000000000053200003"
     description: "Generates a private key in ECDA secp256k1 format"
+    input:
+      - name: crypto
+        type: CryptoSignature
+        description: "Type of the private key to generate"
     output:
       fields:
         - name: privateKey

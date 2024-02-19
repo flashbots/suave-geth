@@ -55,7 +55,7 @@ func (m *mockRuntime) signEthTransaction(txn []byte, chainId string, signingKey 
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) signMessage(digest []byte, signingKey string) ([]byte, error) {
+func (m *mockRuntime) signMessage(digest []byte, crypto types.CryptoSignature, signingKey string) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
@@ -83,7 +83,7 @@ func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.Sim
 	return types.SimulateTransactionResult{}, nil
 }
 
-func (m *mockRuntime) privateKeyGen() (string, error) {
+func (m *mockRuntime) privateKeyGen(crypto types.CryptoSignature) (string, error) {
 	return "", nil
 }
 
