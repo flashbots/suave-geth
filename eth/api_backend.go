@@ -436,8 +436,11 @@ func (b *EthAPIBackend) StartMining() error {
 func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.ConfidentialComputeRequest) vm.SuaveContext {
 	storeTransaction := b.suaveEngine.NewTransactionalStore(requestTx)
 	return vm.SuaveContext{
-		ConfidentialInputs: ccr.ConfidentialInputs,
-		CallerStack:        []*common.Address{},
+		Context: map[string][]byte{
+			"confidentialInputs": ccr.ConfidentialInputs,
+			"kettleAddress":      ccr.KettleAddress.Bytes(),
+		},
+		CallerStack: []*common.Address{},
 		Backend: &vm.SuaveExecutionBackend{
 			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
 			EthBlockSigningKey:     b.suaveEthBlockSigningKey,

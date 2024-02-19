@@ -87,6 +87,10 @@ func (m *mockRuntime) privateKeyGen(crypto types.CryptoSignature) (string, error
 	return "", nil
 }
 
+func (m *mockRuntime) contextGet(key string) ([]byte, error) {
+	return nil, nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},
