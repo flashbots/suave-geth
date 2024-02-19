@@ -24,9 +24,6 @@ jobs:
           username: ${{ secrets.FLASHBOTS_DOCKERHUB_USERNAME }}
           password: ${{ secrets.FLASHBOTS_DOCKERHUB_TOKEN }}
 
-      - name: Log tag name
-        run: echo "Build for tag ${{ github.ref_name }}"
-
       - name: Create release
         run: make release
         env:
