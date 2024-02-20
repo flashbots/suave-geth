@@ -31,6 +31,5 @@ jobs:
       - name: Create release
         run: make release
         env:
-          GORELEASER_KEY: ${{ secrets.GORELEASERPRO_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
