@@ -28,6 +28,15 @@ jobs:
       - name: Log tag name
         run: echo "Build for tag ${{ github.ref_name }}"
 
+      - name: Validate tag and version
+        run: |
+          make suave
+          version=$(./build/bin/suave-geth version | grep '^Version:' | awk -F': ' '{print "v" $2}')
+          if [ "$version" != "${{ github.ref_name }}" ]; then
+            echo "Version mismatch: $version != ${{ github.ref_name }}"
+            exit 1
+          fi
+
       - name: Create release
         run: make release
         env:
