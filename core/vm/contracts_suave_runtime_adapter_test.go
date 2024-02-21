@@ -15,7 +15,7 @@ var _ SuaveRuntime = &mockRuntime{}
 type mockRuntime struct {
 }
 
-func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string, chainId string) ([]byte, []byte, error) {
+func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string) ([]byte, []byte, error) {
 	return []byte{0x1}, []byte{0x1}, nil
 }
 
@@ -31,7 +31,7 @@ func (m *mockRuntime) confidentialStore(dataId types.DataId, key string, data1 [
 	return nil
 }
 
-func (m *mockRuntime) ethcall(contractAddr common.Address, input1 []byte, chainId string) ([]byte, error) {
+func (m *mockRuntime) ethcall(contractAddr common.Address, input1 []byte) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
@@ -59,7 +59,7 @@ func (m *mockRuntime) signMessage(digest []byte, crypto types.CryptoSignature, s
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) simulateBundle(bundleData []byte, chainId string) (uint64, error) {
+func (m *mockRuntime) simulateBundle(bundleData []byte) (uint64, error) {
 	return 1, nil
 }
 
@@ -79,7 +79,7 @@ func (m *mockRuntime) newBuilder() (string, error) {
 	return "", nil
 }
 
-func (m *mockRuntime) simulateTransaction(session string, txn []byte, chainId string) (types.SimulateTransactionResult, error) {
+func (m *mockRuntime) simulateTransaction(session string, txn []byte) (types.SimulateTransactionResult, error) {
 	return types.SimulateTransactionResult{}, nil
 }
 
