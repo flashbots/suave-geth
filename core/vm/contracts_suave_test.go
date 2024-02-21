@@ -271,6 +271,7 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 			resp: []byte("ok1"),
 		},
 		{
+			// DNS resolution failure
 			req: types.HttpRequest{Url: "http://sepolia:" + parsedURL.Port(), Method: "GET"},
 			err: true,
 		},
