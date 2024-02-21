@@ -99,12 +99,9 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid value for remote backend endpoint: %s", endpoint)
 			}
-			chainId := new(big.Int)
-			if _, ok := chainId.SetString(parts[0], 10); !ok {
-				return nil, fmt.Errorf("invalid chain id: %s", parts[0])
-			}
-			rpcUrl := parts[1]
-			dnsRegistry[chainId.String()] = rpcUrl
+			name := parts[0]
+			domain := parts[1]
+			dnsRegistry[name] = domain
 		}
 		cfg.DnsRegistry = dnsRegistry
 	}
@@ -130,6 +127,7 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	backend := &vm.SuaveExecutionBackend{
 		ExternalWhitelist:      cfg.Whitelist,
 		ConfidentialEthBackend: suaveEthBackend,
+		DnsRegistry:            cfg.DnsRegistry,
 		EthBlockSigningKey:     blsKey,
 		EthBundleSigningKey:    ecdsaKey,
 	}
@@ -148,6 +146,7 @@ var (
 		Flags: []cli.Flag{
 			isLocalForgeFlag,
 			whiteListForgeFlag,
+			dnsRegistryForgeFlag,
 			ethBackendForgeFlag,
 			tomlConfigForgeFlag,
 		},

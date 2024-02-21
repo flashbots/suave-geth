@@ -1737,12 +1737,9 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 			if len(parts) != 2 {
 				Fatalf("invalid value for remote backend endpoint: %s", endpoint)
 			}
-			chainId := new(big.Int)
-			if _, ok := chainId.SetString(parts[0], 10); !ok {
-				Fatalf("invalid chain id: %s", parts[0])
-			}
-			rpcUrl := parts[1]
-			dnsRegistry[chainId.String()] = rpcUrl
+			name := parts[0]
+			domain := parts[1]
+			dnsRegistry[name] = domain
 		}
 		cfg.SuaveDnsRegistry = dnsRegistry
 	}
