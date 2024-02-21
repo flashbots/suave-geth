@@ -4,6 +4,11 @@ pragma solidity ^0.8.8;
 library Suave {
     error PeekerReverted(address, bytes);
 
+    enum CryptoSignature {
+        SECP256,
+        BLS
+    }
+
     type DataId is bytes16;
 
     struct BuildBlockArgs {
@@ -68,6 +73,8 @@ library Suave {
     address public constant CONFIDENTIAL_RETRIEVE = 0x0000000000000000000000000000000042020001;
 
     address public constant CONFIDENTIAL_STORE = 0x0000000000000000000000000000000042020000;
+
+    address public constant CONTEXT_GET = 0x0000000000000000000000000000000053300003;
 
     address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
 
@@ -150,6 +157,15 @@ library Suave {
         }
     }
 
+    function contextGet(string memory key) internal returns (bytes memory) {
+        (bool success, bytes memory data) = CONTEXT_GET.call(abi.encode(key));
+        if (!success) {
+            revert PeekerReverted(CONTEXT_GET, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
     function doHTTPRequest(HttpRequest memory request) internal returns (bytes memory) {
         (bool success, bytes memory data) = DO_HTTPREQUEST.call(abi.encode(request));
         if (!success) {
@@ -224,8 +240,8 @@ library Suave {
         return abi.decode(data, (DataRecord));
     }
 
-    function privateKeyGen() internal returns (string memory) {
-        (bool success, bytes memory data) = PRIVATE_KEY_GEN.call(abi.encode());
+    function privateKeyGen(CryptoSignature crypto) internal returns (string memory) {
+        (bool success, bytes memory data) = PRIVATE_KEY_GEN.call(abi.encode(crypto));
         if (!success) {
             revert PeekerReverted(PRIVATE_KEY_GEN, data);
         }
@@ -245,9 +261,12 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function signMessage(bytes memory digest, string memory signingKey) internal returns (bytes memory) {
+    function signMessage(bytes memory digest, CryptoSignature crypto, string memory signingKey)
+        internal
+        returns (bytes memory)
+    {
         require(isConfidential());
-        (bool success, bytes memory data) = SIGN_MESSAGE.call(abi.encode(digest, signingKey));
+        (bool success, bytes memory data) = SIGN_MESSAGE.call(abi.encode(digest, crypto, signingKey));
         if (!success) {
             revert PeekerReverted(SIGN_MESSAGE, data);
         }
