@@ -27,7 +27,7 @@ contract BundleContract is AnyBundleContract {
 
         bytes memory bundleData = this.fetchConfidentialBundleData();
 
-        uint64 egp = Suave.simulateBundle(bundleData, "");
+        uint64 egp = Suave.simulateBundle(bundleData);
 
         Suave.DataRecord memory dataRecord =
             Suave.newDataRecord(decryptionCondition, dataAllowedPeekers, dataAllowedStores, "default:v0:ethBundles");
@@ -82,7 +82,7 @@ contract MevShareContract is AnyBundleContract {
         bytes memory bundleData = this.fetchConfidentialBundleData();
 
         // 2. sim bundle
-        uint64 egp = Suave.simulateBundle(bundleData, "");
+        uint64 egp = Suave.simulateBundle(bundleData);
 
         // 3. extract hint
         bytes memory hint = Suave.extractHint(bundleData);
@@ -119,7 +119,7 @@ contract MevShareContract is AnyBundleContract {
         bytes memory matchBundleData = this.fetchConfidentialBundleData();
 
         // 2. sim match alone for validity
-        uint64 egp = Suave.simulateBundle(matchBundleData, "");
+        uint64 egp = Suave.simulateBundle(matchBundleData);
 
         // 3. extract hint
         bytes memory matchHint = Suave.extractHint(matchBundleData);
@@ -316,7 +316,7 @@ contract EthBlockContract is AnyBundleContract {
             Suave.newDataRecord(blockHeight, allowedPeekers, allowedPeekers, "default:v0:mergedDataRecords");
         Suave.confidentialStore(blockBid.id, "default:v0:mergedDataRecords", abi.encode(records));
 
-        (bytes memory builderBid, bytes memory payload) = Suave.buildEthBlock(blockArgs, blockBid.id, namespace, "");
+        (bytes memory builderBid, bytes memory payload) = Suave.buildEthBlock(blockArgs, blockBid.id, namespace);
         Suave.confidentialStore(blockBid.id, "default:v0:builderPayload", payload); // only through this.unlock
 
         return (blockBid, builderBid);
