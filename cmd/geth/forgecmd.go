@@ -36,6 +36,10 @@ var (
 		Name:  "whitelist",
 		Usage: `The whitelist external endpoints to call`,
 	}
+	dnsRegistryForgeFlag = &cli.StringSliceFlag{
+		Name:  "dns-registry",
+		Usage: `The DNS registry to resolve aliases to endpoints`,
+	}
 	ethBackendForgeFlag = &cli.StringFlag{
 		Name:  "eth-backend",
 		Usage: `The endpoint of the confidential eth backend`,
@@ -47,8 +51,9 @@ var (
 )
 
 type suaveForgeConfig struct {
-	Whitelist  []string `toml:"whitelist"`
-	EthBackend string   `toml:"eth_backend"`
+	Whitelist   []string          `toml:"whitelist"`
+	DnsRegistry map[string]string `toml:"dns_registry"`
+	EthBackend  string            `toml:"eth_backend"`
 }
 
 func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
@@ -86,6 +91,22 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	}
 	if ctx.IsSet(whiteListForgeFlag.Name) {
 		cfg.Whitelist = ctx.StringSlice(whiteListForgeFlag.Name)
+	}
+	if ctx.IsSet(dnsRegistryForgeFlag.Name) {
+		dnsRegistry := make(map[string]string)
+		for _, endpoint := range ctx.StringSlice(dnsRegistryForgeFlag.Name) {
+			parts := strings.Split(endpoint, "=")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid value for remote backend endpoint: %s", endpoint)
+			}
+			chainId := new(big.Int)
+			if _, ok := chainId.SetString(parts[0], 10); !ok {
+				return nil, fmt.Errorf("invalid chain id: %s", parts[0])
+			}
+			rpcUrl := parts[1]
+			dnsRegistry[chainId.String()] = rpcUrl
+		}
+		cfg.DnsRegistry = dnsRegistry
 	}
 
 	// create the suave context

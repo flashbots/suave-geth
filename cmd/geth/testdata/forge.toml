@@ -1,6 +1,7 @@
 [profile.suave]
 whitelist = ["a", "b"]
 eth_backend = "suave"
+dns_registry = { "a" = "b", "c" = "d" }
 [profile.ci.fuzz]
 runs = 10_000
 solc_version = "0.8.23"

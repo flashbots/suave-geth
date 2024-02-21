@@ -220,12 +220,20 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	}
 
 	var allowed bool
-	for _, allowedDomain := range s.suaveContext.Backend.ExternalWhitelist {
-		if allowedDomain == "*" || allowedDomain == parsedURL.Hostname() {
-			allowed = true
-			break
+	// resolve dns if possible
+	if domain, ok := s.suaveContext.Backend.DnsRegistry[parsedURL.Hostname()]; ok {
+		parsedURL.Host = domain
+		allowed = true
+	} else {
+		// check if the domain is allowed
+		for _, allowedDomain := range s.suaveContext.Backend.ExternalWhitelist {
+			if allowedDomain == "*" || allowedDomain == parsedURL.Hostname() {
+				allowed = true
+				break
+			}
 		}
 	}
+
 	if !allowed {
 		return nil, fmt.Errorf("domain %s is not allowed", parsedURL.Hostname())
 	}
