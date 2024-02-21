@@ -756,7 +756,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 	require.NoError(t, err)
 
 	{ // Test the bundle simulation precompile through eth_call
-		calldata, err := artifacts.SuaveAbi.Methods["simulateBundle"].Inputs.Pack(bundleBytes, "")
+		calldata, err := artifacts.SuaveAbi.Methods["simulateBundle"].Inputs.Pack(bundleBytes)
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
@@ -806,7 +806,7 @@ func TestBlockBuildingPrecompiles(t *testing.T) {
 			FeeRecipient: common.Address{0x42},
 		}
 
-		packed, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, record.Id, "", "")
+		packed, err := artifacts.SuaveAbi.Methods["buildEthBlock"].Inputs.Pack(payloadArgsTuple, record.Id, "")
 		require.NoError(t, err)
 
 		var simResult hexutil.Bytes
