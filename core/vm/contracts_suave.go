@@ -222,7 +222,7 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	var allowed bool
 	// resolve dns if possible
 	if domain, ok := s.suaveContext.Backend.DnsRegistry[parsedURL.Hostname()]; ok {
-		parsedURL.Host = domain
+		request.Url = strings.Replace(request.Url, parsedURL.Hostname(), domain, 1)
 		allowed = true
 	} else {
 		// check if the domain is allowed

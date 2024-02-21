@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -196,6 +197,7 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 		suaveContext: &SuaveContext{
 			Backend: &SuaveExecutionBackend{
 				ExternalWhitelist: []string{"127.0.0.1"},
+				DnsRegistry:       map[string]string{"localhost": "127.0.0.1", "goerli": "127.0.0.1"},
 			},
 		},
 	}
@@ -204,6 +206,9 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 		fn: basicHandler,
 	})
 	defer srv.Close()
+
+	parsedURL, err := url.Parse(srv.URL)
+	require.NoError(t, err)
 
 	cases := []struct {
 		req  types.HttpRequest
@@ -258,6 +263,15 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 		{
 			// POST with error
 			req: types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"fail:1"}},
+			err: true,
+		},
+		{
+			// DNS resolution success
+			req:  types.HttpRequest{Url: "http://goerli:" + parsedURL.Port(), Method: "GET"},
+			resp: []byte("ok1"),
+		},
+		{
+			req: types.HttpRequest{Url: "http://sepolia:" + parsedURL.Port(), Method: "GET"},
 			err: true,
 		},
 	}
