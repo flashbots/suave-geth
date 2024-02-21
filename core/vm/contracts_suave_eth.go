@@ -62,7 +62,7 @@ func (s *suaveRuntime) signEthTransaction(txn []byte, chainId string, signingKey
 	return signedBytes, nil
 }
 
-func (b *suaveRuntime) simulateBundle(input []byte, chainId string) (uint64, error) {
+func (b *suaveRuntime) simulateBundle(input []byte) (uint64, error) {
 	var bundle types.SBundle
 	err := json.Unmarshal(input, &bundle)
 	if err != nil {
@@ -72,11 +72,7 @@ func (b *suaveRuntime) simulateBundle(input []byte, chainId string) (uint64, err
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
 	defer cancel()
 
-	backend, err := b.suaveContext.Backend.GetConfidentialEthBackend(chainId)
-	if err != nil {
-		return 0, fmt.Errorf("could not get eth backend: %w", err)
-	}
-	envelope, err := backend.BuildEthBlock(ctx, nil, bundle.Txs)
+	envelope, err := b.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
 	if err != nil {
 		return 0, err
 	}
@@ -112,15 +108,11 @@ func (b *suaveRuntime) extractHint(bundleBytes []byte) ([]byte, error) {
 	return hintBytes, nil
 }
 
-func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte, chainId string) ([]byte, error) {
-	backend, err := b.suaveContext.Backend.GetConfidentialEthBackend(chainId)
-	if err != nil {
-		return nil, fmt.Errorf("could not get eth backend: %w", err)
-	}
-	return backend.Call(context.Background(), contractAddr, input)
+func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byte, error) {
+	return b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
 }
 
-func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID types.DataId, namespace string, chainId string) ([]byte, []byte, error) {
+func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID types.DataId, namespace string) ([]byte, []byte, error) {
 	dataIDs := [][16]byte{}
 	// first check for merged record, else assume regular record
 	if mergedDataRecordsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(dataID, buildEthBlockAddr, "default:v0:mergedDataRecords"); err == nil {
@@ -220,11 +212,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
 
-	backend, err := b.suaveContext.Backend.GetConfidentialEthBackend(chainId)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get eth backend: %w", err)
-	}
-	envelope, err := backend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
+	envelope, err := b.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not build eth block: %w", err)

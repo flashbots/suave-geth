@@ -33,24 +33,11 @@ type SuaveContext struct {
 }
 
 type SuaveExecutionBackend struct {
-	EthBundleSigningKey     *ecdsa.PrivateKey
-	EthBlockSigningKey      *bls.SecretKey
-	ExternalWhitelist       []string
-	ConfidentialStore       ConfidentialStore
-	ConfidentialEthBackend  suave.ConfidentialEthBackend
-	ConfidentialEthBackends map[string]suave.ConfidentialEthBackend
-}
-
-func (b *SuaveExecutionBackend) GetConfidentialEthBackend(chainId string) (suave.ConfidentialEthBackend, error) {
-	// legacy behavior if chain id is not specified
-	if chainId == "" {
-		return b.ConfidentialEthBackend, nil
-	}
-
-	if backend, ok := b.ConfidentialEthBackends[chainId]; ok {
-		return backend, nil
-	}
-	return nil, fmt.Errorf("no confidential backend for chain %s", chainId)
+	EthBundleSigningKey    *ecdsa.PrivateKey
+	EthBlockSigningKey     *bls.SecretKey
+	ExternalWhitelist      []string
+	ConfidentialStore      ConfidentialStore
+	ConfidentialEthBackend suave.ConfidentialEthBackend
 }
 
 func NewRuntimeSuaveContext(evm *EVM, caller common.Address) *SuaveContext {

@@ -118,13 +118,11 @@ library Suave {
         }
     }
 
-    function buildEthBlock(
-        BuildBlockArgs memory blockArgs,
-        DataId dataId,
-        string memory namespace,
-        string memory chainId
-    ) internal returns (bytes memory, bytes memory) {
-        (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, namespace, chainId));
+    function buildEthBlock(BuildBlockArgs memory blockArgs, DataId dataId, string memory namespace)
+        internal
+        returns (bytes memory, bytes memory)
+    {
+        (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, namespace));
         if (!success) {
             revert PeekerReverted(BUILD_ETH_BLOCK, data);
         }
@@ -175,11 +173,8 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function ethcall(address contractAddr, bytes memory input1, string memory chainId)
-        internal
-        returns (bytes memory)
-    {
-        (bool success, bytes memory data) = ETHCALL.call(abi.encode(contractAddr, input1, chainId));
+    function ethcall(address contractAddr, bytes memory input1) internal returns (bytes memory) {
+        (bool success, bytes memory data) = ETHCALL.call(abi.encode(contractAddr, input1));
         if (!success) {
             revert PeekerReverted(ETHCALL, data);
         }
@@ -274,8 +269,8 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    function simulateBundle(bytes memory bundleData, string memory chainId) internal returns (uint64) {
-        (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(bundleData, chainId));
+    function simulateBundle(bytes memory bundleData) internal returns (uint64) {
+        (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(bundleData));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
         }
@@ -283,11 +278,11 @@ library Suave {
         return abi.decode(data, (uint64));
     }
 
-    function simulateTransaction(string memory sessionid, bytes memory txn, string memory chainId)
+    function simulateTransaction(string memory sessionid, bytes memory txn)
         internal
         returns (SimulateTransactionResult memory)
     {
-        (bool success, bytes memory data) = SIMULATE_TRANSACTION.call(abi.encode(sessionid, txn, chainId));
+        (bool success, bytes memory data) = SIMULATE_TRANSACTION.call(abi.encode(sessionid, txn));
         if (!success) {
             revert PeekerReverted(SIMULATE_TRANSACTION, data);
         }
