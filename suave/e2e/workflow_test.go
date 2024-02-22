@@ -1226,6 +1226,39 @@ func TestE2ERemoteCalls(t *testing.T) {
 	})
 }
 
+func TestE2ERemoteCallsWithDns(t *testing.T) {
+	httpSrv := httptest.NewServer(&dummyRelayer{fn: func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte{0x1, 0x2, 0x3})
+	}})
+	defer httpSrv.Close()
+
+	fr := newFramework(t, WithDnsRegistry(map[string]string{"goerli": httpSrv.URL}))
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	t.Run("DNS registered", func(t *testing.T) {
+		req := &types.HttpRequest{
+			Method: "GET",
+			Url:    "goerli",
+		}
+		_, err := contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("DNS not registered", func(t *testing.T) {
+		req := &types.HttpRequest{
+			Method: "GET",
+			Url:    "sepolia",
+		}
+		_, err := contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+		require.Error(t, err)
+	})
+}
+
 func TestE2EPrecompile_Builder(t *testing.T) {
 	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
@@ -1403,6 +1436,12 @@ func WithBlockSigningKeyOpt(t *testing.T) (frameworkOpt, *bls.PublicKey) {
 func WithWhitelist(whitelist []string) frameworkOpt {
 	return func(c *frameworkConfig) {
 		c.suaveConfig.ExternalWhitelist = whitelist
+	}
+}
+
+func WithDnsRegistry(registry map[string]string) frameworkOpt {
+	return func(c *frameworkConfig) {
+		c.suaveConfig.SuaveDnsRegistry = registry
 	}
 }
 
