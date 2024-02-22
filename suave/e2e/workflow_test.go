@@ -1441,7 +1441,7 @@ func WithWhitelist(whitelist []string) frameworkOpt {
 
 func WithDnsRegistry(registry map[string]string) frameworkOpt {
 	return func(c *frameworkConfig) {
-		c.suaveConfig.SuaveDnsRegistry = registry
+		c.suaveConfig.DnsRegistry = registry
 	}
 }
 

@@ -1741,7 +1741,7 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 			domain := parts[1]
 			dnsRegistry[name] = domain
 		}
-		cfg.SuaveDnsRegistry = dnsRegistry
+		cfg.DnsRegistry = dnsRegistry
 	}
 
 	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {
