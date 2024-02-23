@@ -3,21 +3,26 @@
 package types
 
 import "github.com/ethereum/go-ethereum/common"
+import "github.com/ethereum/go-ethereum/common/hexutil"
 
 type DataId [16]byte
+
+func (d DataId) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(d[:]).MarshalText()
+}
 
 // Structs
 
 type BuildBlockArgs struct {
-	Slot           uint64
-	ProposerPubkey []byte
+	Slot           hexutil.Big
+	ProposerPubkey hexutil.Bytes
 	Parent         common.Hash
 	Timestamp      uint64
 	FeeRecipient   common.Address
 	GasLimit       uint64
 	Random         common.Hash
 	Withdrawals    []*Withdrawal
-	Extra          []byte
+	Extra          hexutil.Bytes
 	BeaconRoot     common.Hash
 	FillPending    bool
 }
@@ -25,7 +30,7 @@ type BuildBlockArgs struct {
 type DataRecord struct {
 	Id                  DataId
 	Salt                DataId
-	DecryptionCondition uint64
+	DecryptionCondition hexutil.Big
 	AllowedPeekers      []common.Address
 	AllowedStores       []common.Address
 	Version             string
