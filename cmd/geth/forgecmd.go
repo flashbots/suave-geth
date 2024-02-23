@@ -36,6 +36,10 @@ var (
 		Name:  "whitelist",
 		Usage: `The whitelist external endpoints to call`,
 	}
+	dnsRegistryForgeFlag = &cli.StringSliceFlag{
+		Name:  "dns-registry",
+		Usage: `The DNS registry to resolve aliases to endpoints`,
+	}
 	ethBackendForgeFlag = &cli.StringFlag{
 		Name:  "eth-backend",
 		Usage: `The endpoint of the confidential eth backend`,
@@ -47,8 +51,9 @@ var (
 )
 
 type suaveForgeConfig struct {
-	Whitelist  []string `toml:"whitelist"`
-	EthBackend string   `toml:"eth_backend"`
+	Whitelist   []string          `toml:"whitelist"`
+	DnsRegistry map[string]string `toml:"dns_registry"`
+	EthBackend  string            `toml:"eth_backend"`
 }
 
 func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
@@ -87,6 +92,19 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	if ctx.IsSet(whiteListForgeFlag.Name) {
 		cfg.Whitelist = ctx.StringSlice(whiteListForgeFlag.Name)
 	}
+	if ctx.IsSet(dnsRegistryForgeFlag.Name) {
+		dnsRegistry := make(map[string]string)
+		for _, endpoint := range ctx.StringSlice(dnsRegistryForgeFlag.Name) {
+			parts := strings.Split(endpoint, "=")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("invalid value for remote backend endpoint: %s", endpoint)
+			}
+			name := parts[0]
+			domain := parts[1]
+			dnsRegistry[name] = domain
+		}
+		cfg.DnsRegistry = dnsRegistry
+	}
 
 	// create the suave context
 	var suaveEthBackend suave.ConfidentialEthBackend
@@ -109,6 +127,7 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	backend := &vm.SuaveExecutionBackend{
 		ExternalWhitelist:      cfg.Whitelist,
 		ConfidentialEthBackend: suaveEthBackend,
+		DnsRegistry:            cfg.DnsRegistry,
 		EthBlockSigningKey:     blsKey,
 		EthBundleSigningKey:    ecdsaKey,
 	}
@@ -127,6 +146,7 @@ var (
 		Flags: []cli.Flag{
 			isLocalForgeFlag,
 			whiteListForgeFlag,
+			dnsRegistryForgeFlag,
 			ethBackendForgeFlag,
 			tomlConfigForgeFlag,
 		},

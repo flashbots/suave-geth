@@ -190,6 +190,7 @@ var (
 
 	suaveFlags = []cli.Flag{
 		utils.SuaveEthRemoteBackendEndpointFlag,
+		utils.SuaveDnsFlag,
 		utils.SuaveConfidentialTransportRedisEndpointFlag,
 		utils.SuaveConfidentialStoreRedisEndpointFlag,
 		utils.SuaveConfidentialStorePebbleDbPathFlag,

@@ -1,5 +1,6 @@
 [profile.suave]
 whitelist = ["a", "b"]
+dns_registry = { a = "b", c = "d" }
 eth_backend = "suave"
 [profile.ci.fuzz]
 runs = 10_000

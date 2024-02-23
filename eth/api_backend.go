@@ -59,6 +59,7 @@ type EthAPIBackend struct {
 	suaveEngine              *cstore.CStoreEngine
 	suaveEthBackend          suave.ConfidentialEthBackend
 	suaveExternalWhitelist   []string
+	suaveDnsRegistry         map[string]string
 }
 
 // For testing purposes
@@ -445,6 +446,7 @@ func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.Co
 			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
 			EthBlockSigningKey:     b.suaveEthBlockSigningKey,
 			ExternalWhitelist:      b.suaveExternalWhitelist,
+			DnsRegistry:            b.suaveDnsRegistry,
 			ConfidentialStore:      storeTransaction,
 			ConfidentialEthBackend: b.suaveEthBackend,
 		},

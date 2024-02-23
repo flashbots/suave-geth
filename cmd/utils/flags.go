@@ -530,6 +530,12 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveDnsFlag = &cli.StringSliceFlag{
+		Name:     "suave.dns",
+		Usage:    "Suave domain name resolver settings. (format: alias=url)",
+		Category: flags.SuaveCategory,
+	}
+
 	SuaveConfidentialTransportRedisEndpointFlag = &cli.StringFlag{
 		Name:     "suave.confidential.redis-transport-endpoint",
 		Usage:    "Redis endpoint to use as confidential store transport (default: no transport)",
@@ -1722,6 +1728,20 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 	CheckExclusive(ctx, SuaveConfidentialStoreRedisEndpointFlag, SuaveConfidentialStorePebbleDbPathFlag)
 	if ctx.IsSet(SuaveEthRemoteBackendEndpointFlag.Name) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
+	}
+
+	if ctx.IsSet(SuaveDnsFlag.Name) {
+		dnsRegistry := make(map[string]string)
+		for _, endpoint := range ctx.StringSlice(SuaveDnsFlag.Name) {
+			parts := strings.Split(endpoint, "=")
+			if len(parts) != 2 {
+				Fatalf("invalid value for remote backend endpoint: %s", endpoint)
+			}
+			name := parts[0]
+			domain := parts[1]
+			dnsRegistry[name] = domain
+		}
+		cfg.DnsRegistry = dnsRegistry
 	}
 
 	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {

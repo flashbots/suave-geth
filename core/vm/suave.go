@@ -36,6 +36,7 @@ type SuaveExecutionBackend struct {
 	EthBundleSigningKey    *ecdsa.PrivateKey
 	EthBlockSigningKey     *bls.SecretKey
 	ExternalWhitelist      []string
+	DnsRegistry            map[string]string
 	ConfidentialStore      ConfidentialStore
 	ConfidentialEthBackend suave.ConfidentialEthBackend
 }

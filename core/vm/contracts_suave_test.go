@@ -192,17 +192,19 @@ func basicHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestSuave_HttpRequest_Basic(t *testing.T) {
+	srv := httptest.NewServer(&httpTestHandler{
+		fn: basicHandler,
+	})
+
 	s := &suaveRuntime{
 		suaveContext: &SuaveContext{
 			Backend: &SuaveExecutionBackend{
 				ExternalWhitelist: []string{"127.0.0.1"},
+				DnsRegistry:       map[string]string{"goerli": srv.URL},
 			},
 		},
 	}
 
-	srv := httptest.NewServer(&httpTestHandler{
-		fn: basicHandler,
-	})
 	defer srv.Close()
 
 	cases := []struct {
@@ -258,6 +260,16 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 		{
 			// POST with error
 			req: types.HttpRequest{Url: srv.URL, Method: "POST", Headers: []string{"fail:1"}},
+			err: true,
+		},
+		{
+			// DNS resolution success
+			req:  types.HttpRequest{Url: "goerli", Method: "GET"},
+			resp: []byte("ok1"),
+		},
+		{
+			// DNS resolution failure
+			req: types.HttpRequest{Url: "sepolia", Method: "GET"},
 			err: true,
 		},
 	}
