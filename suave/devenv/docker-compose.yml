@@ -18,6 +18,7 @@ services:
       - --keystore=/keystore/keystore
       - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
       - --password=/keystore/password.txt
+      - --suave.eth.remote_endpoint=http://172.17.0.1:8555
     depends_on:
       - suave-enabled-chain
     volumes:
@@ -26,11 +27,7 @@ services:
       - 8545:8545
       - 8546:8546
   suave-enabled-chain:
-    image: flashbots/suave-execution-geth:latest
-    command:
-      - --dev
-      - --dev.gaslimit=30000000
-      - --http
-      - --ws
+    build: https://github.com/zeroXbrock/foundry.git#suavex_endpoints
+    entrypoint: /bin/sh -c 'anvil --host=0.0.0.0 ${ANVIL_FLAGS}'
     ports:
       - 8555:8545
