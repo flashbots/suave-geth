@@ -19,6 +19,16 @@ structs:
         type: address[]
       - name: version
         type: string
+  - name: Withdrawal
+    fields:
+      - name: index
+        type: uint64
+      - name: validator
+        type: uint64
+      - name: Address
+        type: address
+      - name: amount
+        type: uint64
   - name: BuildBlockArgs
     fields:
       - name: slot
