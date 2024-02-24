@@ -45,10 +45,11 @@ devtools:
 
 suavedevtools:
 	go run ./suave/gen/main.go -write
-	cd core/types; go run github.com/fjl/gencodec -type BuildBlockArgs -field-override buildBlockArgsMarshaling -out gen_build_block_args_json.go
-	cd core/types; go run github.com/fjl/gencodec -type DataRecord -field-override dataRecordMarshaling -out gen_data_record_json.go
-	cd core/types; go run github.com/fjl/gencodec -type HttpRequest -field-override httpRequestMarshaling -out gen_http_request_json.go
-	cd core/types; go run github.com/fjl/gencodec -type SimulatedLog -field-override simulatedLogMarshaling -out gen_simulated_log_json.go
+	cd core/types && \
+		go run github.com/fjl/gencodec -type BuildBlockArgs -field-override buildBlockArgsMarshaling -out gen_build_block_args_json.go && \
+		go run github.com/fjl/gencodec -type DataRecord -field-override dataRecordMarshaling -out gen_data_record_json.go && \
+		go run github.com/fjl/gencodec -type HttpRequest -field-override httpRequestMarshaling -out gen_http_request_json.go && \
+		go run github.com/fjl/gencodec -type SimulatedLog -field-override simulatedLogMarshaling -out gen_simulated_log_json.go
 
 devnet-up:
 	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
