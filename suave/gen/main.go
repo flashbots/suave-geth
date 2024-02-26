@@ -268,6 +268,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/suave/artifacts"
 	"github.com/mitchellh/mapstructure"
+	"math/big"
 )
 
 var (
