@@ -13,8 +13,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rpc"
 )
+
+var defaultGasLimit = uint64(100000000)
+
+func SetDefaultGasLimit(gasLimit uint64) {
+	defaultGasLimit = gasLimit
+}
 
 func DeployContract(bytecode []byte, client *Client) (*TransactionResult, error) {
 	txn := &types.LegacyTx{
@@ -64,6 +71,22 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		return nil, err
 	}
 
+	gasLimit := defaultGasLimit
+
+	if gasLimit == 0 {
+		var estimatedGasLimit hexutil.Uint64
+		err = c.client.rpc.Client().Call(&estimatedGasLimit, "eth_estimateGas", ethapi.TransactionArgs{
+			To:                 &c.addr,
+			IsConfidential:     true,
+			ConfidentialInputs: (*hexutil.Bytes)(&confidentialDataBytes),
+			Data:               (*hexutil.Bytes)(&calldata),
+		})
+		if err != nil {
+			return nil, err
+		}
+		gasLimit = uint64(estimatedGasLimit)
+	}
+
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
 			KettleAddress: c.client.kettleAddress,
@@ -71,7 +94,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 			To:            &c.addr,
 			Value:         nil,
 			GasPrice:      gasPrice,
-			Gas:           1000000,
+			Gas:           gasLimit,
 			Data:          calldata,
 		},
 		ConfidentialInputs: confidentialDataBytes,

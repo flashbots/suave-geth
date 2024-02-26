@@ -47,7 +47,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -1028,6 +1027,7 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			args.KettleAddress = &acc
 		}
 
+		args.setDefaults(ctx, b)
 		tx := args.ToTransaction()
 
 		state, header, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
@@ -1038,7 +1038,7 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 		msg := &core.Message{
 			Nonce:             tx.Nonce(),
 			GasLimit:          tx.Gas(),
-			GasPrice:          new(big.Int),
+			GasPrice:          tx.GasPrice(),
 			GasFeeCap:         new(big.Int),
 			GasTipCap:         new(big.Int),
 			To:                tx.To(),
@@ -1048,11 +1048,8 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			SkipAccountChecks: true,
 		}
 
-		_, result, finalize, err := runMEVM(ctx, b, state, header, tx, msg, true)
+		_, result, _, err := runMEVM(ctx, b, state, header, tx, msg, true)
 		if err != nil {
-			return nil, err
-		}
-		if err := finalize(); err != suave.ErrUnsignedFinalize {
 			return nil, err
 		}
 		return result, err
@@ -1927,9 +1924,12 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 			return common.Hash{}, err
 		}
 
-		ntx, _, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
+		ntx, result, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
 		if err != nil {
 			return tx.Hash(), err
+		}
+		if result.Failed() {
+			return tx.Hash(), fmt.Errorf("transaction failed: %w", result.Err)
 		}
 		if err = finalize(); err != nil {
 			log.Error("could not finalize confidential store", "err", err)
@@ -2017,7 +2017,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	}
 
 	if result.Failed() {
-		return nil, nil, nil, fmt.Errorf("%w: %s", result.Err, hexutil.Encode(result.Revert()))
+		return nil, result, storeFinalize, nil
 	}
 
 	if storageAccessTracer.hasStoredState {
