@@ -153,6 +153,7 @@ func (args *TransactionArgs) setFeeDefaults(ctx context.Context, b Backend) erro
 		return nil
 	}
 	// Now attempt to fill in default value depending on whether London is active or not.
+	// Confidential requests do not use London pricing rules.
 	head := b.CurrentHeader()
 	if b.ChainConfig().IsLondon(head.Number) && !args.IsConfidential {
 		// London is active, set maxPriorityFeePerGas and maxFeePerGas.

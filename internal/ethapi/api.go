@@ -1027,6 +1027,8 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			args.KettleAddress = &acc
 		}
 
+		// DoCall is also used in EstimateGas which does not have to include
+		// gas parameters or nonce. We need to set them to default values.
 		args.setDefaults(ctx, b)
 		tx := args.ToTransaction()
 
@@ -1048,6 +1050,9 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 			SkipAccountChecks: true,
 		}
 
+		// Run the MEVM but unlike with the send transaction endpoint, do not
+		// finalize the transactional store (third callback param). Otherwise,
+		// the updated kv entries will be committed to the store.
 		_, result, _, err := runMEVM(ctx, b, state, header, tx, msg, true)
 		if err != nil {
 			return nil, err
@@ -2017,7 +2022,10 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	}
 
 	if result.Failed() {
-		return nil, result, storeFinalize, nil
+		// If the execution fails we do not return an error but the transaction result itself
+		// since some callers of this function (i.e. estimate gas) differentiate between
+		// unrecoverable errors (i.e. nonce is incorrect) and failed executions.
+		return nil, result, nil, nil
 	}
 
 	if storageAccessTracer.hasStoredState {
