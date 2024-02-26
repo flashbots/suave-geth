@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-var defaultGasLimit = uint64(100000000)
+var defaultGasLimit = uint64(10000000)
 
 func SetDefaultGasLimit(gasLimit uint64) {
 	defaultGasLimit = gasLimit
