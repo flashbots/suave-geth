@@ -1051,6 +1051,8 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 }
 
 func TestE2E_EstimateGas(t *testing.T) {
+	t.Parallel()
+
 	// This end-to-end test ensures that call and estimate gas works and it does not
 	// modify the confidential store
 	fr := newFramework(t, WithKettleAddress())
