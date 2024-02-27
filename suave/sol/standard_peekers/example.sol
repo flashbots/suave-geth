@@ -45,15 +45,6 @@ contract ExampleEthCallSource {
         return abi.encodeWithSelector(this.emptyCallback.selector);
     }
 
-    function findStartIndex(bytes memory data) private pure returns (uint256) {
-        for (uint256 i = 0; i < data.length; i++) {
-            if (data[i] == bytes1(0xff)) {
-                return i;
-            }
-        }
-        return data.length; // Not found
-    }
-
     event LogCallback(bytes data);
 
     function emitLogCallback(uint256 num) public {
