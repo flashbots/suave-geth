@@ -6,14 +6,6 @@ import "forge-std/console2.sol";
 contract ExampleEthCallSource {
     uint64 state;
 
-    struct Log {
-        address addr;
-    }
-
-    event LogEvent(address addr); // just for testingn
-
-    function dummy(Log[] memory logs) public {} // doing this to be able to output the json of Log, not proud.
-
     function callTarget(address target, uint256 expected) public {
         bytes memory output = Suave.ethcall(target, abi.encodeWithSignature("get()"));
         (uint256 num) = abi.decode(output, (uint64));
@@ -62,19 +54,14 @@ contract ExampleEthCallSource {
         return data.length; // Not found
     }
 
-    event XX(uint256 indexed num, bytes data);
+    event LogCallback(bytes data);
 
-    modifier decodeLogs() {
-        // revert("2");
+    function emitLogCallback(uint256 num) public {
+        // From the msg.input, the 'confidential context' sequence
+        // starts at index 37 (4 signbature bytes + 32 bytes for uint256 + 1 byte for the magic sequence)
+        uint256 magicSequenceIndex = 37;
 
         bytes memory inputData = msg.data;
-        uint256 magicSequenceIndex = findStartIndex(inputData);
-        require(magicSequenceIndex != inputData.length, "Magic sequence not found");
-
-        // because we have to skip the magic number
-        magicSequenceIndex += 1;
-
-        // Calculate the length of the data to decode
         uint256 dataLength = inputData.length - magicSequenceIndex;
 
         // Initialize memory for the data to decode
@@ -85,23 +72,7 @@ contract ExampleEthCallSource {
             dataToDecode[i] = inputData[magicSequenceIndex + i];
         }
 
-        emit XX(magicSequenceIndex, dataToDecode);
-
-        // Decode logs from the extracted data
-        Log[] memory logs = abi.decode(dataToDecode, (Log[]));
-
-        /*
-        for (uint256 i = 0; i < logs.length; i++) {
-            emit LogEvent(logs[i].addr);
-        }
-        */
-
-        // Call the function with decoded logs
-        _;
-    }
-
-    function emitLogCallback(uint256 num) public decodeLogs {
-        // revert("a");
+        emit LogCallback(dataToDecode);
     }
 
     event Example(uint256 num, uint256 indexed num2);
