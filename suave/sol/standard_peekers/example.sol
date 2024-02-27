@@ -66,10 +66,19 @@ contract ExampleEthCallSource {
         emit LogCallback(dataToDecode);
     }
 
-    event Example(uint256 num, uint256 indexed num2);
+    // Event with no indexed parameters
+    event EventAnonymous() anonymous;
+    event EventTopic1();
+    event EventTopic2(uint256 indexed num1, uint256 numNoIndex);
+    event EventTopic3(uint256 indexed num1, uint256 indexed num2, uint256 numNoIndex);
+    event EventTopic4(uint256 indexed num1, uint256 indexed num2, uint256 indexed num3, uint256 numNoIndex);
 
     function emitLog() public payable returns (bytes memory) {
-        emit Example(1, 2);
+        emit EventAnonymous();
+        emit EventTopic1();
+        emit EventTopic2(1, 1);
+        emit EventTopic3(1, 2, 2);
+        emit EventTopic4(1, 2, 3, 3);
 
         return abi.encodeWithSelector(this.emitLogCallback.selector, 10);
     }

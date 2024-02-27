@@ -13,6 +13,8 @@ func TestExecResult_ABIEncoding(t *testing.T) {
 			Logs: []*types.Log{
 				{
 					Address: common.Address{0x1},
+					Topics:  []common.Hash{{0x2}, {0x3}},
+					Data:    []byte{0x4},
 				},
 			},
 		},

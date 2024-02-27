@@ -1045,7 +1045,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestE2E_EmitLogs(t *testing.T) {
+func TestE2E_EmitLogs_Basic(t *testing.T) {
 	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
@@ -1065,12 +1065,32 @@ func TestE2E_EmitLogs(t *testing.T) {
 	require.Equal(t, receipt.Status, uint64(1))
 
 	require.Len(t, receipt.Logs, 1)
+	require.Equal(t, receipt.Logs[0].Address, contractAddr)
 
 	data, err := exampleCallSourceContract.Abi.Events["LogCallback"].Inputs.Unpack(receipt.Logs[0].Data)
 	require.NoError(t, err)
 
+	execResultBytes := data[0].([]byte)
+
 	var execResult suave.ExecResult
-	require.NoError(t, execResult.DecodeABI(data[0].([]byte)))
+	require.NoError(t, execResult.DecodeABI(execResultBytes))
+
+	require.Len(t, execResult.Logs, 5)
+
+	t.Log("Testcases for execution result encoding")
+	t.Log(hex.EncodeToString(execResultBytes))
+
+	// check topics size for each log
+	require.Len(t, execResult.Logs[0].Topics, 0)
+	require.Len(t, execResult.Logs[1].Topics, 1)
+	require.Len(t, execResult.Logs[2].Topics, 2)
+	require.Len(t, execResult.Logs[3].Topics, 3)
+	require.Len(t, execResult.Logs[4].Topics, 4)
+
+	// logs 2.. have data
+	for _, log := range execResult.Logs[2:] {
+		require.NotEmpty(t, log.Data)
+	}
 }
 
 func TestE2E_ForgeIntegration(t *testing.T) {
