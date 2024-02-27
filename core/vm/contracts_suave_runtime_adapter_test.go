@@ -96,6 +96,14 @@ func (m *mockRuntime) randomUint256() (*big.Int, error) {
 	return new(big.Int).SetUint64(9001), nil
 }
 
+func (m *mockRuntime) randomBytes(length uint64) ([]byte, error) {
+	var bytes = make([]byte, length)
+	for i := range bytes {
+		bytes[i] = 0x1
+	}
+	return bytes, nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},

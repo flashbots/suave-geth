@@ -50,6 +50,15 @@ func (b *suaveRuntime) randomUint256() (*big.Int, error) {
 	return num, nil
 }
 
+func (b *suaveRuntime) randomBytes(numBytes uint64) ([]byte, error) {
+	buf := make([]byte, numBytes)
+	_, err := rand.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
 /* Confidential store precompiles */
 
 func (b *suaveRuntime) confidentialStore(dataId types.DataId, key string, data []byte) error {
