@@ -48,6 +48,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// use the gas estimation
+	sdk.SetDefaultGasLimit(0)
+}
+
 func TestIsConfidential(t *testing.T) {
 	// t.Fatal("not implemented")
 
@@ -1045,65 +1050,29 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestE2E_ForgeIntegration(t *testing.T) {
-	// This end-to-end test ensures that the precompile lifecycle expected in Forge works
+func TestE2E_EstimateGas(t *testing.T) {
+	t.Parallel()
+
+	// This end-to-end test ensures that call and estimate gas works and it does not
+	// modify the confidential store
 	fr := newFramework(t, WithKettleAddress())
 	defer fr.Close()
 
-	rpcClient := fr.suethSrv.RPCNode()
-	ethClient := ethclient.NewClient(rpcClient)
-
-	chainIdRaw, err := ethClient.ChainID(context.Background())
-	require.NoError(t, err)
-
-	doCall := func(methodName string, args ...interface{}) []interface{} {
-		toAddr, ok := artifacts.SuaveMethods[methodName]
-		require.True(t, ok, fmt.Sprintf("suave method %s not found", methodName))
-
-		method := artifacts.SuaveAbi.Methods[methodName]
-
-		input, err := method.Inputs.Pack(args...)
-		require.NoError(t, err)
-
-		chainId := hexutil.Big(*chainIdRaw)
-
-		callArgs := ethapi.TransactionArgs{
-			To:             &toAddr,
-			IsConfidential: true,
-			ChainID:        &chainId,
-			Data:           (*hexutil.Bytes)(&input),
-		}
-		var simResult hexutil.Bytes
-		err = rpcClient.Call(&simResult, "eth_call", setTxArgsDefaults(callArgs), "latest")
-		require.NoError(t, err)
-
-		if methodName == "confidentialRetrieve" {
-			// this method does not abi pack the output
-			return []interface{}{[]byte(simResult)}
-		}
-
-		result, err := method.Outputs.Unpack(simResult)
-		require.NoError(t, err)
-		return result
-	}
-
 	addrList := []common.Address{suave.AllowedPeekerAny}
-	recordRaw := doCall("newDataRecord", uint64(0), addrList, addrList, "default:v0:ethBundles")
+	newDataRecordInput := []interface{}{uint64(0), addrList, addrList, "default:v0:ethBundles"}
 
-	var record types.DataRecord
-	require.NoError(t, mapstructure.Decode(recordRaw[0], &record))
+	fr.callPrecompile("newDataRecord", newDataRecordInput)
 
-	recordsRaw := doCall("fetchDataRecords", uint64(0), "default:v0:ethBundles")
-	var bids []types.DataRecord
-	require.NoError(t, mapstructure.Decode(recordsRaw[0], &bids))
-	require.Len(t, bids, 1)
-	require.Equal(t, bids[0].Id, record.Id)
+	// fetch the records and validate that it is empty since a call should not modify the store
+	vals := fr.callPrecompile("fetchDataRecords", []interface{}{uint64(0), "default:v0:ethBundles"})
+	require.Len(t, vals[0], 0)
 
-	val := []byte{0x1, 0x2, 0x3}
-	doCall("confidentialStore", record.Id, "a", val)
+	// estimate the gas for the call should not modify the store either
+	gasLimit := fr.estimateGasPrecompile("newDataRecord", newDataRecordInput)
+	require.NotZero(t, gasLimit)
 
-	valRaw := doCall("confidentialRetrieve", record.Id, "a")
-	require.Equal(t, val, valRaw[0])
+	vals = fr.callPrecompile("fetchDataRecords", []interface{}{uint64(0), "default:v0:ethBundles"})
+	require.Len(t, vals[0], 0)
 }
 
 func TestE2EPrecompile_Call(t *testing.T) {
@@ -1517,6 +1486,23 @@ func (f *framework) Close() {
 		f.ethSrv.Close()
 	}
 	f.suethSrv.Close()
+}
+
+func (f *framework) estimateGasPrecompile(name string, args []interface{}) uint64 {
+	input, err := artifacts.SuaveAbi.Methods[name].Inputs.Pack(args...)
+	require.NoError(f.t, err)
+
+	addr := artifacts.SuaveMethods[name]
+
+	var callResult hexutil.Uint64
+	err = f.suethSrv.RPCNode().Call(&callResult, "eth_estimateGas", ethapi.TransactionArgs{
+		To:             &addr,
+		IsConfidential: true,
+		Data:           (*hexutil.Bytes)(&input),
+	}, "latest")
+	requireNoRpcError(f.t, err)
+
+	return uint64(callResult)
 }
 
 func (f *framework) callPrecompile(name string, args []interface{}) []interface{} {
