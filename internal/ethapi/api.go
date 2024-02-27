@@ -17,6 +17,7 @@
 package ethapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -49,6 +50,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/tyler-smith/go-bip39"
+	ethgoAbi "github.com/umbracle/ethgo/abi"
 )
 
 // EthereumAPI provides an API to access Ethereum related information.
@@ -1968,6 +1970,46 @@ func (m *mevmStateLogger) CaptureTxStart(gasLimit uint64) {}
 
 func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
 
+type logTypeStruct struct {
+	Addr common.Address
+}
+
+var logType abi.Type
+
+var abiLogs = `[{
+	"type": "function",
+	"name": "dummy",
+	"inputs": [
+	  {
+		"name": "logs",
+		"type": "tuple[]",
+		"internalType": "struct ExampleEthCallSource.Log[]",
+		"components": [
+		  {
+			"name": "addr",
+			"type": "address",
+			"internalType": "address"
+		  }
+		]
+	  }
+	],
+	"outputs": [
+	  
+	],
+	"stateMutability": "nonpayable"
+  }]`
+
+func init() {
+	xx, err := abi.JSON(bytes.NewReader([]byte(abiLogs)))
+	if err != nil {
+		panic(err)
+	}
+	// fmt.Println(xx.Methods["dummy"].Inputs[0])
+	logType = xx.Methods["dummy"].Inputs[0].Type
+	//fmt.Println(xx)
+	//panic("x")
+}
+
 // TODO: should be its own api
 func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
@@ -2036,6 +2078,47 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
+	logs := state.GetLogs(common.Hash{}, 0, common.Hash{})
+
+	if len(logs) != 0 {
+		logs2 := []logTypeStruct{}
+		for _, log := range logs {
+			logs2 = append(logs2, logTypeStruct{Addr: log.Address})
+		}
+		logsEncoded, err := logType.Pack(logs2)
+		if err != nil {
+			panic(err)
+		}
+
+		tt := ethgoAbi.MustNewType("tuple(address addr)[]")
+		data2, err := tt.Encode(logs2)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println("-- pack the logs --")
+		fmt.Println(logsEncoded)
+		fmt.Println(data2)
+
+		decoded, err := tt.Decode(data2)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("-- decoded --")
+		fmt.Println(decoded)
+
+		// add some magic number and the result
+		computeResult = append(computeResult, []byte{0xff}...)
+
+		// you need to put 0000000000000000000000000000000000000000000000000000000000000020 at the begginning for the ABI
+		// offset but it is not set during abi encoding not sure why
+		// so we need to do it manually for now
+		computeResult = append(computeResult, hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000020")...)
+
+		computeResult = append(computeResult, logsEncoded...)
+	}
+
+	// encode logs to the ABI form
 	suaveResultTxData := &types.SuaveTransaction{ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())

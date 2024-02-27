@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -176,6 +177,9 @@ func (tx *SuaveTransaction) txType() byte {
 }
 
 func (tx *SuaveTransaction) data() []byte {
+	fmt.Println("-- result to return --")
+	fmt.Println(tx.ConfidentialComputeResult)
+
 	return tx.ConfidentialComputeResult
 }
 

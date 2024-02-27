@@ -46,6 +46,7 @@ import (
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
+	ethgoAbi "github.com/umbracle/ethgo/abi"
 )
 
 func TestIsConfidential(t *testing.T) {
@@ -1043,6 +1044,68 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
 	require.NoError(t, err)
 	require.True(t, ok)
+}
+
+func TestE2E_EmitLogs(t *testing.T) {
+	fr := newFramework(t, WithKettleAddress())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// We reuse the same address for both the source and target contract
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	res, err := sourceContract.SendTransaction("emitLog", []interface{}{}, nil)
+	require.NoError(t, err)
+
+	fmt.Println(res)
+	fmt.Println(err)
+
+	fr.suethSrv.ProgressChain()
+
+	receipt, err := res.Wait()
+	require.NoError(t, err)
+
+	fmt.Println("-- logs --")
+	fmt.Println(receipt.Status)
+	fmt.Println(receipt.Logs)
+
+	fmt.Println(receipt.Logs[0].Topics[1])
+	fmt.Println(receipt.Logs[0].Data)
+
+	re2s, _ := exampleCallSourceContract.Abi.Events["XX"].Inputs.Unpack(receipt.Logs[0].Data)
+	fmt.Println(re2s[0].([]byte))
+
+	fmt.Println(hex.EncodeToString(re2s[0].([]byte)))
+
+	tt := ethgoAbi.MustNewType("tuple(address addr)[]")
+
+	fmt.Println("-- unpack --")
+	fmt.Println(exampleCallSourceContract.Abi.Methods["dummy"].Inputs.Unpack(re2s[0].([]byte)))
+	fmt.Println(tt.Decode(re2s[0].([]byte)))
+
+	/*
+		data, err := exampleCallTargetContract.Abi.Pack("get")
+		require.NoError(t, err)
+
+		data = append(data, []byte{0x1, 0x2, 0x3}...)
+
+		fmt.Println("-- data --")
+		fmt.Println(data)
+
+		clt := ethclient.NewClient(fr.ethSrv.RPCNode())
+		fmt.Println(clt)
+
+		ret, err := ethclient.NewClient(fr.ethSrv.RPCNode()).CallContract(context.Background(), ethereum.CallMsg{
+			To:   &testAddr3,
+			Data: data,
+		}, nil)
+
+		fmt.Println(ret)
+		fmt.Println(err)
+	*/
+
 }
 
 func TestE2E_ForgeIntegration(t *testing.T) {
