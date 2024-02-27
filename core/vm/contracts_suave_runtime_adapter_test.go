@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -89,6 +90,10 @@ func (m *mockRuntime) privateKeyGen(crypto types.CryptoSignature) (string, error
 
 func (m *mockRuntime) contextGet(key string) ([]byte, error) {
 	return nil, nil
+}
+
+func (m *mockRuntime) randomUint256() (*big.Int, error) {
+	return new(big.Int).SetUint64(9001), nil
 }
 
 func TestRuntimeAdapter(t *testing.T) {
