@@ -49,8 +49,8 @@ contract ExampleEthCallSource {
 
     function emitLogCallback(uint256 num) public {
         // From the msg.input, the 'confidential context' sequence
-        // starts at index 37 (4 signbature bytes + 32 bytes for uint256 + 1 byte for the magic sequence)
-        uint256 magicSequenceIndex = 37;
+        // starts at index 37 (4 signbature bytes + 32 bytes for uint256 + 3 bytes for the magic sequence)
+        uint256 magicSequenceIndex = 4 + 32 + 3;
 
         bytes memory inputData = msg.data;
         uint256 dataLength = inputData.length - magicSequenceIndex;
