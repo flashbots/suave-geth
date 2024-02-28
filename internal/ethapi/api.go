@@ -1974,6 +1974,8 @@ func (m *mevmStateLogger) CaptureTxStart(gasLimit uint64) {}
 
 func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
 
+var magicBytes = hexutil.MustDecode("0x543543")
+
 // TODO: should be its own api
 func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
@@ -2058,7 +2060,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		}
 
 		// add some magic number and the result (TODO)
-		computeResult = append(computeResult, []byte{0xff}...)
+		computeResult = append(computeResult, magicBytes...)
 		computeResult = append(computeResult, logsEncoded...)
 	}
 
