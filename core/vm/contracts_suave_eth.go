@@ -222,6 +222,8 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	payload, err := executableDataToDenebExecutionPayload(envelope.ExecutionPayload)
 	if err != nil {
+		log.Warn("failed to generate execution payload from executable data",
+			"reason", err)
 		return nil, nil, fmt.Errorf("could not format execution payload as deneb payload: %w", err)
 	}
 
@@ -337,7 +339,9 @@ func executableDataToDenebExecutionPayload(data *dencun.ExecutableData) (*specDe
 	}
 
 	baseFeePerGas := new(uint256.Int)
-	if baseFeePerGas.SetFromBig(data.BaseFeePerGas) {
+	if data.BaseFeePerGas == nil {
+		return nil, errors.New("base fee per gas: not provided")
+	} else if baseFeePerGas.SetFromBig(data.BaseFeePerGas) {
 		return nil, errors.New("base fee per gas: overflow")
 	}
 
