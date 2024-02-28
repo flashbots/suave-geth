@@ -50,7 +50,7 @@ import (
 
 func init() {
 	// use the gas estimation
-	sdk.SetDefaultGasLimit(0)
+	// sdk.SetDefaultGasLimit(0)
 }
 
 func TestIsConfidential(t *testing.T) {
