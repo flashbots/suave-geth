@@ -367,15 +367,6 @@ functions:
         - name: value
           type: bytes
           description: "Value of the key"
-  - name: randomUint256
-    address: "0x0000000000000000000000000000000077700256"
-    description: "Generates a random uint256"
-    input:
-    output:
-      fields:
-        - name: value
-          type: uint256
-          description: "Random uint256"
   - name: randomBytes
     address: "0x000000000000000000000000000000007770000b"
     description: "Generates a number of random bytes, given by the argument numBytes."
