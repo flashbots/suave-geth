@@ -18,6 +18,7 @@ services:
       - --keystore=/keystore/keystore
       - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
       - --password=/keystore/password.txt
+      - --suave.eth.remote_endpoint=http://172.17.0.1:8555
     depends_on:
       - suave-enabled-chain
     volumes:
