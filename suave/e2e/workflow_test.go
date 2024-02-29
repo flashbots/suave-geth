@@ -1072,7 +1072,7 @@ func TestE2E_EmitLogs_Basic(t *testing.T) {
 	require.Len(t, receipt.Logs, 1)
 	require.Equal(t, receipt.Logs[0].Address, contractAddr)
 
-	data, err := exampleCallSourceContract.Abi.Events["LogCallback"].Inputs.Unpack(receipt.Logs[0].Data)
+	data, err := exampleCallSourceContract.Abi.Events["OffchainLogs"].Inputs.Unpack(receipt.Logs[0].Data)
 	require.NoError(t, err)
 
 	execResultBytes := data[0].([]byte)

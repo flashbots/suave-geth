@@ -2059,7 +2059,6 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 			return nil, nil, nil, err
 		}
 
-		// add some magic number and the result (TODO)
 		computeResult = append(computeResult, magicBytes...)
 		computeResult = append(computeResult, logsEncoded...)
 	}

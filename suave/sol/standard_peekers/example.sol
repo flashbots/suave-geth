@@ -45,7 +45,7 @@ contract ExampleEthCallSource {
         return abi.encodeWithSelector(this.emptyCallback.selector);
     }
 
-    event LogCallback(bytes data);
+    event OffchainLogs(bytes data);
 
     function emitLogCallback(uint256 num) public {
         // From the msg.input, the 'confidential context' sequence
@@ -63,7 +63,7 @@ contract ExampleEthCallSource {
             dataToDecode[i] = inputData[magicSequenceIndex + i];
         }
 
-        emit LogCallback(dataToDecode);
+        emit OffchainLogs(dataToDecode);
     }
 
     // Event with no indexed parameters
