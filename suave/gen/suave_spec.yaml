@@ -372,7 +372,7 @@ functions:
     description: "Generates a number of random bytes, given by the argument numBytes."
     input:
       - name: numBytes
-        type: uint64
+        type: uint8
         description: "Number of random bytes to generate"
     output:
       fields:

@@ -39,7 +39,7 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 	return b.contextGet("confidentialInputs")
 }
 
-func (b *suaveRuntime) randomBytes(numBytes uint64) ([]byte, error) {
+func (b *suaveRuntime) randomBytes(numBytes uint8) ([]byte, error) {
 	buf := make([]byte, numBytes)
 	_, err := rand.Read(buf)
 	if err != nil {

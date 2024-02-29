@@ -91,7 +91,7 @@ func (m *mockRuntime) contextGet(key string) ([]byte, error) {
 	return nil, nil
 }
 
-func (m *mockRuntime) randomBytes(length uint64) ([]byte, error) {
+func (m *mockRuntime) randomBytes(length uint8) ([]byte, error) {
 	var bytes = make([]byte, length)
 	for i := range bytes {
 		bytes[i] = 0x1

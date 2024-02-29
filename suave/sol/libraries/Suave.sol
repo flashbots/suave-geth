@@ -246,7 +246,7 @@ library Suave {
         return abi.decode(data, (string));
     }
 
-    function randomBytes(uint64 numBytes) internal returns (bytes memory) {
+    function randomBytes(uint8 numBytes) internal returns (bytes memory) {
         (bool success, bytes memory data) = RANDOM_BYTES.call(abi.encode(numBytes));
         if (!success) {
             revert PeekerReverted(RANDOM_BYTES, data);
