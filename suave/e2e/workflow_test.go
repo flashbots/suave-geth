@@ -1310,11 +1310,11 @@ func TestE2E_Precompile_RandomBytes(t *testing.T) {
 	defer fr.Close()
 
 	// generate 32 random bytes
-	res := fr.callPrecompile("randomBytes", []interface{}{uint64(32)})
+	res := fr.callPrecompile("randomBytes", []interface{}{uint8(32)})
 	require.Len(t, res[0], 32)
 
 	// generate 64 random bytes
-	res = fr.callPrecompile("randomBytes", []interface{}{uint64(64)})
+	res = fr.callPrecompile("randomBytes", []interface{}{uint8(64)})
 	require.Len(t, res[0], 64)
 }
 
