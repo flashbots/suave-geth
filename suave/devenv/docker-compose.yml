@@ -18,6 +18,7 @@ services:
       - --keystore=/keystore/keystore
       - --unlock=0xB5fEAfbDD752ad52Afb7e1bD2E40432A485bBB7F
       - --password=/keystore/password.txt
+      - --suave.eth.remote_endpoint=http://172.17.0.1:8555
     depends_on:
       - suave-enabled-chain
     volumes:
@@ -31,6 +32,15 @@ services:
       - --dev
       - --dev.gaslimit=30000000
       - --http
+      - --http.port=8545
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.corsdomain=*
       - --ws
+      - --ws.origins=*
+      - --ws.addr=0.0.0.0
+      - --keystore=/keystore/keystore
+    volumes:
+      - ./suave-ex-node:/keystore
     ports:
       - 8555:8545
