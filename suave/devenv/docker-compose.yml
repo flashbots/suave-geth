@@ -31,6 +31,15 @@ services:
       - --dev
       - --dev.gaslimit=30000000
       - --http
+      - --http.port=8545
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.corsdomain=*
       - --ws
+      - --ws.origins=*
+      - --ws.addr=0.0.0.0
+      - --keystore=/keystore/keystore
+    volumes:
+      - ./suave-ex-node:/keystore
     ports:
       - 8555:8545
