@@ -47,6 +47,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -1973,6 +1974,8 @@ func (m *mevmStateLogger) CaptureTxStart(gasLimit uint64) {}
 
 func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
 
+var magicBytes = hexutil.MustDecode("0x543543")
+
 // TODO: should be its own api
 func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
@@ -2044,6 +2047,23 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		computeResult = result.ReturnData // Or should it be nil maybe in this case?
 	}
 
+	logs := state.GetLogs(common.Hash{}, 0, common.Hash{})
+
+	if len(logs) != 0 {
+		result := suave.ExecResult{
+			Logs: logs,
+		}
+
+		logsEncoded, err := result.EncodeABI()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		computeResult = append(computeResult, magicBytes...)
+		computeResult = append(computeResult, logsEncoded...)
+	}
+
+	// encode logs to the ABI form
 	suaveResultTxData := &types.SuaveTransaction{ConfidentialComputeRequest: confidentialRequest.ConfidentialComputeRecord, ConfidentialComputeResult: computeResult}
 
 	signed, err := wallet.SignTx(account, types.NewTx(suaveResultTxData), tx.ChainId())

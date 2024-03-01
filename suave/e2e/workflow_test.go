@@ -50,7 +50,7 @@ import (
 
 func init() {
 	// use the gas estimation
-	sdk.SetDefaultGasLimit(0)
+	// sdk.SetDefaultGasLimit(0)
 }
 
 func TestIsConfidential(t *testing.T) {
@@ -1048,6 +1048,54 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 	ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
 	require.NoError(t, err)
 	require.True(t, ok)
+}
+
+func TestE2E_EmitLogs_Basic(t *testing.T) {
+	fr := newFramework(t, WithKettleAddress())
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// We reuse the same address for both the source and target contract
+	contractAddr := common.Address{0x3}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	res, err := sourceContract.SendTransaction("emitLog", []interface{}{}, nil)
+	require.NoError(t, err)
+
+	fr.suethSrv.ProgressChain()
+
+	receipt, err := res.Wait()
+	require.NoError(t, err)
+	require.Equal(t, receipt.Status, uint64(1))
+
+	require.Len(t, receipt.Logs, 1)
+	require.Equal(t, receipt.Logs[0].Address, contractAddr)
+
+	data, err := exampleCallSourceContract.Abi.Events["OffchainLogs"].Inputs.Unpack(receipt.Logs[0].Data)
+	require.NoError(t, err)
+
+	execResultBytes := data[0].([]byte)
+
+	var execResult suave.ExecResult
+	require.NoError(t, execResult.DecodeABI(execResultBytes))
+
+	require.Len(t, execResult.Logs, 5)
+
+	t.Log("Testcases for execution result encoding")
+	t.Log(hex.EncodeToString(execResultBytes))
+
+	// check topics size for each log
+	require.Len(t, execResult.Logs[0].Topics, 0)
+	require.Len(t, execResult.Logs[1].Topics, 1)
+	require.Len(t, execResult.Logs[2].Topics, 2)
+	require.Len(t, execResult.Logs[3].Topics, 3)
+	require.Len(t, execResult.Logs[4].Topics, 4)
+
+	// logs 2.. have data
+	for _, log := range execResult.Logs[2:] {
+		require.NotEmpty(t, log.Data)
+	}
 }
 
 func TestE2E_EstimateGas(t *testing.T) {

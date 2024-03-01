@@ -44,6 +44,44 @@ contract ExampleEthCallSource {
 
         return abi.encodeWithSelector(this.emptyCallback.selector);
     }
+
+    event OffchainLogs(bytes data);
+
+    function emitLogCallback(uint256 num) public {
+        // From the msg.input, the 'confidential context' sequence
+        // starts at index 37 (4 signbature bytes + 32 bytes for uint256 + 3 bytes for the magic sequence)
+        uint256 magicSequenceIndex = 4 + 32 + 3;
+
+        bytes memory inputData = msg.data;
+        uint256 dataLength = inputData.length - magicSequenceIndex;
+
+        // Initialize memory for the data to decode
+        bytes memory dataToDecode = new bytes(dataLength);
+
+        // Copy the data to decode into the memory array
+        for (uint256 i = 0; i < dataLength; i++) {
+            dataToDecode[i] = inputData[magicSequenceIndex + i];
+        }
+
+        emit OffchainLogs(dataToDecode);
+    }
+
+    // Event with no indexed parameters
+    event EventAnonymous() anonymous;
+    event EventTopic1();
+    event EventTopic2(uint256 indexed num1, uint256 numNoIndex);
+    event EventTopic3(uint256 indexed num1, uint256 indexed num2, uint256 numNoIndex);
+    event EventTopic4(uint256 indexed num1, uint256 indexed num2, uint256 indexed num3, uint256 numNoIndex);
+
+    function emitLog() public payable returns (bytes memory) {
+        emit EventAnonymous();
+        emit EventTopic1();
+        emit EventTopic2(1, 1);
+        emit EventTopic3(1, 2, 2);
+        emit EventTopic4(1, 2, 3, 3);
+
+        return abi.encodeWithSelector(this.emitLogCallback.selector, 10);
+    }
 }
 
 contract ExampleEthCallTarget {
