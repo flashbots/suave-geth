@@ -47,7 +47,7 @@ suavedevtools:
 	go run ./suave/gen/main.go -write
 
 devnet-up:
-	docker-compose pull
+	docker-compose -f ./suave/devenv/docker-compose.yml pull
 	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
 
 devnet-down:
