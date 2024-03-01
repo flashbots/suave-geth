@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -40,14 +39,13 @@ func (b *suaveRuntime) confidentialInputs() ([]byte, error) {
 	return b.contextGet("confidentialInputs")
 }
 
-func (b *suaveRuntime) randomUint256() (*big.Int, error) {
-	maxU256 := new(big.Int)
-	maxU256.SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
-	num, err := rand.Int(rand.Reader, maxU256)
+func (b *suaveRuntime) randomBytes(numBytes uint8) ([]byte, error) {
+	buf := make([]byte, numBytes)
+	_, err := rand.Read(buf)
 	if err != nil {
 		return nil, err
 	}
-	return num, nil
+	return buf, nil
 }
 
 /* Confidential store precompiles */

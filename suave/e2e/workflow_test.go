@@ -1305,6 +1305,19 @@ func TestE2E_Precompile_CryptoBLS(t *testing.T) {
 	require.True(t, valid)
 }
 
+func TestE2E_Precompile_RandomBytes(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	// generate 32 random bytes
+	res := fr.callPrecompile("randomBytes", []interface{}{uint8(32)})
+	require.Len(t, res[0], 32)
+
+	// generate 64 random bytes
+	res = fr.callPrecompile("randomBytes", []interface{}{uint8(64)})
+	require.Len(t, res[0], 64)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
