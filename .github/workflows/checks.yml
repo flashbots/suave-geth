@@ -82,6 +82,11 @@ jobs:
       - name: Build contracts
         run: cd suave && forge build
 
+      - name: Check docker version
+        run: |
+          docker --version
+          docker-compose version
+
       - name: Run dev environment
         run: make devnet-up
 
