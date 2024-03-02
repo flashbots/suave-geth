@@ -46,6 +46,8 @@ import (
 	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/ethereum/go-ethereum/cmd/geth/castcmd"
 )
 
 const (
@@ -240,6 +242,7 @@ func init() {
 		verkleCommand,
 		// Suave commands
 		forgeCommand,
+		castcmd.Cmd,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
