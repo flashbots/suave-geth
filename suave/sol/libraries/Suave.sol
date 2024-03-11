@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
+/// @notice Library to interact with the Suave MEVM precompiles.
 library Suave {
     error PeekerReverted(address, bytes);
 
@@ -11,6 +12,18 @@ library Suave {
 
     type DataId is bytes16;
 
+    /// @notice Arguments to build the block.
+    /// @param slot Slot number of the block
+    /// @param proposerPubkey Public key of the proposer
+    /// @param parent Hash of the parent block
+    /// @param timestamp Timestamp of the block
+    /// @param feeRecipient Address of the fee recipient
+    /// @param gasLimit Gas limit of the block
+    /// @param random Randomness of the block
+    /// @param withdrawals List of withdrawals
+    /// @param extra Extra data of the block
+    /// @param beaconRoot Root of the beacon chain
+    /// @param fillPending Whether to fill the block with pending transactions
     struct BuildBlockArgs {
         uint64 slot;
         bytes proposerPubkey;
@@ -25,6 +38,13 @@ library Suave {
         bool fillPending;
     }
 
+    /// @notice A record of data stored in the ConfidentialStore.
+    /// @param id ID of the data record
+    /// @param salt Salt used to derive the encryption key
+    /// @param decryptionCondition Up to which block this data record is valid
+    /// @param allowedPeekers Addresses which can get data
+    /// @param allowedStores Addresses can set data
+    /// @param version Namespace of the data record
     struct DataRecord {
         DataId id;
         DataId salt;
@@ -34,6 +54,12 @@ library Suave {
         string version;
     }
 
+    /// @notice Description of an HTTP request.
+    /// @param url Target url of the request
+    /// @param method HTTP method of the request
+    /// @param headers HTTP Headers
+    /// @param body Body of the request (if Post or Put)
+    /// @param withFlashbotsSignature Whether to include the Flashbots signature
     struct HttpRequest {
         string url;
         string method;
@@ -42,6 +68,11 @@ library Suave {
         bool withFlashbotsSignature;
     }
 
+    /// @notice Result of a simulated transaction.
+    /// @param egp Effective Gas Price of the transaction
+    /// @param logs Logs emitted during the simulation
+    /// @param success Whether the transaction was successful or not
+    /// @param error Error message if any
     struct SimulateTransactionResult {
         uint64 egp;
         SimulatedLog[] logs;
@@ -49,12 +80,21 @@ library Suave {
         string error;
     }
 
+    /// @notice A log emitted during the simulation of a transaction.
+    /// @param data Data of the log
+    /// @param addr Address of the contract that emitted the log
+    /// @param topics Topics of the log
     struct SimulatedLog {
         bytes data;
         address addr;
         bytes32[] topics;
     }
 
+    /// @notice A withdrawal from the beacon chain.
+    /// @param index Index of the withdrawal
+    /// @param validator ID of the validator
+    /// @param Address Address to withdraw to
+    /// @param amount Amount to be withdrawn
     struct Withdrawal {
         uint64 index;
         uint64 validator;
@@ -106,7 +146,8 @@ library Suave {
 
     address public constant SUBMIT_ETH_BLOCK_TO_RELAY = 0x0000000000000000000000000000000042100002;
 
-    // Returns whether execution is off- or on-chain
+    /// @notice Returns whether execution is off- or on-chain
+    /// @return b Whether execution is off- or on-chain
     function isConfidential() internal returns (bool b) {
         (bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.call("");
         if (!success) {
@@ -120,6 +161,12 @@ library Suave {
         }
     }
 
+    /// @notice Constructs an Ethereum block based on the provided `bidIds`. The construction follows the order of `bidId`s are given.
+    /// @param blockArgs Arguments to build the block
+    /// @param dataId ID of the data record with mev-share bundle data
+    /// @param namespace deprecated
+    /// @return blockBid Block Bid encoded in JSON
+    /// @return executionPayload Execution payload encoded in JSON
     function buildEthBlock(BuildBlockArgs memory blockArgs, DataId dataId, string memory namespace)
         internal
         returns (bytes memory, bytes memory)
@@ -132,6 +179,8 @@ library Suave {
         return abi.decode(data, (bytes, bytes));
     }
 
+    /// @notice Provides the confidential inputs associated with a confidential computation request. Outputs are in bytes format.
+    /// @return confindentialData Confidential inputs
     function confidentialInputs() internal returns (bytes memory) {
         (bool success, bytes memory data) = CONFIDENTIAL_INPUTS.call(abi.encode());
         if (!success) {
@@ -141,6 +190,10 @@ library Suave {
         return data;
     }
 
+    /// @notice Retrieves data from the confidential store. Also mandates the caller&#39;s presence in the `AllowedPeekers` list.
+    /// @param dataId ID of the data record to retrieve
+    /// @param key Key slot of the data to retrieve
+    /// @return value Value of the data
     function confidentialRetrieve(DataId dataId, string memory key) internal returns (bytes memory) {
         (bool success, bytes memory data) = CONFIDENTIAL_RETRIEVE.call(abi.encode(dataId, key));
         if (!success) {
@@ -150,6 +203,10 @@ library Suave {
         return data;
     }
 
+    /// @notice Handles the storage of data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated bid.
+    /// @param dataId ID of the data record to store
+    /// @param key Key slot of the data to store
+    /// @param value Value of the data to store
     function confidentialStore(DataId dataId, string memory key, bytes memory value) internal {
         (bool success, bytes memory data) = CONFIDENTIAL_STORE.call(abi.encode(dataId, key, value));
         if (!success) {
@@ -157,6 +214,9 @@ library Suave {
         }
     }
 
+    /// @notice Retrieves a value from the context
+    /// @param key Key of the value to retrieve
+    /// @return value Value of the key
     function contextGet(string memory key) internal returns (bytes memory) {
         (bool success, bytes memory data) = CONTEXT_GET.call(abi.encode(key));
         if (!success) {
@@ -166,6 +226,9 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Performs an HTTP request and returns the response. `request` is the request to perform.
+    /// @param request Request to perform
+    /// @return httpResponse Body of the response
     function doHTTPRequest(HttpRequest memory request) internal returns (bytes memory) {
         (bool success, bytes memory data) = DO_HTTPREQUEST.call(abi.encode(request));
         if (!success) {
@@ -175,6 +238,10 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Uses the `eth_call` JSON RPC method to let you simulate a function call and return the response.
+    /// @param contractAddr Address of the contract to call
+    /// @param input1 Data to send to the contract
+    /// @return callOutput Output of the contract call
     function ethcall(address contractAddr, bytes memory input1) internal returns (bytes memory) {
         (bool success, bytes memory data) = ETHCALL.call(abi.encode(contractAddr, input1));
         if (!success) {
@@ -184,6 +251,9 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Interprets the bundle data and extracts hints, such as the `To` address and calldata.
+    /// @param bundleData Bundle object encoded in JSON
+    /// @return hints List of hints encoded in JSON
     function extractHint(bytes memory bundleData) internal returns (bytes memory) {
         require(isConfidential());
         (bool success, bytes memory data) = EXTRACT_HINT.call(abi.encode(bundleData));
@@ -194,6 +264,10 @@ library Suave {
         return data;
     }
 
+    /// @notice Retrieves all data records correlating with a specified decryption condition and namespace
+    /// @param cond Filter for the decryption condition
+    /// @param namespace Filter for the namespace of the data records
+    /// @return dataRecords List of data records that match the filter
     function fetchDataRecords(uint64 cond, string memory namespace) internal returns (DataRecord[] memory) {
         (bool success, bytes memory data) = FETCH_DATA_RECORDS.call(abi.encode(cond, namespace));
         if (!success) {
@@ -203,6 +277,9 @@ library Suave {
         return abi.decode(data, (DataRecord[]));
     }
 
+    /// @notice Joins the user&#39;s transaction and with the backrun, and returns encoded mev-share bundle. The bundle is ready to be sent via `SubmitBundleJsonRPC`.
+    /// @param dataId ID of the data record with mev-share bundle data
+    /// @return encodedBundle Mev-Share bundle encoded in JSON
     function fillMevShareBundle(DataId dataId) internal returns (bytes memory) {
         require(isConfidential());
         (bool success, bytes memory data) = FILL_MEV_SHARE_BUNDLE.call(abi.encode(dataId));
@@ -213,6 +290,8 @@ library Suave {
         return data;
     }
 
+    /// @notice Initializes a new remote builder session
+    /// @return sessionid ID of the remote builder session
     function newBuilder() internal returns (string memory) {
         (bool success, bytes memory data) = NEW_BUILDER.call(abi.encode());
         if (!success) {
@@ -222,6 +301,12 @@ library Suave {
         return abi.decode(data, (string));
     }
 
+    /// @notice Initializes data records within the ConfidentialStore. Prior to storing data, all bids should undergo initialization via this precompile.
+    /// @param decryptionCondition Up to which block this data record is valid. Used during `fillMevShareBundle` precompie.
+    /// @param allowedPeekers Addresses which can get data
+    /// @param allowedStores Addresses can set data
+    /// @param dataType Namespace of the data
+    /// @return dataRecord Data record that was created
     function newDataRecord(
         uint64 decryptionCondition,
         address[] memory allowedPeekers,
@@ -237,6 +322,9 @@ library Suave {
         return abi.decode(data, (DataRecord));
     }
 
+    /// @notice Generates a private key in ECDA secp256k1 format
+    /// @param crypto Type of the private key to generate
+    /// @return privateKey Hex encoded string of the ECDSA private key. Exactly as a signMessage precompile wants.
     function privateKeyGen(CryptoSignature crypto) internal returns (string memory) {
         (bool success, bytes memory data) = PRIVATE_KEY_GEN.call(abi.encode(crypto));
         if (!success) {
@@ -246,6 +334,9 @@ library Suave {
         return abi.decode(data, (string));
     }
 
+    /// @notice Generates a number of random bytes, given by the argument numBytes.
+    /// @param numBytes Number of random bytes to generate
+    /// @return value Randomly-generated bytes
     function randomBytes(uint8 numBytes) internal returns (bytes memory) {
         (bool success, bytes memory data) = RANDOM_BYTES.call(abi.encode(numBytes));
         if (!success) {
@@ -255,6 +346,11 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*. `chainId` is a hex encoded string *with 0x prefix*.
+    /// @param txn Transaction to sign encoded in RLP
+    /// @param chainId Id of the chain to sign for
+    /// @param signingKey Hex encoded string of the ECDSA private key
+    /// @return signedTxn Signed transaction encoded in RLP
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
         returns (bytes memory)
@@ -267,6 +363,11 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Signs a message and returns the signature.
+    /// @param digest Message to sign
+    /// @param crypto Type of the private key to generate
+    /// @param signingKey Hex encoded string of the ECDSA private key
+    /// @return signature Signature of the message with the private key
     function signMessage(bytes memory digest, CryptoSignature crypto, string memory signingKey)
         internal
         returns (bytes memory)
@@ -280,6 +381,9 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Performs a simulation of the bundle by building a block that includes it.
+    /// @param bundleData Bundle encoded in JSON
+    /// @return effectiveGasPrice Effective Gas Price of the resultant block
     function simulateBundle(bytes memory bundleData) internal returns (uint64) {
         (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(bundleData));
         if (!success) {
@@ -289,6 +393,10 @@ library Suave {
         return abi.decode(data, (uint64));
     }
 
+    /// @notice Simulates a transaction on a remote builder session
+    /// @param sessionid ID of the remote builder session
+    /// @param txn Txn to simulate encoded in RLP
+    /// @return simulationResult Result of the simulation
     function simulateTransaction(string memory sessionid, bytes memory txn)
         internal
         returns (SimulateTransactionResult memory)
@@ -301,6 +409,11 @@ library Suave {
         return abi.decode(data, (SimulateTransactionResult));
     }
 
+    /// @notice Submits bytes as JSONRPC message to the specified URL with the specified method. As this call is intended for bundles, it also signs the params and adds `X-Flashbots-Signature` header, as usual with bundles. Regular eth bundles don&#39;t need any processing to be sent.
+    /// @param url URL to send the request to
+    /// @param method JSONRPC method to call
+    /// @param params JSONRPC input params encoded in RLP
+    /// @return errorMessage Error message if any
     function submitBundleJsonRPC(string memory url, string memory method, bytes memory params)
         internal
         returns (bytes memory)
@@ -314,6 +427,10 @@ library Suave {
         return data;
     }
 
+    /// @notice Submits a given builderBid to a mev-boost relay.
+    /// @param relayUrl URL of the relay to submit to
+    /// @param builderBid Block bid to submit encoded in JSON
+    /// @return blockBid Error message if any
     function submitEthBlockToRelay(string memory relayUrl, bytes memory builderBid) internal returns (bytes memory) {
         require(isConfidential());
         (bool success, bytes memory data) = SUBMIT_ETH_BLOCK_TO_RELAY.call(abi.encode(relayUrl, builderBid));
