@@ -176,6 +176,10 @@ func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, kettleAddress common.Addr
 	return c
 }
 
+func (c *Client) KettleAddress() common.Address {
+	return c.kettleAddress
+}
+
 func (c *Client) RPC() *ethclient.Client {
 	return c.rpc
 }

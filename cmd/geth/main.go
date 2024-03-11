@@ -47,7 +47,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/ethereum/go-ethereum/cmd/geth/castcmd"
+	"github.com/ethereum/go-ethereum/cmd/geth/spellcmd"
 )
 
 const (
@@ -242,7 +242,7 @@ func init() {
 		verkleCommand,
 		// Suave commands
 		forgeCommand,
-		castcmd.Cmd,
+		spellcmd.Cmd,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
