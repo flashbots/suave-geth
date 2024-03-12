@@ -6,82 +6,121 @@ enums:
     values: ["SECP256", "BLS"]
 structs:
   - name: DataRecord
+    description: "A record of data stored in the ConfidentialStore."
     fields:
       - name: id
+        description: "ID of the data record"
         type: DataId
       - name: salt
+        description: "Salt used to derive the encryption key"
         type: DataId
       - name: decryptionCondition
+        description: "Up to which block this data record is valid"
         type: uint64
       - name: allowedPeekers
+        description: "Addresses which can get data"
         type: address[]
       - name: allowedStores
+        description: "Addresses can set data"
         type: address[]
       - name: version
+        description: "Namespace of the data record"
         type: string
   - name: Withdrawal
+    description: "A withdrawal from the beacon chain."
     fields:
       - name: index
+        description: "Index of the withdrawal"
         type: uint64
       - name: validator
+        description: "ID of the validator"
         type: uint64
       - name: Address
+        description: "Address to withdraw to"
         type: address
       - name: amount
+        description: "Amount to be withdrawn"
         type: uint64
   - name: BuildBlockArgs
+    description: "Arguments to build the block."
     fields:
       - name: slot
+        description: "Slot number of the block"
         type: uint64
       - name: proposerPubkey
+        description: "Public key of the proposer"
         type: bytes
       - name: parent
+        description: "Hash of the parent block"
         type: bytes32
       - name: timestamp
+        description: "Timestamp of the block"
         type: uint64
       - name: feeRecipient
+        description: "Address of the fee recipient"
         type: address
       - name: gasLimit
+        description: "Gas limit of the block"
         type: uint64
       - name: random
+        description: "Randomness of the block"
         type: bytes32
       - name: withdrawals
+        description: "List of withdrawals"
         type: Withdrawal[]
       - name: extra
+        description: "Extra data of the block"
         type: bytes
       - name: beaconRoot
+        description: "Root of the beacon chain"
         type: bytes32
       - name: fillPending
+        description: "Whether to fill the block with pending transactions"
         type: bool
   - name: HttpRequest
+    description: "Description of an HTTP request."
     fields:
       - name: url
+        description: "Target url of the request"
         type: string
       - name: method
+        description: "HTTP method of the request"
         type: string
       - name: headers
+        description: "HTTP Headers"
         type: string[]
       - name: body
+        description: "Body of the request (if Post or Put)"
         type: bytes
       - name: withFlashbotsSignature
+        description: "Whether to include the Flashbots signature"
         type: bool
   - name: SimulateTransactionResult
+    description: "Result of a simulated transaction."
     fields:
       - name: egp
+        description: "Effective Gas Price of the transaction"
         type: uint64
       - name: logs
+        description: "Logs emitted during the simulation"
         type: SimulatedLog[]
       - name: success
+        description: "Whether the transaction was successful or not"
         type: bool
       - name: error
+        description: "Error message if any"
         type: string
   - name: SimulatedLog
+    description: "A log emitted during the simulation of a transaction."
     fields:
       - name: data
+        description: "Data of the log"
         type: bytes
       - name: addr
+        description: "Address of the contract that emitted the log"
         type: address
       - name: topics
+        description: "Topics of the log"
         type: bytes32[]
 functions:
   - name: confidentialInputs
@@ -95,7 +134,7 @@ functions:
           description: "Confidential inputs"
   - name: newDataRecord
     address: "0x0000000000000000000000000000000042030000"
-    description: "Initializes data records within the ConfidentialStore. Prior to storing data, all bids should undergo initialization via this precompile."
+    description: "Initializes data records within the ConfidentialStore. Prior to storing data, all data records should undergo initialization via this precompile."
     input:
       - name: decryptionCondition
         type: uint64
@@ -131,7 +170,7 @@ functions:
           description: "List of data records that match the filter"
   - name: confidentialStore
     address: "0x0000000000000000000000000000000042020000"
-    description: "Handles the storage of data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated bid."
+    description: "Stores data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated data record."
     input:
       - name: dataId
         type: DataId
@@ -160,17 +199,17 @@ functions:
           description: "Value of the data"
   - name: signEthTransaction
     address: "0x0000000000000000000000000000000040100001"
-    description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*. `chainId` is a hex encoded string *with 0x prefix*."
+    description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction."
     input:
       - name: txn
         type: bytes
-        description: "Transaction to sign encoded in RLP"
+        description: "Transaction to sign (RLP encoded)"
       - name: chainId
         type: string
-        description: "Id of the chain to sign for"
+        description: "Id of the chain to sign for (hex encoded, with 0x prefix)"
       - name: signingKey
         type: string
-        description: "Hex encoded string of the ECDSA private key"
+        description: "Hex encoded string of the ECDSA private key (without 0x prefix)"
     output:
       fields:
         - name: signedTxn
@@ -204,7 +243,7 @@ functions:
           description: "List of hints encoded in JSON"
   - name: buildEthBlock
     address: "0x0000000000000000000000000000000042100001"
-    description: "Constructs an Ethereum block based on the provided `bidIds`. The construction follows the order of `bidId`s are given."
+    description: "Constructs an Ethereum block based on the provided data records."
     input:
       - name: blockArgs
         type: BuildBlockArgs
@@ -214,7 +253,7 @@ functions:
         description: "ID of the data record with mev-share bundle data"
       - name: namespace
         type: string
-        description: ""
+        description: "deprecated"
     output:
       fields:
         - name: blockBid

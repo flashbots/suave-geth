@@ -78,6 +78,7 @@ func applyTemplate(templateText string, input desc, out string) error {
 	str = strings.Replace(str, "&amp;", "&", -1)
 	str = strings.Replace(str, ", )", ")", -1)
 	str = strings.Replace(str, "&lt;", "<", -1)
+	str = strings.Replace(str, "&#39;", "'", -1)
 
 	if formatFlag || writeFlag {
 		// The output is always formatted if it is going to be written
@@ -385,6 +386,7 @@ func PrecompileAddressToName(addr common.Address) string {
 var suaveLibTemplate = `// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
+/// @notice Library to interact with the Suave MEVM precompiles.
 library Suave {
     error PeekerReverted(address, bytes);
 
@@ -402,6 +404,10 @@ type {{.Name}} is {{.Typ}};
 {{end}}
 
 {{range .Structs}}
+/// @notice {{.Description}}
+{{- range .Fields}}
+/// @param {{.Name}} {{.Description}}
+{{- end}}
 struct {{.Name}} {
 	{{range .Fields}}{{.Typ}} {{.Name}};
 	{{end}} }
@@ -417,7 +423,8 @@ address public constant {{encodeAddrName .Name}} =
 {{.Address}};
 {{end}}
 
-// Returns whether execution is off- or on-chain
+/// @notice Returns whether execution is off- or on-chain
+/// @return b Whether execution is off- or on-chain
 function isConfidential() internal returns (bool b) {
 	(bool success, bytes memory isConfidentialBytes) = IS_CONFIDENTIAL_ADDR.call("");
 	if (!success) {
@@ -432,6 +439,13 @@ function isConfidential() internal returns (bool b) {
 }
 
 {{range .Functions}}
+/// @notice {{.Description}}
+{{- range .Input}}
+/// @param {{.Name}} {{.Description}}
+{{- end}}
+{{- range .Output.Fields}}
+/// @return {{.Name}} {{.Description}}
+{{- end}}
 function {{.Name}}({{range .Input}}{{styp .Typ}} {{.Name}}, {{end}}) internal returns ({{range .Output.Fields}}{{styp .Typ}}, {{end}}) {
 	{{if .IsConfidential}}require(isConfidential());{{end}}
 	(bool success, bytes memory data) = {{encodeAddrName .Name}}.call(abi.encode({{range .Input}}{{.Name}}, {{end}}));
@@ -471,8 +485,9 @@ type field struct {
 }
 
 type typ struct {
-	Name string
-	Typ  string `yaml:"type"`
+	Name        string
+	Description string
+	Typ         string `yaml:"type"`
 }
 
 type enumDef struct {
@@ -481,8 +496,9 @@ type enumDef struct {
 }
 
 type structsDef struct {
-	Name   string
-	Fields []typ
+	Name        string
+	Description string
+	Fields      []typ
 }
 
 type desc struct {
