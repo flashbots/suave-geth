@@ -134,7 +134,7 @@ functions:
           description: "Confidential inputs"
   - name: newDataRecord
     address: "0x0000000000000000000000000000000042030000"
-    description: "Initializes data records within the ConfidentialStore. Prior to storing data, all bids should undergo initialization via this precompile."
+    description: "Initializes data records within the ConfidentialStore. Prior to storing data, all data records should undergo initialization via this precompile."
     input:
       - name: decryptionCondition
         type: uint64
@@ -170,7 +170,7 @@ functions:
           description: "List of data records that match the filter"
   - name: confidentialStore
     address: "0x0000000000000000000000000000000042020000"
-    description: "Handles the storage of data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated bid."
+    description: "Stores data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated data record."
     input:
       - name: dataId
         type: DataId
@@ -199,17 +199,17 @@ functions:
           description: "Value of the data"
   - name: signEthTransaction
     address: "0x0000000000000000000000000000000040100001"
-    description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*. `chainId` is a hex encoded string *with 0x prefix*."
+    description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction."
     input:
       - name: txn
         type: bytes
-        description: "Transaction to sign encoded in RLP"
+        description: "Transaction to sign (RLP encoded)"
       - name: chainId
         type: string
-        description: "Id of the chain to sign for"
+        description: "Id of the chain to sign for (hex encoded, with 0x prefix)"
       - name: signingKey
         type: string
-        description: "Hex encoded string of the ECDSA private key"
+        description: "Hex encoded string of the ECDSA private key (without 0x prefix)"
     output:
       fields:
         - name: signedTxn
@@ -243,7 +243,7 @@ functions:
           description: "List of hints encoded in JSON"
   - name: buildEthBlock
     address: "0x0000000000000000000000000000000042100001"
-    description: "Constructs an Ethereum block based on the provided `bidIds`. The construction follows the order of `bidId`s are given."
+    description: "Constructs an Ethereum block based on the provided data records."
     input:
       - name: blockArgs
         type: BuildBlockArgs

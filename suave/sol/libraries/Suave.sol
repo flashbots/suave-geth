@@ -161,7 +161,7 @@ library Suave {
         }
     }
 
-    /// @notice Constructs an Ethereum block based on the provided `bidIds`. The construction follows the order of `bidId`s are given.
+    /// @notice Constructs an Ethereum block based on the provided data records.
     /// @param blockArgs Arguments to build the block
     /// @param dataId ID of the data record with mev-share bundle data
     /// @param namespace deprecated
@@ -190,7 +190,7 @@ library Suave {
         return data;
     }
 
-    /// @notice Retrieves data from the confidential store. Also mandates the caller&#39;s presence in the `AllowedPeekers` list.
+    /// @notice Retrieves data from the confidential store. Also mandates the caller's presence in the `AllowedPeekers` list.
     /// @param dataId ID of the data record to retrieve
     /// @param key Key slot of the data to retrieve
     /// @return value Value of the data
@@ -203,7 +203,7 @@ library Suave {
         return data;
     }
 
-    /// @notice Handles the storage of data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated bid.
+    /// @notice Stores data in the confidential store. Requires the caller to be part of the `AllowedPeekers` for the associated data record.
     /// @param dataId ID of the data record to store
     /// @param key Key slot of the data to store
     /// @param value Value of the data to store
@@ -277,7 +277,7 @@ library Suave {
         return abi.decode(data, (DataRecord[]));
     }
 
-    /// @notice Joins the user&#39;s transaction and with the backrun, and returns encoded mev-share bundle. The bundle is ready to be sent via `SubmitBundleJsonRPC`.
+    /// @notice Joins the user's transaction and with the backrun, and returns encoded mev-share bundle. The bundle is ready to be sent via `SubmitBundleJsonRPC`.
     /// @param dataId ID of the data record with mev-share bundle data
     /// @return encodedBundle Mev-Share bundle encoded in JSON
     function fillMevShareBundle(DataId dataId) internal returns (bytes memory) {
@@ -301,7 +301,7 @@ library Suave {
         return abi.decode(data, (string));
     }
 
-    /// @notice Initializes data records within the ConfidentialStore. Prior to storing data, all bids should undergo initialization via this precompile.
+    /// @notice Initializes data records within the ConfidentialStore. Prior to storing data, all data records should undergo initialization via this precompile.
     /// @param decryptionCondition Up to which block this data record is valid. Used during `fillMevShareBundle` precompie.
     /// @param allowedPeekers Addresses which can get data
     /// @param allowedStores Addresses can set data
@@ -346,10 +346,10 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
-    /// @notice Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction. `signingKey` is hex encoded string of the ECDSA private key *without the 0x prefix*. `chainId` is a hex encoded string *with 0x prefix*.
-    /// @param txn Transaction to sign encoded in RLP
-    /// @param chainId Id of the chain to sign for
-    /// @param signingKey Hex encoded string of the ECDSA private key
+    /// @notice Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction.
+    /// @param txn Transaction to sign (RLP encoded)
+    /// @param chainId Id of the chain to sign for (hex encoded, with 0x prefix)
+    /// @param signingKey Hex encoded string of the ECDSA private key (without 0x prefix)
     /// @return signedTxn Signed transaction encoded in RLP
     function signEthTransaction(bytes memory txn, string memory chainId, string memory signingKey)
         internal
@@ -409,7 +409,7 @@ library Suave {
         return abi.decode(data, (SimulateTransactionResult));
     }
 
-    /// @notice Submits bytes as JSONRPC message to the specified URL with the specified method. As this call is intended for bundles, it also signs the params and adds `X-Flashbots-Signature` header, as usual with bundles. Regular eth bundles don&#39;t need any processing to be sent.
+    /// @notice Submits bytes as JSONRPC message to the specified URL with the specified method. As this call is intended for bundles, it also signs the params and adds `X-Flashbots-Signature` header, as usual with bundles. Regular eth bundles don't need any processing to be sent.
     /// @param url URL to send the request to
     /// @param method JSONRPC method to call
     /// @param params JSONRPC input params encoded in RLP

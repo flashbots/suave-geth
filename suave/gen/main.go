@@ -78,6 +78,7 @@ func applyTemplate(templateText string, input desc, out string) error {
 	str = strings.Replace(str, "&amp;", "&", -1)
 	str = strings.Replace(str, ", )", ")", -1)
 	str = strings.Replace(str, "&lt;", "<", -1)
+	str = strings.Replace(str, "&#39;", "'", -1)
 
 	if formatFlag || writeFlag {
 		// The output is always formatted if it is going to be written
