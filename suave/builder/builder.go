@@ -86,15 +86,25 @@ func (b *builder) AddTransactions(txs types.Transactions, revertingHashes map[co
 	return result, nil
 }
 
-func isBundleValid(currentBlockNumber *big.Int, bundle *types.SBundle) error {
+func checkInclusion(currentBlockNumber *big.Int, bundle *types.SBundle) error {
+	if bundle.BlockNumber != nil && bundle.MaxBlock != nil && bundle.BlockNumber.Cmp(bundle.MaxBlock) > 0 {
+		return types.ErrInvalidInclusionRange
+	}
+
 	// check inclusion target if BlockNumber is set
 	if bundle.BlockNumber != nil {
-		if currentBlockNumber.Cmp(bundle.BlockNumber) < 0 {
+		if bundle.MaxBlock == nil && currentBlockNumber.Cmp(bundle.BlockNumber) != 0 {
 			return types.ErrInvalidBlockNumber
 		}
 
-		if bundle.MaxBlock != nil && currentBlockNumber.Cmp(bundle.MaxBlock) <= 0 {
-			return types.ErrExceedsMaxBlock
+		if bundle.MaxBlock != nil {
+			if currentBlockNumber.Cmp(bundle.MaxBlock) > 0 {
+				return types.ErrExceedsMaxBlock
+			}
+
+			if currentBlockNumber.Cmp(bundle.BlockNumber) < 0 {
+				return types.ErrInvalidBlockNumber
+			}
 		}
 	}
 
@@ -128,7 +138,7 @@ func (b *builder) AddBundles(bundles []*types.SBundle) (*types.SimulateBundleRes
 
 	var err error
 	for _, bundle := range bundles {
-		err = isBundleValid(b.config.header.Number, bundle)
+		err = checkInclusion(b.config.header.Number, bundle)
 		if err != nil {
 			break
 		}

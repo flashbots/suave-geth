@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	ErrInvalidBlockNumber = errors.New("invalid block number")
-	ErrExceedsMaxBlock    = errors.New("block number exceeds max block")
-	ErrEmptyTxs           = errors.New("empty transactions")
+	ErrInvalidInclusionRange = errors.New("invalid inclusion range")
+	ErrInvalidBlockNumber    = errors.New("invalid block number")
+	ErrExceedsMaxBlock       = errors.New("block number exceeds max block")
+	ErrEmptyTxs              = errors.New("empty transactions")
 )
 
 // Simplified Share Bundle Type for PoC

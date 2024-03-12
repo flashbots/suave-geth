@@ -53,24 +53,24 @@ func TestBuilder_AddTxns_Simple(t *testing.T) {
 
 func TestBuilder_AddTxns_RevertingHashes(t *testing.T) {
 	to := common.Address{0x01, 0x10, 0xab}
+	key, _ := crypto.GenerateKey()
 
-	key, err := crypto.GenerateKey()
 	mock := newMockBuilder(t)
-	txn1 := mock.state.newTransferFrom(t, key, to, big.NewInt(1)) // should revert
-	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransferFrom(t, key, to, big.NewInt(2)) // should revert
 
 	txns := []*types.Transaction{txn1, txn2}
-	revertingHashes := map[common.Hash]struct{}{txn1.Hash(): {}}
-	_, err = mock.builder.AddTransactions(txns, revertingHashes)
+	revertingHashes := map[common.Hash]struct{}{txn2.Hash(): {}}
+	_, err := mock.builder.AddTransactions(txns, revertingHashes)
 
 	require.NoError(t, err)
 
 	mock.expect(t, expectedResult{
 		txns: []*types.Transaction{
-			txn2,
+			txn1,
 		},
 		balances: map[common.Address]*big.Int{
-			to: big.NewInt(2),
+			to: big.NewInt(1),
 		},
 	})
 }
@@ -94,6 +94,34 @@ func TestBuilder_AddBundle_Simple(t *testing.T) {
 		},
 		balances: map[common.Address]*big.Int{
 			to: big.NewInt(3),
+		},
+	})
+}
+
+func TestBuilder_AddBundles_Simple(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	bundle1 := &types.SBundle{
+		Txs: []*types.Transaction{txn1, txn2},
+	}
+
+	txn3 := mock.state.newTransfer(t, to, big.NewInt(3))
+	bundle2 := &types.SBundle{
+		Txs: []*types.Transaction{txn3},
+	}
+
+	_, err := mock.builder.AddBundles([]*types.SBundle{bundle1, bundle2})
+	require.NoError(t, err)
+	mock.expect(t, expectedResult{
+		txns: []*types.Transaction{
+			txn1, txn2, txn3,
+		},
+		balances: map[common.Address]*big.Int{
+			to: big.NewInt(6),
 		},
 	})
 }
@@ -163,7 +191,7 @@ func TestBuilder_AddBundle_InvalidBlockNumber(t *testing.T) {
 	}
 
 	_, err := mock.builder.AddBundle(bundle)
-	require.ErrorAs(t, err, types.ErrInvalidBlockNumber)
+	require.ErrorAs(t, err, &types.ErrInvalidBlockNumber)
 }
 
 func TestBuilder_AddBundle_ExceedsMaxBlock(t *testing.T) {
@@ -180,7 +208,7 @@ func TestBuilder_AddBundle_ExceedsMaxBlock(t *testing.T) {
 	}
 
 	_, err := mock.builder.AddBundle(bundle)
-	require.ErrorAs(t, err, types.ErrExceedsMaxBlock)
+	require.ErrorAs(t, err, &types.ErrExceedsMaxBlock)
 }
 
 func TestBuilder_AddBundle_EmptyTxs(t *testing.T) {
@@ -190,7 +218,23 @@ func TestBuilder_AddBundle_EmptyTxs(t *testing.T) {
 	}
 
 	_, err := mock.builder.AddBundle(bundle)
-	require.ErrorAs(t, err, types.ErrEmptyTxs)
+	require.ErrorAs(t, err, &types.ErrEmptyTxs)
+}
+
+func TestBuilder_AddBundle_InvalidRange(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+	bundle := &types.SBundle{
+		Txs:         []*types.Transaction{txn1, txn2},
+		BlockNumber: big.NewInt(1000),
+		MaxBlock:    big.NewInt(999),
+	}
+
+	_, err := mock.builder.AddBundle(bundle)
+	require.ErrorAs(t, err, &types.ErrInvalidInclusionRange)
 }
 
 func newMockBuilder(t *testing.T) *mockBuilder {
@@ -200,6 +244,7 @@ func newMockBuilder(t *testing.T) *mockBuilder {
 		GasLimit:   1000000000000,
 		Time:       1000,
 		Difficulty: big.NewInt(1),
+		BaseFee:    big.NewInt(1),
 	}
 
 	mState := newMockState(t)
