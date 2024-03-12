@@ -207,13 +207,23 @@ func (m *mockState) newTransfer(t *testing.T, to common.Address, amount *big.Int
 }
 
 func (m *mockState) newTxn(t *testing.T, tx *types.Transaction) *types.Transaction {
+	return m.newTxnFrom(t, tx, m.premineKey)
+}
+
+func (m *mockState) newTxnFrom(t *testing.T, tx *types.Transaction, privKey *ecdsa.PrivateKey) *types.Transaction {
 	// sign the transaction
-	signature, err := crypto.Sign(m.signer.Hash(tx).Bytes(), m.premineKey)
+	signature, err := crypto.Sign(m.signer.Hash(tx).Bytes(), privKey)
 	require.NoError(t, err)
 
 	// include the signature in the transaction
 	tx, err = tx.WithSignature(m.signer, signature)
 	require.NoError(t, err)
 
+	return tx
+}
+
+func (m *mockState) newTransferFrom(t *testing.T, privKey *ecdsa.PrivateKey, to common.Address, amount *big.Int) *types.Transaction {
+	tx := types.NewTransaction(m.getNonce(), to, amount, 1000000, big.NewInt(1), nil)
+	tx = m.newTxnFrom(t, tx, privKey)
 	return tx
 }

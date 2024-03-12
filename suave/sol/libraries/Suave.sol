@@ -42,6 +42,13 @@ library Suave {
         bool withFlashbotsSignature;
     }
 
+    struct SimulateBundleResult {
+        uint64 egp;
+        SimulateTransactionResult[] simulateTransactionResults;
+        bool success;
+        string error;
+    }
+
     struct SimulateTransactionResult {
         uint64 egp;
         SimulatedLog[] logs;

@@ -75,6 +75,16 @@ structs:
         type: bool
       - name: error
         type: string
+  - name: SimulateBundleResult
+    fields:
+      - name: egp
+        type: uint64
+      - name: simulateTransactionResults
+        type: SimulateTransactionResult[]
+      - name: success
+        type: bool
+      - name: error
+        type: string
   - name: SimulatedLog
     fields:
       - name: data

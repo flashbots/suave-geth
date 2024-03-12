@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,10 +30,173 @@ func TestBuilder_AddTxn_Simple(t *testing.T) {
 	})
 }
 
+func TestBuilder_AddTxns_Simple(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	txns := []*types.Transaction{txn1, txn2}
+	_, err := mock.builder.AddTransactions(txns, nil)
+	require.NoError(t, err)
+
+	mock.expect(t, expectedResult{
+		txns: []*types.Transaction{
+			txn1, txn2,
+		},
+		balances: map[common.Address]*big.Int{
+			to: big.NewInt(3),
+		},
+	})
+}
+
+func TestBuilder_AddTxns_RevertingHashes(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	key, err := crypto.GenerateKey()
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransferFrom(t, key, to, big.NewInt(1)) // should revert
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	txns := []*types.Transaction{txn1, txn2}
+	revertingHashes := map[common.Hash]struct{}{txn1.Hash(): {}}
+	_, err = mock.builder.AddTransactions(txns, revertingHashes)
+
+	require.NoError(t, err)
+
+	mock.expect(t, expectedResult{
+		txns: []*types.Transaction{
+			txn2,
+		},
+		balances: map[common.Address]*big.Int{
+			to: big.NewInt(2),
+		},
+	})
+}
+
+func TestBuilder_AddBundle_Simple(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	bundle := &types.SBundle{
+		Txs: []*types.Transaction{txn1, txn2},
+	}
+
+	_, err := mock.builder.AddBundle(bundle)
+	require.NoError(t, err)
+	mock.expect(t, expectedResult{
+		txns: []*types.Transaction{
+			txn1, txn2,
+		},
+		balances: map[common.Address]*big.Int{
+			to: big.NewInt(3),
+		},
+	})
+}
+
+func TestBuilder_AddBundle_RevertingHashes(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	key, err := crypto.GenerateKey()
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransferFrom(t, key, to, big.NewInt(1)) // should revert
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	bundle := &types.SBundle{
+		Txs:             []*types.Transaction{txn1, txn2},
+		RevertingHashes: []common.Hash{txn1.Hash()},
+	}
+	_, err = mock.builder.AddBundle(bundle)
+
+	require.NoError(t, err)
+
+	mock.expect(t, expectedResult{
+		txns: []*types.Transaction{
+			txn2,
+		},
+		balances: map[common.Address]*big.Int{
+			to: big.NewInt(2),
+		},
+	})
+}
+
+func TestBuilder_AddBundle_InclusionTarget(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	bundle := &types.SBundle{
+		Txs:         []*types.Transaction{txn1, txn2},
+		BlockNumber: big.NewInt(999),
+		MaxBlock:    big.NewInt(1000),
+	}
+
+	_, err := mock.builder.AddBundle(bundle)
+	require.NoError(t, err)
+
+	mock.expect(t, expectedResult{
+		txns: []*types.Transaction{
+			txn1, txn2,
+		},
+		balances: map[common.Address]*big.Int{
+			to: big.NewInt(3),
+		},
+	})
+}
+
+func TestBuilder_AddBundle_InvalidBlockNumber(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	bundle := &types.SBundle{
+		Txs:         []*types.Transaction{txn1, txn2},
+		BlockNumber: big.NewInt(1001),
+	}
+
+	_, err := mock.builder.AddBundle(bundle)
+	require.ErrorAs(t, err, types.ErrInvalidBlockNumber)
+}
+
+func TestBuilder_AddBundle_ExceedsMaxBlock(t *testing.T) {
+	to := common.Address{0x01, 0x10, 0xab}
+
+	mock := newMockBuilder(t)
+	txn1 := mock.state.newTransfer(t, to, big.NewInt(1))
+	txn2 := mock.state.newTransfer(t, to, big.NewInt(2))
+
+	bundle := &types.SBundle{
+		Txs:         []*types.Transaction{txn1, txn2},
+		BlockNumber: big.NewInt(995),
+		MaxBlock:    big.NewInt(999),
+	}
+
+	_, err := mock.builder.AddBundle(bundle)
+	require.ErrorAs(t, err, types.ErrExceedsMaxBlock)
+}
+
+func TestBuilder_AddBundle_EmptyTxs(t *testing.T) {
+	mock := newMockBuilder(t)
+	bundle := &types.SBundle{
+		Txs: []*types.Transaction{},
+	}
+
+	_, err := mock.builder.AddBundle(bundle)
+	require.ErrorAs(t, err, types.ErrEmptyTxs)
+}
+
 func newMockBuilder(t *testing.T) *mockBuilder {
-	// create a dummy header at 0
+	// create a dummy header at 1000
 	header := &types.Header{
-		Number:     big.NewInt(0),
+		Number:     big.NewInt(1000),
 		GasLimit:   1000000000000,
 		Time:       1000,
 		Difficulty: big.NewInt(1),
