@@ -50,7 +50,7 @@ func (c *Contract) Address() common.Address {
 }
 
 func (c *Contract) SendTransaction(method string, args []interface{}, confidentialDataBytes []byte) (*TransactionResult, error) {
-	signer, err := c.client.getSigner()
+	signer, err := c.client.GetSigner()
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +176,23 @@ func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, kettleAddress common.Addr
 	return c
 }
 
+func (c *Client) KettleAddress() common.Address {
+	return c.kettleAddress
+}
+
 func (c *Client) RPC() *ethclient.Client {
 	return c.rpc
 }
 
-func (c *Client) getSigner() (types.Signer, error) {
+func (c *Client) Key() *ecdsa.PrivateKey {
+	return c.key
+}
+
+func (c *Client) SenderAddr() common.Address {
+	return crypto.PubkeyToAddress(c.key.PublicKey)
+}
+
+func (c *Client) GetSigner() (types.Signer, error) {
 	chainID, err := c.rpc.ChainID(context.TODO())
 	if err != nil {
 		return nil, err
@@ -195,7 +207,7 @@ func (c *Client) Addr() common.Address {
 }
 
 func (c *Client) SignTxn(txn *types.LegacyTx) (*types.Transaction, error) {
-	signer, err := c.getSigner()
+	signer, err := c.GetSigner()
 	if err != nil {
 		return nil, err
 	}

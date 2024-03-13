@@ -82,6 +82,13 @@ contract ExampleEthCallSource {
 
         return abi.encodeWithSelector(this.emitLogCallback.selector, 10);
     }
+
+    // simple offchain -> onchain
+    function onchain() public {}
+
+    function offchain() public pure returns (bytes memory) {
+        return abi.encodeWithSelector(this.onchain.selector);
+    }
 }
 
 contract ExampleEthCallTarget {
