@@ -68,6 +68,18 @@ library Suave {
         bool withFlashbotsSignature;
     }
 
+    /// @notice
+    /// @param egp Effective Gas Price of the bundle
+    /// @param results Results of bundle transactions simulation
+    /// @param success Whether the bundle was successful or not
+    /// @param error Error message if any
+    struct SimulateBundleResult {
+        uint64 egp;
+        SimulateTransactionResult[] results;
+        bool success;
+        string error;
+    }
+
     /// @notice Result of a simulated transaction.
     /// @param egp Effective Gas Price of the transaction
     /// @param logs Logs emitted during the simulation

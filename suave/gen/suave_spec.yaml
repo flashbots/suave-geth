@@ -110,6 +110,20 @@ structs:
       - name: error
         description: "Error message if any"
         type: string
+  - name: SimulateBundleResult
+    fields:
+      - name: egp
+        description: "Effective Gas Price of the bundle"
+        type: uint64
+      - name: results
+        description: "Results of bundle transactions simulation"
+        type: SimulateTransactionResult[]
+      - name: success
+        description: "Whether the bundle was successful or not"
+        type: bool
+      - name: error
+        description: "Error message if any"
+        type: string
   - name: SimulatedLog
     description: "A log emitted during the simulation of a transaction."
     fields:
