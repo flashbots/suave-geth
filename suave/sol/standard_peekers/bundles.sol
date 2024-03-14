@@ -12,6 +12,13 @@ contract AnyBundleContract {
         return abi.decode(confidentialInputs, (bytes));
     }
 
+    function simulateBundle(bytes memory bundleData) public returns (uint64) {
+        require(Suave.isConfidential());
+
+        string memory session = Suave.newBuilder();
+        return Suave.simulateBundle(session, bundleData).egp;
+    }
+
     function emitDataRecord(Suave.DataRecord calldata dataRecord) public {
         emit DataRecordEvent(dataRecord.id, dataRecord.decryptionCondition, dataRecord.allowedPeekers);
     }
@@ -27,7 +34,7 @@ contract BundleContract is AnyBundleContract {
 
         bytes memory bundleData = this.fetchConfidentialBundleData();
 
-        uint64 egp = Suave.simulateBundle(bundleData);
+        uint64 egp = simulateBundle(bundleData);
 
         Suave.DataRecord memory dataRecord =
             Suave.newDataRecord(decryptionCondition, dataAllowedPeekers, dataAllowedStores, "default:v0:ethBundles");
@@ -82,7 +89,7 @@ contract MevShareContract is AnyBundleContract {
         bytes memory bundleData = this.fetchConfidentialBundleData();
 
         // 2. sim bundle
-        uint64 egp = Suave.simulateBundle(bundleData);
+        uint64 egp = simulateBundle(bundleData);
 
         // 3. extract hint
         bytes memory hint = Suave.extractHint(bundleData);
@@ -119,7 +126,7 @@ contract MevShareContract is AnyBundleContract {
         bytes memory matchBundleData = this.fetchConfidentialBundleData();
 
         // 2. sim match alone for validity
-        uint64 egp = Suave.simulateBundle(matchBundleData);
+        uint64 egp = simulateBundle(matchBundleData);
 
         // 3. extract hint
         bytes memory matchHint = Suave.extractHint(matchBundleData);
@@ -128,7 +135,7 @@ contract MevShareContract is AnyBundleContract {
             decryptionCondition, dataAllowedPeekers, dataAllowedStores, "mevshare:v0:matchDataRecords"
         );
         Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundles", matchBundleData);
-        Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundleSimResults", abi.encode(0));
+        Suave.confidentialStore(dataRecord.id, "mevshare:v0:ethBundleSimResults", abi.encode(egp));
 
         //4. merge data records
         Suave.DataId[] memory dataRecords = new Suave.DataId[](2);

@@ -115,9 +115,9 @@ structs:
       - name: egp
         description: "Effective Gas Price of the bundle"
         type: uint64
-      - name: results
-        description: "Results of bundle transactions simulation"
-        type: SimulateTransactionResult[]
+      - name: logs
+        description: "Logs emitted during the simulation"
+        type: SimulatedLog[]
       - name: success
         description: "Whether the bundle was successful or not"
         type: bool

@@ -70,12 +70,12 @@ library Suave {
 
     /// @notice
     /// @param egp Effective Gas Price of the bundle
-    /// @param results Results of bundle transactions simulation
+    /// @param logs Logs emitted during the simulation
     /// @param success Whether the bundle was successful or not
     /// @param error Error message if any
     struct SimulateBundleResult {
         uint64 egp;
-        SimulateTransactionResult[] results;
+        SimulatedLog[] logs;
         bool success;
         string error;
     }
