@@ -30,6 +30,14 @@ func (m *mockSuaveBackend) AddTransaction(ctx context.Context, sessionId string,
 	return &types.SimulateTransactionResult{}, nil
 }
 
+func (m *mockSuaveBackend) AddTransactions(ctx context.Context, sessionId string, txs types.Transactions) ([]*types.SimulateTransactionResult, error) {
+	return []*types.SimulateTransactionResult{}, nil
+}
+
+func (m *mockSuaveBackend) AddBundles(ctx context.Context, sessionId string, bundles []*types.SBundle) ([]*types.SimulateBundleResult, error) {
+	return []*types.SimulateBundleResult{}, nil
+}
+
 func (m *mockSuaveBackend) InitializeBid(record suave.DataRecord) error {
 	return nil
 }

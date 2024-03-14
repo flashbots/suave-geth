@@ -59,8 +59,8 @@ func (m *mockRuntime) signMessage(digest []byte, crypto types.CryptoSignature, s
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) simulateBundle(bundleData []byte) (uint64, error) {
-	return 1, nil
+func (m *mockRuntime) simulateBundle(session string, bundleData []byte) (types.SimulateBundleResult, error) {
+	return types.SimulateBundleResult{}, nil
 }
 
 func (m *mockRuntime) submitBundleJsonRPC(url string, method string, params []byte) ([]byte, error) {
