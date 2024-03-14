@@ -394,15 +394,19 @@ library Suave {
     }
 
     /// @notice Performs a simulation of the bundle by building a block that includes it.
-    /// @param bundleData Bundle encoded in JSON
-    /// @return effectiveGasPrice Effective Gas Price of the resultant block
-    function simulateBundle(bytes memory bundleData) internal returns (uint64) {
-        (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(bundleData));
+    /// @param sessionid Id of the remote builder session
+    /// @param bundle Bundle encoded in JSON
+    /// @return simulationResult Result of the simulation
+    function simulateBundle(string memory sessionid, bytes memory bundle)
+        internal
+        returns (SimulateBundleResult memory)
+    {
+        (bool success, bytes memory data) = SIMULATE_BUNDLE.call(abi.encode(sessionid, bundle));
         if (!success) {
             revert PeekerReverted(SIMULATE_BUNDLE, data);
         }
 
-        return abi.decode(data, (uint64));
+        return abi.decode(data, (SimulateBundleResult));
     }
 
     /// @notice Simulates a transaction on a remote builder session

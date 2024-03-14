@@ -41,3 +41,11 @@ func (s *MockServer) NewSession(ctx context.Context) (string, error) {
 func (s *MockServer) AddTransaction(ctx context.Context, sessionId string, tx *types.Transaction) (*types.SimulateTransactionResult, error) {
 	return &types.SimulateTransactionResult{}, nil
 }
+
+func (s *MockServer) AddTransactions(ctx context.Context, sessionId string, txs types.Transactions) ([]*types.SimulateTransactionResult, error) {
+	return []*types.SimulateTransactionResult{}, nil
+}
+
+func (s *MockServer) AddBundles(ctx context.Context, sessionId string, bundles []*types.SBundle) ([]*types.SimulateBundleResult, error) {
+	return []*types.SimulateBundleResult{}, nil
+}

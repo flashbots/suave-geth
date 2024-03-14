@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/beacon/dencun"
@@ -60,29 +58,6 @@ func (s *suaveRuntime) signEthTransaction(txn []byte, chainId string, signingKey
 	}
 
 	return signedBytes, nil
-}
-
-func (b *suaveRuntime) simulateBundle(input []byte) (uint64, error) {
-	var bundle types.SBundle
-	err := json.Unmarshal(input, &bundle)
-	if err != nil {
-		return 0, err
-	}
-
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
-	defer cancel()
-
-	envelope, err := b.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlock(ctx, nil, bundle.Txs)
-	if err != nil {
-		return 0, err
-	}
-
-	if envelope.ExecutionPayload.GasUsed == 0 {
-		return 0, err
-	}
-
-	egp := new(big.Int).Div(envelope.BlockValue, big.NewInt(int64(envelope.ExecutionPayload.GasUsed)))
-	return egp.Uint64(), nil
 }
 
 func (b *suaveRuntime) extractHint(bundleBytes []byte) ([]byte, error) {

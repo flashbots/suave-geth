@@ -308,6 +308,24 @@ func (s *suaveRuntime) simulateTransaction(session string, txnBytes []byte) (typ
 	return *result, nil
 }
 
+func (s *suaveRuntime) simulateBundle(session string, bundleBytes []byte) (types.SimulateBundleResult, error) {
+	bundle := new(types.SBundle)
+	if err := bundle.UnmarshalJSON(bundleBytes); err != nil {
+		return types.SimulateBundleResult{}, err
+	}
+
+	result, err := s.suaveContext.Backend.ConfidentialEthBackend.AddBundles(context.Background(), session, []*types.SBundle{bundle})
+	if err != nil {
+		return types.SimulateBundleResult{}, err
+	}
+
+	if len(result) != 1 {
+		return types.SimulateBundleResult{}, fmt.Errorf("unexpected number of results")
+	}
+
+	return *result[0], nil
+}
+
 func (s *suaveRuntime) contextGet(key string) ([]byte, error) {
 	val, ok := s.suaveContext.Context[key]
 	if !ok {

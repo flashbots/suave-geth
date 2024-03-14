@@ -40,3 +40,15 @@ func (a *APIClient) AddTransaction(ctx context.Context, sessionId string, tx *ty
 	err := a.rpc.CallContext(ctx, &receipt, "suavex_addTransaction", sessionId, tx)
 	return receipt, err
 }
+
+func (a *APIClient) AddTransactions(ctx context.Context, sessionId string, txs types.Transactions) ([]*types.SimulateTransactionResult, error) {
+	var receipt []*types.SimulateTransactionResult
+	err := a.rpc.CallContext(ctx, &receipt, "suavex_addTransactions", sessionId, txs)
+	return receipt, err
+}
+
+func (a *APIClient) AddBundles(ctx context.Context, sessionId string, bundles []*types.SBundle) ([]*types.SimulateBundleResult, error) {
+	var receipt []*types.SimulateBundleResult
+	err := a.rpc.CallContext(ctx, &receipt, "suavex_addBundles", sessionId, bundles)
+	return receipt, err
+}

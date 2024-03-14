@@ -233,14 +233,17 @@ functions:
     address: "0x0000000000000000000000000000000042100000"
     description: "Performs a simulation of the bundle by building a block that includes it."
     input:
-      - name: bundleData
+      - name: sessionid
+        type: string
+        description: "Id of the remote builder session"
+      - name: bundle
         type: bytes
         description: "Bundle encoded in JSON"
     output:
       fields:
-        - name: effectiveGasPrice
-          type: uint64
-          description: "Effective Gas Price of the resultant block"
+        - name: simulationResult
+          type: SimulateBundleResult
+          description: "Result of the simulation"
   - name: extractHint
     address: "0x0000000000000000000000000000000042100037"
     description: "Interprets the bundle data and extracts hints, such as the `To` address and calldata."
