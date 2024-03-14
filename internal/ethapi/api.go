@@ -1942,6 +1942,9 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 			return tx.Hash(), err
 		}
 		tx = ntx
+
+		// disable the suave transaction for now since there is no callback in suavesdk
+		return common.Hash{}, nil
 	}
 
 	return SubmitTransaction(ctx, s.b, tx)

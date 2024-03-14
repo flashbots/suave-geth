@@ -17,6 +17,8 @@
 package vm
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -24,7 +26,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/suave/consolelog"
+	"github.com/ethereum/go-ethereum/suavesdk/proto"
 	"github.com/holiman/uint256"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -41,6 +46,30 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
+type ExternalPrecompile struct {
+}
+
+func (e *ExternalPrecompile) Run(input []byte) ([]byte, error) {
+	fmt.Println("=> RUN AND CALL")
+
+	conn, err := grpc.Dial("localhost:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	client := proto.NewSuaveClient(conn)
+	resp, err := client.Call(context.Background(), &proto.CallRequest{Input: input})
+	if err != nil {
+		panic(err)
+	}
+
+	return resp.Output, nil
+}
+
+func (e *ExternalPrecompile) RequiredGas(input []byte) uint64 {
+	return 0
+}
+
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
@@ -54,6 +83,12 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 			return NewSuavePrecompiledContractWrapper(addr, suaveContext), true
 		}
 	}
+
+	// lets do the trick here
+	if addr == common.HexToAddress("0x0000000000000000000000000000000011100011") {
+		return &ExternalPrecompile{}, true
+	}
+
 	var precompiles map[common.Address]PrecompiledContract
 	switch {
 	case evm.chainRules.IsBerlin:

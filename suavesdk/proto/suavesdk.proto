@@ -1,0 +1,17 @@
+syntax = "proto3";
+package proto;
+option go_package = "./proto";
+
+message CallRequest {
+    bytes input = 1;
+}
+
+message CallResponse {
+    bytes output = 1;
+}
+
+message Empty {}
+
+service Suave {
+    rpc Call(CallRequest) returns (CallResponse);
+}
