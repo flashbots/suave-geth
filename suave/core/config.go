@@ -8,7 +8,7 @@ type Config struct {
 	EthBundleSigningKeyHex        string
 	EthBlockSigningKeyHex         string
 	ExternalWhitelist             []string
-	DnsRegistry                   map[string]string
+	AliasRegistry                 map[string]string
 }
 
 var DefaultConfig = Config{}

@@ -33,7 +33,7 @@ func TestForgeReadConfig(t *testing.T) {
 	sCtx, err := readContext(ctx)
 	require.NoError(t, err)
 	require.Equal(t, sCtx.Backend.ExternalWhitelist, []string{"a", "b"})
-	require.Equal(t, sCtx.Backend.DnsRegistry, map[string]string{"a": "b", "c": "d"})
+	require.Equal(t, sCtx.Backend.ServiceAliasRegistry, map[string]string{"a": "b", "c": "d"})
 	require.Equal(t, sCtx.Backend.ConfidentialEthBackend.(*suave_backends.RemoteEthBackend).Endpoint(), "suave")
 
 	// override the config if the flags are set
@@ -44,7 +44,7 @@ func TestForgeReadConfig(t *testing.T) {
 	sCtx, err = readContext(ctx)
 	require.NoError(t, err)
 	require.Equal(t, sCtx.Backend.ExternalWhitelist, []string{"c", "d"})
-	require.Equal(t, sCtx.Backend.DnsRegistry, map[string]string{"e": "f", "g": "h"})
+	require.Equal(t, sCtx.Backend.ServiceAliasRegistry, map[string]string{"e": "f", "g": "h"})
 	require.Equal(t, sCtx.Backend.ConfidentialEthBackend.(*suave_backends.RemoteEthBackend).Endpoint(), "http://localhost:8545")
 
 	// set flags to null and use default values
