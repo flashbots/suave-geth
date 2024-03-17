@@ -50,16 +50,16 @@ import (
 
 // EthAPIBackend implements ethapi.Backend for full nodes
 type EthAPIBackend struct {
-	extRPCEnabled            bool
-	allowUnprotectedTxs      bool
-	eth                      *Ethereum
-	gpo                      *gasprice.Oracle
-	suaveEthBundleSigningKey *ecdsa.PrivateKey
-	suaveEthBlockSigningKey  *bls.SecretKey
-	suaveEngine              *cstore.CStoreEngine
-	suaveEthBackend          suave.ConfidentialEthBackend
-	suaveExternalWhitelist   []string
-	suaveDnsRegistry         map[string]string
+	extRPCEnabled             bool
+	allowUnprotectedTxs       bool
+	eth                       *Ethereum
+	gpo                       *gasprice.Oracle
+	suaveEthBundleSigningKey  *ecdsa.PrivateKey
+	suaveEthBlockSigningKey   *bls.SecretKey
+	suaveEngine               *cstore.CStoreEngine
+	suaveEthBackend           suave.ConfidentialEthBackend
+	suaveExternalWhitelist    []string
+	suaveServiceAliasRegistry map[string]string
 }
 
 // For testing purposes
@@ -446,7 +446,7 @@ func (b *EthAPIBackend) SuaveContext(requestTx *types.Transaction, ccr *types.Co
 			EthBundleSigningKey:    b.suaveEthBundleSigningKey,
 			EthBlockSigningKey:     b.suaveEthBlockSigningKey,
 			ExternalWhitelist:      b.suaveExternalWhitelist,
-			DnsRegistry:            b.suaveDnsRegistry,
+			ServiceAliasRegistry:   b.suaveServiceAliasRegistry,
 			ConfidentialStore:      storeTransaction,
 			ConfidentialEthBackend: b.suaveEthBackend,
 		},

@@ -199,8 +199,8 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 	s := &suaveRuntime{
 		suaveContext: &SuaveContext{
 			Backend: &SuaveExecutionBackend{
-				ExternalWhitelist: []string{"127.0.0.1"},
-				DnsRegistry:       map[string]string{"goerli": srv.URL},
+				ExternalWhitelist:    []string{"127.0.0.1"},
+				ServiceAliasRegistry: map[string]string{"goerli": srv.URL},
 			},
 		},
 	}
