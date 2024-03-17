@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -264,17 +265,28 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		return nil, nil, fmt.Errorf("could not sign builder record: %w", err)
 	}
 
+	blobsBundle, err := parseBlobs(envelope.BlobsBundle)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not parse blobs: %w", err)
+	}
 	bidRequest := builderDeneb.SubmitBlockRequest{
 		Message:          &blockBidMsg,
 		ExecutionPayload: payload,
 		Signature:        signature,
-		BlobsBundle:      &builderDeneb.BlobsBundle{},
+		BlobsBundle:      blobsBundle,
 	}
 
 	bidBytes, err := bidRequest.MarshalJSON()
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
 	}
+
+	// TODO: remove
+	res, err := b.submitEthBlockToRelay("https://0xafa4c6985aa049fb79dd37010438cfebeb0f2bd42b115b89dd678dab0670c1de38da0c4e9138c9290a398ecd9a0b3110@boost-relay-goerli.flashbots.net", bidBytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not submit block to relay: %w", err)
+	}
+	log.Info("submitted block to relay", "response", string(res))
 
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
@@ -496,4 +508,44 @@ func (c *suaveRuntime) fillMevShareBundle(dataID types.DataId) ([]byte, error) {
 	}
 
 	return json.Marshal(shareBundle)
+}
+
+func parseBlobs(bundle *dencun.BlobsBundleV1) (*builderDeneb.BlobsBundle, error) {
+	blobsBundle := &builderDeneb.BlobsBundle{}
+	for i, blob := range bundle.Blobs {
+		blobFixed, err := convertToFixedArray(blob, [131072]byte{})
+		if err != nil {
+			return nil, fmt.Errorf("could not convert blob to fixed array: %w", err)
+		}
+		blobsBundle.Blobs = append(blobsBundle.Blobs, blobFixed)
+
+		committmentFixed, err := convertToFixedArray(bundle.Commitments[i], [48]byte{})
+		if err != nil {
+			return nil, fmt.Errorf("could not convert commitments to fixed array: %w", err)
+		}
+		blobsBundle.Commitments = append(blobsBundle.Commitments, committmentFixed)
+
+		proofFixed, err := convertToFixedArray(bundle.Proofs[i], [48]byte{})
+		if err != nil {
+			return nil, fmt.Errorf("could not convert proofs to fixed array: %w", err)
+		}
+		blobsBundle.Proofs = append(blobsBundle.Proofs, proofFixed)
+	}
+
+	return blobsBundle, nil
+}
+
+func convertToFixedArray[T any](src []byte, dst T) (T, error) {
+	dstVal := reflect.ValueOf(&dst).Elem()
+	if dstVal.Kind() != reflect.Array {
+		return dst, errors.New("destination is not an array")
+	}
+
+	dstLen := dstVal.Len()
+	if len(src) > dstLen {
+		return dst, fmt.Errorf("source slice is too large: %d bytes", len(src))
+	}
+
+	reflect.Copy(dstVal, reflect.ValueOf(src))
+	return dst, nil
 }
