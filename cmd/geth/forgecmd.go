@@ -191,7 +191,8 @@ var (
 
 				result, err := vm.NewSuavePrecompiledContractWrapper(common.HexToAddress(addr), suaveCtx).Run(input)
 				if err != nil {
-					return fmt.Errorf("failed to run precompile: %w", err)
+					// the actual error messageis returned in 'result', err only contains the ErrExecutionReverted error
+					return fmt.Errorf(string(result))
 				}
 				fmt.Println(hex.EncodeToString(result))
 			} else {
