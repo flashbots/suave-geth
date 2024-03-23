@@ -2031,6 +2031,16 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		return nil, result, nil, nil
 	}
 
+	if result.ReturnData == nil {
+		// If the CCR returns empty data, it might be because it was done with a non-existent
+		// contract. Validate if that is true (code == 0) and return error.
+		// Note that we cannot do this check before "ApplyMessage" because we might be
+		// discarding the execution of precompiles which do not have code.
+		if code := state.GetCode(*msg.To); len(code) == 0 {
+			return nil, nil, nil, fmt.Errorf("target contract does not exist")
+		}
+	}
+
 	if storageAccessTracer.hasStoredState {
 		return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
 	}

@@ -1366,6 +1366,21 @@ func TestE2E_Precompile_RandomBytes(t *testing.T) {
 	require.Len(t, res[0], 64)
 }
 
+func TestE2E_EmptyAddress(t *testing.T) {
+	// it should not be possible to make a CCR to an empty address
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// 0xa contract does not exist
+	contractAddr := common.Address{0xa}
+	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	_, err := sourceContract.SendTransaction("consoleLog", []interface{}{}, nil)
+	require.Error(t, err)
+}
+
 type clientWrapper struct {
 	t *testing.T
 
