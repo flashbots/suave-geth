@@ -82,7 +82,10 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 		if err := tomlConfig.NewDecoder(bytes.NewReader(data)).Decode(&config); err != nil {
 			return nil, err
 		}
-		cfg = config.Profile.Suave
+		if config.Profile.Suave != nil {
+			// Only apply the suave config if it exists
+			cfg = config.Profile.Suave
+		}
 	}
 
 	// override the config if the flags are set

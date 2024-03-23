@@ -27,10 +27,26 @@ func TestForgeReadConfig(t *testing.T) {
 
 	ctx := cli.NewContext(nil, flagSet(t, forgeCommand.Flags), nil)
 
+	// read context from non-existent config file
+	ctx.Set("config", "./testdata/forge_not_exists.toml")
+
+	_, err := readContext(ctx)
+	require.Error(t, err)
+
+	// read context from valid config toml file WITHOUT suave section
+	// it should fallback to the default values
+	ctx.Set("config", "./testdata/forge_noconfig.toml")
+
+	sCtx, err := readContext(ctx)
+	require.NoError(t, err)
+
+	require.Len(t, sCtx.Backend.ExternalWhitelist, 0)
+	require.Len(t, sCtx.Backend.DnsRegistry, 0)
+
 	// read context from config toml file
 	ctx.Set("config", "./testdata/forge.toml")
 
-	sCtx, err := readContext(ctx)
+	sCtx, err = readContext(ctx)
 	require.NoError(t, err)
 	require.Equal(t, sCtx.Backend.ExternalWhitelist, []string{"a", "b"})
 	require.Equal(t, sCtx.Backend.DnsRegistry, map[string]string{"a": "b", "c": "d"})
