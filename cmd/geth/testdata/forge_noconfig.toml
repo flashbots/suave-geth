@@ -1,0 +1,3 @@
+[profile.ci.fuzz]
+runs = 10_000
+solc_version = "0.8.23"
