@@ -1948,6 +1948,7 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 }
 
 type mevmStateLogger struct {
+	suappAddr      common.Address
 	hasStoredState bool
 }
 
@@ -1955,7 +1956,13 @@ func (m *mevmStateLogger) CaptureStart(env *vm.EVM, from common.Address, to comm
 }
 
 func (m *mevmStateLogger) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, rData []byte, depth int, err error) {
-	if op == vm.SSTORE {
+	if op == vm.SSTORE && scope.Contract.Address() == m.suappAddr {
+		// Modify the state storage is a nil operation in a Suapp, since the changes are not synced up with the
+		// consensus state. It is confusing an a bad UX for users that modify the state and nothing happens.
+		// Thus, we capture the state storage modification and return an error.
+		// However, we do leverage this volatile state to create temporal Contracts that act as Objects in the traditional sense.
+		// Only valid during the scope of the Confidential request. Thus, we need to differentiate between the two state changes:
+		// the ones performed on the Suapp itself (confusing for users) and the ones performed on temporal Contracts.
 		m.hasStoredState = true
 	}
 }
@@ -1995,7 +2002,9 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		return nil, nil, nil, err
 	}
 
-	storageAccessTracer := &mevmStateLogger{}
+	storageAccessTracer := &mevmStateLogger{
+		suappAddr: *msg.To,
+	}
 
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
 	suaveCtx := b.SuaveContext(tx, confidentialRequest)

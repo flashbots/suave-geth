@@ -89,6 +89,20 @@ contract ExampleEthCallSource {
     function offchain() public pure returns (bytes memory) {
         return abi.encodeWithSelector(this.onchain.selector);
     }
+
+    function offchainCreateNewContract() public returns (bytes memory) {
+        Other o = new Other();
+        o.setValue(10);
+        return abi.encodeWithSelector(this.onchain.selector);
+    }
+}
+
+contract Other {
+    uint256 value;
+
+    function setValue(uint256 _value) public {
+        value = _value;
+    }
 }
 
 contract ExampleEthCallTarget {
