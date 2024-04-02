@@ -49,6 +49,10 @@ var (
 		Usage: "The directory where the contract artifacts are located",
 		Value: "out",
 	}
+	confidentialInput = &cli.StringFlag{
+		Name:  "confidential-input",
+		Usage: "The confidential input to use for the confidential request",
+	}
 )
 
 var (
@@ -124,6 +128,7 @@ var (
 			privateKeyFlag,
 			rpcFlag,
 			artifactsDirFlag,
+			confidentialInput,
 		},
 		Action: func(ctx *cli.Context) error {
 			args := ctx.Args().Slice()
@@ -134,6 +139,13 @@ var (
 			clt, err := getClient(ctx)
 			if err != nil {
 				return err
+			}
+
+			confInput := ctx.String(confidentialInput.Name)
+			if confInput == "" {
+				log.Info("No confidential input provided, using empty string")
+			} else {
+				log.Info("Confidential input provided", "input", confInput)
 			}
 
 			var contractAddr common.Address
@@ -153,13 +165,35 @@ var (
 				return fmt.Errorf("failed to parse method signature: %w", err)
 			}
 
-			calldata, err := method.Encode([]interface{}{})
+			var methodArgs []interface{}
+			if len(args) == 3 {
+				// arguments are passed as an array of items '(0x000,1,2)'
+				methodArgsStr := args[2]
+
+				// verify it has brackets and remove them
+				if !strings.HasPrefix(methodArgsStr, "(") {
+					return fmt.Errorf("expected method arguments to start with '('")
+				}
+				if !strings.HasSuffix(methodArgsStr, ")") {
+					return fmt.Errorf("expected method arguments to end with ')'")
+				}
+
+				methodArgsStr = methodArgsStr[1 : len(methodArgsStr)-1]
+				parts := strings.Split(methodArgsStr, ",")
+
+				for _, part := range parts {
+					methodArgs = append(methodArgs, strings.TrimSpace(part))
+				}
+			}
+
+			calldata, err := method.Encode(methodArgs)
 			if err != nil {
 				return err
 			}
 
 			log.Info("Sending offchain confidential compute request", "kettle", clt.KettleAddress().String())
-			hash, err := sendConfRequest(clt, devchainKettleAddress, contractAddr, calldata, nil)
+
+			hash, err := sendConfRequest(clt, devchainKettleAddress, contractAddr, calldata, []byte(confInput))
 			if err != nil {
 				return err
 			}
