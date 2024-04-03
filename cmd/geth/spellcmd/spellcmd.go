@@ -141,11 +141,12 @@ var (
 				return err
 			}
 
-			confInput := ctx.String(confidentialInput.Name)
-			if confInput == "" {
-				log.Info("No confidential input provided, using empty string")
-			} else {
+			var confInput []byte
+			if input := ctx.String(confidentialInput.Name); input != "" {
+				confInput = []byte(input)
 				log.Info("Confidential input provided", "input", confInput)
+			} else {
+				log.Info("No confidential input provided, using empty string")
 			}
 
 			var contractAddr common.Address
@@ -193,7 +194,7 @@ var (
 
 			log.Info("Sending offchain confidential compute request", "kettle", clt.KettleAddress().String())
 
-			hash, err := sendConfRequest(clt, devchainKettleAddress, contractAddr, calldata, []byte(confInput))
+			hash, err := sendConfRequest(clt, devchainKettleAddress, contractAddr, calldata, confInput)
 			if err != nil {
 				return err
 			}
