@@ -2123,7 +2123,8 @@ func parseSuavePrecompileError(ret []byte) error {
 
 	size := new(big.Int).SetBytes(ret[64:96]).Uint64()
 	if 96+size > uint64(len(ret)) {
-		panic("BAD")
+		log.Debug("invalid precompile reverted message")
+		return nil
 	}
 
 	msg := ret[96 : 96+size]
