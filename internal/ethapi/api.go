@@ -2114,6 +2114,11 @@ func parseSuavePrecompileError(ret []byte) error {
 
 	ret = ret[4:]
 
+	if len(ret) < 96 {
+		log.Debug("invalid precompile reverted message")
+		return nil
+	}
+
 	// In ABI, the PeekerReverted(address, bytes) error is encoded as slots of 32 bytes:
 	// 0-32 bytes: address. 20 bytes padded with zeros to the left.
 	// 32-64 bytes: offset of the dynamic type bytes It is always 0x...040.
