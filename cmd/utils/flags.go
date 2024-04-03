@@ -530,8 +530,8 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
-	SuaveDnsFlag = &cli.StringSliceFlag{
-		Name:     "suave.dns",
+	SuaveServiceAlias = &cli.StringSliceFlag{
+		Name:     "suave.service-alias",
 		Usage:    "Suave domain name resolver settings. (format: alias=url)",
 		Category: flags.SuaveCategory,
 	}
@@ -1730,18 +1730,18 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 		cfg.SuaveEthRemoteBackendEndpoint = ctx.String(SuaveEthRemoteBackendEndpointFlag.Name)
 	}
 
-	if ctx.IsSet(SuaveDnsFlag.Name) {
-		dnsRegistry := make(map[string]string)
-		for _, endpoint := range ctx.StringSlice(SuaveDnsFlag.Name) {
+	if ctx.IsSet(SuaveServiceAlias.Name) {
+		registry := make(map[string]string)
+		for _, endpoint := range ctx.StringSlice(SuaveServiceAlias.Name) {
 			parts := strings.Split(endpoint, "=")
 			if len(parts) != 2 {
 				Fatalf("invalid value for remote backend endpoint: %s", endpoint)
 			}
 			name := parts[0]
 			domain := parts[1]
-			dnsRegistry[name] = domain
+			registry[name] = domain
 		}
-		cfg.DnsRegistry = dnsRegistry
+		cfg.AliasRegistry = registry
 	}
 
 	if ctx.IsSet(SuaveConfidentialTransportRedisEndpointFlag.Name) {
