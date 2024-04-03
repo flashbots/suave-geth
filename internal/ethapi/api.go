@@ -17,6 +17,7 @@
 package ethapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -2037,6 +2038,14 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		// If the execution fails we do not return an error but the transaction result itself
 		// since some callers of this function (i.e. estimate gas) differentiate between
 		// unrecoverable errors (i.e. nonce is incorrect) and failed executions.
+
+		// If the error comes from a precompile, return data contains the event PeekerReverted(address, bytes).
+		// If so, parse it and return the error message in a more informative way.
+		precompileErr := parseSuavePrecompileError(result.ReturnData)
+		if precompileErr != nil {
+			result.Err = fmt.Errorf("%v: %v", result.Err, precompileErr)
+		}
+
 		return nil, result, nil, nil
 	}
 
@@ -2092,6 +2101,33 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 	// will copy the inner tx again!
 	return signed, result, storeFinalize, nil
+}
+
+var (
+	peekerRevertedPrefix = []byte{0x75, 0xff, 0xf4, 0x67}
+)
+
+func parseSuavePrecompileError(ret []byte) error {
+	if !bytes.HasPrefix(ret, peekerRevertedPrefix) {
+		return nil
+	}
+
+	ret = ret[4:]
+
+	// In ABI, the PeekerReverted(address, bytes) error is encoded as slots of 32 bytes:
+	// 0-32 bytes: address. 20 bytes padded with zeros to the left.
+	// 32-64 bytes: offset of the dynamic type bytes It is always 0x...040.
+	// 64-96 bytes: length of the dynamic type bytes.
+	// 96-end bytes: the dynamic type bytes.
+	precompileAddr := common.BytesToAddress(ret[:32])
+
+	size := new(big.Int).SetBytes(ret[64:96]).Uint64()
+	if 96+size > uint64(len(ret)) {
+		panic("BAD")
+	}
+
+	msg := ret[96 : 96+size]
+	return fmt.Errorf("precompile '%s' reverted: '%s'", precompileAddr, string(msg))
 }
 
 // Sign calculates an ECDSA signature for:

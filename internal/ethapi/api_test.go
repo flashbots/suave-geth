@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"hash"
@@ -47,6 +48,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -740,3 +742,15 @@ func TestRPCMarshalBlock(t *testing.T) {
 		}
 	}
 }
+
+// --- suave specific ---
+
+func TestSuave_ParsePrecompileError(t *testing.T) {
+	txt := "75fff46700000000000000000000000000000000000000000000000000000000432000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002d47657420227365706f6c6961223a20756e737570706f727465642070726f746f636f6c20736368656d6520222200000000000000000000000000000000000000"
+	txtB, _ := hex.DecodeString(txt)
+
+	err := parseSuavePrecompileError(txtB)
+	require.Equal(t, err.Error(), `precompile '0x0000000000000000000000000000000043200002' reverted: 'Get "sepolia": unsupported protocol scheme ""'`)
+}
+
+// --- end of suave specific ---
