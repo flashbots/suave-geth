@@ -1385,6 +1385,28 @@ func TestE2E_EmptyAddress(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestE2E_PrecompileInternalError(t *testing.T) {
+	// if the precompile fails, return a more informative error
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	contractAddr := common.Address{0x3}
+	contract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
+
+	req := &types.HttpRequest{
+		Method: "GET",
+		Url:    "sepolia",
+	}
+	_, err := contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+	require.Error(t, err)
+
+	if !strings.Contains(err.Error(), `precompile '0x0000000000000000000000000000000043200002' reverted`) {
+		t.Fatal("bad")
+	}
+}
+
 type clientWrapper struct {
 	t *testing.T
 

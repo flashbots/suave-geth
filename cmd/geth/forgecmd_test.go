@@ -41,7 +41,7 @@ func TestForgeReadConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, sCtx.Backend.ExternalWhitelist, 0)
-	require.Len(t, sCtx.Backend.DnsRegistry, 0)
+	require.Len(t, sCtx.Backend.ServiceAliasRegistry, 0)
 
 	// read context from config toml file
 	ctx.Set("config", "./testdata/forge.toml")
