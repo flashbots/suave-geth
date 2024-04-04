@@ -225,7 +225,7 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 
 	var allowed bool
 	// resolve dns if possible
-	if endpoint, ok := s.suaveContext.Backend.DnsRegistry[request.Url]; ok {
+	if endpoint, ok := s.suaveContext.Backend.ServiceAliasRegistry[request.Url]; ok {
 		request.Url = endpoint
 	} else {
 		// decode the url and check if the domain is allowed

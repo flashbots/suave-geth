@@ -36,9 +36,9 @@ var (
 		Name:  "whitelist",
 		Usage: `The whitelist external endpoints to call`,
 	}
-	dnsRegistryForgeFlag = &cli.StringSliceFlag{
-		Name:  "dns-registry",
-		Usage: `The DNS registry to resolve aliases to endpoints`,
+	serviceAliasForgeFlag = &cli.StringSliceFlag{
+		Name:  "service-alias",
+		Usage: `The list of alias to endpoint mappings.`,
 	}
 	ethBackendForgeFlag = &cli.StringFlag{
 		Name:  "eth-backend",
@@ -51,9 +51,9 @@ var (
 )
 
 type suaveForgeConfig struct {
-	Whitelist   []string          `toml:"whitelist"`
-	DnsRegistry map[string]string `toml:"dns_registry"`
-	EthBackend  string            `toml:"eth_backend"`
+	Whitelist    []string          `toml:"whitelist"`
+	ServiceAlias map[string]string `toml:"service_alias"`
+	EthBackend   string            `toml:"eth_backend"`
 }
 
 func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
@@ -95,18 +95,18 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	if ctx.IsSet(whiteListForgeFlag.Name) {
 		cfg.Whitelist = ctx.StringSlice(whiteListForgeFlag.Name)
 	}
-	if ctx.IsSet(dnsRegistryForgeFlag.Name) {
-		dnsRegistry := make(map[string]string)
-		for _, endpoint := range ctx.StringSlice(dnsRegistryForgeFlag.Name) {
+	if ctx.IsSet(serviceAliasForgeFlag.Name) {
+		registry := make(map[string]string)
+		for _, endpoint := range ctx.StringSlice(serviceAliasForgeFlag.Name) {
 			parts := strings.Split(endpoint, "=")
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("invalid value for remote backend endpoint: %s", endpoint)
 			}
 			name := parts[0]
 			domain := parts[1]
-			dnsRegistry[name] = domain
+			registry[name] = domain
 		}
-		cfg.DnsRegistry = dnsRegistry
+		cfg.ServiceAlias = registry
 	}
 
 	// create the suave context
@@ -130,7 +130,7 @@ func readContext(ctx *cli.Context) (*vm.SuaveContext, error) {
 	backend := &vm.SuaveExecutionBackend{
 		ExternalWhitelist:      cfg.Whitelist,
 		ConfidentialEthBackend: suaveEthBackend,
-		DnsRegistry:            cfg.DnsRegistry,
+		ServiceAliasRegistry:   cfg.ServiceAlias,
 		EthBlockSigningKey:     blsKey,
 		EthBundleSigningKey:    ecdsaKey,
 	}
@@ -149,7 +149,7 @@ var (
 		Flags: []cli.Flag{
 			isLocalForgeFlag,
 			whiteListForgeFlag,
-			dnsRegistryForgeFlag,
+			serviceAliasForgeFlag,
 			ethBackendForgeFlag,
 			tomlConfigForgeFlag,
 		},
