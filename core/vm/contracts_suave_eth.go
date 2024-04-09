@@ -257,7 +257,7 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 	}
 
 	// hardcoded for goerli, should be passed in with the inputs
-	genesisForkVersion := phase0.Version{0x00, 0x00, 0x10, 0x20}
+	genesisForkVersion := phase0.Version{0x01, 0x01, 0x70, 0x00}
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
 	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, b.suaveContext.Backend.EthBlockSigningKey)
 	if err != nil {
