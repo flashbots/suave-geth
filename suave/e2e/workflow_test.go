@@ -1045,7 +1045,7 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 
 	builderPubkey := blockPayloadSentToRelay.Message.BuilderPubkey
 	signature := blockPayloadSentToRelay.Signature
-	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, phase0.Version{0x00, 0x00, 0x10, 0x20}, phase0.Root{})
+	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, phase0.Version{0x01, 0x01, 0x70, 0x00}, phase0.Root{})
 	ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, builderPubkey[:], signature[:])
 	require.NoError(t, err)
 	require.True(t, ok)
