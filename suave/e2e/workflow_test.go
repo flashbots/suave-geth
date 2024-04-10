@@ -925,7 +925,8 @@ func TestRelayBlockSubmissionContract(t *testing.T) {
 			return
 		}
 
-		genesisForkVersion := phase0.Version{0x00, 0x00, 0x10, 0x20}
+		// Hardcoded for Holesky
+		genesisForkVersion := phase0.Version{0x01, 0x01, 0x70, 0x00}
 		builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
 		ok, err := ssz.VerifySignature(blockPayloadSentToRelay.Message, builderSigningDomain, bls.PublicKeyToBytes(signingPubkey), blockPayloadSentToRelay.Signature[:])
 		require.NoError(t, err)
