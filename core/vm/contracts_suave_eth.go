@@ -266,23 +266,25 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		return nil, nil, fmt.Errorf("could not sign builder record: %w", err)
 	}
 
-	blobsBundle, err := parseBlobs(envelope.BlobsBundle)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not parse blobs: %w", err)
-	}
 	bidRequest := builderDeneb.SubmitBlockRequest{
 		Message:          &blockBidMsg,
 		ExecutionPayload: payload,
 		Signature:        signature,
-		BlobsBundle:      blobsBundle,
-	}
-
-	bidBytes, err := bidRequest.MarshalJSON()
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
+		BlobsBundle:      &builderDeneb.BlobsBundle{},
 	}
 
 	if len(relayUrl) != 0 {
+		// Only attach blobs if bid is submitted outside EVM
+		blobsBundle, err := parseBlobs(envelope.BlobsBundle)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not parse blobs: %w", err)
+		}
+		bidRequest.BlobsBundle = blobsBundle
+		bidBytes, err := bidRequest.MarshalJSON()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
+		}
+
 		res, err := b.submitEthBlockToRelay(relayUrl, bidBytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not submit block to relay: %w", err)
@@ -291,9 +293,12 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 	}
 
 	// Remove blobs before returning to prevent EVM from running out of memory
-	bidRequest.BlobsBundle = nil
-	bidBytes, _ = bidRequest.MarshalJSON() // Assume no error like above
-	envelope.BlobsBundle = nil
+	bidRequest.BlobsBundle = &builderDeneb.BlobsBundle{}
+	bidBytes, err := bidRequest.MarshalJSON()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
+	}
+	envelope.BlobsBundle = &dencun.BlobsBundleV1{}
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not marshal payload envelope: %w", err)
