@@ -194,7 +194,7 @@ var (
 
 			log.Info("Sending offchain confidential compute request", "kettle", clt.KettleAddress().String())
 
-			hash, err := sendConfRequest(clt, devchainKettleAddress, contractAddr, calldata, confInput)
+			hash, err := sendConfRequest(clt, clt.KettleAddress(), contractAddr, calldata, confInput)
 			if err != nil {
 				return err
 			}
