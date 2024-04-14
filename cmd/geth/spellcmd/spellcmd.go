@@ -194,7 +194,7 @@ var (
 
 			log.Info("Sending offchain confidential compute request", "kettle", clt.KettleAddress().String())
 
-			hash, err := sendConfRequest(clt, devchainKettleAddress, contractAddr, calldata, confInput)
+			hash, err := sendConfRequest(clt, contractAddr, calldata, confInput)
 			if err != nil {
 				return err
 			}
@@ -285,7 +285,7 @@ func getClient(ctx *cli.Context) (*sdk.Client, error) {
 	return clt, nil
 }
 
-func sendConfRequest(client *sdk.Client, kettleAddr, addr common.Address, calldata, confBytes []byte) (common.Hash, error) {
+func sendConfRequest(client *sdk.Client, addr common.Address, calldata, confBytes []byte) (common.Hash, error) {
 	signer, err := client.GetSigner()
 	if err != nil {
 		return common.Hash{}, err
@@ -303,7 +303,7 @@ func sendConfRequest(client *sdk.Client, kettleAddr, addr common.Address, callda
 
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
 		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: kettleAddr,
+			KettleAddress: client.KettleAddress(),
 			Nonce:         nonce,
 			To:            &addr,
 			Value:         nil,
