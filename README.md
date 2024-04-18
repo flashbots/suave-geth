@@ -41,17 +41,18 @@ curl -L https://suaveup.flashbots.net | bash
 $ make suave
 ```
 
-Now you have the `suave` binary in your Go bin directory. You can check this by running:
-
-```bash
-$ which suave
-$ suave --version
-```
+Now you can go to /build/bin and:
 
 Start the local devnet like this:
 
 ```bash
-$ suave --suave.dev
+$ ./suave-geth --suave.dev
+```
+
+Start the Rigil testnet like this:
+
+```bash
+$ ./suave-geth --rigil
 ```
 
 #### Using Docker
