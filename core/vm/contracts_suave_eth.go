@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -112,7 +113,8 @@ func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byt
 	return b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
 }
 
-func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID types.DataId, namespace string) ([]byte, []byte, error) {
+// This is a temp solution and will be replaced with block building session
+func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID types.DataId, relayUrl string) ([]byte, []byte, error) {
 	dataIDs := [][16]byte{}
 	// first check for merged record, else assume regular record
 	if mergedDataRecordsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(dataID, buildEthBlockAddr, "default:v0:mergedDataRecords"); err == nil {
@@ -256,8 +258,8 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		Value:                value,
 	}
 
-	// hardcoded for goerli, should be passed in with the inputs
-	genesisForkVersion := phase0.Version{0x00, 0x00, 0x10, 0x20}
+	// hardcoded for holesky, should be passed in with the inputs
+	genesisForkVersion := phase0.Version{0x01, 0x01, 0x70, 0x00}
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
 	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, b.suaveContext.Backend.EthBlockSigningKey)
 	if err != nil {
@@ -271,11 +273,32 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 		BlobsBundle:      &builderDeneb.BlobsBundle{},
 	}
 
+	if len(relayUrl) != 0 {
+		// Only attach blobs if bid is submitted outside EVM
+		blobsBundle, err := parseBlobs(envelope.BlobsBundle)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not parse blobs: %w", err)
+		}
+		bidRequest.BlobsBundle = blobsBundle
+		bidBytes, err := bidRequest.MarshalJSON()
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
+		}
+
+		res, err := b.submitEthBlockToRelay(relayUrl, bidBytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not submit block to relay: %w", err)
+		}
+		log.Info("submitted block to relay", "response", res)
+	}
+
+	// Remove blobs before returning to prevent EVM from running out of memory
+	bidRequest.BlobsBundle = &builderDeneb.BlobsBundle{}
 	bidBytes, err := bidRequest.MarshalJSON()
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not marshal builder record request: %w", err)
 	}
-
+	envelope.BlobsBundle = &dencun.BlobsBundleV1{}
 	envelopeBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not marshal payload envelope: %w", err)
@@ -496,4 +519,44 @@ func (c *suaveRuntime) fillMevShareBundle(dataID types.DataId) ([]byte, error) {
 	}
 
 	return json.Marshal(shareBundle)
+}
+
+func parseBlobs(bundle *dencun.BlobsBundleV1) (*builderDeneb.BlobsBundle, error) {
+	blobsBundle := &builderDeneb.BlobsBundle{}
+	for i, blob := range bundle.Blobs {
+		blobFixed, err := convertToFixedArray(blob, [131072]byte{})
+		if err != nil {
+			return nil, fmt.Errorf("could not convert blob to fixed array: %w", err)
+		}
+		blobsBundle.Blobs = append(blobsBundle.Blobs, blobFixed)
+
+		committmentFixed, err := convertToFixedArray(bundle.Commitments[i], [48]byte{})
+		if err != nil {
+			return nil, fmt.Errorf("could not convert commitments to fixed array: %w", err)
+		}
+		blobsBundle.Commitments = append(blobsBundle.Commitments, committmentFixed)
+
+		proofFixed, err := convertToFixedArray(bundle.Proofs[i], [48]byte{})
+		if err != nil {
+			return nil, fmt.Errorf("could not convert proofs to fixed array: %w", err)
+		}
+		blobsBundle.Proofs = append(blobsBundle.Proofs, proofFixed)
+	}
+
+	return blobsBundle, nil
+}
+
+func convertToFixedArray[T any](src []byte, dst T) (T, error) {
+	dstVal := reflect.ValueOf(&dst).Elem()
+	if dstVal.Kind() != reflect.Array {
+		return dst, errors.New("destination is not an array")
+	}
+
+	dstLen := dstVal.Len()
+	if len(src) > dstLen {
+		return dst, fmt.Errorf("source slice is too large: %d bytes", len(src))
+	}
+
+	reflect.Copy(dstVal, reflect.ValueOf(src))
+	return dst, nil
 }

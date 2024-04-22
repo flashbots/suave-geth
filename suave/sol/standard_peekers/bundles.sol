@@ -248,7 +248,7 @@ contract EthBlockContract is AnyBundleContract {
             alldataIds[i] = bidsByEGP[i].dataId;
         }
 
-        return buildAndEmit(blockArgs, blockHeight, alldataIds, "mevshare:v0");
+        return buildAndEmit(blockArgs, blockHeight, alldataIds, "");
     }
 
     function buildFromPool(Suave.BuildBlockArgs memory blockArgs, uint64 blockHeight) public returns (bytes memory) {
@@ -290,12 +290,12 @@ contract EthBlockContract is AnyBundleContract {
         Suave.BuildBlockArgs memory blockArgs,
         uint64 blockHeight,
         Suave.DataId[] memory records,
-        string memory namespace
+        string memory relayUrl
     ) public virtual returns (bytes memory) {
         require(Suave.isConfidential());
 
         (Suave.DataRecord memory blockBid, bytes memory builderBid) =
-            this.doBuild(blockArgs, blockHeight, records, namespace);
+            this.doBuild(blockArgs, blockHeight, records, relayUrl);
 
         emit BuilderBoostBidEvent(blockBid.id, builderBid);
         emit DataRecordEvent(blockBid.id, blockBid.decryptionCondition, blockBid.allowedPeekers);
@@ -352,12 +352,12 @@ contract EthBlockBidSenderContract is EthBlockContract {
         Suave.BuildBlockArgs memory blockArgs,
         uint64 blockHeight,
         Suave.DataId[] memory dataRecords,
-        string memory namespace
+        string memory relayUrl
     ) public virtual override returns (bytes memory) {
         require(Suave.isConfidential());
 
         (Suave.DataRecord memory blockDataRecord, bytes memory builderBid) =
-            this.doBuild(blockArgs, blockHeight, dataRecords, namespace);
+            this.doBuild(blockArgs, blockHeight, dataRecords, relayUrl);
         Suave.submitEthBlockToRelay(boostRelayUrl, builderBid);
 
         emit DataRecordEvent(blockDataRecord.id, blockDataRecord.decryptionCondition, blockDataRecord.allowedPeekers);

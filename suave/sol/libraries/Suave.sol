@@ -161,17 +161,17 @@ library Suave {
         }
     }
 
-    /// @notice Constructs an Ethereum block based on the provided data records.
+    /// @notice Constructs an Ethereum block based on the provided data records. No blobs are returned.
     /// @param blockArgs Arguments to build the block
     /// @param dataId ID of the data record with mev-share bundle data
-    /// @param namespace deprecated
+    /// @param relayUrl If specified the built block will be submitted to the relay
     /// @return blockBid Block Bid encoded in JSON
     /// @return executionPayload Execution payload encoded in JSON
-    function buildEthBlock(BuildBlockArgs memory blockArgs, DataId dataId, string memory namespace)
+    function buildEthBlock(BuildBlockArgs memory blockArgs, DataId dataId, string memory relayUrl)
         internal
         returns (bytes memory, bytes memory)
     {
-        (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, namespace));
+        (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, relayUrl));
         if (!success) {
             revert PeekerReverted(BUILD_ETH_BLOCK, data);
         }
