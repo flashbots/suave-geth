@@ -20,6 +20,8 @@ var (
 	ethBlockBidSenderContract    = newArtifact("bundles.sol/EthBlockBidSenderContract.json")
 	exampleCallSourceContract    = newArtifact("example.sol/ExampleEthCallSource.json")
 	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
+
+	mossBundle1 = newArtifact("moss.sol/Bundle1.json")
 )
 
 func newArtifact(name string) *Artifact {

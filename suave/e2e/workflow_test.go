@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
+	ethcatalyst "github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -1408,6 +1409,129 @@ func TestE2E_PrecompileInternalError(t *testing.T) {
 	}
 }
 
+type Moss1Bundle struct {
+	Txn1 []byte
+	Txn2 []byte
+}
+
+func TestE2E_Moss_1(t *testing.T) {
+	// validate that the engine API works as expected
+	fr := newFramework(t)
+	defer fr.Close()
+
+	genesisBlock := fr.suethSrv.CurrentBlock()
+	clt := &engineClient{rpc: fr.suethSrv.RPCNode()}
+
+	// WARNING: Nonce account checks are skipped.
+
+	// build the internal transaction, a simple transfer
+	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr2,
+		Value:    big.NewInt(1111),
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	txn1Marshal, err := txn1.MarshalBinary()
+	require.NoError(t, err)
+
+	bundle := &Moss1Bundle{
+		Txn1: txn1Marshal,
+		Txn2: txn1Marshal,
+	}
+	data, err := mossBundle1.Abi.Pack("applyFn", bundle)
+	require.NoError(t, err)
+
+	// Verify sending computation requests and onchain transactions to isConfidentialAddress
+	txn, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr4,
+		Value:    nil,
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+		Data:     data,
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	errs := fr.suethSrv.service.TxPool().AddRemotes([]*types.Transaction{txn})
+	require.NoError(t, errs[0])
+
+	// add a transaction to the pool
+	res, err := clt.ForkchoiceUpdatedV1(engine.ForkchoiceStateV1{
+		// update the fork choice to the current genesis block
+		HeadBlockHash: genesisBlock.Hash(),
+	}, &engine.PayloadAttributes{
+		// start the payload generation
+		Timestamp: uint64(time.Now().Unix()),
+	})
+	require.NoError(t, err)
+
+	fmt.Println("-- res --", res)
+}
+
+func TestE2E_Moss_2(t *testing.T) {
+	// validate that the engine API works as expected
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	// WARNING: Nonce account checks are skipped.
+
+	// build the internal transaction, a simple transfer
+	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr2,
+		Value:    big.NewInt(1111),
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	txn1Marshal, err := txn1.MarshalBinary()
+	require.NoError(t, err)
+
+	// send a confidential compute request
+	mossContract := sdk.GetContract(testAddr4, mossBundle1.Abi, clt)
+	_, err = mossContract.SendTransaction("emitTheBundle", []interface{}{txn1Marshal}, nil)
+	require.NoError(t, err)
+
+	// XXX: instrospect the mempool and check that there is a transaction there from the Suapp
+	pending, _ := fr.suethSrv.service.TxPool().Stats()
+	require.Equal(t, 1, pending)
+
+	// XXX: Advance the chain and seal a block with the
+
+	fmt.Println("===> BUILD THE BLOCK <===")
+
+	genesisBlock := fr.suethSrv.CurrentBlock()
+	eClt := &engineClient{rpc: fr.suethSrv.RPCNode()}
+
+	// add a transaction to the pool
+	res, err := eClt.ForkchoiceUpdatedV1(engine.ForkchoiceStateV1{
+		// update the fork choice to the current genesis block
+		HeadBlockHash: genesisBlock.Hash(),
+	}, &engine.PayloadAttributes{
+		// start the payload generation
+		Timestamp: uint64(time.Now().Unix()),
+	})
+	require.NoError(t, err)
+
+	fmt.Println("-- res --", res)
+}
+
+type engineClient struct {
+	rpc *rpc.Client
+}
+
+func (c *engineClient) ForkchoiceUpdatedV1(update engine.ForkchoiceStateV1, payloadAttributes *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
+	var resp engine.ForkChoiceResponse
+	err := c.rpc.Call(&resp, "engine_forkchoiceUpdatedV1", update, payloadAttributes)
+	return resp, err
+}
+
 type clientWrapper struct {
 	t *testing.T
 
@@ -1646,6 +1770,7 @@ var (
 	testAddr2 = crypto.PubkeyToAddress(testKey2.PublicKey)
 
 	testAddr3 = common.Address{0x3}
+	testAddr4 = common.Address{0x4}
 
 	testBalance = big.NewInt(2e18)
 
@@ -1677,6 +1802,7 @@ var (
 			newBlockBidAddress:  {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareContract.DeployedCode},
 			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
+			testAddr4:           {Balance: big.NewInt(0), Code: mossBundle1.DeployedCode},
 		},
 	}
 
@@ -1726,6 +1852,12 @@ func startSuethService(t *testing.T, genesis *core.Genesis, blocks []*types.Bloc
 	if err != nil {
 		t.Fatal("can't create eth service:", err)
 	}
+
+	// REGISTER THE ENGINE API SERVICE
+	if err := ethcatalyst.Register(n, ethservice); err != nil {
+		t.Fatalf("Failed to register the Engine API service: %v", err)
+	}
+
 	if err := n.Start(); err != nil {
 		t.Fatal("can't start node:", err)
 	}

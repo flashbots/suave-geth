@@ -126,6 +126,10 @@ library Suave {
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
+    address public constant MOSS_ADD_TRANSACTION = 0x1000000000000000000000000000000077777777;
+
+    address public constant MOSS_SEND_BUNDLE = 0x2000000000000000000000000000000077777777;
+
     address public constant NEW_BUILDER = 0x0000000000000000000000000000000053200001;
 
     address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
@@ -288,6 +292,29 @@ library Suave {
         }
 
         return data;
+    }
+
+    /// @notice
+    /// @param txn Transaction to add
+    /// @return logs Logs emitted during the simulation
+    /// @return success Whether the transaction was successful or not
+    /// @return error Error message if any
+    function mossAddTransaction(bytes memory txn) internal returns (SimulatedLog[] memory, bool, string memory) {
+        (bool success, bytes memory data) = MOSS_ADD_TRANSACTION.call(abi.encode(txn));
+        if (!success) {
+            revert PeekerReverted(MOSS_ADD_TRANSACTION, data);
+        }
+
+        return abi.decode(data, (SimulatedLog[], bool, string));
+    }
+
+    /// @notice
+    /// @param bundle
+    function mossSendBundle(bytes memory bundle) internal {
+        (bool success, bytes memory data) = MOSS_SEND_BUNDLE.call(abi.encode(bundle));
+        if (!success) {
+            revert PeekerReverted(MOSS_SEND_BUNDLE, data);
+        }
     }
 
     /// @notice Initializes a new remote builder session
