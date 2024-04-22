@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -862,7 +863,27 @@ func (w *worker) updateSnapshot(env *environment) {
 	w.snapshotState = env.state.Copy()
 }
 
+func (w *worker) AddTransaction(txn *types.Transaction) (*types.Receipt, error) {
+	_, err := w.commitTransaction(w.current, txn)
+	if err != nil {
+		panic(err)
+		return nil, err
+	}
+
+	receipt := w.current.receipts[len(w.current.receipts)-1]
+	return receipt, nil
+}
+
+func (w *worker) SendBundleToPool(to common.Address, bundle []byte) error {
+	panic("not enabled?")
+}
+
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
+	fmt.Println("__ COMMIT TRANSACTION __")
+	fmt.Println(tx.To(), tx.Data())
+
+	vm.Moss = w // This is not fancy but works
+
 	var (
 		snap = env.state.Snapshot()
 		gp   = env.gasPool.Gas()
@@ -903,6 +924,7 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 		if tx == nil {
 			break
 		}
+
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
 		from, _ := types.Sender(env.signer, tx)

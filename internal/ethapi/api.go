@@ -1984,11 +1984,53 @@ func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
 
 var magicBytes = hexutil.MustDecode("0x543543")
 
+type moss struct {
+	signer  types.Signer
+	backend Backend
+}
+
+func (m *moss) AddTransaction(txn *types.Transaction) (*types.Receipt, error) {
+	panic("not enabled")
+}
+
+func (m *moss) SendBundleToPool(to common.Address, bundle []byte) error {
+	// testKey is a private key to use for funding a tester account.
+	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+
+	fmt.Println("-- send the bundle to the pool --")
+	fmt.Println(bundle)
+
+	// build the internal transaction, a simple transfer
+	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &to,
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+		Data:     bundle,
+	}), m.signer, testKey)
+	if err != nil {
+		return fmt.Errorf("failed to sign transaction: %w", err)
+	}
+
+	fmt.Println("-- send transaction to the pool --")
+	fmt.Println(txn1)
+
+	if err := m.backend.SendTx(context.Background(), txn1); err != nil {
+		return err
+	}
+	return nil
+}
+
 // TODO: should be its own api
 func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
+
+	vm.Moss = &moss{
+		backend: b,
+		signer:  types.MakeSigner(b.ChainConfig(), header.Number, header.Time),
+	}
 
 	// TODO: copy the inner, but only once
 	confidentialRequest, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)

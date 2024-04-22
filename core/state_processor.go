@@ -154,6 +154,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		return nil, err
 	}
+	msg.SkipAccountChecks = true // FIX
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, config, cfg)

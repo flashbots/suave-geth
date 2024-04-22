@@ -42,17 +42,19 @@ type (
 )
 
 func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
+	// console-log precompile available in the suave context (DEBUG)
+	if addr == consolelog.Console2ContractAddr {
+		return &consoleLogPrecompile{}, true
+	}
+	if isPrecompileAddr(addr) {
+		suaveContext := NewRuntimeSuaveContext(evm, addr)
+		return NewSuavePrecompiledContractWrapper(addr, suaveContext), true
+	}
+
 	// First check confidential precompiles, only then continue to the regular ones
 	if evm.chainRules.IsSuave {
-		// console-log precompile available in the suave context
-		if addr == consolelog.Console2ContractAddr {
-			return &consoleLogPrecompile{}, true
-		}
-
-		if isPrecompileAddr(addr) && evm.Config.IsConfidential {
-			suaveContext := NewRuntimeSuaveContext(evm, addr)
-			return NewSuavePrecompiledContractWrapper(addr, suaveContext), true
-		}
+		// For simplicity, assume everything is always the MEVM, later on the MEVM is
+		// only accessibel in the Moss execution context
 	}
 	var precompiles map[common.Address]PrecompiledContract
 	switch {
@@ -174,7 +176,7 @@ func NewConfidentialEVM(suaveContext SuaveContext, blockCtx BlockContext, txCtx 
 func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {
 	evm.TxContext = txCtx
 	evm.StateDB = statedb
-	evm.SuaveContext = nil
+	// evm.SuaveContext = nil
 }
 
 // Cancel cancels any running EVM operation. This may be called concurrently and

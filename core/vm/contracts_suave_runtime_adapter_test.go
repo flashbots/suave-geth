@@ -99,6 +99,14 @@ func (m *mockRuntime) randomBytes(length uint8) ([]byte, error) {
 	return bytes, nil
 }
 
+func (m *mockRuntime) mossAddTransaction(txn []byte) ([]types.SimulatedLog, bool, string, error) {
+	return nil, false, "", nil
+}
+
+func (m *mockRuntime) mossSendBundle(bundle []byte) error {
+	return nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},
