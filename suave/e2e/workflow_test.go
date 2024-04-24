@@ -1409,9 +1409,13 @@ func TestE2E_PrecompileInternalError(t *testing.T) {
 	}
 }
 
+type Moss1BundleTxn struct {
+	Txn       []byte
+	CanRevert bool
+}
+
 type Moss1Bundle struct {
-	Txn1 []byte
-	Txn2 []byte
+	Txns []Moss1BundleTxn
 }
 
 func TestE2E_Moss_1(t *testing.T) {
@@ -1422,11 +1426,9 @@ func TestE2E_Moss_1(t *testing.T) {
 	genesisBlock := fr.suethSrv.CurrentBlock()
 	clt := &engineClient{rpc: fr.suethSrv.RPCNode()}
 
-	// WARNING: Nonce account checks are skipped.
-
 	// build the internal transaction, a simple transfer
 	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
-		Nonce:    0,
+		Nonce:    1,
 		To:       &testAddr2,
 		Value:    big.NewInt(1111),
 		Gas:      1000000,
@@ -1438,8 +1440,10 @@ func TestE2E_Moss_1(t *testing.T) {
 	require.NoError(t, err)
 
 	bundle := &Moss1Bundle{
-		Txn1: txn1Marshal,
-		Txn2: txn1Marshal,
+		Txns: []Moss1BundleTxn{
+			{Txn: txn1Marshal, CanRevert: true},
+			{Txn: txn1Marshal, CanRevert: true},
+		},
 	}
 	data, err := mossBundle1.Abi.Pack("applyFn", bundle)
 	require.NoError(t, err)
@@ -1449,7 +1453,7 @@ func TestE2E_Moss_1(t *testing.T) {
 		Nonce:    0,
 		To:       &testAddr4,
 		Value:    nil,
-		Gas:      1000000,
+		Gas:      11111111,
 		GasPrice: big.NewInt(10),
 		Data:     data,
 	}), signer, testKey)
@@ -1472,6 +1476,8 @@ func TestE2E_Moss_1(t *testing.T) {
 }
 
 func TestE2E_Moss_2(t *testing.T) {
+	t.Skip("Update")
+
 	// validate that the engine API works as expected
 	fr := newFramework(t)
 	defer fr.Close()

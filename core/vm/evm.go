@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -49,6 +50,16 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 	if isPrecompileAddr(addr) {
 		suaveContext := NewRuntimeSuaveContext(evm, addr)
 		return NewSuavePrecompiledContractWrapper(addr, suaveContext), true
+	}
+
+	// check if this is somethign for the disaptch table
+	if evm.DispatchTable != nil {
+		fmt.Println("--- addr ---", addr)
+		fmt.Println(evm.DispatchTable.GetPrecompiled(addr))
+
+		if p, ok := evm.DispatchTable.GetPrecompiled(addr); ok {
+			return p, true
+		}
 	}
 
 	// First check confidential precompiles, only then continue to the regular ones
@@ -139,6 +150,9 @@ type EVM struct {
 	// Set only if EVM was instantiated with NewConfidentialVM
 	// !!! WILL PANIC IF CONFIDENTIAL EXECUTION REQUESTED AND THIS IS NOT SET
 	SuaveContext *SuaveContext
+
+	// Suave MOSS
+	DispatchTable *DispatchTable
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -176,7 +190,7 @@ func NewConfidentialEVM(suaveContext SuaveContext, blockCtx BlockContext, txCtx 
 func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {
 	evm.TxContext = txCtx
 	evm.StateDB = statedb
-	// evm.SuaveContext = nil
+	evm.SuaveContext = nil
 }
 
 // Cancel cancels any running EVM operation. This may be called concurrently and

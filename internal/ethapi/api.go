@@ -2004,7 +2004,7 @@ func (m *moss) SendBundleToPool(to common.Address, bundle []byte) error {
 	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
 		Nonce:    0,
 		To:       &to,
-		Gas:      1000000,
+		Gas:      11111111,
 		GasPrice: big.NewInt(10),
 		Data:     bundle,
 	}), m.signer, testKey)
@@ -2021,16 +2021,23 @@ func (m *moss) SendBundleToPool(to common.Address, bundle []byte) error {
 	return nil
 }
 
+type moss1 struct {
+}
+
+func (m *moss1) SendBundle(tx []byte) error {
+	fmt.Println("__ SEND BUNDLE __")
+	return nil
+}
+
+func (m *moss1) Address() common.Address {
+	return common.HexToAddress("0x1234567890123456789012345678901234567890")
+}
+
 // TODO: should be its own api
 func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types.Header, tx *types.Transaction, msg *core.Message, isCall bool) (*types.Transaction, *core.ExecutionResult, func() error, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
-
-	vm.Moss = &moss{
-		backend: b,
-		signer:  types.MakeSigner(b.ChainConfig(), header.Number, header.Time),
-	}
 
 	// TODO: copy the inner, but only once
 	confidentialRequest, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx)
@@ -2052,6 +2059,8 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	blockCtx := core.NewEVMBlockContext(header, NewChainContext(ctx, b), nil)
 	suaveCtx := b.SuaveContext(tx, confidentialRequest)
 	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall, Tracer: storageAccessTracer}, &blockCtx, &suaveCtx)
+
+	evm.AddDispatchTable(&moss1{})
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)

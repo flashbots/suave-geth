@@ -863,26 +863,80 @@ func (w *worker) updateSnapshot(env *environment) {
 	w.snapshotState = env.state.Copy()
 }
 
-func (w *worker) AddTransaction(txn *types.Transaction) (*types.Receipt, error) {
-	_, err := w.commitTransaction(w.current, txn)
-	if err != nil {
-		panic(err)
+type moss2 struct {
+	env *environment
+	w   *worker
+}
+
+type addTransactionResult struct {
+	Error bool
+}
+
+func (m *moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
+	fmt.Println("__ TXN __")
+	fmt.Println(txnRaw)
+
+	var txn types.Transaction
+	if err := txn.UnmarshalBinary(txnRaw); err != nil {
 		return nil, err
 	}
 
-	receipt := w.current.receipts[len(w.current.receipts)-1]
-	return receipt, nil
+	// apply the transaction
+	_, err := m.w.commitTransaction(m.env, &txn)
+
+	fmt.Println("-- commit transcation result --")
+	fmt.Println(err)
+
+	if err != nil {
+		return &addTransactionResult{Error: true}, nil
+	}
+
+	fmt.Println("=Z=ZZZZZZZZ")
+	return &addTransactionResult{Error: false}, nil
 }
 
-func (w *worker) SendBundleToPool(to common.Address, bundle []byte) error {
-	panic("not enabled?")
+func (m *moss2) Address() common.Address {
+	return common.HexToAddress("0x1234567890123456789012345678901234567891")
+}
+
+func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) error {
+	fmt.Println("__ APPLY MEVM TRANSACTION __")
+
+	// take a snapshot of the state to revert if things fail
+	snap := env.state.Snapshot()
+	gp := env.gasPool.Gas()
+	receiptsIndx := len(env.receipts)
+
+	moss := &moss2{
+		w:   w,
+		env: env,
+	}
+
+	// MOSS TRANSACTION, apply the MEVM
+	_, err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss})
+	if err != nil {
+		env.state.RevertToSnapshot(snap)
+		env.gasPool.SetGas(gp)
+
+		// revert receipts and txns
+		env.receipts = env.receipts[:receiptsIndx]
+		env.txs = env.txs[:receiptsIndx]
+
+		return err
+	}
+
+	return nil
 }
 
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
-	fmt.Println("__ COMMIT TRANSACTION __")
-	fmt.Println(tx.To(), tx.Data())
-
-	vm.Moss = w // This is not fancy but works
+	if tx.Gas() == 11111111 {
+		// TODO: Since we do not have a special MossBundle txn type yet I use the gas limit to indiciate that
+		// this transaction is a moss transaction
+		if err := w.commitMEVMTransaction(env, tx); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
 
 	var (
 		snap = env.state.Snapshot()
