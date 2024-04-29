@@ -223,30 +223,11 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		body = bytes.NewReader(request.Body)
 	}
 
-	var allowed bool
-	// resolve dns if possible
-	if endpoint, ok := s.suaveContext.Backend.ServiceAliasRegistry[request.Url]; ok {
-		request.Url = endpoint
-	} else {
-		// decode the url and check if the domain is allowed
-		parsedURL, err := url.Parse(request.Url)
-		if err != nil {
-			panic(err)
-		}
-
-		// check if the domain is allowed
-		for _, allowedDomain := range s.suaveContext.Backend.ExternalWhitelist {
-			if allowedDomain == "*" || allowedDomain == parsedURL.Hostname() {
-				allowed = true
-				break
-			}
-		}
-		if !allowed {
-			return nil, fmt.Errorf("domain %s is not allowed", parsedURL.Hostname())
-		}
+	url, err := s.resolveURL(request.Url)
+	if err != nil {
+		return nil, err
 	}
-
-	req, err := http.NewRequest(request.Method, request.Url, body)
+	req, err := http.NewRequest(request.Method, url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -289,6 +270,33 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		return nil, fmt.Errorf("http error: %s: %v", resp.Status, data)
 	}
 	return data, nil
+}
+
+func (s *suaveRuntime) resolveURL(urlOrServiceName string) (string, error) {
+	var allowed bool
+	// resolve dns if possible
+	if endpoint, ok := s.suaveContext.Backend.ServiceAliasRegistry[urlOrServiceName]; ok {
+		return endpoint, nil
+	}
+
+	// decode the url and check if the domain is allowed
+	parsedURL, err := url.Parse(urlOrServiceName)
+	if err != nil {
+		return "", err
+	}
+
+	// check if the domain is allowed
+	for _, allowedDomain := range s.suaveContext.Backend.ExternalWhitelist {
+		if allowedDomain == "*" || allowedDomain == parsedURL.Hostname() {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return "", fmt.Errorf("domain %s is not allowed", parsedURL.Hostname())
+	}
+
+	return urlOrServiceName, nil
 }
 
 func (s *suaveRuntime) newBuilder() (string, error) {

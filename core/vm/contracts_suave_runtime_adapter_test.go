@@ -15,6 +15,10 @@ var _ SuaveRuntime = &mockRuntime{}
 type mockRuntime struct {
 }
 
+func (m *mockRuntime) buildEthBlockTo(execNode string, blockArgs types.BuildBlockArgs, dataID types.DataId, relayUrl string) ([]byte, []byte, error) {
+	return nil, nil, nil
+}
+
 func (m *mockRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataId types.DataId, namespace string) ([]byte, []byte, error) {
 	return []byte{0x1}, []byte{0x1}, nil
 }

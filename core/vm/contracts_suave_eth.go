@@ -18,6 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	suave_backends "github.com/ethereum/go-ethereum/suave/backends"
+	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/holiman/uint256"
@@ -113,8 +115,12 @@ func (b *suaveRuntime) ethcall(contractAddr common.Address, input []byte) ([]byt
 	return b.suaveContext.Backend.ConfidentialEthBackend.Call(context.Background(), contractAddr, input)
 }
 
-// This is a temp solution and will be replaced with block building session
 func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID types.DataId, relayUrl string) ([]byte, []byte, error) {
+	return b.buildEthBlockTo("", blockArgs, dataID, relayUrl)
+}
+
+// This is a temp solution and will be replaced with block building session
+func (b *suaveRuntime) buildEthBlockTo(execNode string, blockArgs types.BuildBlockArgs, dataID types.DataId, relayUrl string) ([]byte, []byte, error) {
 	dataIDs := [][16]byte{}
 	// first check for merged record, else assume regular record
 	if mergedDataRecordsBytes, err := b.suaveContext.Backend.ConfidentialStore.Retrieve(dataID, buildEthBlockAddr, "default:v0:mergedDataRecords"); err == nil {
@@ -214,8 +220,20 @@ func (b *suaveRuntime) buildEthBlock(blockArgs types.BuildBlockArgs, dataID type
 
 	log.Info("requesting a block be built", "mergedBundles", mergedBundles)
 
-	envelope, err := b.suaveContext.Backend.ConfidentialEthBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
+	var confBackend suave.ConfidentialEthBackend
+	if execNode == "" {
+		// Use the backend configured with --suave.eth.remote-endpoint
+		confBackend = b.suaveContext.Backend.ConfidentialEthBackend
+	} else {
+		// Resolve the url from the execNode
+		url, err := b.resolveURL(execNode)
+		if err != nil {
+			return nil, nil, err
+		}
+		confBackend = suave_backends.NewRemoteEthBackend(url)
+	}
 
+	envelope, err := confBackend.BuildEthBlockFromBundles(context.TODO(), &blockArgs, mergedBundles)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not build eth block: %w", err)
 	}
