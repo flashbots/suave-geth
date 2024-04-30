@@ -1171,12 +1171,20 @@ func TestE2EOnChainStateTransition(t *testing.T) {
 	sourceContract := sdk.GetContract(contractAddr, exampleCallSourceContract.Abi, clt)
 
 	// a confidential request cannot make a state change in the Suapp
-	_, err := sourceContract.SendTransaction("ilegalStateTransition", []interface{}{}, nil)
-	require.Error(t, err)
-
-	// a confidential request can create a new "temporal" contract and change the state there
-	_, err = sourceContract.SendTransaction("offchainCreateNewContract", []interface{}{}, nil)
+	_, err := sourceContract.SendTransaction("addCount", []interface{}{}, nil)
 	require.NoError(t, err)
+
+	fmt.Println("===> SECOND CALL <===")
+
+	// a confidential request cannot make a state change in the Suapp
+	_, err = sourceContract.SendTransaction("addCount", []interface{}{}, nil)
+	require.NoError(t, err)
+
+	/*
+		// a confidential request can create a new "temporal" contract and change the state there
+		_, err = sourceContract.SendTransaction("offchainCreateNewContract", []interface{}{}, nil)
+		require.NoError(t, err)
+	*/
 }
 
 func TestE2EConsoleLog(t *testing.T) {

@@ -161,6 +161,10 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 	return sdb, nil
 }
 
+func (s *StateDB) SetSnapshot(snapshot snapshot.Snapshot) {
+	s.snap = snapshot
+}
+
 // StartPrefetcher initializes a new trie prefetcher to pull in nodes from the
 // state trie concurrently while the state is mutated so that when we reach the
 // commit phase, most of the needed data is already hot.
@@ -876,6 +880,15 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	}
 	// Invalidate journal because reverting across transactions is not allowed.
 	s.clearJournalAndRefund()
+}
+
+func (s *StateDB) GetModifiedState(addr common.Address) map[common.Hash]common.Hash {
+	obj, exist := s.stateObjects[addr]
+	if !exist {
+		return nil
+	}
+
+	return obj.dirtyStorage
 }
 
 // IntermediateRoot computes the current root hash of the state trie.

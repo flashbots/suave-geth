@@ -12,6 +12,10 @@ contract ExampleEthCallSource {
         require(num == expected);
     }
 
+    function addCount() public {
+        state++;
+    }
+
     function ilegalStateTransition() public payable {
         state++;
     }

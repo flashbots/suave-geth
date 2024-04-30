@@ -48,7 +48,7 @@ func (l *LocalConfidentialStore) InitRecord(record suave.DataRecord) error {
 
 	_, found := l.records[record.Id]
 	if found {
-		return suave.ErrRecordAlreadyPresent
+		return nil
 	}
 
 	l.records[record.Id] = record

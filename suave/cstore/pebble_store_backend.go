@@ -72,7 +72,7 @@ func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 		if err == nil {
 			closer.Close()
 		}
-		return suave.ErrRecordAlreadyPresent
+		return nil
 	}
 
 	data, err := json.Marshal(record)

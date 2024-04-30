@@ -39,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -1984,43 +1985,6 @@ func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
 
 var magicBytes = hexutil.MustDecode("0x543543")
 
-type moss struct {
-	signer  types.Signer
-	backend Backend
-}
-
-func (m *moss) AddTransaction(txn *types.Transaction) (*types.Receipt, error) {
-	panic("not enabled")
-}
-
-func (m *moss) SendBundleToPool(to common.Address, bundle []byte) error {
-	// testKey is a private key to use for funding a tester account.
-	testKey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-
-	fmt.Println("-- send the bundle to the pool --")
-	fmt.Println(bundle)
-
-	// build the internal transaction, a simple transfer
-	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
-		Nonce:    0,
-		To:       &to,
-		Gas:      11111111,
-		GasPrice: big.NewInt(10),
-		Data:     bundle,
-	}), m.signer, testKey)
-	if err != nil {
-		return fmt.Errorf("failed to sign transaction: %w", err)
-	}
-
-	fmt.Println("-- send transaction to the pool --")
-	fmt.Println(txn1)
-
-	if err := m.backend.SendTx(context.Background(), txn1); err != nil {
-		return err
-	}
-	return nil
-}
-
 type moss1 struct {
 }
 
@@ -2031,6 +1995,65 @@ func (m *moss1) SendBundle(tx []byte) error {
 
 func (m *moss1) Address() common.Address {
 	return common.HexToAddress("0x1234567890123456789012345678901234567890")
+}
+
+/*
+// confState is a wrapper around the state.StateDB that fetches the state
+// from the confidential store
+type confState struct {
+	*state.StateDB
+
+	confStore vm.ConfidentialStore
+	record    types.DataRecord
+}
+
+func (c *confState) GetCommittedState(common.Address, common.Hash) common.Hash {
+	return common.Hash{}
+}
+*/
+
+type confSnap struct {
+	record      types.DataRecord
+	confStore   vm.ConfidentialStore
+	accountHash common.Hash
+}
+
+func (c *confSnap) Root() common.Hash {
+	return common.Hash{}
+}
+
+func (c *confSnap) Account(hash common.Hash) (*snapshot.Account, error) {
+	// it is okay to fail here since it will default to the state to query
+	return nil, fmt.Errorf("not found")
+}
+
+func (c *confSnap) AccountRLP(hash common.Hash) ([]byte, error) {
+	panic("TODO conf store state wrapper. not implemented")
+}
+
+func (c *confSnap) set(k, val common.Hash) error {
+	v, _ := rlp.EncodeToBytes(common.TrimLeftZeroes(val[:]))
+	_, err := c.confStore.Store(c.record.Id, common.Address{}, crypto.Keccak256Hash(k[:]).Hex(), v)
+	return err
+}
+
+func (c *confSnap) Storage(accountHash, storageHash common.Hash) ([]byte, error) {
+	if accountHash != c.accountHash {
+		return nil, fmt.Errorf("not found")
+	}
+
+	fmt.Println("RETRIEVE", c.record.Id, storageHash.Hex())
+
+	// now we cooking, it is querying storage of the suapp
+	data, err := c.confStore.Retrieve(c.record.Id, common.Address{}, storageHash.Hex())
+	if err != nil {
+		fmt.Println("X", err)
+		return nil, err
+	}
+
+	fmt.Println("=>", data)
+
+	return data, nil
 }
 
 // TODO: should be its own api
@@ -2060,6 +2083,30 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	suaveCtx := b.SuaveContext(tx, confidentialRequest)
 	evm, storeFinalize, vmError := b.GetMEVM(ctx, msg, state, header, &vm.Config{IsConfidential: true, NoBaseFee: isCall, Tracer: storageAccessTracer}, &blockCtx, &suaveCtx)
 
+	// we can replace the state here because GetMEVM only uses it to initialize
+	// create a new entry in the confidential store for this Suapp contract
+	salt := suave.DataId{}
+	copy(salt[:], msg.To[:16])
+
+	record, err := suaveCtx.Backend.ConfidentialStore.InitRecord(types.DataRecord{
+		Salt:                salt,
+		DecryptionCondition: 0,
+		AllowedPeekers:      []common.Address{{}},
+		AllowedStores:       []common.Address{{}},
+		Version:             "internal-" + msg.To.Hex(),
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	conf2 := &confSnap{
+		record:      record,
+		confStore:   suaveCtx.Backend.ConfidentialStore,
+		accountHash: crypto.Keccak256Hash(msg.To[:]),
+	}
+	state.SetSnapshot(conf2)
+
+	// add the new precompiles
 	evm.AddDispatchTable(&moss1{})
 
 	// Wait for the context to be done and cancel the evm. Even if the
@@ -2110,9 +2157,21 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		}
 	}
 
-	if storageAccessTracer.hasStoredState {
-		return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
+	// Take the updated state for the CONTRACT only and apply it to the conf store
+	for k, v := range state.GetModifiedState(*msg.To) {
+		fmt.Println("_ SET => ", k, v)
+
+		if err := conf2.set(k, v); err != nil {
+			return nil, nil, nil, err
+		}
 	}
+
+	/*
+		// We do not need this anymore since the state goes to the confidential store
+		if storageAccessTracer.hasStoredState {
+			return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
+		}
+	*/
 
 	// Check for call in return
 	var computeResult []byte

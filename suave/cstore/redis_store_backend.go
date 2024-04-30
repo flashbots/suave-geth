@@ -102,7 +102,7 @@ func (r *RedisStoreBackend) InitRecord(record suave.DataRecord) error {
 
 	err := r.client.Get(r.ctx, key).Err()
 	if !errors.Is(err, redis.Nil) {
-		return suave.ErrRecordAlreadyPresent
+		return nil
 	}
 
 	data, err := json.Marshal(record)
