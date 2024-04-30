@@ -2042,17 +2042,11 @@ func (c *confSnap) Storage(accountHash, storageHash common.Hash) ([]byte, error)
 		return nil, fmt.Errorf("not found")
 	}
 
-	fmt.Println("RETRIEVE", c.record.Id, storageHash.Hex())
-
 	// now we cooking, it is querying storage of the suapp
 	data, err := c.confStore.Retrieve(c.record.Id, common.Address{}, storageHash.Hex())
 	if err != nil {
-		fmt.Println("X", err)
 		return nil, err
 	}
-
-	fmt.Println("=>", data)
-
 	return data, nil
 }
 
@@ -2159,19 +2153,10 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 	// Take the updated state for the CONTRACT only and apply it to the conf store
 	for k, v := range state.GetModifiedState(*msg.To) {
-		fmt.Println("_ SET => ", k, v)
-
 		if err := conf2.set(k, v); err != nil {
 			return nil, nil, nil, err
 		}
 	}
-
-	/*
-		// We do not need this anymore since the state goes to the confidential store
-		if storageAccessTracer.hasStoredState {
-			return nil, nil, nil, fmt.Errorf("confidential request cannot modify state storage")
-		}
-	*/
 
 	// Check for call in return
 	var computeResult []byte
