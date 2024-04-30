@@ -108,6 +108,8 @@ library Suave {
 
     address public constant BUILD_ETH_BLOCK = 0x0000000000000000000000000000000042100001;
 
+    address public constant BUILD_ETH_BLOCK_TO = 0x0000000000000000000000000000000042100006;
+
     address public constant CONFIDENTIAL_INPUTS = 0x0000000000000000000000000000000042010001;
 
     address public constant CONFIDENTIAL_RETRIEVE = 0x0000000000000000000000000000000042020001;
@@ -174,6 +176,28 @@ library Suave {
         (bool success, bytes memory data) = BUILD_ETH_BLOCK.call(abi.encode(blockArgs, dataId, relayUrl));
         if (!success) {
             revert PeekerReverted(BUILD_ETH_BLOCK, data);
+        }
+
+        return abi.decode(data, (bytes, bytes));
+    }
+
+    /// @notice Constructs an Ethereum block based on the provided data records. No blobs are returned.
+    /// @param executionNodeURL URL (or service name) of the execution node
+    /// @param blockArgs Arguments to build the block
+    /// @param dataId ID of the data record with mev-share bundle data
+    /// @param relayUrl If specified the built block will be submitted to the relay
+    /// @return blockBid Block Bid encoded in JSON
+    /// @return executionPayload Execution payload encoded in JSON
+    function buildEthBlockTo(
+        string memory executionNodeURL,
+        BuildBlockArgs memory blockArgs,
+        DataId dataId,
+        string memory relayUrl
+    ) internal returns (bytes memory, bytes memory) {
+        (bool success, bytes memory data) =
+            BUILD_ETH_BLOCK_TO.call(abi.encode(executionNodeURL, blockArgs, dataId, relayUrl));
+        if (!success) {
+            revert PeekerReverted(BUILD_ETH_BLOCK_TO, data);
         }
 
         return abi.decode(data, (bytes, bytes));

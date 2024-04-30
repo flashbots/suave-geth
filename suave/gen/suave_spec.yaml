@@ -262,6 +262,30 @@ functions:
         - name: executionPayload
           type: bytes
           description: "Execution payload encoded in JSON"
+  - name: buildEthBlockTo
+    address: "0x0000000000000000000000000000000042100006"
+    description: "Constructs an Ethereum block based on the provided data records. No blobs are returned."
+    input:
+      - name: executionNodeURL
+        type: string
+        description: "URL (or service name) of the execution node"
+      - name: blockArgs
+        type: BuildBlockArgs
+        description: "Arguments to build the block"
+      - name: dataId
+        type: DataId
+        description: "ID of the data record with mev-share bundle data"
+      - name: relayUrl
+        type: string
+        description: "If specified the built block will be submitted to the relay"
+    output:
+      fields:
+        - name: blockBid
+          type: bytes
+          description: "Block Bid encoded in JSON"
+        - name: executionPayload
+          type: bytes
+          description: "Execution payload encoded in JSON"
   - name: submitEthBlockToRelay
     address: "0x0000000000000000000000000000000042100002"
     description: "Submits a given builderBid to a mev-boost relay."
