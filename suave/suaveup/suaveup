@@ -56,20 +56,19 @@ else
     exit 1
 fi
 
-# use tar to extract the downloaded file and move it to /usr/local/bin
+# use tar to extract the downloaded file and move it to ~/.suave
 echo "Extracting suave-geth_${VERSION}_${ARCH_STRING}.zip ..."
 unzip -qq -o suave-geth_${VERSION}_${ARCH_STRING}.zip
 chmod +x suave-geth
 
-if [ ! -d "/usr/local" ]; then
-    sudo mkdir /usr/local
-fi
-if [ ! -d "/usr/local/bin" ]; then
-    sudo mkdir /usr/local/bin
-fi
+BASE_DIR="${XDG_CONFIG_HOME:-$HOME}"
+SUAVE_DIR="${SUAVE_DIR-"$BASE_DIR/.suave"}"
+SUAVE_BIN_DIR="$SUAVE_DIR/bin"
 
-echo "Moving suave-geth to /usr/local/bin ..."
-sudo mv suave-geth /usr/local/bin/suave-geth
+mkdir -p "$SUAVE_BIN_DIR"
+
+echo "Moving suave-geth to ${SUAVE_BIN_DIR}..."
+mv suave-geth $SUAVE_BIN_DIR/suave-geth
 rm suave-geth_${VERSION}_${ARCH_STRING}.zip
 
 echo "Installed suave-geth $VERSION ✅ "
