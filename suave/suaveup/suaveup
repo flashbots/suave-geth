@@ -56,7 +56,7 @@ else
     exit 1
 fi
 
-# use tar to extract the downloaded file and move it to ~/.suave
+# use tar to extract the downloaded file and move it to the SUAVE_BIN_DIR directory
 echo "Extracting suave-geth_${VERSION}_${ARCH_STRING}.zip ..."
 unzip -qq -o suave-geth_${VERSION}_${ARCH_STRING}.zip
 chmod +x suave-geth
@@ -71,5 +71,39 @@ echo "Moving suave-geth to ${SUAVE_BIN_DIR}..."
 mv suave-geth $SUAVE_BIN_DIR/suave-geth
 rm suave-geth_${VERSION}_${ARCH_STRING}.zip
 
+# Pick the right shell profile file
+case $SHELL in
+*/zsh)
+    PROFILE="${ZDOTDIR-"$HOME"}/.zshenv"
+    PREF_SHELL=zsh
+    ;;
+*/bash)
+    PROFILE=$HOME/.bashrc
+    PREF_SHELL=bash
+    ;;
+*/fish)
+    PROFILE=$HOME/.config/fish/config.fish
+    PREF_SHELL=fish
+    ;;
+*/ash)
+    PROFILE=$HOME/.profile
+    PREF_SHELL=ash
+    ;;
+*)
+    echo "suaveup: could not detect shell, manually add ${SUAVE_BIN_DIR} to your PATH."
+    exit 1
+esac
+
+# Add suaveup if it isn't already in PATH.
+if [[ ":$PATH:" != *":${SUAVE_BIN_DIR}:"* ]]; then
+    # Add the suaveup directory to the path and ensure the old PATH variables remain.
+    # If the shell is fish, echo fish_add_path instead of export.
+    if [[ "$PREF_SHELL" == "fish" ]]; then
+        echo >> "$PROFILE" && echo "fish_add_path -a $SUAVE_BIN_DIR" >> "$PROFILE"
+    else
+        echo >> "$PROFILE" && echo "export PATH=\"\$PATH:$SUAVE_BIN_DIR\"" >> "$PROFILE"
+    fi
+fi
+
 echo "Installed suave-geth $VERSION ✅ "
-echo "You can confirm by running 'suave-geth version'"
+echo "Run 'source $PROFILE' or start a new terminal session to add suave-geth to your PATH, then check the installation by running 'suave-geth version'"
