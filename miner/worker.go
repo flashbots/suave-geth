@@ -873,9 +873,6 @@ type addTransactionResult struct {
 }
 
 func (m *moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
-	fmt.Println("__ TXN __")
-	fmt.Println(txnRaw)
-
 	var txn types.Transaction
 	if err := txn.UnmarshalBinary(txnRaw); err != nil {
 		return nil, err
@@ -883,15 +880,10 @@ func (m *moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
 
 	// apply the transaction
 	_, err := m.w.commitTransaction(m.env, &txn)
-
-	fmt.Println("-- commit transcation result --")
-	fmt.Println(err)
-
 	if err != nil {
 		return &addTransactionResult{Error: true}, nil
 	}
 
-	fmt.Println("=Z=ZZZZZZZZ")
 	return &addTransactionResult{Error: false}, nil
 }
 
@@ -900,8 +892,6 @@ func (m *moss2) Address() common.Address {
 }
 
 func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) error {
-	fmt.Println("__ APPLY MEVM TRANSACTION __")
-
 	// take a snapshot of the state to revert if things fail
 	snap := env.state.Snapshot()
 	gp := env.gasPool.Gas()
@@ -913,7 +903,8 @@ func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) 
 	}
 
 	// MOSS TRANSACTION, apply the MEVM
-	_, err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, env.state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss})
+	state := env.state.Copy() // You have to use a new copy of the state, otherwise the state will be modified
+	_, err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss})
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		env.gasPool.SetGas(gp)
@@ -929,6 +920,8 @@ func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) 
 }
 
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
+	// sender, _ := types.Sender(env.signer, tx)
+
 	if tx.Gas() == 11111111 {
 		// TODO: Since we do not have a special MossBundle txn type yet I use the gas limit to indiciate that
 		// this transaction is a moss transaction
@@ -1044,6 +1037,8 @@ type generateParams struct {
 	withdrawals types.Withdrawals // List of withdrawals to include in block.
 	noUncle     bool              // Flag whether the uncle block inclusion is allowed
 	noTxs       bool              // Flag whether an empty block without any transaction is expected
+
+	txs types.Transactions
 }
 
 // prepareWork constructs the sealing task according to the given parameters,
@@ -1168,6 +1163,38 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, e
 	}
 	defer work.discard()
 
+	// SUAVE-OPTIMISM ADD THE PARAMS TRANSACTIONS
+	if work.gasPool == nil {
+		// You need to do this because gas limit is set during fillTransactions
+		// not during commitTransaction so the deposit txns fail if not set.
+		gasLimit := work.header.GasLimit
+		work.gasPool = new(core.GasPool).AddGas(gasLimit)
+	}
+
+	for _, tx := range params.txs {
+		// MOCK IT. We are not going to execute the deposit, but include the transaction on the block
+		// I do not think op-node is testing this result
+
+		work.txs = append(work.txs, tx)
+		work.receipts = append(work.receipts, &types.Receipt{
+			Status:  types.ReceiptStatusSuccessful,
+			TxHash:  tx.Hash(),
+			GasUsed: 223344,
+		})
+
+		/*
+			from, _ := types.Sender(work.signer, tx)
+			work.state.SetTxContext(tx.Hash(), work.tcount)
+			_, err := w.commitTransaction(work, tx)
+			if err != nil {
+				fmt.Println("- failed to do stuff -", from, tx)
+				panic(err)
+			}
+		*/
+
+		work.tcount++
+	}
+
 	if !params.noTxs {
 		interrupt := new(atomic.Int32)
 		timer := time.AfterFunc(w.newpayloadTimeout, func() {
@@ -1184,6 +1211,7 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, e
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return block, totalFees(block, work.receipts), nil
 }
 
@@ -1297,7 +1325,7 @@ func (w *worker) commit(env *environment, interval func(), update bool, start ti
 // getSealingBlock generates the sealing block based on the given parameters.
 // The generation result will be passed back via the given channel no matter
 // the generation itself succeeds or not.
-func (w *worker) getSealingBlock(parent common.Hash, timestamp uint64, coinbase common.Address, random common.Hash, withdrawals types.Withdrawals, noTxs bool) (*types.Block, *big.Int, error) {
+func (w *worker) getSealingBlock(parent common.Hash, timestamp uint64, coinbase common.Address, random common.Hash, withdrawals types.Withdrawals, noTxs bool, transactions []*types.Transaction) (*types.Block, *big.Int, error) {
 	req := &getWorkReq{
 		params: &generateParams{
 			timestamp:   timestamp,
@@ -1308,9 +1336,16 @@ func (w *worker) getSealingBlock(parent common.Hash, timestamp uint64, coinbase 
 			withdrawals: withdrawals,
 			noUncle:     true,
 			noTxs:       noTxs,
+			txs:         transactions,
 		},
 		result: make(chan *newPayloadResult, 1),
 	}
+
+	// IF YOU DO NOT CALL THIS OP-NODE<->OP-GETH MINE BLOCKS NON-STOP
+	if _, err := w.validateParams(req.params); err != nil {
+		return nil, nil, err
+	}
+
 	select {
 	case w.getWorkCh <- req:
 		result := <-req.result
@@ -1590,4 +1625,36 @@ func signalToErr(signal int32) error {
 	default:
 		panic(fmt.Errorf("undefined signal %d", signal))
 	}
+}
+
+// validateParams validates the given parameters.
+// It currently checks that the parent block is known and that the timestamp is valid,
+// i.e., after the parent block's timestamp.
+// It returns an upper bound of the payload building duration as computed
+// by the difference in block timestamps between the parent and genParams.
+func (w *worker) validateParams(genParams *generateParams) (time.Duration, error) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	// Find the parent block for sealing task
+	parent := w.chain.CurrentBlock()
+	if genParams.parentHash != (common.Hash{}) {
+		block := w.chain.GetBlockByHash(genParams.parentHash)
+		if block == nil {
+			return 0, fmt.Errorf("missing parent %v", genParams.parentHash)
+		}
+		parent = block.Header()
+	}
+
+	// Sanity check the timestamp correctness
+	blockTime := int64(genParams.timestamp) - int64(parent.Time)
+	if blockTime <= 0 && genParams.forceTime {
+		return 0, fmt.Errorf("invalid timestamp, parent %d given %d", parent.Time, genParams.timestamp)
+	}
+
+	// minimum payload build time of 2s
+	if blockTime < 2 {
+		blockTime = 2
+	}
+	return time.Duration(blockTime) * time.Second, nil
 }

@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -54,9 +53,6 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 
 	// check if this is somethign for the disaptch table
 	if evm.DispatchTable != nil {
-		fmt.Println("--- addr ---", addr)
-		fmt.Println(evm.DispatchTable.GetPrecompiled(addr))
-
 		if p, ok := evm.DispatchTable.GetPrecompiled(addr); ok {
 			return p, true
 		}

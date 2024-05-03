@@ -34,21 +34,18 @@ contract Suapp {
 }
 
 contract Bundle1 is Suapp {
+    uint256 public count;
+
     struct Bundle {
         Transaction[] txns;
     }
 
     struct Transaction {
         bytes txn;
-        bool canRevert;
     }
 
-    function emitTheBundle(bytes memory txn) public isCCR {
-        // call with a confidential compute request
-        // Bundle memory bundle;
-        // bundle.txn1 = txn;
-
-        // ctx.sendBundle(hex"1234");
+    function incr() public {
+        count++;
     }
 
     function applyFn(Bundle memory bundle) public isWorker {
@@ -57,10 +54,7 @@ contract Bundle1 is Suapp {
         for (uint256 i = 0; i < bundle.txns.length; i++) {
             Transaction memory txn = bundle.txns[i];
 
-            WorkerMoss.TransactionResult memory res = workerCtx.addTransaction(txn.txn);
-            if (!txn.canRevert && res.err) {
-                revert();
-            }
+            workerCtx.addTransaction(txn.txn);
         }
     }
 }

@@ -211,6 +211,10 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner SuaveTransaction
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
+	case DepositTxType:
+		var inner DepositTx
+		err := rlp.DecodeBytes(b[1:], &inner)
+		return &inner, err
 	default:
 		return nil, ErrTxTypeNotSupported
 	}

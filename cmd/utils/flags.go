@@ -2415,7 +2415,8 @@ func readJSONGenesis(genesisPath string) (*jsonGenesis, error) {
 		return nil, fmt.Errorf("invalid genesis file: %v", err)
 	}
 	if genesis.Name == "" {
-		return nil, fmt.Errorf("genesis.json file must have a name field")
+		genesis.Name = "custom" // for optimism
+		// return nil, fmt.Errorf("genesis.json file must have a name field")
 	}
 
 	genesis.core = coreGenesis

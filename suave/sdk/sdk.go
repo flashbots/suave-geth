@@ -127,7 +127,7 @@ type TransactionResult struct {
 }
 
 func (t *TransactionResult) Wait() (*types.Receipt, error) {
-	return t.WaitWithTimeout(10 * time.Second)
+	return t.WaitWithTimeout(20 * time.Second)
 }
 
 func (t *TransactionResult) WaitWithTimeout(timeout time.Duration) (*types.Receipt, error) {
@@ -144,7 +144,7 @@ func (t *TransactionResult) WaitWithTimeout(timeout time.Duration) (*types.Recei
 		select {
 		case <-timer.C:
 			return nil, fmt.Errorf("timeout")
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(1 * time.Second):
 			receipt, err = t.clt.rpc.TransactionReceipt(context.Background(), t.hash)
 			if err != nil && err != ethereum.NotFound {
 				return nil, err

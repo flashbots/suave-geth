@@ -1431,17 +1431,20 @@ func TestE2E_Moss_1(t *testing.T) {
 	fr := newFramework(t)
 	defer fr.Close()
 
+	fmt.Println(testAddr.String())
+	fmt.Println(testAddr2.String())
+
 	genesisBlock := fr.suethSrv.CurrentBlock()
 	clt := &engineClient{rpc: fr.suethSrv.RPCNode()}
 
 	// build the internal transaction, a simple transfer
 	txn1, err := types.SignTx(types.NewTx(&types.LegacyTx{
-		Nonce:    1,
+		Nonce:    0,
 		To:       &testAddr2,
 		Value:    big.NewInt(1111),
 		Gas:      1000000,
 		GasPrice: big.NewInt(10),
-	}), signer, testKey)
+	}), signer, testKey2)
 	require.NoError(t, err)
 
 	txn1Marshal, err := txn1.MarshalBinary()
@@ -1449,7 +1452,6 @@ func TestE2E_Moss_1(t *testing.T) {
 
 	bundle := &Moss1Bundle{
 		Txns: []Moss1BundleTxn{
-			{Txn: txn1Marshal, CanRevert: true},
 			{Txn: txn1Marshal, CanRevert: true},
 		},
 	}
@@ -1480,7 +1482,29 @@ func TestE2E_Moss_1(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// now call the other endpoint
 	fmt.Println("-- res --", res)
+	fmt.Println("=> GET PAYLOAD ")
+
+	envelope, err := clt.GetPayloadV2(*res.PayloadID)
+	require.NoError(t, err)
+
+	fmt.Println("-- envelope --", envelope)
+
+	raw, _ := json.Marshal(envelope.ExecutionPayload)
+	fmt.Println(string(raw))
+
+	// start a brand new process and try to process the same block
+	// as if it were from sync.
+	{
+		fr2 := newFramework(t)
+
+		clt2 := &engineClient{rpc: fr2.suethSrv.RPCNode()}
+		fmt.Println(clt2)
+
+		fmt.Println("__ LFG __")
+		fmt.Println(clt2.NewPayloadV2(*envelope.ExecutionPayload))
+	}
 }
 
 func TestE2E_Moss_2(t *testing.T) {
@@ -1543,6 +1567,18 @@ type engineClient struct {
 func (c *engineClient) ForkchoiceUpdatedV1(update engine.ForkchoiceStateV1, payloadAttributes *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	var resp engine.ForkChoiceResponse
 	err := c.rpc.Call(&resp, "engine_forkchoiceUpdatedV1", update, payloadAttributes)
+	return resp, err
+}
+
+func (e *engineClient) GetPayloadV2(payloadID engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error) {
+	var resp engine.ExecutionPayloadEnvelope
+	err := e.rpc.Call(&resp, "engine_getPayloadV2", payloadID)
+	return &resp, err
+}
+
+func (e *engineClient) NewPayloadV2(params engine.ExecutableData) (engine.PayloadStatusV1, error) {
+	var resp engine.PayloadStatusV1
+	err := e.rpc.Call(&resp, "engine_newPayloadV2", params)
 	return resp, err
 }
 

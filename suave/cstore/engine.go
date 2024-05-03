@@ -239,8 +239,6 @@ func (e *CStoreEngine) Retrieve(id suave.DataId, caller common.Address, key stri
 
 // Finalize finalizes a transaction and updates the store.
 func (e *CStoreEngine) Finalize(tx *types.Transaction, newRecords map[suave.DataId]suave.DataRecord, stores []StoreWrite) error {
-	fmt.Println("__ FINALISE STORAGE __")
-
 	for _, record := range newRecords {
 		err := e.storage.InitRecord(record)
 		if err != nil {
@@ -250,8 +248,6 @@ func (e *CStoreEngine) Finalize(tx *types.Transaction, newRecords map[suave.Data
 	}
 
 	for _, sw := range stores {
-		fmt.Println("_ STORE _", sw.DataRecord.Id, sw.Key, sw.Value)
-
 		if _, err := e.storage.Store(sw.DataRecord, sw.Caller, sw.Key, sw.Value); err != nil {
 			// TODO: deinitialize and deStore!
 			return fmt.Errorf("failed to store data: %w", err)

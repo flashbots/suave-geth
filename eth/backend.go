@@ -210,6 +210,12 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if eth.blockchain.Config().Optimism != nil {
+		// Optimism Bedrock depends on Merge functionality
+		eth.merger.FinalizePoS()
+	}
+
 	eth.bloomIndexer.Start(eth.blockchain)
 
 	if config.TxPool.Journal != "" {

@@ -1383,6 +1383,13 @@ type RPCTransaction struct {
 	V                         *hexutil.Big      `json:"v"`
 	R                         *hexutil.Big      `json:"r"`
 	S                         *hexutil.Big      `json:"s"`
+
+	// deposit-tx only
+	SourceHash *common.Hash `json:"sourceHash,omitempty"`
+	Mint       *hexutil.Big `json:"mint,omitempty"`
+	IsSystemTx *bool        `json:"isSystemTx,omitempty"`
+	// deposit-tx post-Canyon only
+	DepositReceiptVersion *hexutil.Uint64 `json:"depositReceiptVersion,omitempty"`
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
@@ -1483,6 +1490,16 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		result.RequestRecord = (*json.RawMessage)(&rrBytes)
 		result.ConfidentialComputeResult = (*hexutil.Bytes)(&inner.ConfidentialComputeResult)
 		result.ChainID = (*hexutil.Big)(tx.ChainId())
+	case types.DepositTxType:
+		deposit, _ := types.CastTxInner[types.DepositTx](tx)
+		srcHash := deposit.SourceHash
+		isSystemTx := deposit.IsSystemTransaction
+		result.SourceHash = &srcHash
+		if isSystemTx {
+			// Only include IsSystemTx when true
+			result.IsSystemTx = &isSystemTx
+		}
+		result.Mint = (*hexutil.Big)(deposit.Mint)
 	}
 	return result
 }
@@ -1918,31 +1935,35 @@ func (s *TransactionAPI) FillTransaction(ctx context.Context, args TransactionAr
 func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
 	if err := tx.UnmarshalBinary(input); err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("could not decode transaction: %w", err)
 	}
 
 	if _, ok := types.CastTxInner[*types.ConfidentialComputeRequest](tx); ok {
 		state, header, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
 		if state == nil || err != nil {
-			return common.Hash{}, err
+			return common.Hash{}, fmt.Errorf("could not get state: %w", err)
 		}
 
 		msg, err := core.TransactionToMessage(tx, s.signer, header.BaseFee)
 		if err != nil {
-			return common.Hash{}, err
+			return common.Hash{}, fmt.Errorf("could not convert transaction to message: %w", err)
 		}
 
 		ntx, result, finalize, err := runMEVM(ctx, s.b, state, header, tx, msg, false)
 		if err != nil {
-			return tx.Hash(), err
+			return tx.Hash(), fmt.Errorf("transaction failed1: %w", err)
 		}
 		if result.Failed() {
-			return tx.Hash(), fmt.Errorf("transaction failed: %w", result.Err)
+			return tx.Hash(), fmt.Errorf("transaction failed2: %w", result.Err)
 		}
 		if err = finalize(); err != nil {
 			log.Error("could not finalize confidential store", "err", err)
 			return tx.Hash(), err
 		}
+		// DO NOT SEND TEH CALLBACK BECAUSE THIS DOES NOT END IN THE SUAVE CHAIN BUT THE TARGET CHAIN
+		// FOR NOW THIS IS DISABLED
+		return ntx.Hash(), nil
+
 		tx = ntx
 	}
 
@@ -2153,6 +2174,7 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 	// Take the updated state for the CONTRACT only and apply it to the conf store
 	for k, v := range state.GetModifiedState(*msg.To) {
+		fmt.Println("- write state -", k, v)
 		if err := conf2.set(k, v); err != nil {
 			return nil, nil, nil, err
 		}

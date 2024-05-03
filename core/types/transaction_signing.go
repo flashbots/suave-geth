@@ -396,7 +396,7 @@ type londonSigner struct{ eip2930Signer }
 // - EIP-155 replay protected transactions, and
 // - legacy Homestead transactions.
 func NewLondonSigner(chainId *big.Int) Signer {
-	return londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}
+	return suaveSigner{londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}} // HACK TO ENABLE SUAVE ALSO IF LONDON IS ENABLED (OP)
 }
 
 func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
