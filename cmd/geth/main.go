@@ -40,6 +40,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/suavesdk"
 
 	// Force-load the tracer engines to trigger registration
 	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
@@ -372,6 +373,9 @@ func startNode(ctx *cli.Context, stack *node.Node, backend ethapi.Backend, isCon
 
 	// Start up the node itself
 	utils.StartNode(ctx, stack, isConsole)
+
+	// SUAVE
+	suavesdk.Start()
 
 	// Unlock any account specifically requested
 	unlockAccounts(ctx, stack)
