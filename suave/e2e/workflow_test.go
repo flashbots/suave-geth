@@ -18,6 +18,7 @@ import (
 	builderDeneb "github.com/attestantio/go-builder-client/api/deneb"
 	bellatrixSpec "github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -1549,6 +1550,63 @@ func TestE2E_Moss_2(t *testing.T) {
 	fmt.Println("-- res --", res)
 }
 
+func TestMoss_SendTransaction_InsideCCR(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	queryCount := func(blockNumber *big.Int) uint64 {
+		// queryCount calls the Bundle2 count method
+		clt := ethclient.NewClient(fr.suethSrv.RPCNode())
+
+		data, err := mossBundle2.Abi.Pack("count")
+		require.NoError(t, err)
+
+		resultRaw, err := clt.CallContract(context.Background(), ethereum.CallMsg{To: &testAddr5, Data: data}, blockNumber)
+		require.NoError(t, err)
+
+		result, err := mossBundle2.Abi.Unpack("count", resultRaw)
+		require.NoError(t, err)
+
+		return result[0].(*big.Int).Uint64()
+	}
+
+	// query the contract and check that the counter is 0
+	require.Equal(t, uint64(0), queryCount(nil))
+
+	clt := fr.NewSDKClient()
+	priv := hex.EncodeToString(crypto.FromECDSA(testKey))
+
+	bundle2Contract := sdk.GetContract(testAddr5, mossBundle2.Abi, clt)
+	_, err := bundle2Contract.SendTransaction("coprocess", []interface{}{}, []byte(priv))
+	require.NoError(t, err)
+
+	// try to seal a block
+	{
+		eClt := &engineClient{rpc: fr.suethSrv.RPCNode()}
+		res, err := eClt.ForkchoiceUpdatedV1(engine.ForkchoiceStateV1{
+			// update the fork choice to the current genesis block
+			HeadBlockHash: fr.suethSrv.CurrentBlock().Hash(),
+		}, &engine.PayloadAttributes{
+			// start the payload generation
+			Timestamp: uint64(time.Now().Unix()),
+		})
+		require.NoError(t, err)
+
+		envelope, err := eClt.GetPayloadV2(*res.PayloadID)
+		require.NoError(t, err)
+
+		// now move it one block again?
+		res, err = eClt.ForkchoiceUpdatedV1(engine.ForkchoiceStateV1{
+			// update the fork choice to the current sealed block
+			HeadBlockHash: envelope.ExecutionPayload.BlockHash,
+		}, nil)
+		require.NoError(t, err)
+	}
+
+	// TODO: Check post txn
+
+}
+
 type engineClient struct {
 	rpc *rpc.Client
 }
@@ -1810,6 +1868,7 @@ var (
 
 	testAddr3 = common.Address{0x3}
 	testAddr4 = common.Address{0x4}
+	testAddr5 = common.Address{0x5}
 
 	testBalance = big.NewInt(2e18)
 
@@ -1842,6 +1901,7 @@ var (
 			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareContract.DeployedCode},
 			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
 			testAddr4:           {Balance: big.NewInt(0), Code: mossBundle1.DeployedCode},
+			testAddr5:           {Balance: big.NewInt(0), Code: mossBundle2.DeployedCode},
 		},
 	}
 

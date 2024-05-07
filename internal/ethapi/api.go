@@ -2012,31 +2012,39 @@ func (m *mevmStateLogger) CaptureTxEnd(restGas uint64) {}
 var magicBytes = hexutil.MustDecode("0x543543")
 
 type moss1 struct {
+	SendTransactions []*types.Transaction
 }
 
-func (m *moss1) SendBundle(tx []byte) error {
-	fmt.Println("__ SEND BUNDLE __")
+// moss1Bundle is the parameter for SendBundle. It represents a types.MossBundle
+type moss1Bundle struct {
+	To             common.Address
+	Data           []byte
+	BlockNumber    uint64
+	MaxBlockNumber uint64
+}
+
+func (m *moss1) SendTransaction(txnRLP []byte) error {
+	// send the transaction to the memory pool. TODO: This should wait until the ccr has not reverted
+	if m.SendTransactions == nil {
+		m.SendTransactions = make([]*types.Transaction, 0)
+	}
+
+	var txn types.Transaction
+	if err := rlp.DecodeBytes(txnRLP, &txn); err != nil {
+		return err
+	}
+	m.SendTransactions = append(m.SendTransactions, &txn)
+	return nil
+}
+
+func (m *moss1) SendBundle(bundle *moss1Bundle) error {
+	panic("TODO SEND BUNDLE")
 	return nil
 }
 
 func (m *moss1) Address() common.Address {
 	return common.HexToAddress("0x1234567890123456789012345678901234567890")
 }
-
-/*
-// confState is a wrapper around the state.StateDB that fetches the state
-// from the confidential store
-type confState struct {
-	*state.StateDB
-
-	confStore vm.ConfidentialStore
-	record    types.DataRecord
-}
-
-func (c *confState) GetCommittedState(common.Address, common.Hash) common.Hash {
-	return common.Hash{}
-}
-*/
 
 type confSnap struct {
 	record      types.DataRecord
@@ -2127,7 +2135,8 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	state.SetSnapshot(conf2)
 
 	// add the new precompiles
-	evm.AddDispatchTable(&moss1{})
+	moss := &moss1{}
+	evm.AddDispatchTable(moss)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -2211,6 +2220,13 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 		computeResult = append(computeResult, magicBytes...)
 		computeResult = append(computeResult, logsEncoded...)
+	}
+
+	// At this point, everything worked, so emit any transactions in MOSS context
+	for _, txn := range moss.SendTransactions {
+		if err := b.SendTx(context.TODO(), txn); err != nil {
+			panic(err)
+		}
 	}
 
 	// encode logs to the ABI form

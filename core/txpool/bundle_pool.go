@@ -24,7 +24,12 @@ func NewBundlePool() *BundlePool {
 
 func (b *BundlePool) StartP2P() *BundlePool {
 	// connect to the suavesdk network and listen for bundles
-	topic, err := suavesdk.GetSDK().Topic("moss-bundle")
+	sdk := suavesdk.GetSDK()
+	if sdk == nil {
+		return b
+	}
+
+	topic, err := sdk.Topic("moss-bundle")
 	if err != nil {
 		panic(err)
 	}

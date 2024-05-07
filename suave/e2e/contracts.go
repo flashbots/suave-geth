@@ -22,6 +22,7 @@ var (
 	exampleCallTargetContract    = newArtifact("example.sol/ExampleEthCallTarget.json")
 
 	mossBundle1 = newArtifact("moss.sol/Bundle1.json")
+	mossBundle2 = newArtifact("moss.sol/Bundle2.json")
 )
 
 func newArtifact(name string) *Artifact {
