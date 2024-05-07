@@ -1427,12 +1427,8 @@ type Moss1Bundle struct {
 }
 
 func TestE2E_Moss_1(t *testing.T) {
-	// validate that the engine API works as expected
 	fr := newFramework(t)
 	defer fr.Close()
-
-	fmt.Println(testAddr.String())
-	fmt.Println(testAddr2.String())
 
 	genesisBlock := fr.suethSrv.CurrentBlock()
 	clt := &engineClient{rpc: fr.suethSrv.RPCNode()}
@@ -1458,19 +1454,12 @@ func TestE2E_Moss_1(t *testing.T) {
 	data, err := mossBundle1.Abi.Pack("applyFn", bundle)
 	require.NoError(t, err)
 
-	// Verify sending computation requests and onchain transactions to isConfidentialAddress
-	txn, err := types.SignTx(types.NewTx(&types.LegacyTx{
-		Nonce:    0,
-		To:       &testAddr4,
-		Value:    nil,
-		Gas:      11111111,
-		GasPrice: big.NewInt(10),
-		Data:     data,
-	}), signer, testKey)
-	require.NoError(t, err)
-
-	errs := fr.suethSrv.service.TxPool().AddRemotes([]*types.Transaction{txn})
-	require.NoError(t, errs[0])
+	fr.suethSrv.service.TxPool().AddMossBundle(&types.MossBundle{
+		To:             testAddr4,
+		Data:           data,
+		BlockNumber:    1,
+		MaxBlockNumber: 10,
+	})
 
 	// add a transaction to the pool
 	res, err := clt.ForkchoiceUpdatedV1(engine.ForkchoiceStateV1{

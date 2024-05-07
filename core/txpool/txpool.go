@@ -280,6 +280,8 @@ type TxPool struct {
 	initDoneCh      chan struct{}  // is closed once the pool is initialized (for tests)
 
 	changesSinceReorg int // A counter for how many drops we've performed in-between reorg.
+
+	bundlePool *BundlePool
 }
 
 type txpoolResetRequest struct {
@@ -310,6 +312,7 @@ func NewTxPool(config Config, chainconfig *params.ChainConfig, chain blockChain)
 		reorgShutdownCh: make(chan struct{}),
 		initDoneCh:      make(chan struct{}),
 		gasPrice:        new(big.Int).SetUint64(config.PriceLimit),
+		bundlePool:      NewBundlePool().StartP2P(),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	for _, addr := range config.Locals {
@@ -341,6 +344,14 @@ func NewTxPool(config Config, chainconfig *params.ChainConfig, chain blockChain)
 	go pool.loop()
 
 	return pool
+}
+
+func (pool *TxPool) AddMossBundle(bundle *types.MossBundle) {
+	pool.bundlePool.AddBundle(bundle)
+}
+
+func (pool *TxPool) GetMossBundles(blockNum uint64) []*types.MossBundle {
+	return pool.bundlePool.GetBundles(blockNum)
 }
 
 // loop is the transaction pool's main event loop, waiting for and reacting to
@@ -1262,6 +1273,8 @@ func (pool *TxPool) runReorg(done chan struct{}, reset *txpoolResetRequest, dirt
 		for addr := range pool.queue {
 			promoteAddrs = append(promoteAddrs, addr)
 		}
+
+		pool.bundlePool.ResetPool(reset.newHead)
 	}
 	// Check for pending transactions for every account that sent new ones
 	promoted := pool.promoteExecutables(promoteAddrs)

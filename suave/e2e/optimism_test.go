@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/suave/sdk"
 	"github.com/stretchr/testify/require"
@@ -99,8 +101,7 @@ func TestOp_Moss(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// ethClt := ethclient.NewClient(rpcConn)
-
+	ethClt := ethclient.NewClient(rpcConn)
 	clt := sdk.NewClient(rpcConn, testKey, common.Address{})
 
 	// use a new account to make the transaction
@@ -146,15 +147,14 @@ func TestOp_Moss(t *testing.T) {
 	data, err := mossBundle1.Abi.Pack("applyFn", bundle)
 	require.NoError(t, err)
 
-	txn, err := clt.SendTransaction(&types.LegacyTx{
-		To:   &suappAddr,
-		Data: data,
-		Gas:  11111111,
+	blockNumber, err := ethClt.BlockNumber(context.Background())
+	require.NoError(t, err)
+
+	// send the bundle
+	ethClt.SendBundle(context.Background(), &types.MossBundle{
+		To:             suappAddr,
+		Data:           data,
+		BlockNumber:    blockNumber + 1,
+		MaxBlockNumber: blockNumber + 10,
 	})
-	require.NoError(t, err)
-
-	receipt, err := txn.Wait()
-	require.NoError(t, err)
-
-	fmt.Printf("Moss done (%d)\n", receipt.BlockNumber)
 }

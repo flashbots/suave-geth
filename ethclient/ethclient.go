@@ -85,6 +85,10 @@ func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Blo
 	return ec.getBlock(ctx, "eth_getBlockByHash", hash, true)
 }
 
+func (ec *Client) SendBundle(ctx context.Context, bundle *types.MossBundle) error {
+	return ec.c.CallContext(ctx, nil, "eth_sendBundle", bundle)
+}
+
 // BlockByNumber returns a block from the current canonical chain. If number is nil, the
 // latest known block is returned.
 //

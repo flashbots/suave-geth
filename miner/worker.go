@@ -891,8 +891,15 @@ func (m *moss2) Address() common.Address {
 	return common.HexToAddress("0x1234567890123456789012345678901234567891")
 }
 
-func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) error {
+func (w *worker) applyMossBundle(env *environment, bundle *types.MossBundle) error {
 	// take a snapshot of the state to revert if things fail
+
+	// Sometimes it is not there yet, that is sketchy.
+	gasLimit := env.header.GasLimit
+	if env.gasPool == nil {
+		env.gasPool = new(core.GasPool).AddGas(gasLimit)
+	}
+
 	snap := env.state.Snapshot()
 	gp := env.gasPool.Gas()
 	receiptsIndx := len(env.receipts)
@@ -904,8 +911,7 @@ func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) 
 
 	// MOSS TRANSACTION, apply the MEVM
 	state := env.state.Copy() // You have to use a new copy of the state, otherwise the state will be modified
-	_, err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, state, env.header, tx, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss})
-	if err != nil {
+	if err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, state, env.header, bundle, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss}); err != nil {
 		env.state.RevertToSnapshot(snap)
 		env.gasPool.SetGas(gp)
 
@@ -920,17 +926,6 @@ func (w *worker) commitMEVMTransaction(env *environment, tx *types.Transaction) 
 }
 
 func (w *worker) commitTransaction(env *environment, tx *types.Transaction) ([]*types.Log, error) {
-	// sender, _ := types.Sender(env.signer, tx)
-
-	if tx.Gas() == 11111111 {
-		// TODO: Since we do not have a special MossBundle txn type yet I use the gas limit to indiciate that
-		// this transaction is a moss transaction
-		if err := w.commitMEVMTransaction(env, tx); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-
 	var (
 		snap = env.state.Snapshot()
 		gp   = env.gasPool.Gas()
@@ -1152,6 +1147,15 @@ func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) err
 			return err
 		}
 	}
+
+	// Try to apply the bundles now
+	bundles := w.eth.TxPool().GetMossBundles(env.header.Number.Uint64())
+	for _, bundle := range bundles {
+		if err := w.applyMossBundle(env, bundle); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

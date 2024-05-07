@@ -173,26 +173,20 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 }
 
 // ApplyTransaction attempts to applies a MOSS transaction during block building
-func ApplyTransactionMEVM(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config, dispatchRuntime []vm.DispatchRuntime) (*ExecutionResult, error) {
-	msg, err := TransactionToMessage(tx, types.MakeSigner(config, header.Number, header.Time), header.BaseFee)
-	if err != nil {
-		return nil, err
-	}
-	msg.SkipAccountChecks = true // FIX
+func ApplyTransactionMEVM(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, bundle *types.MossBundle, usedGas *uint64, cfg vm.Config, dispatchRuntime []vm.DispatchRuntime) error {
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, config, cfg)
 	vmenv.AddDispatchTable(dispatchRuntime...)
 
 	// Create a new context to be used in the EVM environment.
-	txContext := NewEVMTxContext(msg)
-	vmenv.Reset(txContext, statedb)
+	vmenv.Reset(vm.TxContext{Origin: common.Address{}, GasPrice: big.NewInt(0)}, statedb)
 
-	// Apply the transaction to the current state (included in the env).
-	result, err := ApplyMessage(vmenv, msg, gp)
-	if err != nil {
-		return nil, err
+	sender := vm.AccountRef(common.Address{})
+	_, _, vmerr := vmenv.Call(sender, bundle.To, bundle.Data, 1000000000, big.NewInt(0))
+	if vmerr != nil {
+		return vmerr
 	}
 
-	return result, nil
+	return nil
 }
