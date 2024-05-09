@@ -168,7 +168,7 @@ contract MevShare is Suapp {
         CCRMoss.MossBundle memory mossBundle = CCRMoss.MossBundle({
             to: address(this),
             data: abi.encodeWithSelector(this.applyFn.selector, bundle),
-            blockNumber: 0,
+            blockNumber: 0, // this gets set internally if empty
             maxBlockNumber: 0
         });
         ccrCtx.sendBundle(mossBundle);
