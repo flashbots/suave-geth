@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 	"unicode"
 	"unicode/utf8"
@@ -29,9 +30,15 @@ type DispatchRuntime interface {
 }
 
 type DispatchTable struct {
+	namespaces map[common.Address]namespace
+}
+
+type namespace struct {
 	sv reflect.Value
 
-	methods map[common.Address]map[string]*runtimeMethod
+	addr common.Address
+
+	methods map[string]*runtimeMethod
 }
 
 type runtimeMethod struct {
@@ -47,7 +54,7 @@ type runtimeMethod struct {
 
 func NewDispatchTable() *DispatchTable {
 	return &DispatchTable{
-		methods: map[common.Address]map[string]*runtimeMethod{},
+		namespaces: map[common.Address]namespace{},
 	}
 }
 
@@ -57,7 +64,11 @@ type dispatchPrecompile struct {
 }
 
 func (p *dispatchPrecompile) Run(input []byte) ([]byte, error) {
-	return p.d.Run(p.addr, input)
+	ret, err := p.d.Run(p.addr, input)
+	if err != nil {
+		log.Debug("dispatchPrecompile.Run", "err", err)
+	}
+	return ret, err
 }
 
 func (p *dispatchPrecompile) RequiredGas([]byte) uint64 {
@@ -65,12 +76,12 @@ func (p *dispatchPrecompile) RequiredGas([]byte) uint64 {
 }
 
 func (d *DispatchTable) Contains(addr common.Address) bool {
-	_, ok := d.methods[addr]
+	_, ok := d.namespaces[addr]
 	return ok
 }
 
 func (d *DispatchTable) GetPrecompiled(addr common.Address) (PrecompiledContract, bool) {
-	_, ok := d.methods[addr]
+	_, ok := d.namespaces[addr]
 	if !ok {
 		return nil, false
 	}
@@ -82,10 +93,11 @@ func (d *DispatchTable) GetPrecompiled(addr common.Address) (PrecompiledContract
 }
 
 func (d *DispatchTable) packAndRun(addr common.Address, methodName string, args ...interface{}) ([]interface{}, error) {
-	methods, ok := d.methods[addr]
+	namespace, ok := d.namespaces[addr]
 	if !ok {
 		return nil, fmt.Errorf("runtime method %s not found", addr)
 	}
+	methods := namespace.methods
 
 	// find the method by name
 	method, ok := methods[methodName]
@@ -120,10 +132,11 @@ func (d *DispatchTable) Run(addr common.Address, input []byte) ([]byte, error) {
 		return nil, fmt.Errorf("input data too short")
 	}
 
-	methods, ok := d.methods[addr]
+	namespace, ok := d.namespaces[addr]
 	if !ok {
 		return nil, fmt.Errorf("runtime method not found")
 	}
+	methods := namespace.methods
 
 	// find the method by signature
 	var method *runtimeMethod
@@ -147,7 +160,7 @@ func (d *DispatchTable) Run(addr common.Address, input []byte) ([]byte, error) {
 	inNum := len(method.reqT)
 
 	inArgs := make([]reflect.Value, inNum)
-	inArgs[0] = d.sv
+	inArgs[0] = namespace.sv
 
 	if inNum != 1 {
 		// decode the input parameters
@@ -197,7 +210,7 @@ func (d *DispatchTable) Register(service DispatchRuntime) error {
 		return errors.New("jsonrpc: service must be a pointer to struct")
 	}
 
-	d.sv = reflect.ValueOf(service)
+	sv := reflect.ValueOf(service)
 	for i := 0; i < st.NumMethod(); i++ {
 		methodTyp := st.Method(i)
 		if methodTyp.PkgPath != "" {
@@ -266,7 +279,11 @@ func (d *DispatchTable) Register(service DispatchRuntime) error {
 			fv:     methodTyp.Func,
 		}
 	}
-	d.methods[service.Address()] = methods
+	d.namespaces[service.Address()] = namespace{
+		sv:      sv,
+		addr:    service.Address(),
+		methods: methods,
+	}
 
 	return nil
 }
@@ -297,6 +314,10 @@ func isErrorType(t reflect.Type) bool {
 
 func isBytesTyp(t reflect.Type) bool {
 	return (t.Kind() == reflect.Slice || t.Kind() == reflect.Array) && t.Elem().Kind() == reflect.Uint8
+}
+
+func isBigIntType(t reflect.Type) bool {
+	return t == reflect.TypeOf((*big.Int)(nil)).Elem()
 }
 
 type abiField struct {
@@ -332,11 +353,19 @@ func convertStructToABITypes(typ reflect.Type) []arguments {
 		var typeSuffix string
 		subType := field.Type
 
+		var isBigInt bool
+
 	INFER:
 		for {
 			if isBytesTyp(subType) {
 				// type []byte or [n]byte, it is decoded
 				// as a simple type
+				break INFER
+			}
+
+			if isBigIntType(subType) {
+				// type *big.Int, it is decoded as a simple type
+				isBigInt = true
 				break INFER
 			}
 
@@ -353,7 +382,7 @@ func convertStructToABITypes(typ reflect.Type) []arguments {
 			subType = subType.Elem()
 		}
 
-		if subType.Kind() == reflect.Struct {
+		if subType.Kind() == reflect.Struct && !isBigInt {
 			fields[i].Components = convertStructToABITypes(subType)
 			fields[i].Type = "tuple" + typeSuffix
 		} else {
@@ -377,7 +406,11 @@ func convertStructToABITypes(typ reflect.Type) []arguments {
 			case reflect.Uint64:
 				basicType = "uint64"
 			default:
-				panic(fmt.Errorf("unknown type: %s", subType.Kind()))
+				if isBigIntType(subType) {
+					basicType = "uint256"
+				} else {
+					panic(fmt.Errorf("unknown type: %s", subType.Kind()))
+				}
 			}
 			fields[i].Type = basicType + typeSuffix
 		}

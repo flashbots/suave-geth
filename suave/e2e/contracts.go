@@ -23,6 +23,7 @@ var (
 
 	mossBundle1 = newArtifact("moss.sol/Bundle1.json")
 	mossBundle2 = newArtifact("moss.sol/Bundle2.json")
+	mevShare2   = newArtifact("moss.sol/MevShare.json")
 )
 
 func newArtifact(name string) *Artifact {

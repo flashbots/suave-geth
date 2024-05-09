@@ -40,6 +40,10 @@ const DiscoveryServiceTag = "suave-lfg"
 type SuaveSDK struct {
 	node host.Host
 	ps   *pubsub.PubSub
+
+	// we have to keep a map of topics because ps.Join fails if we try
+	// to subscribe to the same topic multiple times.
+	topics map[string]*pubsub.Topic
 }
 
 func New() (*SuaveSDK, error) {
@@ -75,8 +79,9 @@ func New() (*SuaveSDK, error) {
 	}
 
 	return &SuaveSDK{
-		node: node,
-		ps:   ps,
+		node:   node,
+		ps:     ps,
+		topics: make(map[string]*pubsub.Topic),
 	}, nil
 }
 
@@ -87,7 +92,17 @@ func (s *SuaveSDK) Close() {
 }
 
 func (s *SuaveSDK) Topic(name string) (*pubsub.Topic, error) {
-	return s.ps.Join(name)
+	if topic, ok := s.topics[name]; ok {
+		return topic, nil
+	}
+
+	topic, err := s.ps.Join(name)
+	if err != nil {
+		return nil, err
+	}
+
+	s.topics[name] = topic
+	return topic, nil
 }
 
 // discoveryNotifee gets notified when we find a new peer via mDNS discovery

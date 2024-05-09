@@ -863,7 +863,33 @@ func (w *worker) updateSnapshot(env *environment) {
 	w.snapshotState = env.state.Copy()
 }
 
-type moss2 struct {
+func NewHeadlessMoss2(eth Backend) *Moss2 {
+	blockchain := eth.BlockChain()
+
+	w := &worker{
+		config: &Config{
+			GasCeil: 1000000000,
+		},
+		chain:       blockchain,
+		eth:         eth,
+		engine:      blockchain.Engine(),
+		chainConfig: blockchain.Config(),
+	}
+
+	env, err := w.prepareWork(&generateParams{})
+	if err != nil {
+		panic(err)
+	}
+
+	env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
+
+	return &Moss2{
+		env: env,
+		w:   w,
+	}
+}
+
+type Moss2 struct {
 	env *environment
 	w   *worker
 }
@@ -872,7 +898,15 @@ type addTransactionResult struct {
 	Error bool
 }
 
-func (m *moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
+func (m *Moss2) Coinbase() (common.Address, error) {
+	return m.env.coinbase, nil
+}
+
+func (m *Moss2) GetBalance(addr common.Address) (*big.Int, error) {
+	return m.env.state.GetBalance(addr), nil
+}
+
+func (m *Moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
 	var txn types.Transaction
 	if err := txn.UnmarshalBinary(txnRaw); err != nil {
 		return nil, err
@@ -887,7 +921,7 @@ func (m *moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
 	return &addTransactionResult{Error: false}, nil
 }
 
-func (m *moss2) Address() common.Address {
+func (m *Moss2) Address() common.Address {
 	return common.HexToAddress("0x1234567890123456789012345678901234567891")
 }
 
@@ -904,7 +938,7 @@ func (w *worker) applyMossBundle(env *environment, bundle *types.MossBundle) err
 	gp := env.gasPool.Gas()
 	receiptsIndx := len(env.receipts)
 
-	moss := &moss2{
+	moss := &Moss2{
 		w:   w,
 		env: env,
 	}

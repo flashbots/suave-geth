@@ -44,6 +44,7 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/ethereum/go-ethereum/suave/sdk"
+	"github.com/ethereum/go-ethereum/suavesdk"
 	"github.com/flashbots/go-boost-utils/bls"
 	"github.com/flashbots/go-boost-utils/ssz"
 	"github.com/mitchellh/mapstructure"
@@ -1607,6 +1608,90 @@ func TestMoss_SendTransaction_InsideCCR(t *testing.T) {
 
 }
 
+func TestMOSS_MevShare(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	clt := fr.NewSDKClient()
+
+	suavesdk.Start()
+
+	// subscribe to topics for the hints
+	topic, err := suavesdk.GetSDK().Topic("mev-share")
+	require.NoError(t, err)
+
+	sub, err := topic.Subscribe()
+	require.NoError(t, err)
+
+	// build a valid txn and send it to mevshare contract
+	txn, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr2,
+		Value:    big.NewInt(1111),
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	txnMarshal, err := txn.MarshalBinary()
+	require.NoError(t, err)
+
+	// send a confidential compute request
+	mossContract := sdk.GetContract(testAddrMevShare, mevShare2.Abi, clt)
+	_, err = mossContract.SendTransaction("sendTransaction", []interface{}{}, txnMarshal)
+	require.NoError(t, err)
+
+	// wait to receive the hints over the p2p layer
+	msg, err := sub.Next(context.TODO())
+	require.NoError(t, err)
+
+	hint := new(MossHint)
+	require.NoError(t, hint.Decode(msg.Data))
+
+	// send the match bundle
+	backrunTxn, err := types.SignTx(types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		To:       &testAddr2,
+		Value:    big.NewInt(1111),
+		Gas:      1000000,
+		GasPrice: big.NewInt(10),
+	}), signer, testKey)
+	require.NoError(t, err)
+
+	backrunTxnMarshal, err := backrunTxn.MarshalBinary()
+	require.NoError(t, err)
+
+	// send a confidential compute request
+	_, err = mossContract.SendTransaction("matchBundle", []interface{}{}, backrunTxnMarshal)
+	require.NoError(t, err)
+}
+
+type MossHint struct {
+	To   common.Address
+	Data []byte
+}
+
+func (m *MossHint) Decode(data []byte) error {
+	typ, err := abi.NewTypeFromString("tuple(address,bytes)")
+	if err != nil {
+		panic(err)
+	}
+
+	valsRaw, err := typ.Unpack(data)
+	if err != nil {
+		return err
+	}
+	vals := valsRaw.(struct {
+		Arg0 common.Address "json:\"arg0\""
+		Arg1 []uint8        "json:\"arg1\""
+	})
+
+	m.To = vals.Arg0
+	m.Data = vals.Arg1
+
+	return nil
+}
+
 type engineClient struct {
 	rpc *rpc.Client
 }
@@ -1872,6 +1957,8 @@ var (
 
 	testBalance = big.NewInt(2e18)
 
+	testAddrMevShare = common.Address{0x1, 0x2, 0x3}
+
 	/* precompiles */
 	isConfidentialAddress     = common.HexToAddress("0x42010000")
 	fetchBidsAddress          = common.HexToAddress("0x42030001")
@@ -1899,6 +1986,7 @@ var (
 			newBundleBidAddress: {Balance: big.NewInt(0), Code: BundleContract.DeployedCode},
 			newBlockBidAddress:  {Balance: big.NewInt(0), Code: buildEthBlockContract.DeployedCode},
 			mevShareAddress:     {Balance: big.NewInt(0), Code: MevShareContract.DeployedCode},
+			testAddrMevShare:    {Balance: big.NewInt(0), Code: mevShare2.DeployedCode},
 			testAddr3:           {Balance: big.NewInt(0), Code: exampleCallSourceContract.DeployedCode},
 			testAddr4:           {Balance: big.NewInt(0), Code: mossBundle1.DeployedCode},
 			testAddr5:           {Balance: big.NewInt(0), Code: mossBundle2.DeployedCode},

@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -358,3 +359,7 @@ func (b *backendMock) BuildBlockFromTxs(ctx context.Context, buildArgs *suave.Bu
 func (b *backendMock) BuildBlockFromBundles(ctx context.Context, buildArgs *suave.BuildBlockArgs, bundles []types.SBundle) (*types.Block, *big.Int, error) {
 	return nil, nil, errors.New("not implemented")
 }
+
+func (b *backendMock) BlockChain() *core.BlockChain { return nil }
+
+func (b *backendMock) TxPool() *txpool.TxPool { return nil }

@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -47,6 +48,14 @@ type LesApiBackend struct {
 	allowUnprotectedTxs bool
 	eth                 *LightEthereum
 	gpo                 *gasprice.Oracle
+}
+
+func (b *LesApiBackend) BlockChain() *core.BlockChain {
+	panic("not imeplemented")
+}
+
+func (b *LesApiBackend) TxPool() *txpool.TxPool {
+	panic("not imeplemented")
 }
 
 func (b *LesApiBackend) ChainConfig() *params.ChainConfig {

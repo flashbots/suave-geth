@@ -62,6 +62,10 @@ type EthAPIBackend struct {
 	suaveServiceAliasRegistry map[string]string
 }
 
+func (b *EthAPIBackend) BlockChain() *core.BlockChain {
+	return b.eth.BlockChain()
+}
+
 // For testing purposes
 func (b *EthAPIBackend) SuaveEngine() *cstore.CStoreEngine {
 	return b.suaveEngine

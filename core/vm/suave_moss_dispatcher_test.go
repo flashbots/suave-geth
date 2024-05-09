@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,17 +14,33 @@ func TestMossDispatcher(t *testing.T) {
 	d := NewDispatchTable()
 	d.MustRegister(&backend{})
 
-	require.Equal(t, d.methods[addr1]["do"].method.Sig, "do(uint64)")
+	require.Equal(t, d.namespaces[addr1].methods["do"].method.Sig, "do(uint64)")
 
 	out, err := d.packAndRun(addr1, "do", uint64(1))
 	require.NoError(t, err)
 	require.Equal(t, uint64(11), out[0])
+
+	out, err = d.packAndRun(addr1, "do2")
+	require.NoError(t, err)
+	require.Equal(t, common.Address{0x2}, out[0])
+
+	out, err = d.packAndRun(addr1, "do3")
+	require.NoError(t, err)
+	require.Equal(t, big.NewInt(3), out[0])
 }
 
 type backend struct{}
 
 func (b *backend) Do(input uint64) (uint64, error) {
 	return input + 10, nil
+}
+
+func (b *backend) Do2() (common.Address, error) {
+	return common.Address{0x2}, nil
+}
+
+func (b *backend) Do3() (*big.Int, error) {
+	return big.NewInt(3), nil
 }
 
 func (b *backend) Address() common.Address {

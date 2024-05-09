@@ -45,11 +45,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	suave "github.com/ethereum/go-ethereum/suave/core"
+	"github.com/ethereum/go-ethereum/suavesdk"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -2023,6 +2025,30 @@ type moss1Bundle struct {
 	MaxBlockNumber uint64
 }
 
+func (m *moss1) EmitTopic(topicName string, dataToSend []byte) error {
+	// You must copy this data
+	data := make([]byte, len(dataToSend))
+	copy(data, dataToSend)
+
+	sdk := suavesdk.GetSDK()
+	if sdk == nil {
+		// sdk not enabled
+		return nil
+	}
+
+	topic, err := sdk.Topic(topicName)
+	if err != nil {
+		// TODO: I am returning panic because the error that goes back to solidity does not return
+		// the reason why it fails yet.
+		panic(err)
+	}
+
+	if err := topic.Publish(context.TODO(), data); err != nil {
+		panic(err)
+	}
+	return err
+}
+
 func (m *moss1) SendTransaction(txnRLP []byte) error {
 	// send the transaction to the memory pool. TODO: This should wait until the ccr has not reverted
 	if m.SendTransactions == nil {
@@ -2134,9 +2160,12 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 	}
 	state.SetSnapshot(conf2)
 
+	// super dity hack, breaks all the tests
+
 	// add the new precompiles
 	moss := &moss1{}
-	evm.AddDispatchTable(moss)
+	moss2 := miner.NewHeadlessMoss2(b)
+	evm.AddDispatchTable(moss, moss2)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)

@@ -16,6 +16,8 @@ interface CCRMoss {
     function sendBundle(MossBundle memory bundle) external;
 
     function sendTransaction(bytes memory txn) external;
+
+    function emitTopic(string memory topicName, bytes memory data) external;
 }
 
 // methods available for Suapps during the block building process.
@@ -24,6 +26,8 @@ interface WorkerMoss {
         bool err;
     }
 
+    function coinbase() external view returns (address);
+    function getBalance(address addr) external view returns (uint256);
     function addTransaction(bytes memory txn) external returns (TransactionResult memory);
 }
 
@@ -99,5 +103,47 @@ contract Bundle2 is Suapp {
         // create a txn to execute to mint the asset
         bytes memory raw = Transactions.encodeRLP(txn);
         ccrCtx.sendTransaction(raw);
+    }
+}
+
+contract MevShare is Suapp {
+    struct Hint {
+        address to;
+        bytes data;
+    }
+
+    function callback() public {}
+
+    function sendTransaction() public isCCR returns (bytes memory) {
+        // decode the txn from confidential inputs
+        bytes memory txnRaw = Suave.confidentialInputs();
+        Transactions.EIP155 memory txn = Transactions.decodeRLP_EIP155(txnRaw);
+
+        // extract the hints
+        Hint memory hint = Hint({to: txn.to, data: txn.data});
+        bytes memory bytesHint = abi.encode(hint);
+
+        // emit the hints over the p2p layer
+        ccrCtx.emitTopic("mev-share", bytesHint);
+        return abi.encodeWithSelector(this.callback.selector);
+    }
+
+    function matchBundle() public isWorker returns (bytes memory) {
+        // We have to validate that applyting 'originalTxn' and then 'matchTxn' produces
+        // a refund on the coinbase account.
+        bytes memory backrunTx = Suave.confidentialInputs();
+        uint256 preBalance = workerCtx.getBalance(workerCtx.coinbase());
+
+        workerCtx.addTransaction(backrunTx);
+
+        uint256 postBalance = workerCtx.getBalance(workerCtx.coinbase());
+        if (postBalance <= preBalance) {
+            revert("No refund");
+        }
+
+        console2.log("Pre balance: ", preBalance);
+        console2.log("Post balance: ", postBalance);
+
+        return abi.encodeWithSelector(this.callback.selector);
     }
 }
