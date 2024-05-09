@@ -134,6 +134,7 @@ contract MevShare is Suapp {
         bytes memory backrunTx = Suave.confidentialInputs();
         uint256 preBalance = workerCtx.getBalance(workerCtx.coinbase());
 
+        // TODO: Add the user txn too.
         workerCtx.addTransaction(backrunTx);
 
         uint256 postBalance = workerCtx.getBalance(workerCtx.coinbase());
