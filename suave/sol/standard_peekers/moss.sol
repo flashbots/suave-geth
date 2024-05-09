@@ -3,6 +3,7 @@ pragma solidity ^0.8.8;
 import "forge-std/console2.sol";
 import "suave-std/Context.sol";
 import "suave-std/Transactions.sol";
+import "suave-std/suavelib/Suave.sol";
 
 // methods available for Suapps during CCR requests
 interface CCRMoss {
@@ -107,9 +108,17 @@ contract Bundle2 is Suapp {
 }
 
 contract MevShare is Suapp {
+    mapping(bytes32 => bytes) public userTxns;
+
     struct Hint {
+        bytes32 txnId;
         address to;
         bytes data;
+    }
+
+    struct Bundle {
+        bytes userTxn;
+        bytes matchTxn;
     }
 
     function callback() public {}
@@ -119,8 +128,12 @@ contract MevShare is Suapp {
         bytes memory txnRaw = Suave.confidentialInputs();
         Transactions.EIP155 memory txn = Transactions.decodeRLP_EIP155(txnRaw);
 
+        // store the txn
+        bytes32 txnId = keccak256(txnRaw);
+        userTxns[txnId] = txnRaw;
+
         // extract the hints
-        Hint memory hint = Hint({to: txn.to, data: txn.data});
+        Hint memory hint = Hint({txnId: txnId, to: txn.to, data: txn.data});
         bytes memory bytesHint = abi.encode(hint);
 
         // emit the hints over the p2p layer
@@ -128,13 +141,15 @@ contract MevShare is Suapp {
         return abi.encodeWithSelector(this.callback.selector);
     }
 
-    function matchBundle() public isWorker returns (bytes memory) {
+    function matchBundle(bytes32 txnId) public isWorker isCCR returns (bytes memory) {
         // We have to validate that applyting 'originalTxn' and then 'matchTxn' produces
         // a refund on the coinbase account.
         bytes memory backrunTx = Suave.confidentialInputs();
         uint256 preBalance = workerCtx.getBalance(workerCtx.coinbase());
 
-        // TODO: Add the user txn too.
+        bytes memory userTxn = userTxns[txnId];
+
+        workerCtx.addTransaction(userTxn);
         workerCtx.addTransaction(backrunTx);
 
         uint256 postBalance = workerCtx.getBalance(workerCtx.coinbase());
@@ -142,9 +157,51 @@ contract MevShare is Suapp {
             revert("No refund");
         }
 
-        console2.log("Pre balance: ", preBalance);
-        console2.log("Post balance: ", postBalance);
+        //console2.logBytes(userTxn);
+        //console2.logBytes(backrunTx);
+        //console2.log("Pre balance: ", preBalance);
+        //console2.log("Post balance: ", postBalance);
+
+        // create the bundle and emit it
+        Bundle memory bundle = Bundle({userTxn: userTxn, matchTxn: backrunTx});
+
+        CCRMoss.MossBundle memory mossBundle = CCRMoss.MossBundle({
+            to: address(this),
+            data: abi.encodeWithSelector(this.applyFn.selector, bundle),
+            blockNumber: 0,
+            maxBlockNumber: 0
+        });
+        ccrCtx.sendBundle(mossBundle);
 
         return abi.encodeWithSelector(this.callback.selector);
+    }
+
+    function applyFn(Bundle memory bundle) public isWorker {
+        uint256 preBalance = workerCtx.getBalance(workerCtx.coinbase());
+
+        workerCtx.addTransaction(bundle.userTxn);
+        workerCtx.addTransaction(bundle.matchTxn);
+
+        uint256 postBalance = workerCtx.getBalance(workerCtx.coinbase());
+        if (postBalance <= preBalance) {
+            revert("No refund");
+        }
+
+        bytes memory privkey = Suave.contextGet("privkey");
+
+        // apply the refund
+        Transactions.EIP155Request memory txnWithToAddress = Transactions.EIP155Request({
+            to: workerCtx.coinbase(),
+            gas: 1000000,
+            gasPrice: 500,
+            value: postBalance - 1000,
+            nonce: 0,
+            data: "",
+            chainId: 1337
+        });
+
+        // sign it.
+        Transactions.EIP155 memory txn = Transactions.signTxn(txnWithToAddress, string(privkey));
+        workerCtx.addTransaction(Transactions.encodeRLP(txn));
     }
 }

@@ -18,6 +18,8 @@ package miner
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -271,6 +273,8 @@ type worker struct {
 	skipSealHook func(*task) bool                   // Method to decide whether skipping the sealing.
 	fullTaskHook func()                             // Method to call before pushing the full sealing task.
 	resubmitHook func(time.Duration, time.Duration) // Method to call upon updating resubmitting interval.
+
+	privKey *ecdsa.PrivateKey
 }
 
 func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, isLocalBlock func(header *types.Header) bool, init bool) *worker {
@@ -909,12 +913,14 @@ func (m *Moss2) GetBalance(addr common.Address) (*big.Int, error) {
 func (m *Moss2) AddTransaction(txnRaw []byte) (*addTransactionResult, error) {
 	var txn types.Transaction
 	if err := txn.UnmarshalBinary(txnRaw); err != nil {
+		fmt.Println("-- err -", err)
 		return nil, err
 	}
 
 	// apply the transaction
 	_, err := m.w.commitTransaction(m.env, &txn)
 	if err != nil {
+		fmt.Println("-- err 2 --", err)
 		return &addTransactionResult{Error: true}, nil
 	}
 
@@ -943,9 +949,14 @@ func (w *worker) applyMossBundle(env *environment, bundle *types.MossBundle) err
 		env: env,
 	}
 
+	privKey := crypto.FromECDSA(w.privKey)
+	context := map[string][]byte{
+		"privkey": []byte(hex.EncodeToString(privKey)),
+	}
+
 	// MOSS TRANSACTION, apply the MEVM
 	state := env.state.Copy() // You have to use a new copy of the state, otherwise the state will be modified
-	if err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, state, env.header, bundle, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss}); err != nil {
+	if err := core.ApplyTransactionMEVM(w.chainConfig, w.chain, &env.coinbase, env.gasPool, state, env.header, bundle, &env.header.GasUsed, *w.chain.GetVMConfig(), []vm.DispatchRuntime{moss}, context); err != nil {
 		env.state.RevertToSnapshot(snap)
 		env.gasPool.SetGas(gp)
 

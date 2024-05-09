@@ -89,8 +89,10 @@ func (b *BundlePool) AddBundle(bundle *types.MossBundle) {
 	if err != nil {
 		panic(err)
 	}
-	if err := b.topic.Publish(context.TODO(), data); err != nil {
-		panic(err)
+	if b.topic != nil {
+		if err := b.topic.Publish(context.TODO(), data); err != nil {
+			panic(err)
+		}
 	}
 }
 

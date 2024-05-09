@@ -181,6 +181,16 @@ func NewConfidentialEVM(suaveContext SuaveContext, blockCtx BlockContext, txCtx 
 	return evm
 }
 
+func (e *EVM) WithSuaveContextVar(key string, val []byte) *EVM {
+	if e.SuaveContext == nil {
+		e.SuaveContext = &SuaveContext{
+			Context: make(map[string][]byte),
+		}
+	}
+	e.SuaveContext.Context[key] = val
+	return e
+}
+
 // Reset resets the EVM with a new transaction context.Reset
 // This is not threadsafe and should only be done very cautiously.
 func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {

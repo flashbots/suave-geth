@@ -2015,6 +2015,7 @@ var magicBytes = hexutil.MustDecode("0x543543")
 
 type moss1 struct {
 	SendTransactions []*types.Transaction
+	Bundles          []moss1Bundle
 }
 
 // moss1Bundle is the parameter for SendBundle. It represents a types.MossBundle
@@ -2063,8 +2064,11 @@ func (m *moss1) SendTransaction(txnRLP []byte) error {
 	return nil
 }
 
-func (m *moss1) SendBundle(bundle *moss1Bundle) error {
-	panic("TODO SEND BUNDLE")
+func (m *moss1) SendBundle(bundle moss1Bundle) error {
+	if m.Bundles == nil {
+		m.Bundles = make([]moss1Bundle, 0)
+	}
+	m.Bundles = append(m.Bundles, bundle)
 	return nil
 }
 
@@ -2256,6 +2260,20 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 		if err := b.SendTx(context.TODO(), txn); err != nil {
 			panic(err)
 		}
+	}
+	for _, bb := range moss.Bundles {
+		bundle := &types.MossBundle{
+			To:             bb.To,
+			Data:           bb.Data,
+			BlockNumber:    bb.BlockNumber,
+			MaxBlockNumber: bb.MaxBlockNumber,
+		}
+		// add some defaults if both blockNumber and maxBlockNumnber are empty
+		if bundle.BlockNumber == 0 {
+			bundle.BlockNumber = header.Number.Uint64() + 1 // valid for the next block already
+			bundle.MaxBlockNumber = bundle.BlockNumber + 10 // valid for the next 10 blocks
+		}
+		b.TxPool().AddMossBundle(bundle)
 	}
 
 	// encode logs to the ABI form

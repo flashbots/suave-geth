@@ -173,14 +173,20 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 }
 
 // ApplyTransaction attempts to applies a MOSS transaction during block building
-func ApplyTransactionMEVM(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, bundle *types.MossBundle, usedGas *uint64, cfg vm.Config, dispatchRuntime []vm.DispatchRuntime) error {
+func ApplyTransactionMEVM(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, bundle *types.MossBundle, usedGas *uint64, cfg vm.Config, dispatchRuntime []vm.DispatchRuntime, context map[string][]byte) error {
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
+	cfg.IsConfidential = true
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, config, cfg)
 	vmenv.AddDispatchTable(dispatchRuntime...)
 
 	// Create a new context to be used in the EVM environment.
 	vmenv.Reset(vm.TxContext{Origin: common.Address{}, GasPrice: big.NewInt(0)}, statedb)
+
+	// we have to do this after the reset
+	for k, v := range context {
+		vmenv.WithSuaveContextVar(k, v)
+	}
 
 	sender := vm.AccountRef(common.Address{})
 	_, _, vmerr := vmenv.Call(sender, bundle.To, bundle.Data, 1000000000, big.NewInt(0))

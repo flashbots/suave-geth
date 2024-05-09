@@ -1609,7 +1609,7 @@ func TestMoss_SendTransaction_InsideCCR(t *testing.T) {
 }
 
 func TestMOSS_MevShare(t *testing.T) {
-	fr := newFramework(t)
+	fr := newFramework(t, WithBuilderKey(testKey2))
 	defer fr.Close()
 
 	clt := fr.NewSDKClient()
@@ -1650,7 +1650,7 @@ func TestMOSS_MevShare(t *testing.T) {
 
 	// send the match bundle
 	backrunTxn, err := types.SignTx(types.NewTx(&types.LegacyTx{
-		Nonce:    0,
+		Nonce:    1,
 		To:       &testAddr2,
 		Value:    big.NewInt(1111),
 		Gas:      1000000,
@@ -1662,17 +1662,32 @@ func TestMOSS_MevShare(t *testing.T) {
 	require.NoError(t, err)
 
 	// send a confidential compute request
-	_, err = mossContract.SendTransaction("matchBundle", []interface{}{}, backrunTxnMarshal)
+	_, err = mossContract.SendTransaction("matchBundle", []interface{}{hint.TxnId}, backrunTxnMarshal)
 	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second) // wait for the bundle to be there?
+
+	// force block building to apply the new MOSS bundle
+	eClt := &engineClient{rpc: fr.suethSrv.RPCNode()}
+	res, err := eClt.ForkchoiceUpdatedV1(engine.ForkchoiceStateV1{
+		// update the fork choice to the current genesis block
+		HeadBlockHash: fr.suethSrv.CurrentBlock().Hash(),
+	}, &engine.PayloadAttributes{
+		// start the payload generation
+		Timestamp: uint64(time.Now().Unix()),
+	})
+	require.NoError(t, err)
+	fmt.Println(res)
 }
 
 type MossHint struct {
-	To   common.Address
-	Data []byte
+	TxnId common.Hash
+	To    common.Address
+	Data  []byte
 }
 
 func (m *MossHint) Decode(data []byte) error {
-	typ, err := abi.NewTypeFromString("tuple(address,bytes)")
+	typ, err := abi.NewTypeFromString("tuple(bytes32,address,bytes)")
 	if err != nil {
 		panic(err)
 	}
@@ -1682,12 +1697,14 @@ func (m *MossHint) Decode(data []byte) error {
 		return err
 	}
 	vals := valsRaw.(struct {
-		Arg0 common.Address "json:\"arg0\""
-		Arg1 []uint8        "json:\"arg1\""
+		Arg0 [32]uint8      "json:\"arg0\""
+		Arg1 common.Address "json:\"arg1\""
+		Arg2 []uint8        "json:\"arg2\""
 	})
 
-	m.To = vals.Arg0
-	m.Data = vals.Arg1
+	m.TxnId = vals.Arg0
+	m.To = vals.Arg1
+	m.Data = vals.Arg2
 
 	return nil
 }
@@ -1763,6 +1780,7 @@ type framework struct {
 type frameworkConfig struct {
 	kettleAddress     bool
 	redisStoreBackend bool
+	BuilderPrivKeyHex *ecdsa.PrivateKey
 	suaveConfig       suave.Config
 }
 
@@ -1823,6 +1841,12 @@ func WithDnsRegistry(registry map[string]string) frameworkOpt {
 	}
 }
 
+func WithBuilderKey(privKey *ecdsa.PrivateKey) frameworkOpt {
+	return func(c *frameworkConfig) {
+		c.BuilderPrivKeyHex = privKey
+	}
+}
+
 func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	cfg := defaultFrameworkConfig
 	for _, opt := range opts {
@@ -1846,6 +1870,10 @@ func newFramework(t *testing.T, opts ...frameworkOpt) *framework {
 	}
 
 	node, ethservice := startSuethService(t, testSuaveGenesis, nil, cfg.suaveConfig)
+
+	if cfg.BuilderPrivKeyHex != nil {
+		ethservice.Miner().SetPrivateKey(cfg.BuilderPrivKeyHex)
+	}
 
 	f := &framework{
 		t:        t,

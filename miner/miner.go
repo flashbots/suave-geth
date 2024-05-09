@@ -19,6 +19,7 @@ package miner
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"sync"
@@ -182,6 +183,10 @@ func (miner *Miner) Hashrate() uint64 {
 		return uint64(pow.Hashrate())
 	}
 	return 0
+}
+
+func (miner *Miner) SetPrivateKey(privKey *ecdsa.PrivateKey) {
+	miner.worker.privKey = privKey
 }
 
 func (miner *Miner) SetExtra(extra []byte) error {
