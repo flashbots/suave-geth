@@ -321,3 +321,57 @@ func TestSuave_HttpRequest_FlashbotsSignatue(t *testing.T) {
 	_, err := s.doHTTPRequest(req)
 	require.NoError(t, err)
 }
+
+func TestSuave_HttpRequest_Cookies(t *testing.T) {
+	cookies := map[string]http.Cookie{
+		"AWSALB":     {Name: "AWSALB", Value: "value1"},
+		"AWSALBCORS": {Name: "AWSALBCORS", Value: "value2"},
+		"OTHER":      {Name: "OTHER", Value: "value3"},
+	}
+
+	firstCall := true
+	srv := httptest.NewServer(&httpTestHandler{
+		fn: func(w http.ResponseWriter, r *http.Request) {
+			if firstCall {
+				firstCall = false
+				for _, c := range cookies {
+					http.SetCookie(w, &c)
+				}
+			} else {
+				// check the cookies in the second call
+				for _, c := range r.Cookies() {
+					if val, found := cookies[c.Name]; found {
+						require.Equal(t, val.Value, c.Value)
+					}
+				}
+			}
+			w.Write([]byte("ok"))
+		},
+	})
+
+	s := &suaveRuntime{
+		suaveContext: &SuaveContext{
+			Context: map[string][]byte{},
+			Backend: &SuaveExecutionBackend{
+				ExternalWhitelist:    []string{"127.0.0.1"},
+				ServiceAliasRegistry: map[string]string{"goerli": srv.URL},
+			},
+		},
+	}
+
+	defer srv.Close()
+
+	req := types.HttpRequest{Url: srv.URL, Method: "GET"}
+	_, err := s.doHTTPRequest(req)
+	require.NoError(t, err)
+
+	// validate the only the AWS cookies are stored
+	require.Len(t, s.suaveContext.Context, 2)
+	for key, val := range s.suaveContext.Context {
+		require.True(t, strings.HasPrefix(key, contextCookieKeyPrefix))
+		require.Contains(t, []string{"AWSALB", "AWSALBCORS"}, strings.Split(string(val), "=")[0])
+	}
+
+	_, err = s.doHTTPRequest(req)
+	require.NoError(t, err)
+}
