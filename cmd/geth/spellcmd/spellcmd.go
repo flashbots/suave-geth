@@ -143,7 +143,13 @@ var (
 
 			var confInput []byte
 			if input := ctx.String(confidentialInput.Name); input != "" {
-				confInput = []byte(input)
+				if strings.HasPrefix(input, "0x") {
+					if confInput, err = hexutil.Decode(input); err != nil {
+						return fmt.Errorf("failed to decode hex confidential input: %w", err)
+					}
+				} else {
+					confInput = []byte(input)
+				}
 				log.Info("Confidential input provided", "input", confInput)
 			} else {
 				log.Info("No confidential input provided, using empty string")
