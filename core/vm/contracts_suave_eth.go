@@ -276,8 +276,8 @@ func (b *suaveRuntime) buildEthBlockTo(execNode string, blockArgs types.BuildBlo
 		Value:                value,
 	}
 
-	// hardcoded for holesky, should be passed in with the inputs
-	genesisForkVersion := phase0.Version{0x01, 0x01, 0x70, 0x00}
+	// hardcoded for mainnet, should be passed in with the inputs
+	genesisForkVersion := phase0.Version{0x00, 0x00, 0x00, 0x00}
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
 	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, b.suaveContext.Backend.EthBlockSigningKey)
 	if err != nil {
