@@ -210,6 +210,8 @@ func (c *consoleLogPrecompile) Run(input []byte) ([]byte, error) {
 	return nil, nil
 }
 
+var contextCookieKeyPrefix = "__cookie_"
+
 func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
 	if request.Method != "GET" && request.Method != "POST" {
 		return nil, fmt.Errorf("only GET and POST methods are supported")
@@ -230,6 +232,13 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	req, err := http.NewRequest(request.Method, url, body)
 	if err != nil {
 		return nil, err
+	}
+
+	// add any cookies stored in the context
+	for key, val := range s.suaveContext.Context {
+		if strings.HasPrefix(key, contextCookieKeyPrefix) {
+			req.Header.Add("Cookie", string(val))
+		}
 	}
 
 	for _, header := range request.Headers {
@@ -269,6 +278,14 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	if resp.StatusCode > 299 {
 		return nil, fmt.Errorf("http error: %s: %v", resp.Status, data)
 	}
+
+	// parse the LB cookies (AWSALB, AWSALBCORS) and set them in the context
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "AWSALB" || cookie.Name == "AWSALBCORS" {
+			s.suaveContext.Context[contextCookieKeyPrefix+cookie.Name] = []byte(cookie.String())
+		}
+	}
+
 	return data, nil
 }
 
