@@ -197,6 +197,29 @@ functions:
         - name: value
           type: bytes
           description: "Value of the data"
+  - name: dagStore
+    address: "0x0000000000000000000000000000000052020000"
+    description: "Stores data in the DAG."
+    input:
+      - name: key
+        type: bytes32
+        description: "Key slot of the data to store"
+      - name: value
+        type: bytes
+        description: "Value of the data to store"
+  - name: dagRetrieve
+    address: "0x0000000000000000000000000000000052020001"
+    description: "Retrieves data from the DAG."
+    input:
+      - name: key
+        type: bytes32
+        description: "Key slot of the data to retrieve"
+    output:
+      packed: true
+      fields:
+        - name: value
+          type: bytes
+          description: "Value of the data"
   - name: signEthTransaction
     address: "0x0000000000000000000000000000000040100001"
     description: "Signs an Ethereum Transaction, 1559 or Legacy, and returns raw signed transaction bytes. `txn` is binary encoding of the transaction."
