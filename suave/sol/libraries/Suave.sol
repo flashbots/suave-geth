@@ -118,6 +118,10 @@ library Suave {
 
     address public constant CONTEXT_GET = 0x0000000000000000000000000000000053300003;
 
+    address public constant DAG_RETRIEVE = 0x0000000000000000000000000000000052020001;
+
+    address public constant DAG_STORE = 0x0000000000000000000000000000000052020000;
+
     address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
 
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
@@ -248,6 +252,28 @@ library Suave {
         }
 
         return abi.decode(data, (bytes));
+    }
+
+    /// @notice Retrieves data from the DAG.
+    /// @param key Key slot of the data to retrieve
+    /// @return value Value of the data
+    function dagRetrieve(bytes32 key) internal returns (bytes memory) {
+        (bool success, bytes memory data) = DAG_RETRIEVE.call(abi.encode(key));
+        if (!success) {
+            revert PeekerReverted(DAG_RETRIEVE, data);
+        }
+
+        return data;
+    }
+
+    /// @notice Stores data in the DAG.
+    /// @param key Key slot of the data to store
+    /// @param value Value of the data to store
+    function dagStore(bytes32 key, bytes memory value) internal {
+        (bool success, bytes memory data) = DAG_STORE.call(abi.encode(key, value));
+        if (!success) {
+            revert PeekerReverted(DAG_STORE, data);
+        }
     }
 
     /// @notice Performs an HTTP request and returns the response. `request` is the request to perform.
