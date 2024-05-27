@@ -65,8 +65,8 @@ type CStoreEngine struct {
 	storage        ConfidentialStorageBackend
 	transportTopic StoreTransportTopic
 
-	daSigner DASigner
-	// chainSigner ChainSigner
+	daSigner    DASigner
+	chainSigner ChainSigner
 
 	storeUUID      uuid.UUID
 	localAddresses map[common.Address]struct{}
@@ -83,7 +83,7 @@ func NewEngine(backend ConfidentialStorageBackend, transportTopic StoreTransport
 		storage:        backend,
 		transportTopic: transportTopic,
 		daSigner:       daSigner,
-		// chainSigner:    chainSigner,
+		chainSigner:    chainSigner,
 		storeUUID:      uuid.New(),
 		localAddresses: localAddresses,
 	}
@@ -262,12 +262,10 @@ func (e *CStoreEngine) Finalize(tx *types.Transaction, newRecords map[suave.Data
 		StoreUUID:   e.storeUUID,
 	}
 
-	/*
-		if _, sigErr := e.chainSigner.Sender(tx); sigErr != nil {
-			log.Info("confidential engine: refusing to send writes based on unsigned transaction", "hash", tx.Hash().Hex(), "err", sigErr)
-			return suave.ErrUnsignedFinalize
-		}
-	*/
+	if _, sigErr := e.chainSigner.Sender(tx); sigErr != nil {
+		log.Info("confidential engine: refusing to send writes based on unsigned transaction", "hash", tx.Hash().Hex(), "err", sigErr)
+		return suave.ErrUnsignedFinalize
+	}
 
 	msgBytes, err := SerializeDAMessage(&pwMsg)
 	if err != nil {
@@ -319,12 +317,10 @@ func (e *CStoreEngine) NewMessage(message DAMessage) error {
 		log.Info("Confidential engine: message is spoofing our storeUUID, processing anyway", "message", message)
 	}
 
-	/*
-		_, err = e.chainSigner.Sender(message.SourceTx)
-		if err != nil {
-			return fmt.Errorf("confidential engine: source tx for message is not signed properly: %w", err)
-		}
-	*/
+	_, err = e.chainSigner.Sender(message.SourceTx)
+	if err != nil {
+		return fmt.Errorf("confidential engine: source tx for message is not signed properly: %w", err)
+	}
 
 	// TODO: check if message.SourceTx is valid and insert it into the mempool!
 
@@ -371,13 +367,11 @@ func (e *CStoreEngine) NewMessage(message DAMessage) error {
 			return fmt.Errorf("confidential engine: caller %x not allowed on record %x", sw.Caller, sw.DataRecord.Id)
 		}
 
-		/*
-			// TODO: move to types.Sender()
-			_, err = e.chainSigner.Sender(sw.DataRecord.CreationTx)
-			if err != nil {
-				return fmt.Errorf("confidential engine: creation tx for record id %x is not signed properly: %w", sw.DataRecord.Id, err)
-			}
-		*/
+		// TODO: move to types.Sender()
+		_, err = e.chainSigner.Sender(sw.DataRecord.CreationTx)
+		if err != nil {
+			return fmt.Errorf("confidential engine: creation tx for record id %x is not signed properly: %w", sw.DataRecord.Id, err)
+		}
 	}
 
 	for _, sw := range message.StoreWrites {
