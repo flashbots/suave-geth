@@ -17,6 +17,9 @@ type ConfidentialComputeRecord struct {
 	KettleAddress          common.Address
 	ConfidentialInputsHash common.Hash
 
+	// Envelope signals whether this CCR was signed using EIP-712
+	Envelope bool
+
 	ChainID *big.Int
 	V, R, S *big.Int
 }
@@ -30,6 +33,7 @@ func (tx *ConfidentialComputeRecord) copy() TxData {
 		Gas:                    tx.Gas,
 		KettleAddress:          tx.KettleAddress,
 		ConfidentialInputsHash: tx.ConfidentialInputsHash,
+		Envelope:               tx.Envelope,
 
 		Value:    new(big.Int),
 		GasPrice: new(big.Int),

@@ -87,17 +87,23 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 		gasLimit = uint64(estimatedGasLimit)
 	}
 
+	record := types.ConfidentialComputeRecord{
+		KettleAddress: c.client.kettleAddress,
+		Nonce:         nonce,
+		To:            &c.addr,
+		Value:         nil,
+		GasPrice:      gasPrice,
+		Gas:           gasLimit,
+		Data:          calldata,
+	}
+	if c.client.useEIP712 {
+		record.ChainID = signer.ChainID()
+		record.Envelope = true
+	}
+
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{
-		ConfidentialComputeRecord: types.ConfidentialComputeRecord{
-			KettleAddress: c.client.kettleAddress,
-			Nonce:         nonce,
-			To:            &c.addr,
-			Value:         nil,
-			GasPrice:      gasPrice,
-			Gas:           gasLimit,
-			Data:          calldata,
-		},
-		ConfidentialInputs: confidentialDataBytes,
+		ConfidentialComputeRecord: record,
+		ConfidentialInputs:        confidentialDataBytes,
 	}), signer, c.client.key)
 	if err != nil {
 		return nil, err
@@ -165,6 +171,7 @@ type Client struct {
 	rpc           *ethclient.Client
 	key           *ecdsa.PrivateKey
 	kettleAddress common.Address
+	useEIP712     bool
 }
 
 func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, kettleAddress common.Address) *Client {
@@ -173,6 +180,11 @@ func NewClient(rpc *rpc.Client, key *ecdsa.PrivateKey, kettleAddress common.Addr
 		key:           key,
 		kettleAddress: kettleAddress,
 	}
+	return c
+}
+
+func (c *Client) WithEIP712() *Client {
+	c.useEIP712 = true
 	return c
 }
 

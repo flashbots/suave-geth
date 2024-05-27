@@ -1569,7 +1569,7 @@ func (f *framework) testHttpRelayer(handler handlerFunc) string {
 }
 
 func (f *framework) NewSDKClient() *sdk.Client {
-	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.KettleAddress())
+	return sdk.NewClient(f.suethSrv.RPCNode(), testKey, f.KettleAddress()).WithEIP712()
 }
 
 func (f *framework) ConfidentialStoreBackend() cstore.ConfidentialStorageBackend {
