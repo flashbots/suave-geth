@@ -343,6 +343,19 @@ func (b *suaveRuntime) privateKeyGen(cryptoType types.CryptoSignature) (string, 
 	return "", fmt.Errorf("unsupported crypto type %v", cryptoType)
 }
 
+func (b *suaveRuntime) derivePublicAddress(privateKey string, cryptoType types.CryptoSignature) (common.Address, error) {
+	if cryptoType == types.CryptoSignature_SECP256 {
+		key, err := crypto.HexToECDSA(privateKey)
+		if err != nil {
+			return common.HexToAddress("0x0000000000000000000000000000000000000000"), fmt.Errorf("could not read the private key: %w", err)
+		}
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		return addr, nil
+	}
+
+	return common.HexToAddress("0x0000000000000000000000000000000000000000"), fmt.Errorf("unsupported crypto type %v", cryptoType)
+}
+
 func (b *suaveRuntime) submitEthBlockToRelay(relayUrl string, builderDataRecordJson []byte) ([]byte, error) {
 	endpoint := relayUrl + "/relay/v1/builder/blocks"
 

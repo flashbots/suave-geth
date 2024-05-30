@@ -91,6 +91,10 @@ func (m *mockRuntime) privateKeyGen(crypto types.CryptoSignature) (string, error
 	return "", nil
 }
 
+func (m *mockRuntime) derivePublicAddress(privateKey string, crypto types.CryptoSignature) (common.Address, error) {
+	return common.HexToAddress("0x0000000000000000000000000000000000000000"), nil
+}
+
 func (m *mockRuntime) contextGet(key string) ([]byte, error) {
 	return nil, nil
 }

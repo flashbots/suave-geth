@@ -1327,6 +1327,10 @@ func TestE2E_Precompile_CryptoSECP256(t *testing.T) {
 	res1 := fr.callPrecompile("signMessage", []interface{}{digest, types.CryptoSignature_SECP256, ecdsaKey})
 	signature := res1[0].([]byte)
 
+	// derive the public address
+	res2 := fr.callPrecompile("derivePublicAddress", []interface{}{ecdsaKey, types.CryptoSignature_SECP256})
+	addr := res2[0].(common.Address)
+
 	// verify the signature
 	priv, err := crypto.HexToECDSA(ecdsaKey)
 	require.NoError(t, err)
@@ -1334,6 +1338,7 @@ func TestE2E_Precompile_CryptoSECP256(t *testing.T) {
 	pub2, err := crypto.SigToPub(digest, signature)
 	require.NoError(t, err)
 	require.Equal(t, crypto.PubkeyToAddress(priv.PublicKey), crypto.PubkeyToAddress(*pub2))
+	require.Equal(t, addr, crypto.PubkeyToAddress(*pub2))
 }
 
 func TestE2E_Precompile_CryptoBLS(t *testing.T) {
