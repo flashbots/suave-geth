@@ -19,6 +19,7 @@ func CCREIP712Envelope(msg *ConfidentialComputeRecord) eip712.TypedData {
 		Types: eip712.Types{
 			"EIP712Domain": []eip712.Type{
 				{Name: "name", Type: "string"},
+				{Name: "verifyingContract", Type: "address"},
 			},
 			"ConfidentialRecord": []eip712.Type{
 				{Name: "nonce", Type: "uint64"},
@@ -32,7 +33,8 @@ func CCREIP712Envelope(msg *ConfidentialComputeRecord) eip712.TypedData {
 			},
 		},
 		Domain: eip712.TypedDataDomain{
-			Name: "ConfidentialRecord",
+			Name:              "ConfidentialRecord",
+			VerifyingContract: msg.KettleAddress.Hex(),
 		},
 		PrimaryType: "ConfidentialRecord",
 		Message: eip712.TypedDataMessage{
