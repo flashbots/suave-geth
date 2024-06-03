@@ -98,7 +98,7 @@ func (c *Contract) SendTransaction(method string, args []interface{}, confidenti
 	}
 	if c.client.useEIP712 {
 		record.ChainID = signer.ChainID()
-		record.Envelope = true
+		record.IsEIP712 = true
 	}
 
 	computeRequest, err := types.SignTx(types.NewTx(&types.ConfidentialComputeRequest{

@@ -359,7 +359,7 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 				txdata.ConfidentialComputeResult,
 			})
 	case *ConfidentialComputeRequest:
-		if txdata.Envelope {
+		if txdata.IsEIP712 {
 			// EIP-712 signature used during signing
 			hash, err := txdata.ConfidentialComputeRecord.EIP712Hash()
 			if err != nil {
@@ -381,7 +381,7 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 				tx.Data(),
 			})
 	case *ConfidentialComputeRecord:
-		if txdata.Envelope {
+		if txdata.IsEIP712 {
 			// EIP-712 signature using during recovery
 			hash, err := txdata.EIP712Hash()
 			if err != nil {
