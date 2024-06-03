@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/signer/core/eip712"
 )
 
@@ -20,7 +19,7 @@ func CCREIP712Envelope(msg *ConfidentialComputeRecord) eip712.TypedData {
 		Types: eip712.Types{
 			"EIP712Domain": []eip712.Type{
 				{Name: "name", Type: "string"},
-				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
 			},
 			"ConfidentialRecord": []eip712.Type{
 				{Name: "nonce", Type: "uint64"},
@@ -34,8 +33,8 @@ func CCREIP712Envelope(msg *ConfidentialComputeRecord) eip712.TypedData {
 			},
 		},
 		Domain: eip712.TypedDataDomain{
-			Name:    "ConfidentialRecord",
-			ChainId: math.NewHexOrDecimal256(msg.ChainID.Int64()),
+			Name:              "ConfidentialRecord",
+			VerifyingContract: msg.KettleAddress.Hex(),
 		},
 		PrimaryType: "ConfidentialRecord",
 		Message: eip712.TypedDataMessage{
