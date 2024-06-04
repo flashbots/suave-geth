@@ -40,6 +40,10 @@ func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input [
 	return nil, nil
 }
 
+func (e *EthMock) ChainID(ctx context.Context) (*big.Int, error) {
+	return nil, nil
+}
+
 type RemoteEthBackend struct {
 	endpoint string
 	client   *rpc.Client
@@ -101,4 +105,11 @@ func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address
 	err := e.CallContext(ctx, &result, "suavex_call", contractAddr, input)
 
 	return result, err
+}
+
+func (e *RemoteEthBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	var chainID *big.Int
+	err := e.CallContext(ctx, &chainID, "eth_chainId")
+
+	return chainID, err
 }

@@ -3,6 +3,7 @@ package suave
 import (
 	"context"
 	"errors"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
@@ -65,6 +66,7 @@ type ConfidentialEthBackend interface {
 	BuildEthBlock(ctx context.Context, args *BuildBlockArgs, txs types.Transactions) (*dencun.ExecutionPayloadEnvelope, error)
 	BuildEthBlockFromBundles(ctx context.Context, args *BuildBlockArgs, bundles []types.SBundle) (*dencun.ExecutionPayloadEnvelope, error)
 	Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error)
+	ChainID(ctx context.Context) (*big.Int, error)
 
 	builder.API
 }

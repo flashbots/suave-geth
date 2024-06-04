@@ -276,8 +276,26 @@ func (b *suaveRuntime) buildEthBlockTo(execNode string, blockArgs types.BuildBlo
 		Value:                value,
 	}
 
-	// hardcoded for holesky, should be passed in with the inputs
-	genesisForkVersion := phase0.Version{0x01, 0x01, 0x70, 0x00}
+	// default to Holesky version
+	var genesisForkVersion phase0.Version
+
+	// use the chain id of the execution node to figure out the fork version
+	chainID, err := confBackend.ChainID(context.Background())
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get chain id to resolve fork version: %w", err)
+	}
+
+	switch chainID.Uint64() {
+	case 1:
+		// mainnet
+		genesisForkVersion = phase0.Version{0x00, 0x00, 0x00, 0x00}
+	case 17000:
+		// holesky
+		genesisForkVersion = phase0.Version{0x01, 0x01, 0x70, 0x00}
+	default:
+		return nil, nil, fmt.Errorf("unsupported chain id %d", chainID.Uint64())
+	}
+
 	builderSigningDomain := ssz.ComputeDomain(ssz.DomainTypeAppBuilder, genesisForkVersion, phase0.Root{})
 	signature, err := ssz.SignMessage(&blockBidMsg, builderSigningDomain, b.suaveContext.Backend.EthBlockSigningKey)
 	if err != nil {

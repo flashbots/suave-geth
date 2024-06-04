@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -67,6 +68,10 @@ func (m *mockSuaveBackend) BuildEthBlockFromBundles(ctx context.Context, args *s
 }
 
 func (m *mockSuaveBackend) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *mockSuaveBackend) ChainID(ctx context.Context) (*big.Int, error) {
 	return nil, nil
 }
 
