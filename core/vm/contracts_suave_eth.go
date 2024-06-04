@@ -276,7 +276,6 @@ func (b *suaveRuntime) buildEthBlockTo(execNode string, blockArgs types.BuildBlo
 		Value:                value,
 	}
 
-	// default to Holesky version
 	var genesisForkVersion phase0.Version
 
 	// use the chain id of the execution node to figure out the fork version
