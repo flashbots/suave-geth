@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	builder "github.com/ethereum/go-ethereum/suave/builder/api"
@@ -108,8 +109,9 @@ func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address
 }
 
 func (e *RemoteEthBackend) ChainID(ctx context.Context) (*big.Int, error) {
-	var chainID *big.Int
-	err := e.CallContext(ctx, &chainID, "eth_chainId")
-
-	return chainID, err
+	var chainID hexutil.Big
+	if err := e.CallContext(ctx, &chainID, "eth_chainId"); err != nil {
+		return nil, err
+	}
+	return chainID.ToInt(), nil
 }
