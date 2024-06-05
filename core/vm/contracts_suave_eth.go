@@ -288,8 +288,8 @@ func (b *suaveRuntime) buildEthBlockTo(execNode string, blockArgs types.BuildBlo
 	case 1:
 		// mainnet
 		genesisForkVersion = phase0.Version{0x00, 0x00, 0x00, 0x00}
-	case 17000:
-		// holesky
+	case 17000, 1337:
+		// holesky and test chains
 		genesisForkVersion = phase0.Version{0x01, 0x01, 0x70, 0x00}
 	default:
 		return nil, nil, fmt.Errorf("unsupported chain id %d", chainID.Uint64())
