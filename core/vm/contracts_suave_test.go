@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
@@ -374,4 +375,43 @@ func TestSuave_HttpRequest_Cookies(t *testing.T) {
 
 	_, err = s.doHTTPRequest(req)
 	require.NoError(t, err)
+}
+
+func TestSuave_HttpRequest_Timeout(t *testing.T) {
+	var requestTimeout time.Duration
+
+	srv := httptest.NewServer(&httpTestHandler{
+		fn: func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(requestTimeout)
+		},
+	})
+
+	s := &suaveRuntime{
+		suaveContext: &SuaveContext{
+			Context: map[string][]byte{},
+			Backend: &SuaveExecutionBackend{
+				ExternalWhitelist:    []string{"127.0.0.1"},
+				ServiceAliasRegistry: map[string]string{"goerli": srv.URL},
+			},
+		},
+	}
+
+	defer srv.Close()
+
+	call := func(timeout time.Duration) error {
+		req := types.HttpRequest{Url: srv.URL, Method: "GET", Timeout: uint64(timeout.Milliseconds())}
+		_, err := s.doHTTPRequest(req)
+		return err
+	}
+
+	requestTimeout = 2 * time.Second
+	require.NoError(t, call(3*time.Second))
+	require.Error(t, call(1*time.Second))
+
+	// check default timeout of 5 seconds
+	requestTimeout = 10 * time.Second
+	start := time.Now()
+	require.Error(t, call(0))
+	end := time.Now()
+	require.True(t, end.Sub(start) < 6*time.Second)
 }

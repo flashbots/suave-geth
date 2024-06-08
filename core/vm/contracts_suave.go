@@ -261,8 +261,15 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		req.Header.Add("X-Flashbots-Signature", signature)
 	}
 
+	var timeout time.Duration
+	if request.Timeout == 0 {
+		timeout = 5 * time.Second
+	} else {
+		timeout = time.Duration(request.Timeout) * time.Millisecond
+	}
+
 	client := &http.Client{
-		Timeout: 5 * time.Second, // TODO: test
+		Timeout: timeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
