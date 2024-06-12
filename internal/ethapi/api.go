@@ -1967,9 +1967,6 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 			log.Error("could not finalize confidential store", "err", err)
 			return tx.Hash(), err
 		}
-		// DO NOT SEND TEH CALLBACK BECAUSE THIS DOES NOT END IN THE SUAVE CHAIN BUT THE TARGET CHAIN
-		// FOR NOW THIS IS DISABLED
-		return ntx.Hash(), nil
 
 		tx = ntx
 	}
