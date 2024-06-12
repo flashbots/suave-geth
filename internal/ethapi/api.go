@@ -2218,7 +2218,6 @@ func runMEVM(ctx context.Context, b Backend, state *state.StateDB, header *types
 
 	// Take the updated state for the CONTRACT only and apply it to the conf store
 	for k, v := range state.GetModifiedState(*msg.To) {
-		fmt.Println("- write state -", k, v)
 		if err := conf2.set(k, v); err != nil {
 			return nil, nil, nil, err
 		}
