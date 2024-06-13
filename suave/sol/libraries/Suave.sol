@@ -122,6 +122,8 @@ library Suave {
 
     address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
 
+    address public constant DO_HTTPREQUESTS = 0x0000000000000000000000000000000043200003;
+
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
     address public constant EXTRACT_HINT = 0x0000000000000000000000000000000042100037;
@@ -262,6 +264,18 @@ library Suave {
         }
 
         return abi.decode(data, (bytes));
+    }
+
+    /// @notice Executes multiple `doHTTPRequest`s async
+    /// @param requests Requests to perform
+    /// @return httpResponses Body of the responses
+    function doHTTPRequests(HttpRequest[] memory requests) internal returns (bytes[] memory) {
+        (bool success, bytes memory data) = DO_HTTPREQUESTS.call(abi.encode(requests));
+        if (!success) {
+            revert PeekerReverted(DO_HTTPREQUESTS, data);
+        }
+
+        return abi.decode(data, (bytes[]));
     }
 
     /// @notice Uses the `eth_call` JSON RPC method to let you simulate a function call and return the response.
