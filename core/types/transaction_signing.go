@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -358,6 +359,15 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 				txdata.ConfidentialComputeResult,
 			})
 	case *ConfidentialComputeRequest:
+		if txdata.IsEIP712 {
+			// EIP-712 signature used during signing
+			hash, err := txdata.ConfidentialComputeRecord.EIP712Hash()
+			if err != nil {
+				log.Error("failed to calculate EIP712 hash", "err", err)
+			}
+			return hash
+		}
+
 		return prefixedRlpHash(
 			ConfidentialComputeRecordTxType, // Note: this is the same as the Record so that hashes match!
 			[]interface{}{
@@ -371,6 +381,16 @@ func (s suaveSigner) Hash(tx *Transaction) common.Hash {
 				tx.Data(),
 			})
 	case *ConfidentialComputeRecord:
+		if txdata.IsEIP712 {
+			// EIP-712 signature using during recovery
+			hash, err := txdata.EIP712Hash()
+			if err != nil {
+				log.Error("failed to calculate EIP712 hash", "err", err)
+			}
+			return hash
+		}
+
+		// normal txn signature
 		return prefixedRlpHash(
 			tx.Type(),
 			[]interface{}{
@@ -687,6 +707,10 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 		tx.Value(),
 		tx.Data(),
 	})
+}
+
+func DecodeSignature(sig []byte) (r, s, v *big.Int) {
+	return decodeSignature(sig)
 }
 
 func decodeSignature(sig []byte) (r, s, v *big.Int) {

@@ -44,6 +44,7 @@ type txJSON struct {
 	BlobVersionedHashes       []common.Hash    `json:"blobVersionedHashes,omitempty"`
 	KettleAddress             *common.Address  `json:"kettleAddress,omitempty"`
 	ConfidentialInputsHash    *common.Hash     `json:"confidentialInputsHash,omitempty"`
+	IsEIP712                  *bool            `json:"iseip712,omitempty"`
 	ConfidentialInputs        *hexutil.Bytes   `json:"confidentialInputs,omitempty"`
 	RequestRecord             *json.RawMessage `json:"requestRecord,omitempty"`
 	ConfidentialComputeResult *hexutil.Bytes   `json:"confidentialComputeResult,omitempty"`
@@ -146,6 +147,7 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 		enc.V = (*hexutil.Big)(itx.V)
 		enc.R = (*hexutil.Big)(itx.R)
 		enc.S = (*hexutil.Big)(itx.S)
+		enc.IsEIP712 = &itx.IsEIP712
 
 	case *SuaveTransaction:
 		requestRecord, err := NewTx(&itx.ConfidentialComputeRequest).MarshalJSON()
@@ -498,6 +500,9 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'chainId' in transaction")
 		}
 		itx.ChainID = (*big.Int)(dec.ChainID)
+		if dec.IsEIP712 != nil {
+			itx.IsEIP712 = *dec.IsEIP712
+		}
 		if dec.V == nil {
 			return errors.New("missing required field 'r' in transaction")
 		}
