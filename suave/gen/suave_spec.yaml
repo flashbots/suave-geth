@@ -95,6 +95,9 @@ structs:
       - name: withFlashbotsSignature
         description: "Whether to include the Flashbots signature"
         type: bool
+      - name: timeout
+        description: "Timeout of the request in milliseconds"
+        type: uint64
   - name: SimulateTransactionResult
     description: "Result of a simulated transaction."
     fields:

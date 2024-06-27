@@ -60,12 +60,14 @@ library Suave {
     /// @param headers HTTP Headers
     /// @param body Body of the request (if Post or Put)
     /// @param withFlashbotsSignature Whether to include the Flashbots signature
+    /// @param timeout Timeout of the request in milliseconds
     struct HttpRequest {
         string url;
         string method;
         string[] headers;
         bytes body;
         bool withFlashbotsSignature;
+        uint64 timeout;
     }
 
     /// @notice Result of a simulated transaction.
