@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/beacon/dencun"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	builder "github.com/ethereum/go-ethereum/suave/builder/api"
@@ -37,6 +38,10 @@ func (e *EthMock) BuildEthBlockFromBundles(ctx context.Context, args *suave.Buil
 }
 
 func (e *EthMock) Call(ctx context.Context, contractAddr common.Address, input []byte) ([]byte, error) {
+	return nil, nil
+}
+
+func (e *EthMock) ChainID(ctx context.Context) (*big.Int, error) {
 	return nil, nil
 }
 
@@ -101,4 +106,12 @@ func (e *RemoteEthBackend) Call(ctx context.Context, contractAddr common.Address
 	err := e.CallContext(ctx, &result, "suavex_call", contractAddr, input)
 
 	return result, err
+}
+
+func (e *RemoteEthBackend) ChainID(ctx context.Context) (*big.Int, error) {
+	var chainID hexutil.Big
+	if err := e.CallContext(ctx, &chainID, "eth_chainId"); err != nil {
+		return nil, err
+	}
+	return chainID.ToInt(), nil
 }
