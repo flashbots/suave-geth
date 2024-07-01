@@ -288,6 +288,7 @@ func getClient(ctx *cli.Context) (*sdk.Client, error) {
 	}
 
 	clt := sdk.NewClient(rpcClient, privKey, kettleAddress)
+	clt = clt.WithEIP712()
 	return clt, nil
 }
 
