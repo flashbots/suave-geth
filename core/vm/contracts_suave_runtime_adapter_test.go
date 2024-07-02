@@ -79,6 +79,12 @@ func (m *mockRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
+func (m *mockRuntime) doHTTPRequests(request []types.HttpRequest) ([][]byte, error) {
+	var byteSlices [][]byte
+	byteSlices = append(byteSlices, []byte{0x1})
+	return byteSlices, nil
+}
+
 func (m *mockRuntime) newBuilder() (string, error) {
 	return "", nil
 }

@@ -3,6 +3,7 @@ package vm
 import (
 	"context"
 	"math/big"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -291,6 +292,35 @@ func TestSuave_HttpRequest_Basic(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSuave_HttpRequests_Basic(t *testing.T) {
+	srv := httptest.NewServer(&httpTestHandler{
+		fn: basicHandler,
+	})
+
+	s := &suaveRuntime{
+		suaveContext: &SuaveContext{
+			Backend: &SuaveExecutionBackend{
+				ExternalWhitelist: []string{"httpbin.org"},
+			},
+		},
+	}
+
+	defer srv.Close()
+
+	var requests []types.HttpRequest
+	for i := 0; i < 3; i++ {
+		requests = append(requests, types.HttpRequest{Url: "https://httpbin.org/delay/1", Method: "GET"})
+	}
+
+	start := time.Now()
+	resp, err := s.doHTTPRequests(requests)
+	elapsed := time.Since(start)
+	require.NoError(t, err)
+	fmt.Println(resp)
+
+	require.True(t, elapsed < 2*time.Second)
 }
 
 func TestSuave_HttpRequest_FlashbotsSignatue(t *testing.T) {
