@@ -121,14 +121,14 @@ var createGasTests = []struct {
 	{"0x61C00060006000f0" + "600052" + "60206000F3", true, 44309, 44309},
 	// create2(0, 0, 0xc001, 0) without 3860
 	{"0x600061C00160006000f5" + "600052" + "60206000F3", false, 50471, 50471},
-	// create2(0, 0, 0xc001, 0) (too large), with 3860
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", true, 32012, 100_000},
+	// create2(0, 0, 0xc001, 0) (too large at new 65535 byte limit), with 3860
+	{"0x61FFFF60006000f5" + "600052" + "60206000F3", true, 53545, 53545},
 	// create2(0, 0, 0xc000, 0)
 	// This case is trying to deploy code at (within) the limit
 	{"0x600061C00060006000f5" + "600052" + "60206000F3", true, 53528, 53528},
 	// create2(0, 0, 0xc001, 0)
-	// This case is trying to deploy code exceeding the limit
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", true, 32024, 100000},
+	// This case is trying to deploy code exceeding the (new) limit
+	{"0x6100006000060006000f5" + "600052" + "60206000F3", true, 32024, 100000},
 }
 
 func TestCreateGas(t *testing.T) {
@@ -168,12 +168,12 @@ func TestCreateGas(t *testing.T) {
 			}
 			return true
 		}
-		minGas := sort.Search(53_545, doCheck)
+		minGas := sort.Search(100_000, doCheck)
 		if uint64(minGas) != tt.minimumGas {
 			t.Fatalf("test %d: min gas error, want %d, have %d", i, tt.minimumGas, minGas)
 		}
 		// If the deployment succeeded, we also check the gas used
-		if minGas < 53_545 {
+		if minGas < 100_000 {
 			if gasUsed != tt.gasUsed {
 				t.Errorf("test %d: gas used mismatch: have %v, want %v", i, gasUsed, tt.gasUsed)
 			}
