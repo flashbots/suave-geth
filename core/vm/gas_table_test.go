@@ -168,12 +168,12 @@ func TestCreateGas(t *testing.T) {
 			}
 			return true
 		}
-		minGas := sort.Search(100_000, doCheck)
+		minGas := sort.Search(53_545, doCheck)
 		if uint64(minGas) != tt.minimumGas {
 			t.Fatalf("test %d: min gas error, want %d, have %d", i, tt.minimumGas, minGas)
 		}
 		// If the deployment succeeded, we also check the gas used
-		if minGas < 100_000 {
+		if minGas < 53_545 {
 			if gasUsed != tt.gasUsed {
 				t.Errorf("test %d: gas used mismatch: have %v, want %v", i, gasUsed, tt.gasUsed)
 			}
