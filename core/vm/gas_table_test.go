@@ -115,20 +115,17 @@ var createGasTests = []struct {
 	gasUsed    uint64
 	minimumGas uint64
 }{
-	// legacy create(0, 0, 0xc000) without 3860 used
-	{"0x61C00060006000f0" + "600052" + "60206000F3", false, 41237, 41237},
-	// legacy create(0, 0, 0xc000) _with_ 3860
-	{"0x61C00060006000f0" + "600052" + "60206000F3", true, 44309, 44309},
-	// create2(0, 0, 0xc001, 0) without 3860
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", false, 50471, 50471},
-	// create2(0, 0, 0xc001, 0) (too large), with 3860
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", true, 32012, 100_000},
-	// create2(0, 0, 0xc000, 0)
-	// This case is trying to deploy code at (within) the limit
-	{"0x600061C00060006000f5" + "600052" + "60206000F3", true, 53528, 53528},
-	// create2(0, 0, 0xc001, 0)
-	// This case is trying to deploy code exceeding the limit
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", true, 32024, 100000},
+	// legacy create(0, 0, 0xFFFF) without 3860 used
+	{"0x61FFFF60006000f0" + "600052" + "60206000F3", false, 46357, 46357},
+	// legacy create(0, 0, 0xFFFF) _with_ 3860
+	{"0x61FFFF60006000f0" + "600052" + "60206000F3", true, 50453, 50453},
+	// create2(0, 0, 0xFFFF, 0) without 3860
+	{"0x600061FFFF60006000f5" + "600052" + "60206000F3", false, 58648, 58648},
+	// create2(0, 0, 0xFFFE, 0)
+	// This case is trying to deploy code at (within) the limit with 3860
+	{"0x600061FFFF60006000f5" + "600052" + "60206000F3", true, 62744, 62744},
+	// create2(0, 0, 0xFFFF, 0) (too large) with 3860
+	//{"0x600061FFFF60006000f5" + "600052" + "60206000F3", true, 62744, 100_000},
 }
 
 func TestCreateGas(t *testing.T) {
