@@ -1,11 +1,28 @@
 package types
 
 import (
+	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/eip712"
 )
 
 func (msg *ConfidentialComputeRecord) EIP712Hash() (common.Hash, error) {
+	if msg.To == nil {
+		// Can this ever happen?
+		return common.Hash{}, fmt.Errorf("missing 'to' address")
+	}
+	if msg.Value == nil {
+		msg.Value = new(big.Int)
+	}
+	if msg.GasPrice == nil {
+		msg.GasPrice = new(big.Int)
+	}
+	if msg.Data == nil {
+		msg.Data = []byte{}
+	}
+
 	hash, _, err := eip712.TypedDataAndHash(CCREIP712Envelope(msg))
 
 	hash32 := common.Hash{}
