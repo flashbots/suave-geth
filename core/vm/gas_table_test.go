@@ -122,13 +122,13 @@ var createGasTests = []struct {
 	// create2(0, 0, 0xc001, 0) without 3860
 	{"0x600061C00160006000f5" + "600052" + "60206000F3", false, 50471, 50471},
 	// create2(0, 0, 0xc001, 0) (too large), with 3860
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", true, 32012, 100_000},
+	{"0x60006201FFFE60006000f5" + "600052" + "60206000F3", true, 53545, 100_000},
 	// create2(0, 0, 0xc000, 0)
 	// This case is trying to deploy code at (within) the limit
 	{"0x600061C00060006000f5" + "600052" + "60206000F3", true, 53528, 53528},
-	// create2(0, 0, 0xc001, 0)
+	// create2(0, 0, 0x01FFFE, 0)
 	// This case is trying to deploy code exceeding the limit
-	{"0x600061C00160006000f5" + "600052" + "60206000F3", true, 32024, 100000},
+	{"0x60006201FFFE60006000f5" + "600052" + "60206000F3", true, 62744, 100000},
 }
 
 func TestCreateGas(t *testing.T) {
