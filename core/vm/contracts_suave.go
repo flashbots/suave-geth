@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -294,6 +295,51 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	}
 
 	return data, nil
+}
+
+// TODO: Non-aggregated error handling
+func (s *suaveRuntime) doHTTPRequests(requests []types.HttpRequest) ([][]byte, error) {
+	var wg sync.WaitGroup
+	responses := make([][]byte, len(requests))
+	errCh := make(chan error, len(requests))
+	resCh := make(chan struct {
+		index int
+		resp  []byte
+	}, len(requests))
+
+	for i, request := range requests {
+		wg.Add(1)
+		go func(i int, request types.HttpRequest) {
+			defer wg.Done()
+			resp, err := s.doHTTPRequest(request)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			resCh <- struct {
+				index int
+				resp  []byte
+			}{index: i, resp: resp}
+		}(i, request)
+	}
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+		close(resCh)
+	}()
+
+	for err := range errCh {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for res := range resCh {
+		responses[res.index] = res.resp
+	}
+
+	return responses, nil
 }
 
 func (s *suaveRuntime) resolveURL(urlOrServiceName string) (string, error) {

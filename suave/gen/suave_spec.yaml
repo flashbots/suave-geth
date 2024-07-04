@@ -386,6 +386,18 @@ functions:
         - name: httpResponse
           type: bytes
           description: "Body of the response"
+  - name: doHTTPRequests
+    address: "0x0000000000000000000000000000000043200003"
+    description: "Executes multiple `doHTTPRequest`s async"
+    input:
+      - name: requests
+        type: HttpRequest[]
+        description: "Requests to perform"
+    output:
+      fields:
+        - name: httpResponses
+          type: bytes[]
+          description: "Body of the responses"
   - name: newBuilder
     address: "0x0000000000000000000000000000000053200001"
     description: "Initializes a new remote builder session"
