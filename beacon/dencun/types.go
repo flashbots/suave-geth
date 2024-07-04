@@ -308,7 +308,6 @@ type ExecutionPayloadBodyV1 struct {
 
 // MarshalJSON marshals as JSON.
 func (e ExecutableData) MarshalJSON() ([]byte, error) {
-	fmt.Println("formatting JSON")
 	type ExecutableData struct {
 		ParentHash    common.Hash         `json:"parentHash"    gencodec:"required"`
 		FeeRecipient  common.Address      `json:"feeRecipient"  gencodec:"required"`
@@ -356,7 +355,6 @@ func (e ExecutableData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON unmarshals from JSON.
 func (e *ExecutableData) UnmarshalJSON(input []byte) error {
-	fmt.Println("unformatting JSON")
 	type ExecutableData struct {
 		ParentHash    *common.Hash        `json:"parentHash"    gencodec:"required"`
 		FeeRecipient  *common.Address     `json:"feeRecipient"  gencodec:"required"`
