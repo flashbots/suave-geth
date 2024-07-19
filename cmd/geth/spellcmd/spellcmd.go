@@ -451,8 +451,10 @@ func resolveEventsInArtifactsFolder(ctx *cli.Context) (artifactEvents, error) {
 			return err
 		}
 
-		for _, evnt := range artifact.Abi.Events {
-			events = append(events, evnt)
+		if artifact.Abi != nil {
+			for _, evnt := range artifact.Abi.Events {
+				events = append(events, evnt)
+			}
 		}
 		return nil
 	})
