@@ -177,6 +177,11 @@ var (
 		Usage:    "Rigil network: pre-configured proof-of-authority test network",
 		Category: flags.EthCategory,
 	}
+	TolimanFlag = &cli.BoolFlag{
+		Name:     "toliman",
+		Usage:    "Toliman network: pre-configured proof-of-authority test network",
+		Category: flags.EthCategory,
+	}
 
 	// Dev mode
 	DeveloperFlag = &cli.BoolFlag{
@@ -1015,6 +1020,7 @@ var (
 		SepoliaFlag,
 		CustomChainFlag,
 		RigilFlag,
+		TolimanFlag,
 	}
 	// NetworkFlags is the flag group of all built-in supported networks.
 	NetworkFlags = append([]cli.Flag{MainnetFlag}, TestnetFlags...)
