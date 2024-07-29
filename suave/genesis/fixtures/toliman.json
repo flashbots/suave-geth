@@ -42,7 +42,6 @@
         }
     },
     "bootnodes": [
-        "enode://30441c4631d5ac1bc00d34c5355f8a3b0e132d89acdce6966d7ddf5f86294d8456d1e895e3e78325906fa19c2ac7478d65bf099abac9f6cbefaa2481f6aad9d1@suave-toliman-bootnode-private-0.ec2.suave-testnets.aws.internal:0?discport=33033",
         "enode://56b43d98f44f59c0e3da714a2a91d241ba0fa35d28c7de35e179087b571c5f3a22e7774e22875c9765b54163ff3e996519d079c843f17509177b48ca6f8c16d4@bootnode-0.toliman.suave.flashbots.net:0?discport=33033"
     ]
 }
