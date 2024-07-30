@@ -1,0 +1,47 @@
+{
+    "name": "suave-toliman",
+    "config": {
+        "chainId": 33626250,
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "berlinBlock": 0,
+        "suaveBlock": 0,
+        "clique": {
+            "period": 4,
+            "epoch": 30000,
+            "initial_signers": [
+                "29f26811cdb344287d918dd49bfcacd522ed06a6",
+                "ad338a1140f6ebb05a1beb8275e35741e870e692",
+                "cbfb04cdc63a10ce92e66cc5334a13ca4fe9fb09"
+            ]
+        }
+    },
+    "difficulty": "1",
+    "gasLimit": "30000000",
+    "alloc": {
+        "84ca823887f49857c6c43ed1f35d6a2fba426e66": {
+            "balance": "524288000000000000000000"
+        },
+        "9ad2b15d18002d4ae145e982f1d917000d21d18a": {
+            "balance": "524288000000000000000000"
+        },
+        "29f26811cdb344287d918dd49bfcacd522ed06a6": {
+            "balance": "524288000000000000000000"
+        },
+        "ad338a1140f6ebb05a1beb8275e35741e870e692": {
+            "balance": "524288000000000000000000"
+        },
+        "cbfb04cdc63a10ce92e66cc5334a13ca4fe9fb09": {
+            "balance": "524288000000000000000000"
+        }
+    },
+    "bootnodes": [
+        "enode://56b43d98f44f59c0e3da714a2a91d241ba0fa35d28c7de35e179087b571c5f3a22e7774e22875c9765b54163ff3e996519d079c843f17509177b48ca6f8c16d4@bootnode-0.toliman.suave.flashbots.net:0?discport=33033"
+    ]
+}

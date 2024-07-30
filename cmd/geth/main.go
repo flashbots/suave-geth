@@ -499,6 +499,11 @@ func prepareSuaveNetworksRemapping(ctx *cli.Context) error {
 			return err
 		}
 	}
+	if ctx.Bool(utils.TolimanFlag.Name) {
+		if err := ctx.Set(utils.CustomChainFlag.Name, "toliman"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
