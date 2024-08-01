@@ -93,10 +93,6 @@ func (r *RedisPubSubTransport) Subscribe() (<-chan DAMessage, context.CancelFunc
 
 			var msg DAMessage
 			msgBytes := common.Hex2Bytes(rmsg.Payload)
-			if err != nil {
-				log.Trace("Redis pubsub: could not decode message from subscription", "err", err, "msg", rmsg.Payload)
-				continue
-			}
 
 			err = json.Unmarshal(msgBytes, &msg)
 			if err != nil {

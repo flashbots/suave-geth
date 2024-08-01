@@ -553,6 +553,12 @@ var (
 		Category: flags.SuaveCategory,
 	}
 
+	SuaveCondentialStoreRedisTTLFlag = &cli.DurationFlag{
+		Name:     "suave.confidential.redis-store-ttl",
+		Usage:    "TTL for redis store",
+		Category: flags.SuaveCategory,
+	}
+
 	SuaveConfidentialStorePebbleDbPathFlag = &cli.StringFlag{
 		Name:     "suave.confidential.pebble-store-db-path",
 		Usage:    "Path to pebble db to use for confidential storage backend (default: local store)",
@@ -1756,6 +1762,10 @@ func SetSuaveConfig(ctx *cli.Context, stack *node.Node, cfg *suave.Config) {
 
 	if ctx.IsSet(SuaveConfidentialStoreRedisEndpointFlag.Name) {
 		cfg.RedisStoreUri = ctx.String(SuaveConfidentialStoreRedisEndpointFlag.Name)
+
+		if ctx.IsSet(SuaveCondentialStoreRedisTTLFlag.Name) {
+			cfg.RedisStoreTTL = ctx.Duration(SuaveCondentialStoreRedisTTLFlag.Name)
+		}
 	}
 
 	if ctx.IsSet(SuaveConfidentialStorePebbleDbPathFlag.Name) {

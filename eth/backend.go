@@ -238,7 +238,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	var confidentialStoreBackend cstore.ConfidentialStorageBackend
 	if config.Suave.RedisStoreUri != "" {
-		confidentialStoreBackend, err = cstore.NewRedisStoreBackend(config.Suave.RedisStoreUri)
+		confidentialStoreBackend, err = cstore.NewRedisStoreBackend(config.Suave.RedisStoreUri, config.Suave.RedisStoreTTL)
 		if err != nil {
 			return nil, err
 		}

@@ -69,14 +69,14 @@ func TestEngineOnRedis(t *testing.T) {
 	mrPubSub := mrStore1
 
 	redisPubSub1 := NewRedisPubSubTransport(mrPubSub.Addr())
-	redisStoreBackend1, _ := NewRedisStoreBackend(mrStore1.Addr())
+	redisStoreBackend1, _ := NewRedisStoreBackend(mrStore1.Addr(), 0)
 
 	engine1 := NewEngine(redisStoreBackend1, redisPubSub1, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine1.Start())
 	t.Cleanup(func() { engine1.Stop() })
 
 	redisPubSub2 := NewRedisPubSubTransport(mrPubSub.Addr())
-	redisStoreBackend2, _ := NewRedisStoreBackend(mrStore2.Addr())
+	redisStoreBackend2, _ := NewRedisStoreBackend(mrStore2.Addr(), 0)
 
 	engine2 := NewEngine(redisStoreBackend2, redisPubSub2, MockSigner{}, MockChainSigner{})
 	require.NoError(t, engine2.Start())
