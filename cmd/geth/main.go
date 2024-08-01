@@ -195,6 +195,7 @@ var (
 		utils.SuaveServiceAlias,
 		utils.SuaveConfidentialTransportRedisEndpointFlag,
 		utils.SuaveConfidentialStoreRedisEndpointFlag,
+		utils.SuaveCondentialStoreRedisTTLFlag,
 		utils.SuaveConfidentialStorePebbleDbPathFlag,
 		utils.SuaveEthBundleSigningKeyFlag,
 		utils.SuaveEthBlockSigningKeyFlag,

@@ -94,7 +94,7 @@ func (b *PebbleStoreBackend) InitRecord(record suave.DataRecord) error {
 		if !errors.Is(err, pebble.ErrNotFound) {
 			return err
 		}
-	} else if err == nil {
+	} else {
 		err = json.Unmarshal(rawCurrentValues, &currentValues)
 		closer.Close()
 		if err != nil {

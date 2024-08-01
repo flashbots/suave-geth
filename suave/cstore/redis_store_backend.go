@@ -26,21 +26,26 @@ var (
 		return fmt.Sprintf("record-data-%x-%s", dataId, key)
 	}
 
-	ffStoreTTL = 24 * time.Hour
+	defaultRedisStoreTTL = 24 * time.Hour
 )
 
 type RedisStoreBackend struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	redisUri string
+	ttl      time.Duration
 	client   *redis.Client
 	local    *miniredis.Miniredis
 }
 
-func NewRedisStoreBackend(redisUri string) (*RedisStoreBackend, error) {
+func NewRedisStoreBackend(redisUri string, ttl time.Duration) (*RedisStoreBackend, error) {
+	if ttl == 0 {
+		ttl = defaultRedisStoreTTL
+	}
 	r := &RedisStoreBackend{
 		cancel:   nil,
 		redisUri: redisUri,
+		ttl:      ttl,
 	}
 
 	if err := r.start(); err != nil {
@@ -50,6 +55,8 @@ func NewRedisStoreBackend(redisUri string) (*RedisStoreBackend, error) {
 }
 
 func (r *RedisStoreBackend) start() error {
+	log.Info("Starting redis store", "uri", r.redisUri, "ttl", r.ttl)
+
 	if r.redisUri == "" {
 		// create a mini-redis instance
 		localRedis, err := miniredis.Run()
@@ -110,7 +117,7 @@ func (r *RedisStoreBackend) InitRecord(record suave.DataRecord) error {
 		return err
 	}
 
-	err = r.client.Set(r.ctx, key, string(data), ffStoreTTL).Err()
+	err = r.client.Set(r.ctx, key, string(data), r.ttl).Err()
 	if err != nil {
 		return err
 	}
@@ -143,7 +150,7 @@ func (r *RedisStoreBackend) FetchRecordByID(dataId suave.DataId) (suave.DataReco
 
 func (r *RedisStoreBackend) Store(record suave.DataRecord, caller common.Address, key string, value []byte) (suave.DataRecord, error) {
 	storeKey := formatRecordValueKey(record.Id, key)
-	err := r.client.Set(r.ctx, storeKey, string(value), ffStoreTTL).Err()
+	err := r.client.Set(r.ctx, storeKey, string(value), r.ttl).Err()
 	if err != nil {
 		return suave.DataRecord{}, fmt.Errorf("unexpected redis error: %w", err)
 	}
