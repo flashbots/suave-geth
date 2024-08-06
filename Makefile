@@ -47,10 +47,10 @@ suavedevtools:
 	go run ./suave/gen/main.go -write
 
 devnet-up:
-	docker-compose -f ./suave/devenv/docker-compose.yml up -d --build
+	docker compose -f ./suave/devenv/docker-compose.yml up -d --build
 
 devnet-down:
-	docker-compose -f ./suave/devenv/docker-compose.yml down
+	docker compose -f ./suave/devenv/docker-compose.yml down
 
 fmt-contracts:
 	cd suave && forge fmt

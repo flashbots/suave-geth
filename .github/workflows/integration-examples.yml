@@ -23,14 +23,14 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run dev environment
-        run: docker-compose -f ./suave/e2e/docker-compose.yml up -d --build
+        run: docker compose -f ./suave/e2e/docker-compose.yml up -d --build
 
       - name: Check out suapp-examples
         uses: actions/checkout@v2
         with:
           repository: flashbots/suapp-examples
           path: suapp-examples
-      
+
       - name: Build suapp-examples
         run: |
           cd suapp-examples
