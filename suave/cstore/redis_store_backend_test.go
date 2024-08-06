@@ -82,3 +82,19 @@ func TestRedis_TTL_MultipleEntries_SameIndex(t *testing.T) {
 	require.Len(t, vals, 1)
 	require.Equal(t, record2, vals[0])
 }
+
+func TestRedis_Count(t *testing.T) {
+	store, err := NewRedisStoreBackend("", 2*time.Second)
+	require.NoError(t, err)
+
+	for i := 0; i < 10; i++ {
+		record := suave.DataRecord{
+			Id:                  suave.RandomDataRecordId(),
+			Version:             "a",
+			DecryptionCondition: 1,
+		}
+		require.NoError(t, store.InitRecord(record))
+	}
+
+	require.NotZero(t, store.count())
+}
