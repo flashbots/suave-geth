@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/metrics"
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/go-redis/redis/v8"
 )
@@ -86,7 +87,28 @@ func (r *RedisStoreBackend) start() error {
 		return fmt.Errorf("mempool: could not initialize: %w", err)
 	}
 
+	go r.trackMetrics()
+
 	return nil
+}
+
+func (r *RedisStoreBackend) count() int64 {
+	return r.client.DBSize(context.Background()).Val()
+}
+
+var (
+	redisStoreItemsGauge = metrics.NewRegisteredGauge("suave/confstore/items", nil)
+)
+
+func (r *RedisStoreBackend) trackMetrics() {
+	for {
+		select {
+		case <-r.ctx.Done():
+			return
+		case <-time.After(10 * time.Second):
+			redisStoreItemsGauge.Update(r.count())
+		}
+	}
 }
 
 func (r *RedisStoreBackend) Stop() error {
