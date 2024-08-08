@@ -138,6 +138,10 @@ library Suave {
 
     address public constant RANDOM_BYTES = 0x000000000000000000000000000000007770000b;
 
+    address public constant SECP256K1_DECRYPT = 0x000000000000000000000000000000005770000D;
+
+    address public constant SECP256K1_ENCRYPT = 0x000000000000000000000000000000005770000E;
+
     address public constant SIGN_ETH_TRANSACTION = 0x0000000000000000000000000000000040100001;
 
     address public constant SIGN_MESSAGE = 0x0000000000000000000000000000000040100003;
@@ -367,6 +371,32 @@ library Suave {
         (bool success, bytes memory data) = RANDOM_BYTES.call(abi.encode(numBytes));
         if (!success) {
             revert PeekerReverted(RANDOM_BYTES, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    /// @notice Decrypts a message using the given secp256k1 private key
+    /// @param privateKey Private key used to decrypt the message.
+    /// @param ciphertext Message to decrypt
+    /// @return message Decrypted message
+    function secp256k1Decrypt(bytes32 privateKey, bytes memory ciphertext) internal returns (bytes memory) {
+        (bool success, bytes memory data) = SECP256K1_DECRYPT.call(abi.encode(privateKey, ciphertext));
+        if (!success) {
+            revert PeekerReverted(SECP256K1_DECRYPT, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    /// @notice Encrypts a message using the given secp256k1 public key
+    /// @param pubkey Uncompressed pubkey used to encrypt the message: encoded as abi-packed hex-string with no 0x prefix. Example: `abi.encodePacked('04115c42e757b2efb7671c578530ec191a1359381e6a71127a9d37c486fd30dae57e76dc58f693bd7e7010358ce6b165e483a2921010db67ac11b1b51b651953d2')`
+    /// @param message Message to encrypt
+    /// @return ciphertext Encrypted message
+    function secp256k1Encrypt(bytes memory pubkey, bytes memory message) internal returns (bytes memory) {
+        (bool success, bytes memory data) = SECP256K1_ENCRYPT.call(abi.encode(pubkey, message));
+        if (!success) {
+            revert PeekerReverted(SECP256K1_ENCRYPT, data);
         }
 
         return abi.decode(data, (bytes));

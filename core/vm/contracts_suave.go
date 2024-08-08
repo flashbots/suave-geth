@@ -3,7 +3,11 @@ package vm
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -346,4 +351,91 @@ func (s *suaveRuntime) contextGet(key string) ([]byte, error) {
 		return nil, fmt.Errorf("value not found")
 	}
 	return val, nil
+}
+
+func newAEAD(key []byte) (cipher.AEAD, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
+}
+
+func (s *suaveRuntime) secp256k1Decrypt(privkey common.Hash, ciphertext []byte) ([]byte, error) {
+	privKey := secp256k1.PrivKeyFromBytes(privkey.Bytes())
+
+	// Read the sender's ephemeral public key from the start of the message.
+	pubKeyLen := binary.LittleEndian.Uint32(ciphertext[:4])
+	senderPubKeyBytes := ciphertext[4 : 4+pubKeyLen]
+	senderPubKey, err := secp256k1.ParsePubKey(senderPubKeyBytes)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	// Derive the key used to seal the message, this time from the
+	// recipient's private key and the sender's public key.
+	recoveredCipherKey := sha256.Sum256(secp256k1.GenerateSharedSecret(privKey, senderPubKey))
+
+	// Open the sealed message.
+	aead, err := newAEAD(recoveredCipherKey[:])
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	nonce := make([]byte, aead.NonceSize())
+	recoveredPlaintext, err := aead.Open(nil, nonce, ciphertext[4+pubKeyLen:], senderPubKeyBytes)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	return recoveredPlaintext, nil
+}
+
+func (s *suaveRuntime) secp256k1Encrypt(pubkey []byte, message []byte) ([]byte, error) {
+	pubKey, err := secp256k1.ParsePubKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Derive an ephemeral public/private keypair for performing ECDHE with
+	// the recipient.
+	ephemeralPrivKey, err := secp256k1.GeneratePrivateKey()
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	ephemeralPubKey := ephemeralPrivKey.PubKey().SerializeCompressed()
+
+	// Using ECDHE, derive a shared symmetric key for encryption of the plaintext.
+	cipherKey := sha256.Sum256(secp256k1.GenerateSharedSecret(ephemeralPrivKey, pubKey))
+
+	// Seal the message using an AEAD.  Here we use AES-256-GCM.
+	// The ephemeral public key must be included in this message, and becomes
+	// the authenticated data for the AEAD.
+	//
+	// Note that unless a unique nonce can be guaranteed, the ephemeral
+	// and/or shared keys must not be reused to encrypt different messages.
+	// Doing so destroys the security of the scheme.  Random nonces may be
+	// used if XChaCha20-Poly1305 is used instead, but the message must then
+	// also encode the nonce (which we don't do here).
+	//
+	// Since a new ephemeral key is generated for every message ensuring there
+	// is no key reuse and AES-GCM permits the nonce to be used as a counter,
+	// the nonce is intentionally initialized to all zeros so it acts like the
+	// first (and only) use of a counter.
+
+	aead, err := newAEAD(cipherKey[:])
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	nonce := make([]byte, aead.NonceSize())
+	ciphertext := make([]byte, 4+len(ephemeralPubKey))
+	binary.LittleEndian.PutUint32(ciphertext, uint32(len(ephemeralPubKey)))
+	copy(ciphertext[4:], ephemeralPubKey)
+	ciphertext = aead.Seal(ciphertext, nonce, message, ephemeralPubKey)
+
+	return ciphertext, nil
 }
