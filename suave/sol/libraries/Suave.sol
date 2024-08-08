@@ -377,11 +377,11 @@ library Suave {
     }
 
     /// @notice Decrypts a message using the given secp256k1 private key
-    /// @param ciphertext Message to decrypt
     /// @param privateKey Private key used to decrypt the message.
+    /// @param ciphertext Message to decrypt
     /// @return message Decrypted message
-    function secp256k1Decrypt(bytes memory ciphertext, bytes32 privateKey) internal returns (bytes memory) {
-        (bool success, bytes memory data) = SECP256K1_DECRYPT.call(abi.encode(ciphertext, privateKey));
+    function secp256k1Decrypt(bytes32 privateKey, bytes memory ciphertext) internal returns (bytes memory) {
+        (bool success, bytes memory data) = SECP256K1_DECRYPT.call(abi.encode(privateKey, ciphertext));
         if (!success) {
             revert PeekerReverted(SECP256K1_DECRYPT, data);
         }
@@ -390,11 +390,11 @@ library Suave {
     }
 
     /// @notice Encrypts a message using the given secp256k1 public key
+    /// @param pubkey Uncompressed pubkey used to encrypt the message: encoded as abi-packed hex-string with no 0x prefix. Example: `abi.encodePacked('04115c42e757b2efb7671c578530ec191a1359381e6a71127a9d37c486fd30dae57e76dc58f693bd7e7010358ce6b165e483a2921010db67ac11b1b51b651953d2')`
     /// @param message Message to encrypt
-    /// @param publicKey Uncompressed pubkey used to encrypt the message: encoded as abi-packed hex-string with no 0x prefix. Example: `abi.encodePacked('04115c42e757b2efb7671c578530ec191a1359381e6a71127a9d37c486fd30dae57e76dc58f693bd7e7010358ce6b165e483a2921010db67ac11b1b51b651953d2')`
     /// @return ciphertext Encrypted message
-    function secp256k1Encrypt(bytes memory message, bytes memory publicKey) internal returns (bytes memory) {
-        (bool success, bytes memory data) = SECP256K1_ENCRYPT.call(abi.encode(message, publicKey));
+    function secp256k1Encrypt(bytes memory pubkey, bytes memory message) internal returns (bytes memory) {
+        (bool success, bytes memory data) = SECP256K1_ENCRYPT.call(abi.encode(pubkey, message));
         if (!success) {
             revert PeekerReverted(SECP256K1_ENCRYPT, data);
         }

@@ -361,8 +361,8 @@ func newAEAD(key []byte) (cipher.AEAD, error) {
 	return cipher.NewGCM(block)
 }
 
-func (s *suaveRuntime) secp256k1Decrypt(ciphertext []byte, privkey []byte) ([]byte, error) {
-	privKey := secp256k1.PrivKeyFromBytes(privkey)
+func (s *suaveRuntime) secp256k1Decrypt(privkey common.Hash, ciphertext []byte) ([]byte, error) {
+	privKey := secp256k1.PrivKeyFromBytes(privkey.Bytes())
 
 	// Read the sender's ephemeral public key from the start of the message.
 	pubKeyLen := binary.LittleEndian.Uint32(ciphertext[:4])
@@ -393,7 +393,7 @@ func (s *suaveRuntime) secp256k1Decrypt(ciphertext []byte, privkey []byte) ([]by
 	return recoveredPlaintext, nil
 }
 
-func (s *suaveRuntime) secp256k1Encrypt(data []byte, pubkey []byte) ([]byte, error) {
+func (s *suaveRuntime) secp256k1Encrypt(pubkey []byte, message []byte) ([]byte, error) {
 	pubKey, err := secp256k1.ParsePubKey(pubkey)
 	if err != nil {
 		return nil, err
@@ -435,7 +435,7 @@ func (s *suaveRuntime) secp256k1Encrypt(data []byte, pubkey []byte) ([]byte, err
 	ciphertext := make([]byte, 4+len(ephemeralPubKey))
 	binary.LittleEndian.PutUint32(ciphertext, uint32(len(ephemeralPubKey)))
 	copy(ciphertext[4:], ephemeralPubKey)
-	ciphertext = aead.Seal(ciphertext, nonce, data, ephemeralPubKey)
+	ciphertext = aead.Seal(ciphertext, nonce, message, ephemeralPubKey)
 
 	return ciphertext, nil
 }
