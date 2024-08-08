@@ -170,13 +170,16 @@ library Suave {
     }
 
     /// @notice Decrypts a message using given bytes as a cipher.
+    /// @param key Private key used to decrypt the ciphertext
     /// @param ciphertext Message to decrypt
-    /// @param cipher Cipher to use for decryption
-    function aesDecrypt(bytes memory ciphertext, bytes32 cipher) internal {
-        (bool success, bytes memory data) = AES_DECRYPT.call(abi.encode(ciphertext, cipher));
+    /// @return message Decrypted message
+    function aesDecrypt(bytes32 key, bytes memory ciphertext) internal returns (bytes memory) {
+        (bool success, bytes memory data) = AES_DECRYPT.call(abi.encode(key, ciphertext));
         if (!success) {
             revert PeekerReverted(AES_DECRYPT, data);
         }
+
+        return abi.decode(data, (bytes));
     }
 
     /// @notice Encrypts a message using given bytes as a cipher.

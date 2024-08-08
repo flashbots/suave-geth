@@ -103,6 +103,14 @@ func (m *mockRuntime) randomBytes(length uint8) ([]byte, error) {
 	return bytes, nil
 }
 
+func (m *mockRuntime) aesEncrypt(key common.Hash, data []byte) ([]byte, error) {
+	return []byte{0x1}, nil
+}
+
+func (m *mockRuntime) aesDecrypt(key common.Hash, data []byte) ([]byte, error) {
+	return []byte{0x1}, nil
+}
+
 func TestRuntimeAdapter(t *testing.T) {
 	adapter := &SuaveRuntimeAdapter{
 		impl: &mockRuntime{},

@@ -349,8 +349,8 @@ func (s *suaveRuntime) contextGet(key string) ([]byte, error) {
 	return val, nil
 }
 
-func (s *suaveRuntime) aesEncrypt(key []byte, message []byte) ([]byte, error) {
-	cipher, err := aes.NewCipher(key)
+func (s *suaveRuntime) aesEncrypt(key common.Hash, message []byte) ([]byte, error) {
+	cipher, err := aes.NewCipher(key.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -359,8 +359,8 @@ func (s *suaveRuntime) aesEncrypt(key []byte, message []byte) ([]byte, error) {
 	return buf, nil
 }
 
-func (s *suaveRuntime) aesDecrypt(key []byte, message []byte) ([]byte, error) {
-	cipher, err := aes.NewCipher(key)
+func (s *suaveRuntime) aesDecrypt(key common.Hash, message []byte) ([]byte, error) {
+	cipher, err := aes.NewCipher(key.Bytes())
 	if err != nil {
 		return nil, err
 	}

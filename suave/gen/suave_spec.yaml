@@ -464,9 +464,14 @@ functions:
     address: "0x000000000000000000000000000000005670000d"
     description: "Decrypts a message using given bytes as a cipher."
     input:
+      - name: key
+        type: bytes32
+        description: "Private key used to decrypt the ciphertext"
       - name: ciphertext
         type: bytes
         description: "Message to decrypt"
-      - name: cipher
-        type: bytes32
-        description: "Cipher to use for decryption"
+    output:
+      fields:
+        - name: message
+          type: bytes
+          description: "Decrypted message"
