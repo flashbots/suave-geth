@@ -149,6 +149,7 @@ func TestSuave_AESPrecompiles(t *testing.T) {
 	_, err := rand.Read(salt)
 	require.NoError(t, err)
 	pk, err := scrypt.Key([]byte("some password"), salt, 32768, 8, 1, 32)
+	require.NoError(t, err)
 
 	// note: any 32-byte value will do for pk
 	// if your secret is not 32 bytes long, it's right-padded with 0s
