@@ -141,7 +141,7 @@ func TestSuave_AESPrecompiles(t *testing.T) {
 	b := newTestBackend(t)
 
 	message := []byte("hello world")
-	// any 32-byte value will do
+	// any 32-byte value will do; if your secret is not 32 bytes, it's right-padded with 0s
 	secret := crypto.Keccak256([]byte("secret"))
 	ciphertext, err := b.aesEncrypt(secret, message)
 	require.NoError(t, err)
