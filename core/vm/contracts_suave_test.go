@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"crypto/rand"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	suave "github.com/ethereum/go-ethereum/suave/core"
 	"github.com/ethereum/go-ethereum/suave/cstore"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/scrypt"
 )
 
 type mockSuaveBackend struct {
@@ -135,6 +137,28 @@ func TestSuave_DataRecordWorkflow(t *testing.T) {
 
 		require.ElementsMatch(t, c.dataRecords, dRecords)
 	}
+}
+
+func TestSuave_AESPrecompiles(t *testing.T) {
+	b := newTestBackend(t)
+
+	message := []byte("hello world")
+
+	// safely generate a 32-byte secret
+	salt := make([]byte, 32)
+	_, err := rand.Read(salt)
+	require.NoError(t, err)
+	pk, err := scrypt.Key([]byte("some password"), salt, 32768, 8, 1, 32)
+	require.NoError(t, err)
+
+	// note: any 32-byte value will do for pk
+	// if your secret is not 32 bytes long, it's right-padded with 0s
+	ciphertext, err := b.aesEncrypt(pk, message)
+	require.NoError(t, err)
+
+	decrypted, err := b.aesDecrypt(pk, ciphertext)
+	require.NoError(t, err)
+	require.Equal(t, message, decrypted)
 }
 
 func TestSuave_ConfStoreWorkflow(t *testing.T) {

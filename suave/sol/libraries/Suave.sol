@@ -108,6 +108,10 @@ library Suave {
 
     address public constant IS_CONFIDENTIAL_ADDR = 0x0000000000000000000000000000000042010000;
 
+    address public constant AES_DECRYPT = 0x000000000000000000000000000000005670000D;
+
+    address public constant AES_ENCRYPT = 0x000000000000000000000000000000005670000e;
+
     address public constant BUILD_ETH_BLOCK = 0x0000000000000000000000000000000042100001;
 
     address public constant BUILD_ETH_BLOCK_TO = 0x0000000000000000000000000000000042100006;
@@ -163,6 +167,32 @@ library Suave {
             // Load the data after 32 bytes, so add 0x20
             b := mload(add(isConfidentialBytes, 0x20))
         }
+    }
+
+    /// @notice Decrypts a message using given bytes as a cipher.
+    /// @param key Private key used to decrypt the ciphertext
+    /// @param ciphertext Message to decrypt
+    /// @return message Decrypted message
+    function aesDecrypt(bytes memory key, bytes memory ciphertext) internal returns (bytes memory) {
+        (bool success, bytes memory data) = AES_DECRYPT.call(abi.encode(key, ciphertext));
+        if (!success) {
+            revert PeekerReverted(AES_DECRYPT, data);
+        }
+
+        return abi.decode(data, (bytes));
+    }
+
+    /// @notice Encrypts a message using given bytes as a cipher.
+    /// @param key Private key used to encrypt the message
+    /// @param message Message to encrypt
+    /// @return ciphertext Encrypted message
+    function aesEncrypt(bytes memory key, bytes memory message) internal returns (bytes memory) {
+        (bool success, bytes memory data) = AES_ENCRYPT.call(abi.encode(key, message));
+        if (!success) {
+            revert PeekerReverted(AES_ENCRYPT, data);
+        }
+
+        return abi.decode(data, (bytes));
     }
 
     /// @notice Constructs an Ethereum block based on the provided data records. No blobs are returned.
