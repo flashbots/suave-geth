@@ -173,7 +173,7 @@ library Suave {
     /// @param key Private key used to decrypt the ciphertext
     /// @param ciphertext Message to decrypt
     /// @return message Decrypted message
-    function aesDecrypt(bytes32 key, bytes memory ciphertext) internal returns (bytes memory) {
+    function aesDecrypt(bytes memory key, bytes memory ciphertext) internal returns (bytes memory) {
         (bool success, bytes memory data) = AES_DECRYPT.call(abi.encode(key, ciphertext));
         if (!success) {
             revert PeekerReverted(AES_DECRYPT, data);
@@ -186,7 +186,7 @@ library Suave {
     /// @param key Private key used to encrypt the message
     /// @param message Message to encrypt
     /// @return ciphertext Encrypted message
-    function aesEncrypt(bytes32 key, bytes memory message) internal returns (bytes memory) {
+    function aesEncrypt(bytes memory key, bytes memory message) internal returns (bytes memory) {
         (bool success, bytes memory data) = AES_ENCRYPT.call(abi.encode(key, message));
         if (!success) {
             revert PeekerReverted(AES_ENCRYPT, data);

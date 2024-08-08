@@ -137,6 +137,20 @@ func TestSuave_DataRecordWorkflow(t *testing.T) {
 	}
 }
 
+func TestSuave_AESPrecompiles(t *testing.T) {
+	b := newTestBackend(t)
+
+	message := []byte("hello world")
+	// any 32-byte value will do
+	secret := crypto.Keccak256([]byte("secret"))
+	ciphertext, err := b.aesEncrypt(secret, message)
+	require.NoError(t, err)
+
+	decrypted, err := b.aesDecrypt(secret, ciphertext)
+	require.NoError(t, err)
+	require.Equal(t, message, decrypted)
+}
+
 func TestSuave_ConfStoreWorkflow(t *testing.T) {
 	b := newTestBackend(t)
 

@@ -103,11 +103,25 @@ func (m *mockRuntime) randomBytes(length uint8) ([]byte, error) {
 	return bytes, nil
 }
 
-func (m *mockRuntime) aesEncrypt(key common.Hash, data []byte) ([]byte, error) {
+func (m *mockRuntime) aesEncrypt(key []byte, message []byte) ([]byte, error) {
+	// cipher, err := aes.NewCipher(key.Bytes())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// buf := make([]byte, aes.BlockSize+len(message))
+	// cipher.Encrypt(buf, message)
+	// return buf, nil
 	return []byte{0x1}, nil
 }
 
-func (m *mockRuntime) aesDecrypt(key common.Hash, data []byte) ([]byte, error) {
+func (m *mockRuntime) aesDecrypt(key []byte, ciphertext []byte) ([]byte, error) {
+	// cipher, err := aes.NewCipher(key.Bytes())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// buf := make([]byte, aes.BlockSize+len(message))
+	// cipher.Decrypt(buf, message)
+	// return buf, nil
 	return []byte{0x1}, nil
 }
 

@@ -450,7 +450,7 @@ functions:
     description: "Encrypts a message using given bytes as a cipher."
     input:
       - name: key
-        type: bytes32
+        type: bytes
         description: "Private key used to encrypt the message"
       - name: message
         type: bytes
@@ -465,7 +465,7 @@ functions:
     description: "Decrypts a message using given bytes as a cipher."
     input:
       - name: key
-        type: bytes32
+        type: bytes
         description: "Private key used to decrypt the ciphertext"
       - name: ciphertext
         type: bytes
