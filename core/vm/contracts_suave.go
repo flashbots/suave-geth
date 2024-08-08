@@ -3,6 +3,7 @@ package vm
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -346,4 +347,24 @@ func (s *suaveRuntime) contextGet(key string) ([]byte, error) {
 		return nil, fmt.Errorf("value not found")
 	}
 	return val, nil
+}
+
+func (s *suaveRuntime) aesEncrypt(key []byte, message []byte) ([]byte, error) {
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	buf := make([]byte, aes.BlockSize+len(message))
+	cipher.Encrypt(buf, message)
+	return buf, nil
+}
+
+func (s *suaveRuntime) aesDecrypt(key []byte, message []byte) ([]byte, error) {
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	buf := make([]byte, aes.BlockSize+len(message))
+	cipher.Decrypt(buf, message)
+	return buf, nil
 }
