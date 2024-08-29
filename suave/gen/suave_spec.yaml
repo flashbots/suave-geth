@@ -475,3 +475,11 @@ functions:
         - name: message
           type: bytes
           description: "Decrypted message"
+  - name: getInsecureTime
+    address: "0x000000000000000000000000000000007770000c"
+    description: "Returns the current Kettle Unix time in seconds."
+    output:
+      fields:
+        - name: time
+          type: uint256
+          description: "Current Unix time in seconds"

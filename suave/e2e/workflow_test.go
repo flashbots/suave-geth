@@ -1371,6 +1371,19 @@ func TestE2E_Precompile_RandomBytes(t *testing.T) {
 	require.Len(t, res[0], 64)
 }
 
+func TestE2E_Precompile_GetInsecureTime(t *testing.T) {
+	fr := newFramework(t)
+	defer fr.Close()
+
+	// get the current time from Unix
+	current := big.NewInt(time.Now().Unix())
+
+	// get the time from the precompile
+	res := fr.callPrecompile("getInsecureTime", []interface{}{})
+	require.NotZero(t, res[0])
+	require.GreaterOrEqual(t, res[0].(*big.Int).Int64(), current.Int64())
+}
+
 func TestE2E_EmptyAddress(t *testing.T) {
 	// it should not be possible to make a CCR to an empty address
 	fr := newFramework(t)
