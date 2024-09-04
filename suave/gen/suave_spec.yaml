@@ -477,7 +477,7 @@ functions:
           description: "Decrypted message"
   - name: getInsecureTime
     address: "0x000000000000000000000000000000007770000c"
-    description: "Returns the current Kettle Unix time in seconds."
+    description: "Returns the current Kettle Unix time in seconds. Insecure because it assumes trust in Kettle's clock."
     output:
       fields:
         - name: time
