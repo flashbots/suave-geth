@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -48,6 +49,10 @@ func (b *suaveRuntime) randomBytes(numBytes uint8) ([]byte, error) {
 		return nil, err
 	}
 	return buf, nil
+}
+
+func (b *suaveRuntime) getInsecureTime() (*big.Int, error) {
+	return big.NewInt(time.Now().UnixMilli()), nil
 }
 
 /* Confidential store precompiles */

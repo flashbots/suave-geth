@@ -134,6 +134,8 @@ library Suave {
 
     address public constant FILL_MEV_SHARE_BUNDLE = 0x0000000000000000000000000000000043200001;
 
+    address public constant GET_INSECURE_TIME = 0x000000000000000000000000000000007770000c;
+
     address public constant NEW_BUILDER = 0x0000000000000000000000000000000053200001;
 
     address public constant NEW_DATA_RECORD = 0x0000000000000000000000000000000042030000;
@@ -344,6 +346,17 @@ library Suave {
         }
 
         return data;
+    }
+
+    /// @notice Returns the current Kettle Unix time in seconds.
+    /// @return time Current Unix time in seconds
+    function getInsecureTime() internal returns (uint256) {
+        (bool success, bytes memory data) = GET_INSECURE_TIME.call(abi.encode());
+        if (!success) {
+            revert PeekerReverted(GET_INSECURE_TIME, data);
+        }
+
+        return abi.decode(data, (uint256));
     }
 
     /// @notice Initializes a new remote builder session

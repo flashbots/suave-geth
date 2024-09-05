@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -101,6 +102,10 @@ func (m *mockRuntime) randomBytes(length uint8) ([]byte, error) {
 		bytes[i] = 0x1
 	}
 	return bytes, nil
+}
+
+func (m *mockRuntime) getInsecureTime() (*big.Int, error) {
+	return big.NewInt(1), nil
 }
 
 func (m *mockRuntime) aesEncrypt(key []byte, message []byte) ([]byte, error) {
