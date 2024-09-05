@@ -52,7 +52,7 @@ func (b *suaveRuntime) randomBytes(numBytes uint8) ([]byte, error) {
 }
 
 func (b *suaveRuntime) getInsecureTime() (*big.Int, error) {
-	return big.NewInt(time.Now().Unix()), nil
+	return big.NewInt(time.Now().UnixMilli()), nil
 }
 
 /* Confidential store precompiles */
