@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/uuid"
 )
@@ -29,6 +30,9 @@ type blockchain interface {
 
 	// Config returns the chain config
 	Config() *params.ChainConfig
+
+	// SubscribeChainHeadEvent to subscribe to ChainHeadEvent
+	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
 }
 
 type Config struct {
@@ -44,6 +48,11 @@ type SessionManager struct {
 	sessionsLock  sync.RWMutex
 	blockchain    blockchain
 	config        *Config
+	subscription  event.Subscription
+	chainHeadChan chan core.ChainHeadEvent
+	exitCh        chan struct{}
+	closed        bool
+	closeMu       sync.RWMutex
 }
 
 func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
@@ -68,12 +77,25 @@ func NewSessionManager(blockchain blockchain, config *Config) *SessionManager {
 		sessionTimers: make(map[string]*time.Timer),
 		blockchain:    blockchain,
 		config:        config,
+		exitCh:        make(chan struct{}),
 	}
+
+	s.chainHeadChan = make(chan core.ChainHeadEvent, 100)
+	s.subscription = s.blockchain.SubscribeChainHeadEvent(s.chainHeadChan)
+	go s.listenForChainHeadEvents()
+
 	return s
 }
 
 // NewSession creates a new builder session and returns the session id
 func (s *SessionManager) NewSession(ctx context.Context) (string, error) {
+	s.closeMu.RLock()
+	if s.closed {
+		s.closeMu.RUnlock()
+		return "", fmt.Errorf("session manager is closed")
+	}
+	s.closeMu.RUnlock()
+
 	// Wait for session to become available
 	select {
 	case <-s.sem:
@@ -160,4 +182,58 @@ func (s *SessionManager) AddTransaction(sessionId string, tx *types.Transaction)
 		return nil, err
 	}
 	return builder.AddTransaction(tx)
+}
+
+func (s *SessionManager) listenForChainHeadEvents() {
+	for {
+		select {
+		case _, ok := <-s.chainHeadChan:
+			if !ok {
+				return
+			}
+			s.terminateAllSessions()
+		case <-s.exitCh:
+			return
+		}
+	}
+}
+
+func (s *SessionManager) terminateAllSessions() {
+	s.sessionsLock.Lock()
+	defer s.sessionsLock.Unlock()
+
+	for id, session := range s.sessions {
+		session.Terminate()
+
+		delete(s.sessions, id)
+
+		if timer, exists := s.sessionTimers[id]; exists {
+			timer.Stop()
+			delete(s.sessionTimers, id)
+		}
+
+		select {
+		case s.sem <- struct{}{}:
+		default:
+			panic("released more sessions than are open")
+		}
+	}
+}
+
+func (s *SessionManager) Close() {
+	s.closeMu.Lock()
+	defer s.closeMu.Unlock()
+
+	if s.closed {
+		return
+	}
+
+	close(s.exitCh)
+
+	if s.subscription != nil {
+		s.subscription.Unsubscribe()
+	}
+
+	s.terminateAllSessions()
+	s.closed = true
 }

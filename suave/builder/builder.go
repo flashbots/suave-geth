@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"context"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -10,12 +12,14 @@ import (
 )
 
 type builder struct {
-	config   *builderConfig
-	txns     []*types.Transaction
-	receipts []*types.Receipt
-	state    *state.StateDB
-	gasPool  *core.GasPool
-	gasUsed  *uint64
+	config     *builderConfig
+	txns       []*types.Transaction
+	receipts   []*types.Receipt
+	state      *state.StateDB
+	gasPool    *core.GasPool
+	gasUsed    *uint64
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
 type builderConfig struct {
@@ -28,12 +32,15 @@ type builderConfig struct {
 func newBuilder(config *builderConfig) *builder {
 	gp := core.GasPool(config.header.GasLimit)
 	var gasUsed uint64
+	ctx, cancel := context.WithCancel(context.Background())
 
 	return &builder{
-		config:  config,
-		state:   config.preState.Copy(),
-		gasPool: &gp,
-		gasUsed: &gasUsed,
+		config:     config,
+		state:      config.preState.Copy(),
+		gasPool:    &gp,
+		gasUsed:    &gasUsed,
+		ctx:        ctx,
+		cancelFunc: cancel,
 	}
 }
 
@@ -74,4 +81,10 @@ func (b *builder) AddTransaction(txn *types.Transaction) (*types.SimulateTransac
 	}
 
 	return result, nil
+}
+
+func (b *builder) Terminate() {
+	b.cancelFunc()
+	b.txns = nil
+	b.receipts = nil
 }
