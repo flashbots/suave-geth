@@ -198,7 +198,7 @@ func (s *SessionManager) listenForChainHeadEvents() {
 	}
 }
 
-func (s *SessionManager) terminateAllSessions() {
+func (s *SessionManager) terminateAllSessions() error {
 	s.sessionsLock.Lock()
 	defer s.sessionsLock.Unlock()
 
@@ -215,9 +215,10 @@ func (s *SessionManager) terminateAllSessions() {
 		select {
 		case s.sem <- struct{}{}:
 		default:
-			panic("released more sessions than are open")
+			return fmt.Errorf("released more sessions than are open")
 		}
 	}
+	return nil
 }
 
 func (s *SessionManager) Close() {

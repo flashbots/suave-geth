@@ -85,6 +85,4 @@ func (b *builder) AddTransaction(txn *types.Transaction) (*types.SimulateTransac
 
 func (b *builder) Terminate() {
 	b.cancelFunc()
-	b.txns = nil
-	b.receipts = nil
 }
