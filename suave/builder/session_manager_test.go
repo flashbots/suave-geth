@@ -4,18 +4,29 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/stretchr/testify/require"
 )
+
+type MockSubscription struct{}
+
+func (m *MockSubscription) Unsubscribe() {}
+func (m *MockSubscription) Err() <-chan error {
+	return nil
+}
 
 func TestSessionManager_SessionTimeout(t *testing.T) {
 	mngr, _ := newSessionManager(t, &Config{
@@ -105,6 +116,95 @@ func TestSessionManager_StartSession(t *testing.T) {
 	require.NotNil(t, receipt)
 }
 
+func TestSessionManager_TerminateAllSessionsOnNewBlock(t *testing.T) {
+	mngr, bMock := newSessionManager(t, &Config{})
+
+	sessionIDs := make([]string, 3)
+	for i := 0; i < 3; i++ {
+		id, err := mngr.NewSession(context.TODO())
+		require.NoError(t, err)
+		sessionIDs[i] = id
+	}
+
+	require.Len(t, mngr.sessions, 3)
+
+	bMock.triggerNewBlock()
+
+	time.Sleep(100 * time.Millisecond)
+
+	require.Empty(t, mngr.sessions)
+
+	for _, id := range sessionIDs {
+		_, err := mngr.getSession(id)
+		require.Error(t, err)
+	}
+}
+
+func TestSessionManager_Close(t *testing.T) {
+	mngr, _ := newSessionManager(t, &Config{})
+
+	id, err := mngr.NewSession(context.TODO())
+	require.NoError(t, err)
+
+	mngr.Close()
+
+	require.Empty(t, mngr.sessions)
+
+	_, err = mngr.getSession(id)
+	require.Error(t, err)
+
+	_, err = mngr.NewSession(context.TODO())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "session manager is closed")
+
+	require.NotPanics(t, func() { mngr.Close() })
+}
+
+func TestSessionManager_ConcurrentAccess(t *testing.T) {
+	mngr, _ := newSessionManager(t, &Config{MaxConcurrentSessions: 10})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			id, err := mngr.NewSession(context.TODO())
+			if err == nil {
+				time.Sleep(10 * time.Millisecond)
+				_, err := mngr.getSession(id)
+				require.NoError(t, err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	require.LessOrEqual(t, len(mngr.sessions), 10)
+}
+
+func TestSessionManager_TerminateOngoingTransactions(t *testing.T) {
+	mngr, bMock := newSessionManager(t, &Config{})
+
+	id, err := mngr.NewSession(context.TODO())
+	require.NoError(t, err)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		time.Sleep(500 * time.Millisecond)
+		_, err := mngr.AddTransaction(id, bMock.state.newTransfer(t, common.Address{}, big.NewInt(1)))
+		require.Error(t, err)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	bMock.triggerNewBlock()
+
+	<-done
+
+	_, err = mngr.getSession(id)
+	require.Error(t, err)
+}
+
 func newSessionManager(t *testing.T, cfg *Config) (*SessionManager, *blockchainMock) {
 	if cfg == nil {
 		cfg = &Config{}
@@ -113,13 +213,39 @@ func newSessionManager(t *testing.T, cfg *Config) (*SessionManager, *blockchainM
 	state := newMockState(t)
 
 	bMock := &blockchainMock{
-		state: state,
+		state:         state,
+		chainHeadChan: make(chan core.ChainHeadEvent, 10),
+		blockNumber:   1,
 	}
 	return NewSessionManager(bMock, cfg), bMock
 }
 
 type blockchainMock struct {
-	state *mockState
+	state         *mockState
+	chainHeadChan chan core.ChainHeadEvent
+	blockNumber   uint64
+}
+
+func (b *blockchainMock) triggerNewBlock() {
+	b.chainHeadChan <- core.ChainHeadEvent{Block: types.NewBlock(&types.Header{Number: big.NewInt(int64(b.blockNumber))}, nil, nil, nil, trie.NewStackTrie(nil))}
+	b.blockNumber++
+}
+
+func (b *blockchainMock) SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription {
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		for {
+			select {
+			case ev := <-b.chainHeadChan:
+				select {
+				case ch <- ev:
+				case <-quit:
+					return nil
+				}
+			case <-quit:
+				return nil
+			}
+		}
+	})
 }
 
 func (b *blockchainMock) Engine() consensus.Engine {
