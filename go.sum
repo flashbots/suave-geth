@@ -152,8 +152,6 @@ github.com/ferranbt/fastssz v0.1.3 h1:ZI+z3JH05h4kgmFXdHuR1aWYsgrg7o+Fw7/NCzM16M
 github.com/ferranbt/fastssz v0.1.3/go.mod h1:0Y9TEd/9XuFlh7mskMPfXiI2Dkw4Ddg9EyXt1W7MRvE=
 github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e h1:bBLctRc7kr01YGvaDfgLbTwjFNW5jdp5y5rj8XXBHfY=
 github.com/fjl/gencodec v0.0.0-20230517082657-f9840df7b83e/go.mod h1:AzA8Lj6YtixmJWL+wkKoBGsLWy9gFrAzi4g+5bCKwpY=
-github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=
-github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5/go.mod h1:VvhXpOYNQvB+uIk2RvXzuaQtkQJzzIx6lSBe1xv7hi0=
 github.com/flashbots/go-boost-utils v1.7.0 h1:BaLeGl71nD/ro0aUzCYqHc8PiqIIaErLwcgMOQWoBZY=
 github.com/flashbots/go-boost-utils v1.7.0/go.mod h1:1Y0rD/e57KZZIRgkCcXRvvztW+v+eZHnWu25wxtGstU=
 github.com/flashbots/go-utils v0.4.13-0.20230919094729-c049be707f79 h1:y2obQCUIvqKISLxWxC0Tz8Oc618vA3q1xmn9GwElvfI=
