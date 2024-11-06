@@ -185,7 +185,7 @@ func (r *RedisStoreBackend) Retrieve(record suave.DataRecord, caller common.Addr
 	storeKey := formatRecordValueKey(record.Id, key)
 	data, err := r.client.Get(r.ctx, storeKey).Bytes()
 	if err != nil {
-		return []byte{}, fmt.Errorf("unexpected redis error: %w, %s, %v", err, storeKey, r.client.Keys(context.TODO(), "*").String())
+		return []byte{}, fmt.Errorf("unexpected redis error: %w, %s", err, storeKey)
 	}
 
 	return data, nil
