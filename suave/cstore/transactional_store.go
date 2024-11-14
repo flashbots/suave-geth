@@ -82,7 +82,8 @@ func (s *TransactionalStore) Retrieve(dataId suave.DataId, caller common.Address
 
 	s.pendingLock.Lock()
 
-	for _, sw := range s.pendingWrites {
+	for i := len(s.pendingWrites) - 1; i >= 0; i-- {
+		sw := s.pendingWrites[i]
 		if sw.DataRecord.Id == record.Id && sw.Key == key {
 			s.pendingLock.Unlock()
 			return common.CopyBytes(sw.Value), nil
