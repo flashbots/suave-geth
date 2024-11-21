@@ -42,7 +42,7 @@ func TestEncodeTypeToGolang(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		actual := encodeTypeToGolang(c.name, true, true)
+		actual := encodeTypeToGolang(c.name, true, true, false)
 		require.Equal(t, c.expected, actual)
 	}
 }
