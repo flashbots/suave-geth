@@ -80,6 +80,10 @@ func (m *mockRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
 	return []byte{0x1}, nil
 }
 
+func (m *mockRuntime) doHTTPRequest2(request types.HttpRequest) (types.HttpResponse, error) {
+	return types.HttpResponse{}, nil
+}
+
 func (m *mockRuntime) newBuilder() (string, error) {
 	return "", nil
 }

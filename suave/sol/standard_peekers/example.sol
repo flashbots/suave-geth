@@ -24,6 +24,11 @@ contract ExampleEthCallSource {
         Suave.doHTTPRequest(request);
     }
 
+    function remoteCall2(Suave.HttpRequest memory request, uint64 expectedStatus) public {
+        Suave.HttpResponse memory response = Suave.doHTTPRequest2(request);
+        require(response.status == expectedStatus);
+    }
+
     function emptyCallback() public payable {}
 
     function sessionE2ETest(bytes memory subTxn, bytes memory subTxn2) public payable returns (bytes memory) {

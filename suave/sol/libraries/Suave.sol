@@ -70,6 +70,16 @@ library Suave {
         uint64 timeout;
     }
 
+    /// @notice Description of an HTTP response.
+    /// @param status HTTP status code of the response
+    /// @param body Body of the response
+    /// @param error Error message if any
+    struct HttpResponse {
+        uint64 status;
+        bytes body;
+        bytes error;
+    }
+
     /// @notice Result of a simulated transaction.
     /// @param egp Effective Gas Price of the transaction
     /// @param logs Logs emitted during the simulation
@@ -125,6 +135,8 @@ library Suave {
     address public constant CONTEXT_GET = 0x0000000000000000000000000000000053300003;
 
     address public constant DO_HTTPREQUEST = 0x0000000000000000000000000000000043200002;
+
+    address public constant DO_HTTPREQUEST2 = 0x0000000000000000000000000000000043200003;
 
     address public constant ETHCALL = 0x0000000000000000000000000000000042100003;
 
@@ -296,6 +308,18 @@ library Suave {
         return abi.decode(data, (bytes));
     }
 
+    /// @notice Performs an HTTP request and returns the response. `request` is the request to perform.
+    /// @param request Request to perform
+    /// @return httpResponse Response of the request
+    function doHTTPRequest2(HttpRequest memory request) internal returns (HttpResponse memory) {
+        (bool success, bytes memory data) = DO_HTTPREQUEST2.call(abi.encode(request));
+        if (!success) {
+            revert PeekerReverted(DO_HTTPREQUEST2, data);
+        }
+
+        return abi.decode(data, (HttpResponse));
+    }
+
     /// @notice Uses the `eth_call` JSON RPC method to let you simulate a function call and return the response.
     /// @param contractAddr Address of the contract to call
     /// @param input1 Data to send to the contract
@@ -348,8 +372,8 @@ library Suave {
         return data;
     }
 
-    /// @notice Returns the current Kettle Unix time in seconds.
-    /// @return time Current Unix time in seconds
+    /// @notice Returns the current Kettle Unix time in milliseconds. Insecure because it assumes trust in Kettle's clock.
+    /// @return time Current Unix time in milliseconds
     function getInsecureTime() internal returns (uint256) {
         (bool success, bytes memory data) = GET_INSECURE_TIME.call(abi.encode());
         if (!success) {
