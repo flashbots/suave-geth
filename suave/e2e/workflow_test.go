@@ -1191,7 +1191,7 @@ func TestE2EConsoleLog(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestE2ERemoteCalls(t *testing.T) {
+func TestE2ERemoteCalls_XXX(t *testing.T) {
 	fr := newFramework(t, WithWhitelist([]string{"127.0.0.1"}))
 	defer fr.Close()
 
@@ -1244,6 +1244,23 @@ func TestE2ERemoteCalls(t *testing.T) {
 			Headers: []string{"b:c"},
 		}
 		_, err := contract.SendTransaction("remoteCall", []interface{}{req}, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("Status code", func(t *testing.T) {
+		srvAddr := fr.testHttpRelayer(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(301)
+		})
+
+		req := &types.HttpRequest{
+			Method: "POST",
+			Url:    srvAddr,
+			Body:   []byte{0x1},
+		}
+		_, err := contract.SendTransaction("remoteCall2", []interface{}{req, uint64(301)}, nil)
+		require.NoError(t, err)
+
+		_, err = contract.SendTransaction("remoteCall2", []interface{}{req, uint64(302)}, nil)
 		require.Error(t, err)
 	})
 }

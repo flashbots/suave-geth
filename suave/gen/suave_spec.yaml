@@ -98,6 +98,18 @@ structs:
       - name: timeout
         description: "Timeout of the request in milliseconds"
         type: uint64
+  - name: HttpResponse
+    description: "Description of an HTTP response."
+    fields:
+      - name: status
+        description: "HTTP status code of the response"
+        type: uint64
+      - name: body
+        description: "Body of the response"
+        type: bytes
+      - name: error
+        description: "Error message if any"
+        type: bytes
   - name: SimulateTransactionResult
     description: "Result of a simulated transaction."
     fields:
@@ -386,6 +398,18 @@ functions:
         - name: httpResponse
           type: bytes
           description: "Body of the response"
+  - name: doHTTPRequest2
+    address: "0x0000000000000000000000000000000043200003"
+    description: "Performs an HTTP request and returns the response. `request` is the request to perform."
+    input:
+      - name: request
+        type: HttpRequest
+        description: "Request to perform"
+    output:
+      fields:
+        - name: httpResponse
+          type: HttpResponse
+          description: "Response of the request"
   - name: newBuilder
     address: "0x0000000000000000000000000000000053200001"
     description: "Initializes a new remote builder session"

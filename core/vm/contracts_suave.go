@@ -219,12 +219,12 @@ func (c *consoleLogPrecompile) Run(input []byte) ([]byte, error) {
 
 var contextCookieKeyPrefix = "__cookie_"
 
-func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
+func (s *suaveRuntime) doHTTPRequest2(request types.HttpRequest) (types.HttpResponse, error) {
 	if request.Method != "GET" && request.Method != "POST" {
-		return nil, fmt.Errorf("only GET and POST methods are supported")
+		return types.HttpResponse{}, fmt.Errorf("only GET and POST methods are supported")
 	}
 	if request.Url == "" {
-		return nil, fmt.Errorf("url is empty")
+		return types.HttpResponse{}, fmt.Errorf("url is empty")
 	}
 
 	var body io.Reader
@@ -234,11 +234,11 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 
 	url, err := s.resolveURL(request.Url)
 	if err != nil {
-		return nil, err
+		return types.HttpResponse{}, err
 	}
 	req, err := http.NewRequest(request.Method, url, body)
 	if err != nil {
-		return nil, err
+		return types.HttpResponse{}, err
 	}
 
 	// add any cookies stored in the context
@@ -251,7 +251,7 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	for _, header := range request.Headers {
 		indx := strings.Index(header, ":")
 		if indx == -1 {
-			return nil, fmt.Errorf("incorrect header format '%s', no ':' present", header)
+			return types.HttpResponse{}, fmt.Errorf("incorrect header format '%s', no ':' present", header)
 		}
 		req.Header.Add(header[:indx], header[indx+1:])
 	}
@@ -261,7 +261,7 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		hashedBody := crypto.Keccak256Hash(request.Body).Hex()
 		sig, err := crypto.Sign(accounts.TextHash([]byte(hashedBody)), s.suaveContext.Backend.EthBundleSigningKey)
 		if err != nil {
-			return nil, err
+			return types.HttpResponse{}, err
 		}
 
 		signature := crypto.PubkeyToAddress(s.suaveContext.Backend.EthBundleSigningKey.PublicKey).Hex() + ":" + hexutil.Encode(sig)
@@ -280,17 +280,18 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return types.HttpResponse{}, err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return types.HttpResponse{}, err
 	}
 
-	if resp.StatusCode > 299 {
-		return nil, fmt.Errorf("http error: %s: %v", resp.Status, data)
+	precResp := types.HttpResponse{
+		Status: uint64(resp.StatusCode),
+		Body:   data,
 	}
 
 	// parse the LB cookies (AWSALB, AWSALBCORS) and set them in the context
@@ -300,7 +301,18 @@ func (s *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) 
 		}
 	}
 
-	return data, nil
+	return precResp, nil
+}
+
+func (m *suaveRuntime) doHTTPRequest(request types.HttpRequest) ([]byte, error) {
+	resp, err := m.doHTTPRequest2(request)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Status > 299 {
+		return nil, fmt.Errorf("http error: %d: %v", resp.Status, resp.Body)
+	}
+	return resp.Body, err
 }
 
 func (s *suaveRuntime) resolveURL(urlOrServiceName string) (string, error) {
