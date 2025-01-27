@@ -2,7 +2,10 @@
 // Hash: 93d0334f831efa37bf623305bc1fadbb86200c71f9e3c4a97337f7879f4216c1
 package types
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 type DataId [16]byte
 
@@ -22,6 +25,17 @@ type BuildBlockArgs struct {
 	FillPending    bool
 }
 
+type buildBlockArgsMarshaling struct {
+	Slot           hexutil.Uint64
+	ProposerPubkey hexutil.Bytes
+
+	Timestamp hexutil.Uint64
+
+	GasLimit hexutil.Uint64
+
+	Extra hexutil.Bytes
+}
+
 type DataRecord struct {
 	Id                  DataId
 	Salt                DataId
@@ -29,6 +43,10 @@ type DataRecord struct {
 	AllowedPeekers      []common.Address
 	AllowedStores       []common.Address
 	Version             string
+}
+
+type dataRecordMarshaling struct {
+	DecryptionCondition hexutil.Uint64
 }
 
 type HttpRequest struct {
@@ -46,11 +64,19 @@ type HttpResponse struct {
 	Error  []byte
 }
 
+type httpRequestMarshaling struct {
+	Body hexutil.Bytes
+}
+
 type SimulateTransactionResult struct {
 	Egp     uint64
 	Logs    []*SimulatedLog
 	Success bool
 	Error   string
+}
+
+type simulateTransactionResultMarshaling struct {
+	Egp hexutil.Uint64
 }
 
 type SimulatedLog struct {
@@ -59,11 +85,22 @@ type SimulatedLog struct {
 	Topics []common.Hash
 }
 
+type simulatedLogMarshaling struct {
+	Data hexutil.Bytes
+}
+
 type Withdrawal struct {
 	Index     uint64
 	Validator uint64
 	Address   common.Address
 	Amount    uint64
+}
+
+type withdrawalMarshaling struct {
+	Index     hexutil.Uint64
+	Validator hexutil.Uint64
+
+	Amount hexutil.Uint64
 }
 
 type CryptoSignature uint8

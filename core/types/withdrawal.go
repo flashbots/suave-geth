@@ -19,19 +19,11 @@ package types
 import (
 	"bytes"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 //go:generate go run github.com/fjl/gencodec -type Withdrawal -field-override withdrawalMarshaling -out gen_withdrawal_json.go
 //go:generate go run ../../rlp/rlpgen -type Withdrawal -out gen_withdrawal_rlp.go
-
-// field type overrides for gencodec
-type withdrawalMarshaling struct {
-	Index     hexutil.Uint64
-	Validator hexutil.Uint64
-	Amount    hexutil.Uint64
-}
 
 // Withdrawals implements DerivableList for withdrawals.
 type Withdrawals []*Withdrawal
